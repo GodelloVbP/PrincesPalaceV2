@@ -47,11 +47,11 @@ namespace PrincesPalace.PlayModeTests
             for (ulong seed = 1; seed < 4000UL; seed++)
             {
                 var map = RealmMapGenerator.GenerateFor(seed, 0, RealmProfiles.ForRealm(0));
-                if (RealmPaths.PocketHead(map, RoomType.Shop) == null) continue;
+                if (RealmPaths.LeftPocketHead(map, RoomType.Shop) == null) continue;
 
                 RunManager.ResetForTests();
                 RunManager.StartRun(seed);
-                var shop = RealmPaths.PocketHead(RunManager.Map, RoomType.Shop);
+                var shop = RealmPaths.LeftPocketHead(RunManager.Map, RoomType.Shop);
                 RealmPaths.StandBefore(shop);
                 RunOrchestrator.ArriveAt(shop);
                 var card0 = RunOrchestrator.CurrentShopStock.FirstOrDefault(e =>
@@ -91,7 +91,7 @@ namespace PrincesPalace.PlayModeTests
 
             // Shops sit only inside pockets, so the party is walked to the
             // spine room the shop's pocket leaves before the map opens.
-            RealmPaths.StandBefore(RealmPaths.PocketHead(RunManager.Map, RoomType.Shop));
+            RealmPaths.StandBefore(RealmPaths.LeftPocketHead(RunManager.Map, RoomType.Shop));
 
             yield return Click(Node("StartRunGate")); // StartOrResumeRun -> BeginDescentTransition -> EnterTheDescent
             yield return WaitUntil(() =>

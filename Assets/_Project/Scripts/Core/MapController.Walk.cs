@@ -76,7 +76,7 @@ namespace PrincesPalace
                 new Vector2(MapWalk.FigureHeight * aspect, MapWalk.FigureHeight);
         }
 
-        private UiVec PositionOf(RealmNode node) => Columns(RunManager.Map).PositionOf(node.Id);
+        private UiVec PositionOf(RealmNode node) => Graph(RunManager.Map).PositionOf(node.Id);
 
         // One walk, then whatever the room turns out to be.
         private IEnumerator WalkAndArrive(RealmNode target)
@@ -88,10 +88,9 @@ namespace PrincesPalace
             int seed = LinkSeeds(RunManager.Map).TryGetValue(LinkKey(current.Id, target.Id), out var s) ? s : 1;
             float duration = MapWalk.DurationFor(from, to);
 
-            // Flipped by SCALE rather than by a mirrored sprite: the descent
-            // runs left to right so this never fires today, and the alternative
-            // is a second art file per character for a case the map does not
-            // have yet.
+            // Flipped by SCALE rather than by a mirrored sprite: the alternative
+            // is a second art file per character. A step to a pocket on the
+            // left faces left, and the next step down faces right again.
             var scale = walker.rectTransform.localScale;
             scale.x = Mathf.Abs(scale.x) * (MapWalk.FacesLeft(from, to) ? -1f : 1f);
             walker.rectTransform.localScale = scale;
@@ -99,13 +98,13 @@ namespace PrincesPalace
             // THE CAMERA HOLDS STILL WHILE HE WALKS.
             //
             // It followed him at first, which sounds right and looks wrong: the
-            // scroll is pinned to the room offset, so tracking the figure pins
-            // the FIGURE to a fixed screen position and slides the entire wood
+            // scroll is pinned to the room, so tracking the figure pins the
+            // FIGURE to a fixed screen position and slides the entire wood
             // past him. Everything moves except the thing that is moving.
             //
-            // Held instead, he crosses the gap between the two painted
-            // clearings in full view -- which is the one thing this animation
-            // exists to show -- and the world catches up afterwards.
+            // Held instead, he crosses the gap between the two rooms in full
+            // view -- which is the one thing this animation exists to show --
+            // and the world catches up afterwards.
             for (float elapsed = 0f; elapsed < duration; elapsed += Time.deltaTime)
             {
                 var point = MapWalk.PositionAt(from, to, seed, elapsed / duration);
@@ -116,7 +115,7 @@ namespace PrincesPalace
             _standing = MapWalk.Standing(to);
             walker.rectTransform.anchoredPosition = new Vector2(_standing.X, _standing.Y);
 
-            yield return PanTo(to.X);
+            yield return PanTo(to.Y);
 
             _walk = null;
             Arrive(target);
@@ -124,15 +123,14 @@ namespace PrincesPalace
 
         // The camera catching up, once the party has arrived.
         //
-        // Eased rather than cut: the pan is exactly one column-gap, and a jump
-        // that size reads as the map having been replaced rather than as
-        // having moved one step along it. Smoothstepped, so it leaves and
-        // arrives at rest -- a linear pan of the whole screen stops dead.
-        private IEnumerator PanTo(float roomX)
+        // Eased rather than cut: a jump of a row or more reads as the map
+        // having been replaced rather than as having moved one step along it.
+        // Smoothstepped, so it leaves and arrives at rest -- a linear pan of
+        // the whole screen stops dead.
+        private IEnumerator PanTo(float roomY)
         {
-            float viewportWidth = viewport.rect.width;
-            float from = content.anchoredPosition.x;
-            float to = MapLayout.Scroll(roomX, content.sizeDelta.x, viewportWidth);
+            float from = content.anchoredPosition.y;
+            float to = MapLayout.Scroll(roomY, content.sizeDelta.y, viewport.rect.height);
 
             if (Mathf.Approximately(from, to)) yield break;
 
@@ -140,11 +138,11 @@ namespace PrincesPalace
             {
                 float t = elapsed / MapWalk.PanSeconds;
                 content.anchoredPosition = new Vector2(
-                    Mathf.Lerp(from, to, t * t * (3f - 2f * t)), content.anchoredPosition.y);
+                    content.anchoredPosition.x, Mathf.Lerp(from, to, t * t * (3f - 2f * t)));
                 yield return null;
             }
 
-            content.anchoredPosition = new Vector2(to, content.anchoredPosition.y);
+            content.anchoredPosition = new Vector2(content.anchoredPosition.x, to);
         }
 
         // What the room does.

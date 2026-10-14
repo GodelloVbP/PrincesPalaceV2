@@ -15,9 +15,9 @@ namespace PrincesPalace.PlayModeTests
 {
     // The descent map, driven through the real scene.
     //
-    // The pool is the interesting part: the tree built every cell a realm
-    // COULD project onto (MapColumns), and the controller has to switch on
-    // exactly the ones this realm has and place each for its column's count.
+    // The pool is the interesting part: the tree built a slot for every node a
+    // realm COULD have (one per id), and the controller has to switch on
+    // exactly the ones this realm has and place each where MapGraph says.
     public class MapFlowTests
     {
         private string _root;
@@ -83,7 +83,7 @@ namespace PrincesPalace.PlayModeTests
                 .Count(b => b.name.StartsWith("MapNode") && b.gameObject.activeSelf);
 
             Assert.AreEqual(RunManager.Map.Nodes.Count, shown);
-            Assert.Less(shown, MapLayout.Capacity, "a leg does not fill every slot the pool provides");
+            Assert.Less(shown, MapLayout.MaxNodes, "a realm does not fill every slot the pool provides");
         }
 
         [UnityTest]
@@ -92,7 +92,7 @@ namespace PrincesPalace.PlayModeTests
             // What makes this a map rather than a grid of buttons. Without the
             // trails nothing on screen says which room leads to which, and a
             // fork is indistinguishable from two unrelated rooms that happen to
-            // share a column.
+            // share a row.
             yield return OpenTheMap();
 
             // Found by name rather than off the field: MapController's arrays
@@ -154,57 +154,49 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
-        public IEnumerator EveryRoomStandsInAPaintedClearing()
+        public IEnumerator EveryRoomStandsWhereTheLayoutPutsIt()
         {
-            // A short column does not sit CENTRED: the canopy backdrop tiles
-            // with holes punched in it at three fixed heights, and a
-            // centred column of one would stand between two of them.
             yield return OpenTheMap();
 
-            var columns = MapColumns.Of(RunManager.Map);
-            int checkedClearings = 0;
-
+            var graph = MapGraph.Of(RunManager.Map);
             foreach (var node in RunManager.Map.Nodes)
             {
                 var rect = (RectTransform)Named(RealmPaths.ButtonName(node)).transform;
-                int column = columns.ColumnOf(node.Id);
-                int row = columns.RowOf(node.Id);
+                var at = graph.PositionOf(node.Id);
 
-                Assert.AreEqual(MapLayout.RowY(row, columns.CountIn(column)), rect.anchoredPosition.y, 0.01f,
-                    $"room {node.Id} (column {column} row {row}) is not at its row");
-                Assert.AreEqual(MapLayout.ColumnX(column), rect.anchoredPosition.x, 0.01f,
-                    $"room {node.Id} is not in its column");
-
-                if (columns.CountIn(column) > MapLayout.ClearingRowY.Length) continue;
-                Assert.AreEqual(MapLayout.ClearingRowY[row], rect.anchoredPosition.y, 0.01f,
-                    $"room {node.Id} is not standing in its clearing");
-                checkedClearings++;
+                Assert.AreEqual(at.X, rect.anchoredPosition.x, 0.01f, $"room {node.Id} is not in its lane");
+                Assert.AreEqual(at.Y, rect.anchoredPosition.y, 0.01f, $"room {node.Id} is not in its row");
+                Assert.AreEqual(MapLayout.TileWidthFor(node.Type), rect.sizeDelta.x, 0.01f,
+                    $"room {node.Id} ({node.Type}) is the wrong size");
             }
-
-            Assert.Greater(checkedClearings, 0, "vacuity: no column was short enough to snap to clearings");
         }
 
         [UnityTest]
-        public IEnumerator TheWoodScrollsSoTheCurrentRoomSitsOnTheLeftClearing()
+        public IEnumerator TheWoodScrollsSoTheCurrentRoomSitsNearTheTop()
         {
-            // The "everything squished onto one page" fix, asserted where it is
-            // actually observable: against the REAL viewport width, which an
-            // EditMode solve does not have. Nine columns at the art's own pitch
-            // is ~7400 units of content, so the screen is a window over it
-            // rather than a track scaled down to fit.
+            // The camera pins the party's room near the top of the window and
+            // the realm runs on below it: scrolling down is going deeper.
+            // Asserted against the REAL viewport height, which an EditMode
+            // solve does not have.
             yield return OpenTheMap();
 
             var content = (RectTransform)Named("MapContent").transform;
             var viewport = (RectTransform)Named("MapViewport").transform;
 
-            Assert.Greater(content.sizeDelta.x, viewport.rect.width * 2f,
-                "the leg is meant to be wider than the window, not squeezed into it");
+            Assert.Greater(content.sizeDelta.y, viewport.rect.height * 2f,
+                "the realm is meant to be taller than the window, not squeezed into it");
 
-            var current = RunManager.CurrentNode;
-            float onScreen = MapLayout.ColumnX(current.Offset) + content.anchoredPosition.x;
+            // Walk the party two rows down, and the camera follows.
+            var third = RunManager.Map.Nodes.Where(n => n.Offset == 2).OrderBy(n => n.Id).First();
+            RealmPaths.StandBefore(third);
+            RunManager.MoveTo(third.Id);
+            RunManager.ClearCurrentRoom();
+            _map.Refresh();
 
+            float rowsDown = -MapGraph.Of(RunManager.Map).PositionOf(third.Id).Y;
+            float onScreen = rowsDown - content.anchoredPosition.y;
             Assert.AreEqual(MapLayout.FollowOffset, onScreen, 0.01f,
-                "the party's own room has to land on the left painted clearing");
+                "the party's own room has to sit at the camera's follow line");
         }
 
         [UnityTest]
@@ -259,7 +251,7 @@ namespace PrincesPalace.PlayModeTests
             // A room that leads nowhere else, so the arrival redraws the map
             // rather than loading a fight scene out from under the assertions:
             // a treasure, which resolves on the spot, opening its pocket so the
-            // walk crosses from one column to the next.
+            // walk crosses from one row to the next.
             yield return OpenTheMap(seed: RealmPaths.SeedWhere(
                 m => RealmPaths.PocketHead(m, RoomType.Treasure) != null, "a treasure opening a pocket"));
             var quiet = RealmPaths.PocketHead(RunManager.Map, RoomType.Treasure);
@@ -277,11 +269,11 @@ namespace PrincesPalace.PlayModeTests
             // here.
             yield return null;
             yield return null;
-            Assert.AreNotEqual(startedAt.x, walker.anchoredPosition.x, "the figure should be under way");
+            Assert.AreNotEqual(startedAt.y, walker.anchoredPosition.y, "the figure should be under way");
 
             yield return WaitForTheWalk();
 
-            var expected = MapWalk.Standing(MapColumns.Of(RunManager.Map).PositionOf(quiet.Id));
+            var expected = MapWalk.Standing(MapGraph.Of(RunManager.Map).PositionOf(quiet.Id));
             Assert.AreEqual(expected.X, walker.anchoredPosition.x, 0.01f, "arrived at the wrong room");
             Assert.AreEqual(expected.Y, walker.anchoredPosition.y, 0.01f, "arrived at the wrong height");
             Assert.AreEqual(quiet.Id, RunManager.CurrentNode.Id, "arriving is what moves the party");

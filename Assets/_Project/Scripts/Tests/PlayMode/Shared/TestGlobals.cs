@@ -97,6 +97,7 @@ namespace PrincesPalace.PlayModeTests
             // simply never finish, and it surfaces as an unrelated timeout.
             ResetEngineClock();
             ResetMenuMemory();
+            ResetMapOpening();
             FightBeatPlayer.BeatSpeedMultiplier = 1f;
 
             // BOTH HALVES of the player-facing product (docs/
@@ -123,6 +124,13 @@ namespace PrincesPalace.PlayModeTests
         // test that opened the menu on Party would otherwise hand the next one
         // a menu that reopens there.
         public static void ResetMenuMemory() => MenuMemory.Clear();
+
+        // THE MAP'S OPENING SHOT, off for every test. In play the camera sweeps
+        // up from the heart on a fresh realm; a test that aims a click or reads
+        // the camera must find the party's room where the layout puts it.
+        // MapRealmScreenTests turns it on for itself. Also called before every test
+        // from PlayModeTestProfiler.
+        public static void ResetMapOpening() => MapController.OpeningEnabled = false;
 
         // EVERY ENGINE TIME GLOBAL, back to what the project boots with.
         // Called from ResetAll AND, before every test, from

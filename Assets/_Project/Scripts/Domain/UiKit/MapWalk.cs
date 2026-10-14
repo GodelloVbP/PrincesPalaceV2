@@ -14,41 +14,30 @@ namespace PrincesPalace.Domain.UiKit
     // than a change here.
     public static class MapWalk
     {
-        // Where the figure stands, relative to its room's centre.
-        //
-        // MEASURED, not chosen: tools/measure_clearing.py scans the painted
-        // clearings out of forest_map_background.png and reports 155 x 283
-        // content units. The tile standing in one is 100 x 130, so there is no
-        // "beside the icon" that also fits inside the clearing -- 27 units of
-        // margin each side against a figure half again as wide as it is tall.
-        //
-        // So the figure stands at the clearing's right EDGE and overhangs the
-        // canopy, which is consistent rather than sloppy: the trails are drawn
-        // over the canopy too, and a walker on a path is on a path. Standing
-        // right rather than left is what puts it between the room it is in and
-        // the choice it is about to make, and low enough not to cover the icon
-        // that says what kind of room this is.
-        public const float StandX = 66f;
-        public const float StandY = -40f;
+        // Where the figure stands, relative to its room's centre: beside the
+        // tile, on the side the prize chip is not, and low enough not to cover
+        // the icon that says what kind of room this is. A figure half again as
+        // wide as it is tall does not fit inside a 100-wide tile, so it
+        // overhangs the canopy, as the trails do.
+        public const float StandX = -96f;
+        public const float StandY = -24f;
 
         // The figure's drawn height; its width follows from the art's own
         // aspect. Shawn's idle is 540x370, i.e. half again as wide as tall,
         // which is most of why "next to the icon" does not fit.
         public const float FigureHeight = 96f;
 
-        // How long one column-gap of travel takes. Distance-scaled rather than
-        // fixed, so a step to the room directly across is not slower per unit
-        // than a step to a room two rows up.
-        public const float SecondsPerColumn = 0.85f;
+        // How long one row-pitch of travel takes. Distance-scaled rather than
+        // fixed, so a step to the room directly below is not slower per unit
+        // than a step across to a pocket.
+        public const float SecondsPerRow = 0.45f;
 
         // How long the camera takes to catch up after an arrival. Its own
-        // number rather than a share of the walk: the pan is always exactly one
-        // column-gap however long the step to that room took.
+        // number rather than a share of the walk.
         public const float PanSeconds = 0.35f;
 
-        // Floors and ceilings on that, so a near-vertical link inside one
-        // column does not finish instantly and a long diagonal does not become
-        // a walk the player waits through.
+        // Floors and ceilings on that, so a short hop does not finish instantly
+        // and a long link does not become a walk the player waits through.
         public const float MinSeconds = 0.35f;
         public const float MaxSeconds = 1.4f;
 
@@ -58,7 +47,7 @@ namespace PrincesPalace.Domain.UiKit
             float dy = to.Y - from.Y;
             float distance = (float)System.Math.Sqrt(dx * dx + dy * dy);
 
-            float seconds = SecondsPerColumn * distance / MapLayout.ColumnGap;
+            float seconds = SecondsPerRow * distance / MapLayout.RowPitch;
             if (seconds < MinSeconds) return MinSeconds;
             if (seconds > MaxSeconds) return MaxSeconds;
             return seconds;
@@ -97,10 +86,9 @@ namespace PrincesPalace.Domain.UiKit
             return (float)(System.Math.Abs(System.Math.Sin(phase)) * BobHeight);
         }
 
-        // The descent runs left to right, so a figure whose art faces right is
-        // already facing its destination. Stated rather than assumed because
-        // CharacterDefinition carries a facing and the next character's art may
-        // not agree with Shawn's.
+        // The art faces right, so a step toward the left needs a mirror. Stated
+        // rather than assumed because CharacterDefinition carries a facing and
+        // the next character's art may not agree with Shawn's.
         public static bool FacesLeft(UiVec from, UiVec to) => to.X < from.X;
 
         private static float Clamp01(float t) => t < 0f ? 0f : t > 1f ? 1f : t;

@@ -93,7 +93,8 @@ namespace PrincesPalace.PlayModeTests
             // first, not just the two engine frames TakeOverInput's own callers
             // already pay.
             yield return new WaitForSecondsRealtime(0.5f);
-            var choices = RunManager.Choices().OrderBy(n => n.Offset).ThenBy(n => n.Id).ToList();
+            var graph = MapGraph.Of(RunManager.Map);
+            var choices = RunManager.Choices().OrderBy(n => graph.PositionOf(n.Id).X).ThenBy(n => n.Id).ToList();
             Assert.GreaterOrEqual(choices.Count, 2, "fixture: this seed should offer a real choice");
             var target = choices[targetSlot];
             Assert.AreEqual(RoomType.Fight, target.Type,

@@ -159,6 +159,19 @@ namespace PrincesPalace.Domain.Dungeon
             return seen;
         }
 
+        // The rooms ahead of `fromId` that stepping to `choiceId` shuts off:
+        // everything the party could still reach from where it stands that the
+        // choice cannot reach, the other choices included. Empty when the
+        // choice keeps every route open (a pocket rejoins the spine), which is
+        // when the map draws no veil (plan section 7).
+        public HashSet<int> ClosedBy(int fromId, int choiceId)
+        {
+            var closed = AllReachableFrom(fromId);
+            closed.Remove(choiceId);
+            closed.ExceptWith(AllReachableFrom(choiceId));
+            return closed;
+        }
+
         // Rooms walked on the shortest and longest entry-to-heart route (the
         // entry is not a room). Nodes are stored in id order along edges, so
         // one backwards pass is a topological order.

@@ -50,14 +50,18 @@ namespace PrincesPalace.Domain.UiKit
         public readonly int SkipHealPercent;
         public readonly bool GuardsHeart;
 
+        // How many rooms stepping here shuts off for good; 0 for most choices.
+        public readonly int ClosesRooms;
+
         public MapNodeFacts(RoomType type, IReadOnlyList<string> enemyNames = null, int experience = 0,
                             int gold = 0, int stashGold = 0)
-            : this(type, enemyNames, experience, gold, stashGold, 0, default, 0, false)
+            : this(type, enemyNames, experience, gold, stashGold, 0, default, 0, false, 0)
         {
         }
 
         private MapNodeFacts(RoomType type, IReadOnlyList<string> enemyNames, int experience, int gold,
-                             int stashGold, int strength, MapNodeChip chip, int skipHealPercent, bool guardsHeart)
+                             int stashGold, int strength, MapNodeChip chip, int skipHealPercent, bool guardsHeart,
+                             int closesRooms)
         {
             Type = type;
             EnemyNames = enemyNames ?? new string[0];
@@ -68,11 +72,16 @@ namespace PrincesPalace.Domain.UiKit
             Chip = chip;
             SkipHealPercent = skipHealPercent;
             GuardsHeart = guardsHeart;
+            ClosesRooms = closesRooms;
         }
 
         public MapNodeFacts WithRealm(int strength, MapNodeChip chip, int skipHealPercent, bool guardsHeart) =>
             new MapNodeFacts(Type, EnemyNames, Experience, Gold, StashGold, strength, chip, skipHealPercent,
-                guardsHeart);
+                guardsHeart, ClosesRooms);
+
+        public MapNodeFacts WithCloses(int rooms) =>
+            new MapNodeFacts(Type, EnemyNames, Experience, Gold, StashGold, Strength, Chip, SkipHealPercent,
+                GuardsHeart, rooms);
     }
 
     // THE WORDS ON THE MAP'S ROOMS: the caption under each tile, the detail
@@ -129,6 +138,8 @@ namespace PrincesPalace.Domain.UiKit
 
             if (facts.GuardsHeart) lines.Add(UiStrings.MapPreviewAnchor.Format());
             if (facts.SkipHealPercent > 0) lines.Add(UiStrings.MapPreviewSkipHeal.Format(facts.SkipHealPercent));
+            if (facts.ClosesRooms == 1) lines.Add(UiStrings.MapPreviewClosesOne.Format());
+            else if (facts.ClosesRooms > 1) lines.Add(UiStrings.MapPreviewCloses.Format(facts.ClosesRooms));
             return string.Join("\n", lines);
         }
 
@@ -147,6 +158,27 @@ namespace PrincesPalace.Domain.UiKit
                 default: return string.Empty;
             }
         }
+
+        // The badge on the node itself: the kind, and the gold or potions when
+        // they are a number. Empty for a node with no prize.
+        public static string ChipTag(MapNodeChip chip)
+        {
+            switch (chip.Kind)
+            {
+                case PrizeKind.Gold: return UiStrings.MapChipGold.Format(chip.Amount);
+                case PrizeKind.Consumable:
+                    return chip.Amount == 1
+                        ? UiStrings.MapChipPotion.Format()
+                        : UiStrings.MapChipPotions.Format(chip.Amount);
+                case PrizeKind.Item: return UiStrings.MapChipGear.Format();
+                case PrizeKind.Book: return UiStrings.MapChipBook.Format();
+                case PrizeKind.Relic: return UiStrings.MapChipRelic.Format();
+                default: return string.Empty;
+            }
+        }
+
+        // The second card's heading while two routes are open.
+        public static string OtherTitle(MapNodeFacts facts) => UiStrings.MapCompareOther.Format(Title(facts));
 
         // "Giant Rat ×2, Wolf": first-seen order, repeats counted.
         public static string EnemyLine(IReadOnlyList<string> names) =>

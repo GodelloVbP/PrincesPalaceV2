@@ -90,7 +90,8 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
             TakeOverInput();
 
-            var choices = RunManager.Choices().OrderBy(n => n.Offset).ThenBy(n => n.Id).ToList();
+            var graph = MapGraph.Of(RunManager.Map);
+            var choices = RunManager.Choices().OrderBy(n => graph.PositionOf(n.Id).X).ThenBy(n => n.Id).ToList();
             Assert.GreaterOrEqual(choices.Count, 2, "fixture: this seed should offer a real choice");
             var target = choices[targetSlot];
             Assert.AreEqual(RoomType.Fight, target.Type,
@@ -99,11 +100,11 @@ namespace PrincesPalace.PlayModeTests
             string entryName = RealmPaths.ButtonName(choices[0]);
             AssertSelectedName(entryName, "the current node's first reachable choice is the declared entry");
 
-            // GENUINE AIMING: Down steps choice to choice, ordered by Slot
-            // ascending (MapGamepadNavigationTests' own pinned rule) -- this
-            // is the property segment 1's own single-choice seed cannot
+            // GENUINE AIMING: Right steps choice to choice in screen order,
+            // left to right (MapGamepadNavigationTests' own pinned rule) --
+            // this is the property segment 1's own single-choice seed cannot
             // exercise at all.
-            for (int i = 0; i < targetSlot; i++) yield return MoveDown();
+            for (int i = 0; i < targetSlot; i++) yield return MoveRight();
 
             string targetName = RealmPaths.ButtonName(target);
             AssertSelectedName(targetName, $"Move should have aimed the selection at slot {targetSlot}, not the entry");

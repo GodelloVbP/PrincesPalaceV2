@@ -159,8 +159,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(RoomType.Fight, entryNode.Type,
                 $"fixture: seed {seed} should put a plain Fight room first among the entry's choices");
 
-            // The node's GameObject name is the pool slot MapColumns projects
-            // it onto, NOT node.Id (RealmPaths.ButtonName).
+            // The node's GameObject name is its pool slot (RealmPaths.ButtonName).
             string entryName = RealmPaths.ButtonName(entryNode);
             AssertSelectedName(entryName,
                 "the current node's first reachable choice is the declared entry");

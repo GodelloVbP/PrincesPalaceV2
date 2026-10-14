@@ -1,10 +1,13 @@
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
+using UnityEngine.UI;
 
 namespace PrincesPalace.PlayModeTests
 {
@@ -13,17 +16,17 @@ namespace PrincesPalace.PlayModeTests
     // header already says there is no Graph group kind, "Map's Graph shape
     // has no groups at all and is entirely this loop [Links]", so
     // MapController.RefreshNavLinks is EXPLICIT LINKS ONLY, rewritten every
-    // Refresh() off RunManager.Choices() (`MapController.cs:245`).
+    // Refresh() off RunManager.Choices().
     //
     // Pinned against seed 4242 (the same seed CancelOpensSystemMenuTests'
     // own MapCancel test already uses). Its first realm, printed once by a
     // throwaway diagnostic: the entry (id 0), then spine room id 1 at offset 1
-    // with a pocket leaving it. The fixture stands the party on id 1
-    // (MapNode6: column 1, row 0 of MapColumns' six-row pool), so the choices
-    // are the pocket's anchor, id 2 (MapNode12, column 2 row 0), and spine
-    // room id 3 (MapNode13, column 2 row 1). Literal from here on, never
-    // recomputed from RunManager.Choices() in the assertions themselves
-    // (CLAUDE.md gotcha 5's formula-pinning rule).
+    // with a pocket leaving it. A node's pool slot is its id, so the fixture
+    // stands the party on id 1 (MapNode1) and the choices are the pocket's
+    // anchor, id 2 (MapNode2, hanging left of the spine), and spine room
+    // id 3 (MapNode3, on the spine): left to right, in that order. Literal
+    // from here on, never recomputed from RunManager.Choices() in the
+    // assertions themselves (CLAUDE.md gotcha 5's formula-pinning rule).
     public class MapGamepadNavigationTests
     {
         private string _root;
@@ -73,6 +76,10 @@ namespace PrincesPalace.PlayModeTests
 
             _map = Object.FindAnyObjectByType<MapController>(FindObjectsInactive.Include);
             Assert.IsNotNull(_map, "the map scene has no MapController");
+
+            // Always repainted: a map left in the overview by the previous
+            // test must come back, and the opening shot must not be running.
+            if (_map.InOverview) _map.SetOverview(false);
             if (NavSceneReuse.Reused) _map.Refresh();
 
             _input = NavSceneReuse.TakeOverInput();
@@ -100,56 +107,147 @@ namespace PrincesPalace.PlayModeTests
         private static GameObject Node(string name) => GameObject.Find(name);
 
         [UnityTest]
-        public IEnumerator EntryIsTheFirstReachableChoice_MapNode12()
+        public IEnumerator EntryIsTheLeftmostChoice_MapNode2()
         {
             SharedScene.MarkDirty("asserts the entry a freshly loaded map selects, not one a reset put back");
             yield return LoadTheMap();
 
-            Assert.AreEqual(Node("MapNode12"), EventSystem.current.currentSelectedGameObject,
-                "the current node's first reachable choice (column 2, row 0) is the declared entry -- " +
+            Assert.AreEqual(Node("MapNode2"), EventSystem.current.currentSelectedGameObject,
+                "the current node's leftmost reachable choice is the declared entry -- " +
                 "current itself is never interactable and would be a dead Submit");
         }
 
         [UnityTest]
-        public IEnumerator Right_FromCurrent_ReachesTheFirstChoice()
+        public IEnumerator Down_FromCurrent_ReachesTheFirstChoice()
         {
             yield return LoadTheMap();
-            EventSystem.current.SetSelectedGameObject(Node("MapNode6"));
-            yield return null;
-
-            yield return Move(1f, 0f);
-
-            Assert.AreEqual(Node("MapNode12"), EventSystem.current.currentSelectedGameObject,
-                "Right from current should reach its first reachable choice");
-        }
-
-        [UnityTest]
-        public IEnumerator Down_FromTheFirstChoice_ReachesTheSecond()
-        {
-            yield return LoadTheMap();
-            EventSystem.current.SetSelectedGameObject(Node("MapNode12"));
+            EventSystem.current.SetSelectedGameObject(Node("MapNode1"));
             yield return null;
 
             yield return Move(0f, -1f);
 
-            Assert.AreEqual(Node("MapNode13"), EventSystem.current.currentSelectedGameObject,
-                "Down should step choice to choice in screen order (top to bottom)");
+            Assert.AreEqual(Node("MapNode2"), EventSystem.current.currentSelectedGameObject,
+                "Down from current should reach its first reachable choice");
+        }
+
+        [UnityTest]
+        public IEnumerator Right_FromTheFirstChoice_ReachesTheSecond()
+        {
+            yield return LoadTheMap();
+            EventSystem.current.SetSelectedGameObject(Node("MapNode2"));
+            yield return null;
+
+            yield return Move(1f, 0f);
+
+            Assert.AreEqual(Node("MapNode3"), EventSystem.current.currentSelectedGameObject,
+                "Right should step choice to choice in screen order (left to right)");
         }
 
         // A separate test rather than a third press chained onto the one
         // above, so each claim reads alone. (Chaining would be safe: the 0.1s
         // uGUI re-press gate is lifted by NavSceneReuse.TakeOverInput.)
         [UnityTest]
-        public IEnumerator Left_FromTheSecondChoice_ReturnsToCurrent()
+        public IEnumerator Left_FromTheSecondChoice_ReturnsToTheFirst()
         {
             yield return LoadTheMap();
-            EventSystem.current.SetSelectedGameObject(Node("MapNode13"));
+            EventSystem.current.SetSelectedGameObject(Node("MapNode3"));
             yield return null;
 
             yield return Move(-1f, 0f);
 
-            Assert.AreEqual(Node("MapNode6"), EventSystem.current.currentSelectedGameObject,
-                "Left from any choice should return to current, the one thing a Graph transition undoes");
+            Assert.AreEqual(Node("MapNode2"), EventSystem.current.currentSelectedGameObject,
+                "Left from the second choice should step back to the first");
+        }
+
+        [UnityTest]
+        public IEnumerator Up_FromAChoice_ReturnsToCurrent()
+        {
+            yield return LoadTheMap();
+            EventSystem.current.SetSelectedGameObject(Node("MapNode3"));
+            yield return null;
+
+            yield return Move(0f, 1f);
+
+            Assert.AreEqual(Node("MapNode1"), EventSystem.current.currentSelectedGameObject,
+                "Up from any choice should return to current, the one thing a Graph transition undoes");
+        }
+
+        // The property that makes the pad usable at all: from where the party
+        // stands, following the d-pad's own links reaches EVERY room it can
+        // walk to. Walked over the live Selectables' navigation, so a link the
+        // controller forgot to write fails here whatever the tests above pin.
+        [UnityTest]
+        public IEnumerator EveryReachableChoiceCanBeReachedWithTheDpad()
+        {
+            yield return LoadTheMap();
+
+            var reachable = ReachableByDpad(Node("MapNode1"));
+            var choices = RunManager.Choices();
+            foreach (var choice in choices)
+            {
+                Assert.IsTrue(reachable.Contains(Node("MapNode" + choice.Id)),
+                    $"the d-pad cannot reach choice {choice.Id}");
+            }
+
+            Assert.GreaterOrEqual(choices.Count, 2, "vacuity: the fixture offers a real choice");
+        }
+
+        // Y: every room is selectable and the d-pad reaches all of them, with
+        // the camera zoomed out; pressing one walks nowhere.
+        [UnityTest]
+        public IEnumerator Overview_LetsTheDpadReachEveryRoom_AndWalksNowhere()
+        {
+            yield return LoadTheMap();
+            SharedScene.MarkDirty("toggles the overview and presses a room in it");
+
+            _map.ToggleOverview();
+            yield return null;
+            yield return null;
+            Assert.IsTrue(_map.InOverview);
+
+            var shown = _map.GetComponentsInChildren<Button>(includeInactive: false)
+                .Where(b => b.name.StartsWith("MapNode") && b.gameObject.activeInHierarchy)
+                .ToList();
+            Assert.AreEqual(RunManager.Map.Nodes.Count, shown.Count);
+
+            var reachable = ReachableByDpad(Node("MapNode1"));
+            foreach (var button in shown)
+            {
+                Assert.IsTrue(reachable.Contains(button.gameObject), $"{button.name} is out of the d-pad's reach");
+            }
+
+            // Submit on a room that is a choice in play still walks nowhere.
+            EventSystem.current.SetSelectedGameObject(Node("MapNode2"));
+            yield return null;
+            _input.SubmitDown = true;
+            yield return DriveFrame();
+            yield return null;
+            Assert.IsFalse(_map.IsWalking, "a press in the overview is read-only");
+            Assert.AreEqual(1, RunManager.CurrentNode.Id);
+
+            _map.ToggleOverview();
+            yield return null;
+            Assert.IsFalse(_map.InOverview);
+        }
+
+        // Every GameObject the d-pad can arrive at from `start`, by following
+        // the explicit navigation the map wrote.
+        private static HashSet<GameObject> ReachableByDpad(GameObject start)
+        {
+            var seen = new HashSet<GameObject> { start };
+            var queue = new Queue<GameObject>();
+            queue.Enqueue(start);
+            while (queue.Count > 0)
+            {
+                var navigation = queue.Dequeue().GetComponent<Selectable>().navigation;
+                foreach (var next in new[] { navigation.selectOnUp, navigation.selectOnDown,
+                             navigation.selectOnLeft, navigation.selectOnRight })
+                {
+                    if (next != null && seen.Add(next.gameObject)) queue.Enqueue(next.gameObject);
+                }
+            }
+
+            return seen;
         }
 
         // The required action: Submit on the entry should choose that room --
@@ -161,7 +259,7 @@ namespace PrincesPalace.PlayModeTests
         {
             yield return LoadTheMap();
             SharedScene.MarkDirty("walks the party to another node, which Refresh does not walk back");
-            EventSystem.current.SetSelectedGameObject(Node("MapNode12"));
+            EventSystem.current.SetSelectedGameObject(Node("MapNode2"));
             yield return null;
 
             Assert.AreEqual(1, RunManager.CurrentNode.Id, "should still be standing on room 1 before Submit");
@@ -178,7 +276,7 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.IsFalse(_map.IsWalking, "the walk should have finished within 3000 frames");
             Assert.AreEqual(2, RunManager.CurrentNode.Id,
-                "Submit on MapNode12 (column 2, row 0, id 2) should have moved the party there exactly once");
+                "Submit on MapNode2 (id 2) should have moved the party there exactly once");
         }
     }
 }

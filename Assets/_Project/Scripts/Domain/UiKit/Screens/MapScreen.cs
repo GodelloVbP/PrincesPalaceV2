@@ -8,31 +8,19 @@ namespace PrincesPalace.Domain.UiKit.Screens
     //
     // The one screen whose contents genuinely are not known at build time -- a
     // realm is generated from a seed at runtime, so the nodes are a POOL sized
-    // from MapLayout.Capacity, which is (columns x rows) and therefore every
-    // cell MapColumns can project a realm onto. The controller places each
-    // used cell for its column's room count.
+    // from MapLayout.MaxNodes, one slot per node id. The controller places each
+    // used slot from MapGraph.
     //
-    // It is also the one screen WIDER THAN THE CANVAS. Nine columns at the
-    // background's own clearing pitch is ~7400 units behind a 1920 window, so
-    // the shape here is viewport -> content -> everything, with the content
-    // rect sliding under a mask and the camera pinning the current room to the
-    // left painted clearing. See MapLayout for why every x is content-local.
+    // It is also the one screen TALLER THAN THE CANVAS: entry at the top, heart
+    // at the bottom, and the content rect sliding up under a mask while the
+    // camera pins the current room near the top. See MapLayout for why every
+    // coordinate is content-local.
     public sealed class MapScreen
     {
-        // A FOREST FLOOR, not a nebula.
-        //
-        // This screen was pointing at Divine_principality_nebula while
-        // forest_map_background.png sat in the same folder unreferenced by
-        // anything -- and that art was clearly drawn for this screen: it is a
-        // top-down canopy with clearings punched through it, one per room, laid
-        // out in columns. The nebula is a fine backdrop for somewhere; the
-        // descent is through a wood.
-        //
-        // TILED, not stretched. It paints one pair of clearing columns, so it
-        // repeats every MapLayout.BackgroundPeriod and scrolls with the leg.
-        // Stretching it flat -- which is what this screen did until now -- put
-        // the clearings wherever the aspect happened to land them and every
-        // room stood on canopy.
+        // A FOREST FLOOR: the top-down canopy painting, tiled down the leg with
+        // every second tile mirrored (MapLayout.BackgroundTileIsMirrored). Its
+        // painted clearings were drawn for the old horizontal map and are not
+        // aligned to the graph; a vertical painting is an art-brief item.
         public const string BackgroundKey = "Assets/_Project/Art/Backgrounds/forest_map_background.png";
 
         // The room tile itself: one painted tree, shared by every room, with
@@ -96,29 +84,29 @@ namespace PrincesPalace.Domain.UiKit.Screens
             }
         }
 
-        public static float TileWidthFor(RoomType type)
-        {
-            switch (type)
-            {
-                case RoomType.Boss: return MapLayout.BossTileWidth;
-                case RoomType.EliteFight: return MapLayout.EliteTileWidth;
-                default: return MapLayout.TileWidth;
-            }
-        }
-
         public UiNode Root;
 
         // The scrolling half. The viewport is the fixed window and does the
-        // clipping; the content is the wide rect that slides under it.
+        // clipping; the content is the tall rect that slides under it.
         public NodeRef Viewport;
         public NodeRef Content;
         public List<NodeRef> Backdrops = new List<NodeRef>();
         public NodeRef Fog;
 
+        // One slot per node id.
         public List<NodeRef> NodeButtons = new List<NodeRef>();
         public List<NodeRef> NodeIcons = new List<NodeRef>();
         public List<NodeRef> NodeLabels = new List<NodeRef>();
         public List<NodeRef> NodeMarkers = new List<NodeRef>();
+
+        // The fixed node grammar (plan section 7): pips for strength, three to
+        // a node and flat in slot order, and one prize chip per node.
+        public List<NodeRef> NodePips = new List<NodeRef>();
+        public List<NodeRef> NodeChips = new List<NodeRef>();
+        public List<NodeRef> NodeChipTexts = new List<NodeRef>();
+
+        // The painted fog over a room the focused choice would close off.
+        public List<NodeRef> NodeVeils = new List<NodeRef>();
 
         // Every straight piece of every trail. Flat rather than nested per
         // link, because the controller walks links in one pass and a jagged
@@ -130,6 +118,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // end up with a walked surface inside an unreachable edge.
         public List<NodeRef> TrailCores = new List<NodeRef>();
 
+        // The roots joining each anchor to the heart, the same two layers as a
+        // trail.
+        public List<NodeRef> RootSegments = new List<NodeRef>();
+        public List<NodeRef> RootCores = new List<NodeRef>();
+
+        // The heart's anchors: portraits and their names, the front slots then
+        // the queue (MapGraph.SlotCentre).
+        public List<NodeRef> HeartPortraits = new List<NodeRef>();
+        public List<NodeRef> HeartNames = new List<NodeRef>();
+
         public NodeRef Walker;
 
         public NodeRef TitleLabel;
@@ -137,6 +135,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef GoldLabel;
         public NodeRef AbandonButton;
         public NodeRef RoomMessageLabel;
+        public NodeRef OverviewLabel;
 
         // "Somebody wants looking at": how many characters carry a pip in the
         // CHARACTER tab (plan C20). Shown whenever that is more than none; a
@@ -148,12 +147,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // keeps its own active state so "nothing waits" is still the label's.
         public NodeRef AttentionBadge;
 
-        // The detail card for the hovered or focused room. Inactive until a
-        // room is pointed at; the controller fills the two labels from
-        // MapNodeCard.
+        // The detail card for the hovered or focused room, and a second one
+        // beside it while two routes are open. Inactive until a room is
+        // pointed at; the controller fills the labels from MapNodeCard.
         public NodeRef PreviewPanel;
         public NodeRef PreviewTitle;
         public NodeRef PreviewBody;
+        public NodeRef ComparePanel;
+        public NodeRef CompareTitle;
+        public NodeRef CompareBody;
 
         // The same overlay the hub and the fight mount. Live here:
         // between rooms is when gear is meant to change.
@@ -178,24 +180,21 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // descent, and the hub has none to act on.
         public DebugMenuScreen Debug;
 
-        // The strip under the lowest row of rooms and their captions (y -418),
-        // shared by the room detail card and the attention badge.
-        private const float BottomStripY = -478f;
+        // The bottom strip, under the lowest row the camera shows: the detail
+        // card, or the pair of them.
+        private const float CardY = -442f;
+        private static readonly UiVec CardSize = new UiVec(700f, 176f);
+        private const float CardGap = 20f;
 
-        // The card is taller than the badge (three body lines: enemies, pay and
-        // prize, the skip heal or the anchor's promise), so it sits a little
-        // higher to keep its foot on screen.
-        private const float PreviewY = -470f;
-        private static readonly UiVec PreviewSize = new UiVec(700f, 136f);
-        private static readonly UiVec AttentionBadgeSize = new UiVec(760f, 84f);
+        private static readonly UiVec AttentionBadgeSize = new UiVec(560f, 88f);
 
-        // Anchored to the content rect's LEFT edge, which is the origin every
-        // MapLayout x is measured from. Declared once here so no construction
-        // site restates it and drifts.
-        private static readonly UiVec ContentEdge = new UiVec(0f, 0.5f);
+        // Anchored to the content rect's TOP CENTRE, which is the origin every
+        // MapLayout coordinate is measured from. Declared once here so no
+        // construction site restates it and drifts.
+        private static readonly UiVec ContentTop = new UiVec(0.5f, 1f);
 
         private static Place OnContent(float x, float y) =>
-            Place.Pin(ContentEdge, UiVec.Centre, new UiVec(x, y));
+            Place.Pin(ContentTop, UiVec.Centre, new UiVec(x, y));
 
         // partyRosterCardCount and systemMenuLabelWidths thread straight through to
         // SystemMenuScreen.
@@ -206,6 +205,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
         {
             var screen = new MapScreen();
 
+            // THE TOP BAND (plan section 7): the floor, the realm's name with the
+            // rooms walked, and the gold.
+            //
             // FunctionalHeading, not CeremonialTitle -- the map is a working
             // screen the player passes through every room, not a title or a
             // ceremonial moment the way Defeat/Reckoning's own titles are.
@@ -220,16 +222,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // the shop nor the menu is guaranteed to be the next thing the
             // player opens, so the map is where a pending book, point or
             // reward has to say so, and a 16 px line at the top corner was
-            // missed (AUDIT #254). It sits in the bottom strip below the
-            // lowest row of rooms, level with the room detail card, where the
-            // eye is while choosing a route. 720 wide at Body 26 wraps the
-            // three-reason worst case onto two lines inside a 760x84 frame.
-            var attention = Ui.Label("MapAttentionLabel", UiStrings.MapAttention, new UiVec(720f, 64f), 26,
+            // missed (AUDIT #254). It sits under the abandon button, out of the
+            // bottom strip the detail cards use. 520 wide at Body 26 wraps the
+            // three-reason worst case onto two lines inside a 560x88 frame.
+            var attention = Ui.Label("MapAttentionLabel", UiStrings.MapAttention, new UiVec(520f, 72f), 26,
                     FightHudPalette.GoldLight, Place.At(0f, 0f))
                 .TextAligned(UiTextAlign.Centre)
                 .Styled(TypographyRole.Body)
                 .Inactive();
-            var attentionBadge = Ui.OutlineBox("MapAttentionBadge", Place.At(440f, BottomStripY), AttentionBadgeSize,
+            var attentionBadge = Ui.OutlineBox("MapAttentionBadge", Place.At(-660f, 372f), AttentionBadgeSize,
                 FightHudPalette.PanelPrimary, FightHudPalette.BorderGold, new[] { attention })
                 .Inactive();
             screen.AttentionBadge = attentionBadge;
@@ -251,34 +252,38 @@ namespace PrincesPalace.Domain.UiKit.Screens
             //
             // Sits UNDER the depth line rather than over the wood, because it
             // is a heading about the descent's state and not a label on
-            // anything in the scene. 900 wide at y 364 clears depth's band
-            // (387-421) with room to spare; the treasure template's worst-case
-            // sample is what E1 measures the box against.
+            // anything in the scene. Beside the attention badge, not over it.
             //
             // Sized for the longest line any room can produce -- the unbuilt
             // shop's apology -- so a placeholder message cannot overflow a box
             // fitted to the short ones.
             var roomMessage = Ui.Label("MapRoomMessageLabel", UiStrings.MapRoomShop,
-                new UiVec(900f, 32f), 18, "#C8BBE4", Place.At(0f, 364f))
+                new UiVec(760f, 32f), 18, "#C8BBE4", Place.At(190f, 364f))
                 .Styled(TypographyRole.Body);
 
-            // The card for whichever room is hovered or focused, in the same
-            // bottom strip. Inspecting never commits: the card shows for any
-            // visible room, reachable or not, so a route can be planned.
-            var previewTitle = Ui.Label("MapPreviewTitle", UiString.Runtime, new UiVec(PreviewSize.X - 40f, 28f), 22,
-                    FightHudPalette.HeadingGold, Place.At(0f, 46f))
-                .TextAligned(UiTextAlign.Left)
-                .Styled(TypographyRole.FunctionalHeading);
-            var previewBody = Ui.Label("MapPreviewBody", UiString.Runtime, new UiVec(PreviewSize.X - 40f, 84f), 19,
-                    FightHudPalette.TextPrimary, Place.At(0f, -16f))
-                .TextAligned(UiTextAlign.Left)
-                .Styled(TypographyRole.Body);
-            var previewPanel = Ui.OutlineBox("MapPreviewPanel", Place.At(-330f, PreviewY), PreviewSize,
-                FightHudPalette.PanelViolet, FightHudPalette.BorderGold, new[] { previewTitle, previewBody })
-                .Inactive();
+            // The hint for Y, and the overview's own banner in its place while
+            // it is up; the same label, its text swapped by the controller.
+            var overview = Ui.Label("MapOverviewLabel", UiStrings.MapOverviewHint, new UiVec(460f, 28f), 18,
+                    FightHudPalette.GoldLight, Place.At(660f, 410f))
+                .TextAligned(UiTextAlign.Right)
+                .Styled(TypographyRole.TacticalData);
+            screen.OverviewLabel = overview;
+
+            // The cards for whichever room is hovered or focused, in the bottom
+            // strip. Inspecting never commits: a card shows for any visible
+            // room, reachable or not, so a route can be planned. The second
+            // card appears while two routes are open, so the choice reads side
+            // by side.
+            var previewPanel = BuildCard("MapPreview", -(CardSize.X + CardGap) * 0.5f,
+                out var previewTitle, out var previewBody);
             screen.PreviewPanel = previewPanel;
             screen.PreviewTitle = previewTitle;
             screen.PreviewBody = previewBody;
+            var comparePanel = BuildCard("MapCompare", (CardSize.X + CardGap) * 0.5f,
+                out var compareTitle, out var compareBody);
+            screen.ComparePanel = comparePanel;
+            screen.CompareTitle = compareTitle;
+            screen.CompareBody = compareBody;
 
             screen.TitleLabel = title;
             screen.DepthLabel = depth;
@@ -286,37 +291,42 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.AbandonButton = abandon;
             screen.RoomMessageLabel = roomMessage;
 
-            // The painted forest, repeated. Tiles are 1920 wide and repeat
-            // every 1726, so consecutive tiles overlap by 194 -- the art's own
-            // clearing pair is what has to line up end to end, not its canvas.
-            // the forest tile is 1920 wide but repeats every 1726, so
-            // neighbouring tiles overlap by design - the clearings are what
-            // tile, not the canvas
+            // The painted wood, tiled DOWN the leg. Every second tile is
+            // mirrored top to bottom by the controller so neighbouring edges
+            // match.
             var backdrops = Ui.Pool("MapBackdrops", MapLayout.MaxBackgroundTiles, i => screen.BuildBackdrop(i))
                 .AsDecor();
 
             var trails = Ui.Pool("MapTrails", MapLayout.SegmentCapacity, i => screen.BuildTrailSegment(i))
                 .AllowOverlap("a pool's own rect is the whole canvas because its members are placed at runtime; it draws nothing itself and takes no clicks");
 
-            var nodes = Ui.Pool("MapNodes", MapLayout.Capacity, i => screen.BuildNode(i))
+            var roots = Ui.Pool("MapRoots", MapLayout.RootSegmentCapacity, i => screen.BuildRootSegment(i))
+                .AllowOverlap("a pool's own rect is the whole canvas because its members are placed at runtime; it draws nothing itself and takes no clicks");
+
+            var nodes = Ui.Pool("MapNodes", MapLayout.MaxNodes, i => screen.BuildNode(i))
                 .AllowOverlap("an invisible pool container spans the panel by construction and has no graphic to intercept anything");
+
+            var heartPortraits = Ui.Pool("MapHeartPortraits", MapGraph.HeartSlots, i => screen.BuildHeartPortrait(i))
+                .AllowOverlap("a pool's own rect is the whole canvas because its members are placed at runtime; it draws nothing itself and takes no clicks");
+
+            var heartNames = Ui.Pool("MapHeartNames", MapGraph.HeartSlots, i => screen.BuildHeartName(i))
+                .AllowOverlap("a pool's own rect is the whole canvas because its members are placed at runtime; it draws nothing itself and takes no clicks");
 
             var walker = screen.BuildWalker();
             var fog = screen.BuildFog();
 
-            // BACKDROP, then TRAILS, then NODES, then the WALKER, then FOG.
-            // uGUI paints siblings in order and this is the whole back-to-front
-            // stack: a path crossing over the room it leads to would read as
-            // the rooms being behind the map rather than on it, the figure
-            // walks IN FRONT of the wood it is walking through, and the fog has
-            // to cover the forest it is fading out.
+            // BACKDROP, then TRAILS, then ROOTS, then NODES, then the HEART's
+            // anchors, then the WALKER, then FOG. uGUI paints siblings in order
+            // and this is the whole back-to-front stack: a path crossing over
+            // the room it leads to would read as the rooms being behind the map
+            // rather than on it, the figure walks IN FRONT of the wood it is
+            // walking through, and the fog has to cover the forest it is
+            // fading out.
             var content = Ui.Panel("MapContent",
-                    Place.Pin(ContentEdge, ContentEdge, UiVec.Zero),
-                    UiSize.Fixed(
-                        MapLayout.ContentWidth(MapLayout.Columns, UiFrames.Reference.X),
-                        UiFrames.Reference.Y),
-                    backdrops, trails, nodes, walker, fog)
-                .AllowOverflow("the content rect is deliberately wider than the window it sits in - that overflow IS the scroll, and MapViewport clips it");
+                    Place.Pin(ContentTop, ContentTop, UiVec.Zero),
+                    UiSize.Fixed(UiFrames.Reference.X, MapLayout.MaxContentHeight),
+                    backdrops, trails, roots, nodes, heartPortraits, heartNames, walker, fog)
+                .AllowOverflow("the content rect is deliberately taller than the window it sits in - that overflow IS the scroll, and MapViewport clips it");
 
             screen.Content = content;
 
@@ -365,29 +375,44 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.Debug = debug;
 
             screen.Root = Ui.Panel("MapPanel", UiSize.Fill,
-                viewport, title, depth, gold, attentionBadge, previewPanel, abandon, roomMessage, shop.Root, eventRoom.Root, systemMenu.Root,
-                debug.Root);
+                viewport, title, depth, gold, attentionBadge, previewPanel, comparePanel, abandon,
+                roomMessage, overview, shop.Root, eventRoom.Root, systemMenu.Root, debug.Root);
 
             return screen;
         }
 
-        // One repeat of the painted forest, pinned by its own LEFT edge so tile
-        // i starts exactly where the clearing grid says it should.
+        // One detail card: a gold-rimmed violet plate with a heading and up to
+        // five body lines (enemies, pay and prize, the anchor's promise, the
+        // skip heal, the rooms it closes).
+        private static UiNode BuildCard(string stem, float x, out NodeRef titleRef, out NodeRef bodyRef)
+        {
+            var title = Ui.Label(stem + "Title", UiString.Runtime, new UiVec(CardSize.X - 40f, 28f), 22,
+                    FightHudPalette.HeadingGold, Place.At(0f, 62f))
+                .TextAligned(UiTextAlign.Left)
+                .Styled(TypographyRole.FunctionalHeading);
+            var body = Ui.Label(stem + "Body", UiString.Runtime, new UiVec(CardSize.X - 40f, 118f), 19,
+                    FightHudPalette.TextPrimary, Place.At(0f, -16f))
+                .TextAligned(UiTextAlign.Left)
+                .Styled(TypographyRole.Body);
+            titleRef = title;
+            bodyRef = body;
+
+            return Ui.OutlineBox(stem + "Panel", Place.At(x, CardY), CardSize,
+                FightHudPalette.PanelViolet, FightHudPalette.BorderGold, new[] { title, body })
+                .Inactive();
+        }
+
+        // One tile of the painted wood, pinned by its own top edge so tile i
+        // starts exactly where the leg's tiling says it should.
         private UiNode BuildBackdrop(int index)
         {
-            // FILLHEIGHT, NOT FILL, and the width is the tile's own.
-            //
-            // Fill takes both axes from the parent, and the parent is the whole
-            // scrolling leg -- 8824 map-units of it. One repeat of the forest
-            // was being stretched across all of it, which showed as a forest
-            // magnified about five times. See MapLayout.BackgroundTileWidth.
-            //
-            // The height still fills, because that axis genuinely is the
-            // content's: the wood is as tall as the map is, whatever that
-            // turns out to be.
+            // Fixed to the art's own canvas. Fill would take the parent's size,
+            // and the parent is the whole scrolling leg: one tile of the forest
+            // stretched over thousands of units, which is the "zoomed in forest"
+            // this screen once shipped (MapScreenTests).
             var tile = Ui.Sprite($"MapBackdrop{index}", BackgroundKey,
-                    Place.Pin(ContentEdge, ContentEdge, new UiVec(MapLayout.BackgroundTileX(index), 0f)),
-                    UiSize.FillHeight(MapLayout.BackgroundTileWidth))
+                    Place.Pin(ContentTop, ContentTop, new UiVec(0f, MapLayout.BackgroundTileY(index))),
+                    UiSize.Fixed(MapLayout.BackgroundTileWidth, MapLayout.BackgroundTileHeight))
                 .AsDecor()
                 .AllowOverflow("the last tile deliberately overhangs the content it fills - a forest that stopped exactly at the content edge would show a hard cut");
 
@@ -407,29 +432,29 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // actual squad leader turns out to have.
         private UiNode BuildWalker()
         {
-            var entrance = MapWalk.Standing(new UiVec(MapLayout.ColumnX(0), MapLayout.RowY(0, 1)));
+            var entrance = MapWalk.Standing(new UiVec(0f, -MapLayout.TopMargin));
 
             var walker = Ui.Sprite("MapWalker", WalkerKey,
                     OnContent(entrance.X, entrance.Y),
                     UiSize.Fixed(MapWalk.FigureHeight * ShawnAspect, MapWalk.FigureHeight))
                 .AsDecor()
-                .AllowOverflow("the figure stands at the clearing's edge and overhangs the canopy on purpose - so do the trails it walks along, and there is no room inside a 155-wide clearing for a figure half again as wide as it is tall")
+                .AllowOverflow("the figure stands beside its tile and overhangs the canopy on purpose - so do the trails it walks along")
                 .Inactive();
 
             Walker = walker;
             return walker;
         }
 
-        // The fade at the end of the wood. Declared where a full-length leg
-        // puts it; the controller moves it if a leg is shorter.
+        // The fade at the end of the wood, below the heart. Declared at the
+        // bottom of the tallest leg; the controller moves it to the real one.
         private UiNode BuildFog()
         {
-            var label = Ui.Label("MapFogLabel", UiStrings.MapFog, new UiVec(220f, 80f), 15, "#6B6180",
-                Place.At(60f, 0f));
+            var label = Ui.Label("MapFogLabel", UiStrings.MapFog, new UiVec(320f, 80f), 15, "#6B6180",
+                Place.At(0f, 0f));
 
             var fog = Ui.Solid("MapFog", "#040503EB",
-                    OnContent(MapLayout.FogX(MapLayout.Columns) + MapLayout.FogWidth * 0.5f, 0f),
-                    UiSize.Fixed(MapLayout.FogWidth, 680f));
+                    OnContent(0f, -MapLayout.MaxContentHeight + FogHeight * 0.5f),
+                    UiSize.Fixed(UiFrames.Reference.X, FogHeight));
 
             fog.Children.Add(label);
 
@@ -437,9 +462,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
             return fog;
         }
 
-        // One straight piece of one trail. Declared at the origin with a
+        public const float FogHeight = 280f;
+
+        // One straight piece of one trail. Declared at the top with a
         // placeholder size because a segment's real position, length and
-        // rotation all depend on which two rooms a leg happened to generate --
+        // rotation all depend on which two rooms a realm happened to generate --
         // the same arrangement the fight screen's VFX and damage-popup pools
         // use, and the reason the pool rather than the member carries the audit
         // exemption.
@@ -469,7 +496,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .AsDecor();
 
             var segment = Ui.Solid($"MapTrail{index}", TrailAheadHex,
-                    new UiVec(8f, 8f), OnContent(0f, 0f))
+                    new UiVec(8f, 8f), OnContent(0f, -MapLayout.TopMargin))
                 .AsDecor()
                 .Inactive();
 
@@ -480,10 +507,29 @@ namespace PrincesPalace.Domain.UiKit.Screens
             return segment;
         }
 
-        // The four states a trail can be in, straight from v1. Colours rather
-        // than one tint at four alphas: a walked path and an unreachable one
-        // differ in what they MEAN, and the eye separates hue faster than it
-        // separates opacity.
+        // A root: the trail's two layers in living wood. "MapRoot" and "MapGrip"
+        // stay off the "MapTrail" prefix the trail tests count.
+        private UiNode BuildRootSegment(int index)
+        {
+            var core = Ui.Solid($"MapGrip{index}", RootCoreLivingHex,
+                    Place.Frac(new UiVec(0f, 0.3f), new UiVec(1f, 0.7f)), UiSize.Fill)
+                .AsDecor();
+
+            var segment = Ui.Solid($"MapRoot{index}", RootLivingHex,
+                    new UiVec(8f, 8f), OnContent(0f, -MapLayout.TopMargin))
+                .AsDecor()
+                .Inactive();
+
+            segment.Children.Add(core);
+
+            RootSegments.Add(segment);
+            RootCores.Add(core);
+            return segment;
+        }
+
+        // The four states a trail can be in. Colours rather than one tint at
+        // four alphas: a walked path and an unreachable one differ in what they
+        // MEAN, and the eye separates hue faster than it separates opacity.
         //
         // The verge half, which is the darker outer edge.
         public const string TrailTakenHex = "#3A2312";
@@ -500,6 +546,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public const string TrailCoreAheadHex = "#6E5537A0";
         public const string TrailCoreClosedHex = "#3F332552";
 
+        // A root while its anchor stands, and once it has fallen.
+        public const string RootLivingHex = "#1F2E14F2";
+        public const string RootCoreLivingHex = "#6F8F3CF2";
+        public const string RootWitheredHex = "#2A2420A0";
+        public const string RootCoreWitheredHex = "#4A4038A0";
+
         // A road has to be thick enough for the verge to read AS a verge --
         // at 7px an "ahead" trail has only two pixels of edge and two of
         // core, so the other states are wider.
@@ -507,6 +559,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public const float TrailWidthOpen = 20f;
         public const float TrailWidthAhead = 12f;
         public const float TrailWidthClosed = 7f;
+
+        public const float RootWidthLiving = 18f;
+        public const float RootWidthWithered = 8f;
 
         // The per-state tile tints live in MapController, not here, and
         // deliberately break the convention the trail colours above follow.
@@ -520,19 +575,20 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public const string CaptionHex = "#EDE6FF";
         public const string RefusalHex = "#E0786E";
 
+        // The pip and the chip: gold on the tile's own canopy, the chip's
+        // plate dark so its text keeps contrast on any prize.
+        public const string PipHex = "#F2DB9E";
+        public const string ChipRimHex = "#C9A24B";
+        public const string ChipFillHex = "#241A38F2";
+        public const string ChipTextHex = "#F2DB9E";
+
+        // The fog drawn over a room a focused choice would close off.
+        public const string VeilHex = "#0B0813B8";
+
         private const float MarkerWidth = 118f;
-        private const float MarkerHeight = 26f;
 
         private UiNode BuildNode(int index)
         {
-            int column = index / MapLayout.Rows;
-            int row = index % MapLayout.Rows;
-
-            // The cell's place in a FULL column. A column's rows depend on how
-            // many rooms it holds (MapLayout.RowY), which only the realm knows,
-            // so the controller re-places every used node on each refresh.
-            var place = OnContent(MapLayout.ColumnX(column), MapLayout.RowY(row, MapLayout.Rows));
-
             // Declared at the WIDEST a tile can be, because which slot holds the
             // boss is a runtime fact. The controller shrinks it per type; the
             // audit therefore checks a box at least as big as the real one.
@@ -543,8 +599,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // GameObjects with that name under one parent -- the wiring bound
             // this one and painted it, while every lookup by name silently took
             // the emitter's empty one. UiAudit's A4b is what catches it now.
-            var label = Ui.Label($"MapNode{index}Name", UiString.Runtime, new UiVec(MapLayout.MaxTileWidth, 28f), 13,
-                    CaptionHex, Place.At(0f, -size.Y * 0.5f - 16f))
+            var label = Ui.Label($"MapNode{index}Name", UiString.Runtime,
+                    new UiVec(MapLayout.CaptionWidth, MapLayout.CaptionHeight), 13,
+                    CaptionHex, Place.At(0f, -size.Y * 0.5f - MapLayout.CaptionGap))
                 .AllowOverflow("the caption sits BELOW its node deliberately - inside, it would cover the room icon it names");
 
             // The type icon, standing in the clearing under the tree's canopy
@@ -567,9 +624,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // readable at once. Words in a gold-rimmed plate: the flat 18 px
             // square it replaced said nothing to a player who had not been
             // told what it meant.
-            var markerSize = new UiVec(MarkerWidth, MarkerHeight);
+            var markerSize = new UiVec(MarkerWidth, MapLayout.MarkerHeight);
             var marker = Ui.Solid($"MapNode{index}Marker", FightHudPalette.PanelViolet,
-                    Place.At(0f, size.Y * 0.5f + 18f), UiSize.Fixed(markerSize))
+                    Place.At(0f, size.Y * 0.5f + MapLayout.MarkerGap), UiSize.Fixed(markerSize))
                 .AllowOverflow("the you-are-here tag sits ABOVE its node so the node keeps saying what KIND of room it is")
                 .Inactive();
             foreach (var edge in Ui.Rim($"MapNode{index}Marker", markerSize, FightHudPalette.BorderGold))
@@ -579,7 +636,48 @@ namespace PrincesPalace.Domain.UiKit.Screens
             marker.Children.Add(Ui.Label($"MapNode{index}MarkerText", UiStrings.MapYouAreHere, markerSize, 13,
                 FightHudPalette.GoldLight, Place.At(0f, 0f)).Styled(TypographyRole.TacticalData));
 
-            var button = Ui.Button($"MapNode{index}", UiString.Runtime, size, 12, place);
+            // Strength as pips along the tile's top edge, inside it.
+            var pips = new List<UiNode>();
+            for (int p = 0; p < NodeStrength.Max; p++)
+            {
+                var pip = Ui.Solid($"MapNode{index}Pip{p}", PipHex,
+                        Place.At((p - (NodeStrength.Max - 1) * 0.5f) * MapLayout.PipPitch, size.Y * 0.5f - 18f),
+                        UiSize.Fixed(MapLayout.PipSize, MapLayout.PipSize))
+                    .AsDecor()
+                    .Inactive();
+                pips.Add(pip);
+                NodePips.Add(pip);
+            }
+
+            // The prize chip, beside the tile; its size follows strength, set
+            // at runtime. A gold rim is the chip itself and the dark fill sits
+            // inside it by a fixed inset, so resizing the chip resizes both.
+            var chipText = Ui.Label($"MapNode{index}ChipText", UiString.Runtime,
+                    new UiVec(MapLayout.MaxChipWidth - 6f, MapLayout.MaxChipHeight - 4f), 12,
+                    ChipTextHex, Place.Stretch(3f, 3f, 2f, 2f))
+                .Styled(TypographyRole.TacticalData);
+            var chipFill = Ui.Solid($"MapNode{index}ChipFill", ChipFillHex,
+                    Place.Stretch(2f, 2f, 2f, 2f), UiSize.Fill)
+                .AsDecor();
+            chipFill.Children.Add(chipText);
+            var chip = Ui.Solid($"MapNode{index}Chip", ChipRimHex,
+                    Place.At(size.X * 0.5f + MapLayout.ChipGap + MapLayout.MaxChipWidth * 0.5f, -20f),
+                    UiSize.Fixed(MapLayout.MaxChipWidth, MapLayout.MaxChipHeight))
+                .AsDecor()
+                .AllowOverflow("the chip stands beside its tile so the icon stays readable")
+                .Inactive();
+            chip.Children.Add(chipFill);
+
+            // The fog over the whole tile when a focused choice would close
+            // this room off.
+            // The tree again, tinted by the controller (VeilHex) rather than a
+            // flat rect, so the fog keeps the tile's own silhouette.
+            var veil = Ui.Sprite($"MapNode{index}Veil", TreeKey, Place.Stretch(0f, 0f, 0f, 0f), UiSize.Fill)
+                .AsDecor()
+                .Inactive();
+
+            var button = Ui.Button($"MapNode{index}", UiString.Runtime, size, 12,
+                OnContent(0f, -MapLayout.TopMargin));
 
             // The painted tree IS the button's plate, so the tile the player
             // clicks and the tile they see are one graphic. Without this the
@@ -587,17 +685,50 @@ namespace PrincesPalace.Domain.UiKit.Screens
             button.SpriteKey = TreeKey;
 
             button.Children.Add(icon);
+            foreach (var pip in pips) button.Children.Add(pip);
+            button.Children.Add(veil);
             button.Children.Add(label);
             button.Children.Add(marker);
+            button.Children.Add(chip);
 
             NodeButtons.Add(button);
             NodeIcons.Add(icon);
             NodeLabels.Add(label);
             NodeMarkers.Add(marker);
+            NodeChips.Add(chip);
+            NodeChipTexts.Add(chipText);
+            NodeVeils.Add(veil);
 
-            // Hidden until a leg says otherwise: most of the pool is empty in
-            // any given leg, and an inactive node cannot be clicked by accident.
+            // Hidden until a realm says otherwise: most of the pool is empty in
+            // any given realm, and an inactive node cannot be clicked by accident.
             return button.Inactive();
+        }
+
+        // Where an anchor stands at the heart: its portrait, in the slot
+        // MapGraph.SlotCentre gives. The art is the anchor's own idle, swapped
+        // in at runtime.
+        private UiNode BuildHeartPortrait(int index)
+        {
+            var portrait = Ui.Sprite($"MapHeartPortrait{index}", EliteIconKey,
+                    OnContent(0f, -MapLayout.TopMargin),
+                    UiSize.Fixed(MapGraph.FrontWidth, MapGraph.FrontWidth))
+                .AsDecor()
+                .AllowOverflow("an anchor's idle is drawn wider than its slot's box and overhangs the wood")
+                .Inactive();
+
+            HeartPortraits.Add(portrait);
+            return portrait;
+        }
+
+        private UiNode BuildHeartName(int index)
+        {
+            var name = Ui.Label($"MapHeartName{index}", UiString.Runtime,
+                    new UiVec(MapGraph.FrontWidth, MapLayout.CaptionHeight), 13, CaptionHex,
+                    OnContent(0f, -MapLayout.TopMargin))
+                .Inactive();
+
+            HeartNames.Add(name);
+            return name;
         }
     }
 }

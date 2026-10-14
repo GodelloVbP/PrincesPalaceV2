@@ -30,16 +30,22 @@ namespace PrincesPalace.PlayModeTests
             throw new AssertionException("No seed under 4000 has a first realm with " + what + ".");
         }
 
-        // The room first in screen order among the entry's choices: row 0 of
-        // column 1, which is the map's pad entry on a fresh run.
-        public static RealmNode FirstChoice(RealmMap map) =>
-            map.ReachableFrom(map.Entry.Id).Select(map.Node).OrderBy(n => n.Id).First();
+        // The room first in screen order among the entry's choices: the
+        // leftmost, which is the map's pad entry on a fresh run.
+        public static RealmNode FirstChoice(RealmMap map)
+        {
+            var graph = MapGraph.Of(map);
+            return map.ReachableFrom(map.Entry.Id).Select(map.Node)
+                .OrderBy(n => graph.PositionOf(n.Id).X).ThenBy(n => n.Id).First();
+        }
 
         // The live run's first choice in screen order from where it stands:
-        // its pad entry. Choices share a column at most with each other, and
-        // within a column rows follow id.
-        public static RealmNode FirstChoiceFromHere() =>
-            RunManager.Choices().OrderBy(n => n.Offset).ThenBy(n => n.Id).First();
+        // its pad entry. Screen order is left to right.
+        public static RealmNode FirstChoiceFromHere()
+        {
+            var graph = MapGraph.Of(RunManager.Map);
+            return RunManager.Choices().OrderBy(n => graph.PositionOf(n.Id).X).ThenBy(n => n.Id).First();
+        }
 
         // A room of `type` that opens its pocket (room 0): the first choice
         // from the spine room the pocket leaves, one column over; null when
@@ -47,11 +53,20 @@ namespace PrincesPalace.PlayModeTests
         public static RealmNode PocketHead(RealmMap map, RoomType type) =>
             map.Pockets.Select(p => map.Node(p.Rooms[0])).FirstOrDefault(n => n.Type == type);
 
+        // The same, only for a pocket on an odd stretch: it hangs to the left
+        // of the spine, so its head is the first choice in screen order.
+        public static RealmNode LeftPocketHead(RealmMap map, RoomType type) =>
+            map.Pockets.Where(p => p.Stretch % 2 == 1).Select(p => map.Node(p.Rooms[0]))
+                .FirstOrDefault(n => n.Type == type);
+
         // A plain Fight standing alone on the spine just past a pocket, so
         // from the room before it the party chooses between the pocket and
         // this fight: a real choice, with the fight second in screen order.
+        // Only a pocket on an odd stretch qualifies: it hangs to the left of
+        // the spine, so the fight is to its right.
         public static RealmNode FightPastAPocket(RealmMap map) =>
             map.Pockets
+                .Where(p => p.Stretch % 2 == 1)
                 .Select(p => map.SpineAt(p.Stretch + 1).ToList())
                 .Where(level => level.Count == 1 && level[0].Type == RoomType.Fight)
                 .Select(level => level[0])
@@ -103,8 +118,8 @@ namespace PrincesPalace.PlayModeTests
             return path;
         }
 
-        // The pool GameObject name a node is drawn on (MapColumns).
+        // The pool GameObject name a node is drawn on (MapGraph.IndexOf).
         public static string ButtonName(RealmNode node) =>
-            "MapNode" + MapColumns.Of(RunManager.Map).IndexOf(node.Id);
+            "MapNode" + MapGraph.Of(RunManager.Map).IndexOf(node.Id);
     }
 }

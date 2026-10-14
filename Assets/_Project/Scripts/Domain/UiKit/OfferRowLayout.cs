@@ -1,25 +1,30 @@
 namespace PrincesPalace.Domain.UiKit
 {
-    // Where the Reckoning's offer cards sit, and how wide they are, for a row
-    // of any width.
+    // Where a Reckoning page's cards sit, and how wide they are, for a row of
+    // any width.
     //
-    // ITS OWN TYPE BECAUSE THE ROW IS NOT ALWAYS FULL. The tree is built at
-    // ItemOfferTable.OfferCount cards, but a thin content pool can still roll
-    // fewer than that -- and the controller re-centres and resizes the row for
-    // whatever count is actually on screen (ReckoningController.LayOutOfferRow),
-    // from the same arithmetic the tree was built with. One function shared by
-    // both rather than the same numbers written out twice.
+    // ITS OWN TYPE BECAUSE THE ROW IS NOT ALWAYS THE SAME. A page shows k + 2
+    // cards for k choices (docs/PLAN_ITEMS.md 1.2), so a row is three wide for
+    // the common one-choice page and MaxCards wide for a boss and two anchors.
+    // The tree is built at MaxCards and ReckoningController.LayOutOfferRow
+    // re-centres and resizes it for whatever count is on screen, from the same
+    // arithmetic the tree was built with. One function shared by both rather
+    // than the same numbers written out twice.
     //
     // Pure, engine-free and EditMode-testable, the same posture MapLayout takes
     // for the descent map's tiles.
     //
     // BuildOffer's own comment records the constraint this arithmetic answers
-    // to: "The three cards run to x 540 against a clip half-width of 540.3.
-    // That is deliberate -- the offers are sized to use the full interior --
-    // but it means widening a card by even a pixel now fails A2." So the
-    // budget is fixed and the cards divide it, at any count.
+    // to: the row runs to the clip's half-width, so widening a card by even a
+    // pixel fails the containment audit. The budget is fixed and the cards
+    // divide it, at any count.
     public static class OfferRowLayout
     {
+        // The most cards one page shows: k + 2 for k = 3, a boss and two
+        // anchors settled together. A fourth chip would not fit; I3 revisits
+        // the width when it lets chips pile up.
+        public const int MaxCards = 5;
+
         // The painted interior the row has to live inside, edge to edge.
         //
         // DERIVED from the screen that paints the border rather than restated
@@ -31,7 +36,7 @@ namespace PrincesPalace.Domain.UiKit
         // row is measured to the fraction.
         //
         // MapLayout sets the precedent for reading a constant from the type
-        // that owns it (MapColumns) rather than keeping a copy in sync.
+        // that owns it rather than keeping a copy in sync.
         public const float RowBudget = Screens.ReckoningScreen.ContentHalfWidth * 2f;
 
         public const float CardGap = 30f;

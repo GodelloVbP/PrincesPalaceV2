@@ -2,221 +2,198 @@ using PrincesPalace.Domain.Dungeon;
 
 namespace PrincesPalace.Domain.UiKit
 {
-    // Where a realm node sits on screen.
+    // Where a realm node sits on screen, as numbers (docs/PLAN_RUN_MAP.md
+    // section 7). Pure arithmetic in Domain for the same reason
+    // FightSubmenuLayout is: the screen tree sizes its pools at build time and
+    // the controller reads the same numbers at runtime, and the two must be one
+    // function. Which node owns which position is MapGraph.
     //
-    // Pure arithmetic over (column, row), in Domain for the same reason
-    // FightSubmenuLayout is: the SCREEN TREE sizes the node pool at build time
-    // and the CONTROLLER reads the same numbers at runtime, and those two must
-    // be the same function or the map drifts from what it claims. Which node
-    // owns which (column, row) is MapColumns' projection.
+    // The screen scrolls vertically: the entry sits at the top and the heart at
+    // the bottom (RealmLayout.Orientation), so scrolling down is going deeper.
     //
-    // A realm is MapColumns.Count columns of at most MapColumns.MaxRows rows, so
-    // the pool is that product, built before any run exists.
-    //
-    // EVERY x HERE IS CONTENT-LOCAL, measured from the scrolling content rect's
-    // own LEFT edge, not from the panel's centre like the rest of the game's
-    // screens. The map is the one screen wider than the canvas: nine columns at
-    // a fixed pitch is ~7400 units of content behind a 1920 window, and a
-    // centre-relative coordinate would have to know the leg's length to mean
-    // anything. Nodes are pinned to that left edge (Place.Pin at anchor 0,0.5)
-    // so a column's position is the same number whatever the leg does.
+    // CONTENT-LOCAL COORDINATES, Unity-style: x from the content's horizontal
+    // centre (+ right), y from the content's top edge, NEGATIVE going down.
+    // The content rect is pinned top-centre, so these are anchoredPosition
+    // values as they stand.
     public static class MapLayout
     {
-        // THE PAINTED CLEARINGS, measured off forest_map_background.png rather
-        // than chosen -- the art is a top-down canopy with holes punched
-        // through it, and a room has to stand in a hole. Two clearing columns
-        // and three clearing rows per tile of background; the tile repeats
-        // every BackgroundPeriod, which is what carries the grid past column 1.
-        //
-        // This is why the backdrop and the scrolling are one change and not
-        // two: the camera pins the current room at ClearingColumnX[0] (see
-        // FollowOffset), which is the ONLY reason rooms land on clearings at
-        // all. Stretch the art flat behind a centred track, as this screen did
-        // until now, and every room stands on canopy.
-        public static readonly float[] ClearingColumnX = { 520f, 1383f };
-        public static readonly float[] ClearingRowY = { 322f, 11f, -302f };
+        // The lateral span RealmLayout's 0..1 across maps onto. Narrower than
+        // the 1920 canvas so the outermost pocket tile and its prize chip stay
+        // on screen.
+        public const float SpanWidth = 1500f;
 
-        public static float ColumnGap => ClearingColumnX[1] - ClearingColumnX[0];
+        // The vertical distance between two longest-route rows. The tallest
+        // footprint (an anchor tile with its tag above and caption below) is
+        // RowPitch - 15, so two nodes in neighbouring rows never touch.
+        public const float RowPitch = 224f;
+
+        // Row 0's centre below the content top.
+        public const float TopMargin = 340f;
+
+        // From the heart's row to the content bottom: the heart's anchors, the
+        // queue behind them and the fog.
+        public const float HeartDepth = 560f;
+
+        // ---- a node's parts -----------------------------------------------------
 
         // A room tile is the painted tree plus its icon. Portrait, not square:
-        // trees read taller than wide, so the bonus is height only and the
-        // three widths stay widths.
+        // trees read taller than wide, so the bonus is height only.
         public const float TileWidth = 100f;
         public const float EliteTileWidth = 118f;
         public const float BossTileWidth = 142f;
         public const float TileHeightBonus = 30f;
 
-        // The widest a tile can be, which is what the declared pool has to
-        // reserve: the tree is built before any run exists and cannot know
-        // which slot the boss will land in.
         public const float MaxTileWidth = BossTileWidth;
         public const float MaxTileHeight = BossTileWidth + TileHeightBonus;
 
-        public static int Columns => MapColumns.Count;
-        public static int Rows => MapColumns.MaxRows;
-
-        // The pool's capacity: every slot a leg could possibly use.
-        public static int Capacity => Columns * Rows;
-
-        // Which pool entry a (column, row) pair owns. Row-major so a column's
-        // entries are contiguous.
-        public static int IndexFor(int column, int row) => column * Rows + row;
-
-        public static float ColumnX(int column) => ClearingColumnX[0] + column * ColumnGap;
-
-        // A column of up to three SNAPS to the painted clearings by row index
-        // rather than centring, so a two-room column leaves its unused
-        // clearing empty instead of standing between holes in the canopy.
-        //
-        // A fuller column (a fork beside a pocket that rejoins there) has more
-        // rooms than the art has clearings, so it spreads evenly between the
-        // outer clearings and its tiles shrink to fit (TileScale). Every room
-        // stays visible and clickable; the canopy match is what gives.
-        public static float RowY(int row, int countInColumn)
+        public static float TileWidthFor(RoomType type)
         {
-            if (row < 0) row = 0;
-            if (countInColumn <= ClearingRowY.Length)
+            switch (type)
             {
-                return row < ClearingRowY.Length ? ClearingRowY[row] : ClearingRowY[ClearingRowY.Length - 1];
+                case RoomType.Boss: return BossTileWidth;
+                case RoomType.EliteFight: return EliteTileWidth;
+                default: return TileWidth;
             }
-
-            if (row > countInColumn - 1) row = countInColumn - 1;
-            return ClearingRowY[0] - row * CrowdedPitch(countInColumn);
         }
 
-        private static float CrowdedPitch(int countInColumn) =>
-            (ClearingRowY[0] - ClearingRowY[ClearingRowY.Length - 1]) / (countInColumn - 1);
+        public static float TileHeightFor(RoomType type) => TileWidthFor(type) + TileHeightBonus;
 
-        // The breathing room between two stacked tiles in a crowded column.
-        public const float CrowdedTileGap = 10f;
+        // The caption hangs below its tile, the you-are-here tag stands above.
+        public const float CaptionWidth = 130f;
+        public const float CaptionHeight = 28f;
+        public const float CaptionGap = 16f;
+        public const float MarkerHeight = 26f;
+        public const float MarkerGap = 18f;
 
-        // How much a column's tiles shrink so the elite tile, the tallest that
-        // can stand in a crowded column, still clears its neighbour.
-        public static float TileScale(int countInColumn)
+        // The prize chip stands beside the tile, not on it, so the icon stays
+        // readable. Its size follows strength: one step wider and taller per
+        // pip.
+        public const float ChipGap = 6f;
+        public const float ChipBaseWidth = 64f;
+        public const float ChipBaseHeight = 24f;
+        public const float ChipWidthStep = 10f;
+        public const float ChipHeightStep = 4f;
+
+        public static float ChipWidthFor(int strength) =>
+            ChipBaseWidth + ChipWidthStep * (ClampStrength(strength) - 1);
+
+        public static float ChipHeightFor(int strength) =>
+            ChipBaseHeight + ChipHeightStep * (ClampStrength(strength) - 1);
+
+        public static readonly float MaxChipWidth = ChipBaseWidth + ChipWidthStep * (NodeStrength.Max - 1);
+        public static readonly float MaxChipHeight = ChipBaseHeight + ChipHeightStep * (NodeStrength.Max - 1);
+
+        private static int ClampStrength(int strength) =>
+            strength < NodeStrength.Min ? NodeStrength.Min : strength > NodeStrength.Max ? NodeStrength.Max : strength;
+
+        // The pips sit along the tile's top edge, inside it.
+        public const float PipSize = 16f;
+        public const float PipPitch = 20f;
+
+        // Everything a node can draw, as one box: tile, caption, tag, and the
+        // widest chip on the right (mirrored on the left, which keeps the box
+        // symmetric about the node's own x). Two nodes whose boxes do not
+        // intersect cannot have overlapping tiles, captions or chips; the
+        // layout test holds every default realm to that.
+        public static MapRect Footprint(RoomType type, UiVec centre)
         {
-            if (countInColumn <= ClearingRowY.Length) return 1f;
-            float fit = (CrowdedPitch(countInColumn) - CrowdedTileGap) / (EliteTileWidth + TileHeightBonus);
-            return fit < 1f ? fit : 1f;
+            float width = TileWidthFor(type);
+            float height = TileHeightFor(type);
+
+            float halfWidth = width * 0.5f + ChipGap + MaxChipWidth;
+            if (CaptionWidth * 0.5f > halfWidth) halfWidth = CaptionWidth * 0.5f;
+
+            float above = height * 0.5f + MarkerGap + MarkerHeight * 0.5f;
+            float below = height * 0.5f + CaptionGap + CaptionHeight * 0.5f;
+
+            return new MapRect(centre.X - halfWidth, centre.Y - below, centre.X + halfWidth, centre.Y + above);
         }
 
-        // ---- the scrolling window ----------------------------------------
+        // ---- capacity -----------------------------------------------------------
 
-        // Where the CURRENT room sits, measured from the viewport's own left
-        // edge, once the camera has caught up to it.
-        //
-        // Tied to the left clearing rather than chosen: Scroll() pins the
-        // current room to this exact screen offset whatever its depth, so for
-        // it to land ON the left painted clearing -- and, by the same fixed
-        // ColumnGap stride, for the column it is choosing into to land on the
-        // right one -- this has to be the left clearing's own x. Any other
-        // value reintroduces the rooms-versus-clearings mismatch.
-        public static float FollowOffset => ClearingColumnX[0];
+        // The most nodes a default-profile realm holds: the spine, the most
+        // forks, and every pocket at its longest. A designed profile past this
+        // draws what fits and says so.
+        public const int MaxNodes =
+            RealmMap.SpineLength + 1 + RealmProfiles.MaxDefaultForks
+            + RealmMap.MaxPockets * RealmProfiles.MaxDefaultPocketLength;
 
-        // The background art paints ONE pair of clearings, so it repeats every
-        // two columns. Tiling rather than stretching wider art is what lets a
-        // leg of any length stay aligned without needing bigger source art.
-        public static float BackgroundPeriod => ColumnGap * 2f;
+        // The most rows the longest route can have: every node on one route.
+        public const int MaxRows = MaxNodes;
 
-        // HOW WIDE ONE REPEAT IS DRAWN, in map space.
-        //
-        // This has to be a fixed number and it is not a screen assumption,
-        // which is the distinction that matters here. The tile was declared
-        // UiSize.Fill, and while every screen was pinned to 1920 that happened
-        // to resolve to 1920 and looked deliberate. Once screens were unpinned
-        // (34098f9) "fill" started meaning the parent's REAL width -- and the
-        // parent is MapContent, which is the whole scrolling leg. All eight
-        // tiles became 8824 wide, so one repeat of the art was stretched across
-        // the entire wood and the visible 1920 of it was a 4.6x magnification.
-        // That is the "zoomed in forest".
-        //
-        // A tile that repeats every BackgroundPeriod must be at least
-        // BackgroundPeriod wide or the wood has gaps in it, and it cannot be
-        // measured off the window, because MapContent is 8824 map-units wide
-        // whatever size the window is. So the width belongs here beside the
-        // period it has to cover, in the same units.
-        //
-        // 1920 against 1726 of period: the overlap is deliberate and is what
-        // the tile's own AllowOverflow reason describes. The source art is
-        // 1672x941, so this is a uniform 1.15x upscale rather than a stretch --
-        // 1920x1080 and 1672x941 are both 16:9 to within a pixel.
+        // Edges. A node leads to at most three (a fork sibling: the next level
+        // twice and a pocket); the fuzz test holds every default realm under it.
+        public const int LinkCapacity = MaxNodes * 2;
+
+        public const int RootCapacity = RealmProfiles.MaxDefaultAnchors;
+
+        // ---- the scrolling window -----------------------------------------------
+
+        public static float ContentHeight(int rows) =>
+            TopMargin + (rows < 1 ? 0 : rows - 1) * RowPitch + HeartDepth;
+
+        public static float MaxContentHeight => ContentHeight(MaxRows);
+
+        // Where the CURRENT room sits below the viewport's top edge once the
+        // camera has caught up: under the top band, with the next two rows
+        // above the detail card.
+        public const float FollowOffset = TopMargin;
+
+        // Auto-scroll, as how far the content has moved UP: positive, clamped
+        // so the camera never scrolls off its own content. `currentY` is
+        // content-local (negative).
+        public static float Scroll(float currentY, float contentHeight, float viewportHeight)
+        {
+            float max = System.Math.Max(0f, contentHeight - viewportHeight);
+            float target = -currentY - FollowOffset;
+            if (target < 0f) target = 0f;
+            if (target > max) target = max;
+            return target;
+        }
+
+        // The deepest the camera goes: the heart, for the opening shot.
+        public static float ScrollToBottom(float contentHeight, float viewportHeight) =>
+            System.Math.Max(0f, contentHeight - viewportHeight);
+
+        // The painted wood, tiled down the leg. One tile is the art's own
+        // canvas; every second tile is mirrored top to bottom by the controller
+        // so neighbouring edges match.
         public const float BackgroundTileWidth = 1920f;
         public const float BackgroundTileHeight = 1080f;
 
-        // Ceiling rather than an exact fit, so a longer leg (a test-only leg
-        // length) warns instead of silently running out of forest.
-        public const int MaxBackgroundTiles = 8;
+        public static int MaxBackgroundTiles =>
+            (int)System.Math.Ceiling(MaxContentHeight / BackgroundTileHeight);
 
-        public static int BackgroundTilesFor(int depthCount) =>
-            depthCount <= 0 ? 0 : (depthCount + 1) / 2;
+        public static int BackgroundTilesFor(float contentHeight) =>
+            contentHeight <= 0f ? 0 : (int)System.Math.Ceiling(contentHeight / BackgroundTileHeight);
 
-        public static float BackgroundTileX(int index) => index * BackgroundPeriod;
+        public static float BackgroundTileY(int index) => -index * BackgroundTileHeight;
 
-        // How far past the last column the "the wood continues" fade sits.
-        public const float FogMargin = 340f;
+        public static bool BackgroundTileIsMirrored(int index) => index % 2 == 1;
 
-        // The fog's own width, and the gap it leaves after the last tile.
-        public const float FogWidth = 520f;
+        // The overview's zoom: the whole realm inside the viewport, never
+        // magnified.
+        public const float OverviewMargin = 150f;
 
-        // RE-DERIVED, not ported. v1 put the fog's left edge at
-        // (depthCount - 1) * ColumnGap + TileSize / 2 -- which is measured from
-        // the content's left edge while the last COLUMN is at
-        // ClearingColumnX[0] + that same span. The fog therefore started 470
-        // units short of the boss and, being 520 wide and opaque, covered it.
-        // The last column's own right edge is what "just past the last column"
-        // has to mean.
-        public static float FogX(int depthCount)
+        public static float OverviewScale(float contentHeight, float viewportHeight)
         {
-            int last = depthCount <= 0 ? 0 : depthCount - 1;
-            return ColumnX(last) + MaxTileWidth * 0.5f + FogMargin;
+            float room = viewportHeight - OverviewMargin * 2f;
+            if (contentHeight <= 0f || room <= 0f) return 1f;
+            float fit = room / contentHeight;
+            return fit < 1f ? fit : 1f;
         }
 
-        // Content has to be wide enough that Scroll() can carry the LAST column
-        // all the way to FollowOffset -- not merely far enough to cover the fog
-        // sitting past it. Undershooting clamps the auto-scroll short and
-        // leaves the deepest rooms parked off the right edge, unclickable and
-        // reading as "the map breaks past this point".
-        public static float ContentWidth(int depthCount, float viewportWidth)
-        {
-            // Scrolling the last column to FollowOffset means a scroll of
-            // exactly legSpan (ColumnX(last) - FollowOffset), and the clamp in
-            // Scroll() allows at most contentWidth - viewportWidth.
-            float legSpan = depthCount <= 0 ? 0f : (depthCount - 1) * ColumnGap;
-            float toReachLastColumn = legSpan + viewportWidth;
-            float toHoldTheFog = FogX(depthCount) + FogWidth;
+        // ---- the trails between rooms -------------------------------------------
 
-            float width = toReachLastColumn > toHoldTheFog ? toReachLastColumn : toHoldTheFog;
-            return width > viewportWidth ? width : viewportWidth;
-        }
-
-        // Auto-scroll, as a CONTENT OFFSET: what to add to content's x so the
-        // current room sits FollowOffset in from the viewport's left edge.
-        // Clamped at both ends so the camera never scrolls off its own content.
-        public static float Scroll(float currentX, float contentWidth, float viewportWidth)
-        {
-            float maxScroll = System.Math.Max(0f, contentWidth - viewportWidth);
-            float target = currentX - FollowOffset;
-            if (target < 0f) target = 0f;
-            if (target > maxScroll) target = maxScroll;
-            return -target;
-        }
-
-        // ---- the trails between rooms ------------------------------------
-
-        // How many straight pieces a curve is chopped into. Six is v1's number,
-        // and it is where a bezier stops looking like a dogleg. uGUI has no
-        // line renderer, so a curve IS a row of rotated quads and this count is
-        // the whole of its smoothness.
+        // How many straight pieces a curve is chopped into. uGUI has no line
+        // renderer, so a curve IS a row of rotated quads and this count is the
+        // whole of its smoothness.
         public const int SegmentsPerLink = 6;
 
-        // Two links a pool slot on average, outside the last column. Fork
-        // siblings carry three (the next level twice and a pocket) and most
-        // rooms one; MapColumnsTests holds every default-profile realm in the
-        // fuzz under this.
-        public static int LinkCapacity => (Columns - 1) * Rows * 2;
+        public const int SegmentCapacity = LinkCapacity * SegmentsPerLink;
 
-        public static int SegmentCapacity => LinkCapacity * SegmentsPerLink;
+        public const int RootSegmentCapacity = RootCapacity * SegmentsPerLink;
 
-        // One straight piece of a trail: where it sits, how long, how turned.
         public readonly struct PathSegment
         {
             public readonly UiVec Centre;
@@ -231,23 +208,36 @@ namespace PrincesPalace.Domain.UiKit
             }
         }
 
-        // A cubic bezier with a little jitter, so a trail is never
-        // ruler-straight. Two rooms at the same row in adjacent columns would
-        // otherwise be joined by a perfectly horizontal bar, and a forest floor
-        // does not do that: the jitter is what makes it read as a path trodden
-        // between trees rather than as a wiring diagram.
-        //
-        // DERIVED FROM THE SEED, never random. The same leg gets drawn again on
-        // every refresh, and a trail that re-rolled its curve each time would
-        // make the whole map writhe whenever anything else changed.
+        // A cubic bezier leaving and arriving vertically, with a little
+        // lateral jitter so a trail is never ruler-straight. DERIVED FROM THE
+        // SEED, never random: the same realm is drawn again on every refresh,
+        // and a trail that re-rolled its curve would make the map writhe.
         public static UiVec PathPoint(UiVec from, UiVec to, int seed, float t)
         {
-            float dx = to.X - from.X;
+            float dy = to.Y - from.Y;
             float jitter = (seed * 37) % 17 - 8;
 
-            var p1 = new UiVec(from.X + dx * 0.35f, from.Y + jitter);
-            var p2 = new UiVec(to.X - dx * 0.35f, to.Y - jitter);
+            var p1 = new UiVec(from.X + jitter, from.Y + dy * 0.4f);
+            var p2 = new UiVec(to.X - jitter, to.Y - dy * 0.4f);
 
+            return Cubic(from, p1, p2, to, t);
+        }
+
+        // A root: the same curve with a sideways belly, so a root reads as
+        // grown rather than drawn, and never lies on top of a trail.
+        public static UiVec RootPoint(UiVec from, UiVec to, int seed, float t)
+        {
+            float dy = to.Y - from.Y;
+            float bend = ((seed * 53) % 23 - 11) * 6f;
+
+            var p1 = new UiVec(from.X + bend, from.Y + dy * 0.25f);
+            var p2 = new UiVec(to.X + bend, to.Y - dy * 0.25f);
+
+            return Cubic(from, p1, p2, to, t);
+        }
+
+        private static UiVec Cubic(UiVec from, UiVec p1, UiVec p2, UiVec to, float t)
+        {
             float u = 1f - t;
             float a = u * u * u;
             float b = 3f * u * u * t;
@@ -259,28 +249,52 @@ namespace PrincesPalace.Domain.UiKit
                 a * from.Y + b * p1.Y + c * p2.Y + d * to.Y);
         }
 
-        // Piece `index` of the curve from `from` to `to`.
-        //
+        public static PathSegment SegmentAt(UiVec from, UiVec to, int seed, int index) =>
+            Piece(PathPoint(from, to, seed, index / (float)SegmentsPerLink),
+                PathPoint(from, to, seed, (index + 1) / (float)SegmentsPerLink));
+
+        public static PathSegment RootSegmentAt(UiVec from, UiVec to, int seed, int index) =>
+            Piece(RootPoint(from, to, seed, index / (float)SegmentsPerLink),
+                RootPoint(from, to, seed, (index + 1) / (float)SegmentsPerLink));
+
         // Lengthened by 2 deliberately: consecutive quads meeting exactly at a
-        // point leave a hairline gap wherever the curve turns, and a trail with
-        // holes in it reads as broken rather than as curved.
-        public static PathSegment SegmentAt(UiVec from, UiVec to, int seed, int index)
+        // point leave a hairline gap wherever the curve turns.
+        private static PathSegment Piece(UiVec a, UiVec b)
         {
-            float t0 = index / (float)SegmentsPerLink;
-            float t1 = (index + 1) / (float)SegmentsPerLink;
-
-            var a = PathPoint(from, to, seed, t0);
-            var b = PathPoint(from, to, seed, t1);
-
             float dx = b.X - a.X;
             float dy = b.Y - a.Y;
             float length = (float)System.Math.Sqrt(dx * dx + dy * dy);
             float angle = (float)(System.Math.Atan2(dy, dx) * 180.0 / System.Math.PI);
 
-            return new PathSegment(
-                new UiVec(a.X + dx * 0.5f, a.Y + dy * 0.5f),
-                length + 2f,
-                angle);
+            return new PathSegment(new UiVec(a.X + dx * 0.5f, a.Y + dy * 0.5f), length + 2f, angle);
         }
+    }
+
+    // An axis-aligned box in content-local coordinates (y up).
+    public readonly struct MapRect
+    {
+        public readonly float Left;
+        public readonly float Bottom;
+        public readonly float Right;
+        public readonly float Top;
+
+        public MapRect(float left, float bottom, float right, float top)
+        {
+            Left = left;
+            Bottom = bottom;
+            Right = right;
+            Top = top;
+        }
+
+        public static MapRect Around(UiVec centre, float width, float height) =>
+            new MapRect(centre.X - width * 0.5f, centre.Y - height * 0.5f,
+                centre.X + width * 0.5f, centre.Y + height * 0.5f);
+
+        public float Width => Right - Left;
+        public float Height => Top - Bottom;
+
+        // Touching edges do not intersect.
+        public bool Intersects(MapRect other) =>
+            Left < other.Right && other.Left < Right && Bottom < other.Top && other.Bottom < Top;
     }
 }

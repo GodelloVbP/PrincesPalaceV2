@@ -61,7 +61,7 @@ namespace PrincesPalace.PlayModeTests
             _map.Refresh();
         }
 
-        private static int IndexOf(RealmNode node) => MapColumns.Of(RunManager.Map).IndexOf(node.Id);
+        private static int IndexOf(RealmNode node) => MapGraph.Of(RunManager.Map).IndexOf(node.Id);
 
         private GameObject NodeObject(RealmNode node) => Named($"MapNode{IndexOf(node)}");
 
@@ -341,7 +341,10 @@ namespace PrincesPalace.PlayModeTests
             Assert.GreaterOrEqual(label.fontSize, 26f, "the nudge is back to a small line");
 
             var size = ((RectTransform)badge.transform).rect.size;
-            Assert.GreaterOrEqual(size.x, 700f);
+            // 560 wide: the badge moved out of the bottom strip to make room
+            // for the pair of detail cards, and under the abandon button there
+            // is no room for the 760 it had.
+            Assert.GreaterOrEqual(size.x, 540f);
             Assert.GreaterOrEqual(size.y, 80f);
         }
     }

@@ -298,14 +298,18 @@ namespace PrincesPalace.Domain.UiKit
 
         // ---- descent map ----------------------------------------------------
 
-        public static readonly UiString MapTitle = UiString.Define("map.title", "The Descent");
+        // The top band: the floor, then the realm's name and the rooms walked.
+        // Every floor without a designed realm (P8) is the default realm, and
+        // its name is the descent itself.
+        public static readonly UiString MapTitle = UiString.Define("map.title", "FLOOR {0}", "FLOOR 99");
+        public static readonly UiString MapRealmDefaultName = UiString.Define("map.realm.default", "THE DESCENT");
         // Worst-case samples, like every other template: without one the label
         // renders its raw "{0}" at rest, which is what the resting screenshot
         // showed -- and E1 has nothing to measure the box against.
         // Rooms walked this run (RunSnapshot.roomsWalked), not the step: a
         // pocket adds rooms without moving the difficulty clock.
         public static readonly UiString MapDepth =
-            UiString.Define("map.depth", "ROOM {0}  ·  FLOOR {1}", "ROOM 999  ·  FLOOR 99");
+            UiString.Define("map.depth", "{0}  ·  ROOM {1}", "THE DESCENT  ·  ROOM 999");
         public static readonly UiString MapGold =
             UiString.Define("map.gold", "{0} GOLD", "99999 GOLD");
         public static readonly UiString MapAbandon = UiString.Define("map.abandon", "Abandon Run");
@@ -368,6 +372,31 @@ namespace PrincesPalace.Domain.UiKit
                 "Walking past the detour heals the squad 99%.");
         public static readonly UiString MapPreviewAnchor =
             UiString.Define("map.preview.anchor", "Left alive, it guards the boss.");
+        // The prize chip on a node: short, because it is a badge and the card
+        // has the full line.
+        public static readonly UiString MapChipGold =
+            UiString.Define("map.chip.gold", "{0} G", "99999 G");
+        public static readonly UiString MapChipPotion =
+            UiString.Define("map.chip.potion", "POTION");
+        public static readonly UiString MapChipPotions =
+            UiString.Define("map.chip.potions", "{0} POTIONS", "9 POTIONS");
+        public static readonly UiString MapChipGear = UiString.Define("map.chip.gear", "GEAR");
+        public static readonly UiString MapChipBook = UiString.Define("map.chip.book", "BOOK");
+        public static readonly UiString MapChipRelic = UiString.Define("map.chip.relic", "RELIC");
+        // Shown on the second card when two routes are open; the card names
+        // which one it is.
+        public static readonly UiString MapCompareOther =
+            UiString.Define("map.compare.other", "OR  {0}", "OR  TREASURE  ·  STRENGTH 3");
+        // Said on the card of a route that shuts others off, only when it does.
+        public static readonly UiString MapPreviewCloses =
+            UiString.Define("map.preview.closes", "Taking this closes off {0} other rooms.",
+                "Taking this closes off 99 other rooms.");
+        public static readonly UiString MapPreviewClosesOne =
+            UiString.Define("map.preview.closes_one", "Taking this closes off 1 other room.");
+        public static readonly UiString MapOverview =
+            UiString.Define("map.overview", "OVERVIEW  ·  LOOK ONLY  ·  Y TO RETURN");
+        public static readonly UiString MapOverviewHint =
+            UiString.Define("map.overview.hint", "Y  ·  OVERVIEW", "OVERVIEW  ·  LOOK ONLY  ·  Y TO RETURN");
         // A chip paid at settlement, on the Reckoning's notices.
         public static readonly UiString PrizePaidGold =
             UiString.Define("prize.paid.gold", "Prize: {0} gold.", "Prize: 99999 gold.");
@@ -609,8 +638,6 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("reckoning.experience", "EXPERIENCE");
         public static readonly UiString ReckoningGold =
             UiString.Define("reckoning.gold", "+{0} GOLD", "+99999 GOLD");
-        public static readonly UiString ReckoningChooseOne =
-            UiString.Define("reckoning.choose_one", "CHOOSE ONE");
         public static readonly UiString ReckoningLevel =
             UiString.Define("reckoning.level", "LEVEL {0}", "LEVEL 99");
         // The level-up is called out in the level slot rather than as a fourth
@@ -649,6 +676,89 @@ namespace PrincesPalace.Domain.UiKit
                 "999999 dealt  (999999 phys / 999999 other)      999999 taken      999999 healed");
         public static readonly UiString ReckoningKills =
             UiString.Define("reckoning.kills", "{0} felled", "999 felled");
+
+        // --- the Reckoning's reward pages (docs/PLAN_ITEMS.md 1.2) ----------------
+        //
+        // The page's class word comes from its highest chip; the header adds
+        // how many choices it still grants.
+        public static readonly UiString ReckoningPageGear =
+            UiString.Define("reckoning.page_gear", "GEAR PAGE");
+        public static readonly UiString ReckoningPageGearAnchor =
+            UiString.Define("reckoning.page_gear_anchor", "ANCHOR GEAR PAGE");
+        public static readonly UiString ReckoningPageGearBoss =
+            UiString.Define("reckoning.page_gear_boss", "BOSS GEAR PAGE");
+        public static readonly UiString ReckoningPageRelic =
+            UiString.Define("reckoning.page_relic", "RELIC PAGE");
+        public static readonly UiString ReckoningPageRelicAnchor =
+            UiString.Define("reckoning.page_relic_anchor", "ANCHOR RELIC PAGE");
+        public static readonly UiString ReckoningPageRelicBoss =
+            UiString.Define("reckoning.page_relic_boss", "BOSS RELIC PAGE");
+        public static readonly UiString ReckoningChoicesLeft =
+            UiString.Define("reckoning.choices_left", "{0}  -  {1} CHOICES LEFT", "BOSS RELIC PAGE  -  9 CHOICES LEFT");
+        public static readonly UiString ReckoningChoiceLeft =
+            UiString.Define("reckoning.choice_left", "{0}  -  1 CHOICE LEFT", "BOSS RELIC PAGE  -  1 CHOICE LEFT");
+        public static readonly UiString ReckoningPageDone =
+            UiString.Define("reckoning.page_done", "{0}  -  DONE", "BOSS RELIC PAGE  -  DONE");
+
+        // Squad Favor and what it moves on this page's two ladders, in points
+        // of per-rung chance (RarityTable.TierFavorPerPoint, GearPage.
+        // QualityFavorPerPoint, each against its cap).
+        public static readonly UiString ReckoningFavor =
+            UiString.Define("reckoning.favor", "PRINCE'S FAVOR {0}  -  TIER CLIMB +{1}%  -  QUALITY CLIMB +{2}%",
+                "PRINCE'S FAVOR 99  -  TIER CLIMB +45%  -  QUALITY CLIMB +55%");
+
+        // The gear card's face.
+        public static readonly UiString ReckoningFor =
+            UiString.Define("reckoning.for", "FOR {0}", "FOR BJORN THE BEAR");
+        public static readonly UiString ReckoningForSlot =
+            UiString.Define("reckoning.for_slot", "{0}  -  {1}", "BJORN THE BEAR  -  Weapon 2");
+        public static readonly UiString ReckoningLoses =
+            UiString.Define("reckoning.loses", "loses: {0}", "loses: Lifestealing Gale");
+        public static readonly UiString ReckoningNoChange =
+            UiString.Define("reckoning.no_change", "NO STAT CHANGE");
+        public static readonly UiString ReckoningInert =
+            UiString.Define("reckoning.inert", "Inert until its requirements are met.");
+        public static readonly UiString ReckoningDeltaDamage =
+            UiString.Define("reckoning.delta_damage", "{0} DMG", "+999 DMG");
+        public static readonly UiString ReckoningDeltaHealth =
+            UiString.Define("reckoning.delta_health", "{0} HP", "+999 HP");
+        public static readonly UiString ReckoningDeltaDefence =
+            UiString.Define("reckoning.delta_defence", "{0} DEF", "+999 DEF");
+        public static readonly UiString ReckoningDeltaSpeed =
+            UiString.Define("reckoning.delta_speed", "{0} SPEED", "+999 SPEED");
+        public static readonly UiString ReckoningDeltaMana =
+            UiString.Define("reckoning.delta_mana", "{0} MANA REGEN", "+999 MANA REGEN");
+
+        // The relic card's face.
+        public static readonly UiString ReckoningAddsNothing =
+            UiString.Define("reckoning.adds_nothing", "adds nothing for {0}", "adds nothing for Bjorn, Odette, Shawn");
+
+        // What a card says it will do, then what became of it.
+        public static readonly UiString ReckoningTake = UiString.Define("reckoning.take", "TAKE");
+        public static readonly UiString ReckoningHoned = UiString.Define("reckoning.honed", "HONED");
+        public static readonly UiString ReckoningPaid =
+            UiString.Define("reckoning.paid", "SOLD +{0}", "SOLD +99999");
+        public static readonly UiString ReckoningHoneInstead =
+            UiString.Define("reckoning.hone_instead", "HONE INSTEAD");
+        public static readonly UiString ReckoningSellInstead =
+            UiString.Define("reckoning.sell_instead", "SELL FOR {0}", "SELL FOR 99999");
+        public static readonly UiString ReckoningLeavePage =
+            UiString.Define("reckoning.leave_page", "LEAVE PAGE");
+
+        // The ledger under the cards: copies the page displaced, hones it
+        // gave, and what leaving paid for the choices left unused.
+        public static readonly UiString ReckoningLedgerDisplaced =
+            UiString.Define("reckoning.ledger_displaced", "Now in your bag: {0}",
+                "Now in your bag: Gilded Ironbound Hauberk, Gilded Ironbound Hauberk");
+        public static readonly UiString ReckoningLedgerHoned =
+            UiString.Define("reckoning.ledger_honed", "Honed +1: {0}",
+                "Honed +1: Bjorn the Bear Weapon 2, Bjorn the Bear Weapon 2");
+        public static readonly UiString ReckoningLedgerLeft =
+            UiString.Define("reckoning.ledger_left", "Left unused: {0}", "Left unused: honed 9 slots, paid 99999 gold");
+        public static readonly UiString ReckoningLeftHones =
+            UiString.Define("reckoning.left_hones", "honed {0}", "honed 9");
+        public static readonly UiString ReckoningLeftGold =
+            UiString.Define("reckoning.left_gold", "paid {0} gold", "paid 99999 gold");
 
         // --- the defeat screen ---------------------------------------------------
         //

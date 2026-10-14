@@ -63,15 +63,16 @@ namespace PrincesPalace.Domain.Tests
             }
         }
 
-        // A repeat wider than the tile drawing it leaves unpainted stripes
-        // between copies. Cheap to state, and it is the invariant that makes
-        // the width above a number rather than a preference.
+        // The tiles stack down the leg, so they must reach the bottom of the
+        // tallest realm a default profile can build, or the wood has a hole
+        // under the heart.
         [Test]
-        public void TheTileIsWideEnoughToCoverItsOwnRepeat()
+        public void TheTilesCoverTheTallestRealm()
         {
-            Assert.GreaterOrEqual(MapLayout.BackgroundTileWidth, MapLayout.BackgroundPeriod,
-                $"the forest repeats every {MapLayout.BackgroundPeriod:F0} but each tile is only " +
-                $"{MapLayout.BackgroundTileWidth:F0} wide, so the wood has gaps in it");
+            Assert.AreEqual(1080f, MapLayout.BackgroundTileHeight);
+            Assert.GreaterOrEqual(MapLayout.MaxBackgroundTiles * MapLayout.BackgroundTileHeight,
+                MapLayout.MaxContentHeight,
+                "the tallest realm outgrows the forest tiles");
         }
 
         private static System.Collections.Generic.IEnumerable<SolvedNode> Flatten(SolvedNode node)
@@ -94,9 +95,24 @@ namespace PrincesPalace.Domain.Tests
         public void ThePoolCoversEveryPositionALegCouldUse()
         {
             var screen = MapScreen.Build();
-            Assert.AreEqual(MapLayout.Capacity, screen.NodeButtons.Count);
+            Assert.AreEqual(MapLayout.MaxNodes, screen.NodeButtons.Count);
             Assert.AreEqual(screen.NodeButtons.Count, screen.NodeLabels.Count);
             Assert.AreEqual(screen.NodeButtons.Count, screen.NodeMarkers.Count);
+
+            // The node grammar: three pips, one chip and one veil to a node.
+            Assert.AreEqual(screen.NodeButtons.Count * 3, screen.NodePips.Count);
+            Assert.AreEqual(screen.NodeButtons.Count, screen.NodeChips.Count);
+            Assert.AreEqual(screen.NodeButtons.Count, screen.NodeChipTexts.Count);
+            Assert.AreEqual(screen.NodeButtons.Count, screen.NodeVeils.Count);
+
+            // The heart: two in front and four queued.
+            Assert.AreEqual(6, screen.HeartPortraits.Count);
+            Assert.AreEqual(screen.HeartPortraits.Count, screen.HeartNames.Count);
+
+            Assert.AreEqual(screen.TrailSegments.Count, screen.TrailCores.Count);
+            Assert.AreEqual(MapLayout.SegmentCapacity, screen.TrailSegments.Count);
+            Assert.AreEqual(MapLayout.RootSegmentCapacity, screen.RootSegments.Count);
+            Assert.AreEqual(screen.RootSegments.Count, screen.RootCores.Count);
         }
     }
 }

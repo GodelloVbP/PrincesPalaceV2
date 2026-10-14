@@ -8,8 +8,8 @@ using PrincesPalace.Domain.UiKit;
 namespace PrincesPalace.Domain.Tests
 {
     // The realm rules layered on the map shape (docs/PLAN_RUN_MAP.md
-    // sections 2-3 and 8): strength bands, chip amounts, the skip heal's
-    // trigger, and the column projection the current screen draws through.
+    // sections 2-3 and 8): strength bands, chip amounts and the skip heal's
+    // trigger.
     public class RealmP2RulesTests
     {
         // ---- strength ----------------------------------------------------
@@ -117,71 +117,6 @@ namespace PrincesPalace.Domain.Tests
         public void SkipHeal_IsEightPercent()
         {
             Assert.AreEqual(8, RealmMap.SkipHealPercent);
-        }
-
-        // ---- the column projection --------------------------------------
-
-        [Test]
-        public void Projection_EveryDefaultRealmFits_AndEveryChoiceIsBesideItsNode()
-        {
-            int maxEdges = 0;
-            foreach (int floor in new[] { 1, 2, 4, 8, 10, 14, 30, 100 })
-            {
-                for (ulong seed = 1; seed <= 300; seed++)
-                {
-                    var map = RealmMapGenerator.GenerateFor(seed, (floor - 1) * 8, RealmProfiles.Default(floor));
-                    var columns = MapColumns.Of(map);
-
-                    Assert.IsEmpty(columns.Overflow, $"floor {floor} seed {seed} overflowed the column pool");
-
-                    var indices = new HashSet<int>();
-                    foreach (var node in map.Nodes)
-                    {
-                        Assert.AreEqual(node.Offset, columns.ColumnOf(node.Id));
-                        Assert.IsTrue(indices.Add(columns.IndexOf(node.Id)), "two nodes share a pool slot");
-                        Assert.Less(columns.IndexOf(node.Id), MapLayout.Capacity);
-                        Assert.AreSame(node, columns.At(columns.IndexOf(node.Id)));
-
-                        foreach (int next in node.Next)
-                        {
-                            int gap = columns.ColumnOf(next) - columns.ColumnOf(node.Id);
-                            Assert.That(gap, Is.InRange(0, 1), $"floor {floor} seed {seed}: a choice off screen");
-                        }
-                    }
-
-                    maxEdges = System.Math.Max(maxEdges, map.Nodes.Sum(n => n.Next.Count));
-                }
-            }
-
-            Assert.LessOrEqual(maxEdges, MapLayout.LinkCapacity, "the trail pool cannot draw every edge");
-        }
-
-        [Test]
-        public void Projection_ColumnRowsAreDistinctAndInsideTheClearingBand()
-        {
-            for (int count = 1; count <= MapColumns.MaxRows; count++)
-            {
-                var ys = Enumerable.Range(0, count).Select(row => MapLayout.RowY(row, count)).ToList();
-                CollectionAssert.AllItemsAreUnique(ys, $"{count} rows");
-                foreach (float y in ys)
-                {
-                    Assert.That(y, Is.InRange(MapLayout.ClearingRowY[2] - 0.01f, MapLayout.ClearingRowY[0] + 0.01f));
-                }
-            }
-        }
-
-        [Test]
-        public void CrowdedColumn_TilesShrinkSoTheyNeverOverlap()
-        {
-            Assert.AreEqual(1f, MapLayout.TileScale(3));
-            for (int count = 4; count <= MapColumns.MaxRows; count++)
-            {
-                float pitch = MapLayout.RowY(0, count) - MapLayout.RowY(1, count);
-                float tallest = (MapLayout.EliteTileWidth + MapLayout.TileHeightBonus) * MapLayout.TileScale(count);
-                Assert.LessOrEqual(tallest, pitch, $"{count} rows");
-            }
-
-            Assert.AreEqual(124.8f, MapLayout.RowY(0, 6) - MapLayout.RowY(1, 6), 0.01f);
         }
     }
 }

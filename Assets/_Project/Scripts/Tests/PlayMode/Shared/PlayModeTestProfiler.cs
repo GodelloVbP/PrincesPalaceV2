@@ -171,6 +171,7 @@ namespace PrincesPalace.PlayModeTests
                     try { TestSaveSandbox.BeforeTest(); } catch (Exception) { }
                     try { TestGlobals.ResetEngineClock(); } catch (Exception) { }
                     try { TestGlobals.ResetMenuMemory(); } catch (Exception) { }
+                    try { TestGlobals.ResetMapOpening(); } catch (Exception) { }
                 }
                 else if (kind == "fixture")
                 {
