@@ -376,9 +376,38 @@ namespace PrincesPalace.PlayModeTests
                 System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
                 .Invoke(fight, null);
 
+            // THE HUD DURING THE FADE: the plates read the model's dead
+            // followers, not the paint from before the leader fell.
+            var hint = fight.GetComponentsInChildren<TMPro.TMP_Text>(includeInactive: true)
+                .First(t => t.name == "EnemiesHint");
+            var plates = (UnityEngine.UI.Button[])typeof(FightController)
+                .GetField("enemyPlates", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                .GetValue(fight);
+            string hintDuringFade = null;
+            int platesDuringFade = -1;
+
+            // Sampled once the leader-fall ending is running: the boss's own
+            // fall plays through the beats first, and the HUD then still shows
+            // the beat's own state.
+            var leaderEnding = typeof(FightController).GetField("_leaderEnding",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+
             float deadline = Time.realtimeSinceStartup + 60f;
-            while (!settled && Time.realtimeSinceStartup < deadline) yield return null;
+            while (!settled && Time.realtimeSinceStartup < deadline)
+            {
+                if (hintDuringFade == null && (bool)leaderEnding.GetValue(fight))
+                {
+                    hintDuringFade = hint.text;
+                    platesDuringFade = plates.Count(b => b != null && b.gameObject.activeInHierarchy);
+                }
+
+                yield return null;
+            }
+
             Assert.IsTrue(settled, "FightEnded never fired");
+            Assert.IsNotNull(hintDuringFade, "fixture: the leader-fall ending never ran");
+            StringAssert.StartsWith("0 ", hintDuringFade, "the standing count did not drop while the followers faded");
+            Assert.AreEqual(0, platesDuringFade, "a dismissed follower's plate stayed up while it faded");
 
             Assert.AreEqual(Domain.Combat.Session.FightEndReason.LeaderFell, session.EndReason);
             Assert.AreEqual(Domain.Rewards.FightEnding.Victory,

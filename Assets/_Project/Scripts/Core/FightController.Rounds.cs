@@ -313,6 +313,11 @@ namespace PrincesPalace
 
             _leaderEnded = true;
             _leaderEnding = true;
+
+            // The dismissal landed in the payout, after the last HUD paint:
+            // repaint from the model so the plates read 0 / dead and the
+            // standing count drops while the bodies fade.
+            RefreshUi();
             foreach (var enemy in _session.Encounter.DismissedEnemies)
             {
                 var fade = DeathFadeFor(enemy);
