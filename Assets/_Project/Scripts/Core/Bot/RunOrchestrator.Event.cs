@@ -162,14 +162,27 @@ namespace PrincesPalace
 
             if (EventIsOpenOn(run)) return true;
 
+            run.eventsSeen ??= new List<string>();
+            string picked = RollEvent(save, run, run.step, run.currentNodeId);
+
+            return !string.IsNullOrEmpty(picked) && OpenEventHere(run, picked);
+        }
+
+        // THE ONE EVENT ROLL: arrival opens what this returns, and the map's
+        // detail card (MapNodePreview) names the same pick for a room the party
+        // has not entered. Pure over (seed, step, node, the run's seen list and
+        // the event requirements), so the card is exact while none of those
+        // move between looking and arriving.
+        internal static string RollEvent(SaveData save, RunSnapshot run, int step, int nodeId)
+        {
             var pool = ContentDatabase.Events
                 .Where(e => e != null && e.Data != null)
                 .Select(e => e.Data)
                 .ToList();
 
-            var rng = RngStreams.Open(run.runSeed, RngStreams.Event, run.step, run.currentNodeId);
-            run.eventsSeen ??= new List<string>();
-            string picked = EventRoll.Pick(pool, run.floor, run.eventsSeen, new RunEventContext(save, run), rng);
+            var rng = RngStreams.Open(run.runSeed, RngStreams.Event, step, nodeId);
+            return EventRoll.Pick(pool, run.floor, run.eventsSeen, new RunEventContext(save, run), rng);
+        }
 
         // The title the event page at a room will open with, "" when the pool
         // is empty. Reads, draws from no shared stream.

@@ -53,15 +53,19 @@ namespace PrincesPalace.Domain.UiKit
         // How many rooms stepping here shuts off for good; 0 for most choices.
         public readonly int ClosesRooms;
 
+        // An event room's title, as the run's own roll will open it; "" for
+        // any other room, or when no event is eligible.
+        public readonly string EventTitle;
+
         public MapNodeFacts(RoomType type, IReadOnlyList<string> enemyNames = null, int experience = 0,
                             int gold = 0, int stashGold = 0)
-            : this(type, enemyNames, experience, gold, stashGold, 0, default, 0, false, 0)
+            : this(type, enemyNames, experience, gold, stashGold, 0, default, 0, false, 0, "")
         {
         }
 
         private MapNodeFacts(RoomType type, IReadOnlyList<string> enemyNames, int experience, int gold,
                              int stashGold, int strength, MapNodeChip chip, int skipHealPercent, bool guardsHeart,
-                             int closesRooms)
+                             int closesRooms, string eventTitle)
         {
             Type = type;
             EnemyNames = enemyNames ?? new string[0];
@@ -73,15 +77,20 @@ namespace PrincesPalace.Domain.UiKit
             SkipHealPercent = skipHealPercent;
             GuardsHeart = guardsHeart;
             ClosesRooms = closesRooms;
+            EventTitle = eventTitle ?? "";
         }
 
         public MapNodeFacts WithRealm(int strength, MapNodeChip chip, int skipHealPercent, bool guardsHeart) =>
             new MapNodeFacts(Type, EnemyNames, Experience, Gold, StashGold, strength, chip, skipHealPercent,
-                guardsHeart, ClosesRooms);
+                guardsHeart, ClosesRooms, EventTitle);
 
         public MapNodeFacts WithCloses(int rooms) =>
             new MapNodeFacts(Type, EnemyNames, Experience, Gold, StashGold, Strength, Chip, SkipHealPercent,
-                GuardsHeart, rooms);
+                GuardsHeart, rooms, EventTitle);
+
+        public MapNodeFacts WithEventTitle(string title) =>
+            new MapNodeFacts(Type, EnemyNames, Experience, Gold, StashGold, Strength, Chip, SkipHealPercent,
+                GuardsHeart, ClosesRooms, title);
     }
 
     // THE WORDS ON THE MAP'S ROOMS: the caption under each tile, the detail
@@ -101,6 +110,7 @@ namespace PrincesPalace.Domain.UiKit
                 case RoomType.Rest: return "REST";
                 case RoomType.Shop: return "SHOP";
                 case RoomType.Event: return "EVENT";
+                case RoomType.Cache: return "CACHE";
                 default: return type.ToString().ToUpperInvariant();
             }
         }
@@ -110,7 +120,6 @@ namespace PrincesPalace.Domain.UiKit
             facts.Strength > 0
                 ? UiStrings.MapPreviewStrength.Format(Caption(facts.Type), facts.Strength)
                 : Caption(facts.Type);
-                case RoomType.Cache: return "CACHE";
 
         // Fights name their enemies, the base payout and the chip; a treasure
         // room names its stash. Shop and event pay out of rolls made on

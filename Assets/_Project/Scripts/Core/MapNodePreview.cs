@@ -10,10 +10,11 @@ namespace PrincesPalace
     //
     // Fights are keyed to (seed, step, node), so the enemies and the base payout
     // are knowable from the map; so is a treasure stash, a fight's frozen
-    // strength and its chip. A shop's stock and an event's page are rolled on
-    // arrival (RunOrchestrator.ArriveAt) and stay out of the facts, which
-    // MapNodeCard words as "learn it when you step in". Nothing here draws from
-    // a stream the real room will not open again.
+    // strength and its chip. A shop's stock is rolled on arrival
+    // (RunOrchestrator.ArriveAt) and stays out of the facts, which MapNodeCard
+    // words as "learn it when you step in". An event's TITLE is the same roll
+    // arrival makes (RunOrchestrator.RollEvent), so the card names it. Nothing here
+    // draws from a stream the real room will not open again.
     public static class MapNodePreview
     {
         public static MapNodeFacts For(RunSnapshot run, RealmNode node)
@@ -44,6 +45,9 @@ namespace PrincesPalace
                     int stash = RoomResolution.Resolve(node.Type,
                         RoomResolver.TreasureStream(run, run.legStartStep + node.Offset, node.Id)).Gold;
                     return new MapNodeFacts(node.Type, stashGold: stash);
+
+                case RoomType.Event:
+                    return new MapNodeFacts(node.Type).WithEventTitle(RunOrchestrator.PreviewEventTitle(run, node));
 
                 default:
                     return new MapNodeFacts(node.Type);

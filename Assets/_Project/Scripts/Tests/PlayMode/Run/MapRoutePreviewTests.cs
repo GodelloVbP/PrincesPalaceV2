@@ -164,6 +164,39 @@ namespace PrincesPalace.PlayModeTests
             Assert.GreaterOrEqual(found, 1, "no seed produced a treasure room to compare");
         }
 
+        [UnityTest]
+        public IEnumerator AnEventsPreviewIsTheTitleTheRoomThenOpensWith()
+        {
+            int found = 0;
+
+            for (ulong seed = 1; seed <= 2000 && found < 4; seed++)
+            {
+                if (RealmPaths.FirstOfType(RealmPaths.FirstRealm(seed), RoomType.Event) == null) continue;
+                yield return OpenTheMap(seed);
+                var run = RunManager.Run;
+
+                foreach (var node in RunManager.Map.Nodes.Where(n => n.Type == RoomType.Event))
+                {
+                    var facts = MapNodePreview.For(run, node);
+                    Assert.IsNotEmpty(facts.EventTitle, $"seed {seed} node {node.Id}: the card names no event");
+
+                    // What MoveTo writes, then what arrival opens.
+                    run.currentNodeId = node.Id;
+                    run.step = run.legStartStep + node.Offset;
+                    Assert.IsTrue(RunOrchestrator.EnsureEvent(), $"seed {seed} node {node.Id}");
+
+                    Assert.AreEqual(ContentDatabase.Events.First(e => e.Data.Id == run.eventId).Data.StartPage.Title, facts.EventTitle,
+                        $"seed {seed} node {node.Id}");
+
+                    run.eventId = "";
+                    run.eventsSeen.Clear();
+                    found++;
+                }
+            }
+
+            Assert.GreaterOrEqual(found, 1, "no seed produced an event room to compare");
+        }
+
         // ---- the card ------------------------------------------------------------
 
         [UnityTest]
@@ -185,7 +218,11 @@ namespace PrincesPalace.PlayModeTests
 
                     Assert.IsTrue(panel.activeSelf, $"no card for {node.Type} (seed {seed})");
                     StringAssert.StartsWith(TitleByType[node.Type], Named("MapPreviewTitle").GetComponent<TMP_Text>().text);
-                    StringAssert.StartsWith(BodyStartByType[node.Type],
+                    // An event room's body is the title its roll will open with.
+                    string title = node.Type == RoomType.Event
+                        ? MapNodePreview.For(RunManager.Run, node).EventTitle
+                        : "";
+                    StringAssert.StartsWith(title.Length > 0 ? title : BodyStartByType[node.Type],
                         Named("MapPreviewBody").GetComponent<TMP_Text>().text, $"{node.Type} (seed {seed})");
                     seen.Add(node.Type);
 

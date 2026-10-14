@@ -62,6 +62,15 @@ namespace PrincesPalace.Domain.Tests
                 MapNodeCard.Body(new MapNodeFacts(RoomType.Entry)));
         }
 
+        [Test]
+        public void AnEventNamesItsTitleInPlaceOfTheStockSentence()
+        {
+            var facts = new MapNodeFacts(RoomType.Event).WithEventTitle("The Toll Bridge");
+            Assert.AreEqual("The Toll Bridge", MapNodeCard.Body(facts));
+            Assert.AreEqual("The Toll Bridge\nWalking past the detour heals the squad 8%.",
+                MapNodeCard.Body(facts.WithRealm(0, default, skipHealPercent: 8, guardsHeart: false)));
+        }
+
         [TestCase(MapTileState.Current, "YOU ARE HERE")]
         [TestCase(MapTileState.Walked, "ALREADY CLEARED")]
         [TestCase(MapTileState.Ahead, "TOO FAR AHEAD")]

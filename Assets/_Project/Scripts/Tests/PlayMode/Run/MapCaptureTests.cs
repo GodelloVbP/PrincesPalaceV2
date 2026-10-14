@@ -169,6 +169,47 @@ namespace PrincesPalace.PlayModeTests
             Assert.Pass($"{map.Nodes.Count} rooms, {graph.Rows} rows");
         }
 
+        // A realm half walked: the spine to its middle, one anchor fallen. The
+        // easing mask shows as the wood lifted and warmed around every room
+        // walked and around the heart.
+        [UnityTest]
+        public IEnumerator CaptureARealmHalfWalked()
+        {
+            if (!CanvasCapture.IsSupported)
+            {
+                Assert.Ignore("Headless: camera.Render() is a no-op.");
+                yield break;
+            }
+
+            Prepare("pp-map-shot-eased");
+            RunManager.StartRun(4242);
+            var run = RunManager.Run;
+            run.legStartStep = 13 * RealmMap.SpineLength;
+            run.step = run.legStartStep;
+            run.floor = 14;
+            run.clearedNodeIds.Clear();
+            var map = RunManager.Map;
+            run.currentNodeId = map.Entry.Id;
+
+            var anchors = map.Nodes.Where(n => n.IsAnchor).OrderBy(n => n.Id).ToList();
+            run.slainAnchorIds.Add(anchors[0].Id);
+
+            var middle = map.Nodes.First(n => n.Offset == 4 && n.Role != RealmNodeRole.Pocket);
+            RealmPaths.StandBefore(middle);
+            yield return LoadMap();
+
+            var controller = Object.FindAnyObjectByType<MapController>();
+            Shoot("MapEasedWalk.png");
+
+            controller.SetOverview(true);
+            yield return null;
+            yield return null;
+            Shoot("MapEasedOverview.png");
+
+            Cleanup();
+            Assert.Pass($"{controller.EasedDiscs.Count} discs");
+        }
+
         // The party at the last room before the boss with anchors still alive
         // in their pockets, and with one slain so a root has withered.
         [UnityTest]

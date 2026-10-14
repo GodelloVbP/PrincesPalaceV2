@@ -277,6 +277,28 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- trails ---------------------------------------------------------------
 
+        // The wood is what the viewport shows behind everything, so wherever the
+        // camera rests -- the entry, the heart, anywhere between -- the tiles
+        // must reach the viewport's bottom edge. A leg shorter than the window
+        // (one row) still gets a whole tile.
+        [Test]
+        public void TheForestCoversTheWholeViewportAtEveryScrollOfEveryRealmHeight()
+        {
+            const float viewport = 1080f;
+
+            for (int rows = 1; rows <= MapLayout.MaxRows; rows++)
+            {
+                float content = MapLayout.ContentHeight(rows);
+                float painted = MapLayout.BackgroundTilesFor(content) * MapLayout.BackgroundTileHeight;
+                float deepest = MapLayout.ScrollToBottom(content, viewport) + viewport;
+
+                Assert.GreaterOrEqual(painted, deepest, $"{rows} rows: the camera at the heart sees past the wood");
+                Assert.GreaterOrEqual(painted, content, $"{rows} rows: the wood ends above the leg's own bottom");
+                Assert.GreaterOrEqual(painted, viewport, $"{rows} rows: a short leg leaves bare canvas");
+                Assert.LessOrEqual(MapLayout.BackgroundTilesFor(content), MapLayout.MaxBackgroundTiles, $"{rows} rows");
+            }
+        }
+
         [Test]
         public void ATrailLeavesAndArrivesVertically()
         {

@@ -322,6 +322,7 @@ namespace PrincesPalace
         {
             if (systemMenu != null) systemMenu.Closed -= RefreshAttention;
             _preview.Detach();
+            ReleaseEasingMaterial();
 
             if (_navContext == null) return;
 
@@ -397,6 +398,7 @@ namespace PrincesPalace
                 HideRoots(0);
                 HideHeart();
                 HideBackdrops(0);
+                if (easedWood != null) easedWood.gameObject.SetShown(false);
                 fog.gameObject.SetShown(false);
                 walker.gameObject.SetShown(false);
                 if (attentionLabel != null) attentionLabel.gameObject.SetActive(false);
@@ -476,6 +478,7 @@ namespace PrincesPalace
 
             PaintTrails(map, graph);
             PaintHeart(map, graph, run, cleared);
+            PaintEasing(map, graph, run, cleared, current);
 
             // Not while a walk is in flight: the walk owns both the figure and
             // the camera until it arrives, and a refresh from anything else
@@ -665,7 +668,11 @@ namespace PrincesPalace
                                             HashSet<int> ahead, HashSet<int> cleared)
         {
             if (node.Id == current.Id) return MapTileState.Current;
-            if (cleared.Contains(node.Id)) return MapTileState.Walked;
+            // The entry is never "cleared" (there is nothing in it to resolve;
+            // the opening shot reads that to know the realm is fresh), but a
+            // party that has left it has walked it. Left Closed it dims to
+            // nothing against the wood, with only its caption showing.
+            if (cleared.Contains(node.Id) || node.Role == RealmNodeRole.Entry) return MapTileState.Walked;
             if (reachable.Contains(node.Id)) return MapTileState.Open;
             return ahead.Contains(node.Id) ? MapTileState.Ahead : MapTileState.Closed;
         }
@@ -1067,6 +1074,7 @@ namespace PrincesPalace
                 case RoomType.Rest: return restIcon;
                 case RoomType.Event: return eventIcon;
                 case RoomType.Treasure: return treasureIcon;
+                case RoomType.Cache: return treasureIcon;
                 default: return null;
             }
         }
@@ -1074,7 +1082,6 @@ namespace PrincesPalace
         private static Color TintFor(MapTileState state)
         {
             switch (state)
-                case RoomType.Cache: return treasureIcon;
             {
                 case MapTileState.Current: return CurrentTint;
                 case MapTileState.Walked: return WalkedTint;

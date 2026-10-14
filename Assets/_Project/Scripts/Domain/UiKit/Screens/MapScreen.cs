@@ -96,6 +96,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> Backdrops = new List<NodeRef>();
         public NodeRef Fog;
 
+        // The eased wood laid over the found one (MapController.Easing.cs).
+        public NodeRef EasedWood;
+
         // One slot per node id.
         public List<NodeRef> NodeButtons = new List<NodeRef>();
         public List<NodeRef> NodeIcons = new List<NodeRef>();
@@ -315,10 +318,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var heartNames = Ui.Pool("MapHeartNames", MapGraph.HeartSlots, i => screen.BuildHeartName(i))
                 .AllowOverlap("a pool's own rect is the whole canvas because its members are placed at runtime; it draws nothing itself and takes no clicks");
 
+            var easedWood = screen.BuildEasedWood();
             var walker = screen.BuildWalker();
             var fog = screen.BuildFog();
 
-            // BACKDROP, then TRAILS, then ROOTS, then NODES, then the HEART's
+            // BACKDROP, then the EASED WOOD over it, then TRAILS, then ROOTS, then NODES, then the HEART's
             // anchors, then the WALKER, then FOG. uGUI paints siblings in order
             // and this is the whole back-to-front stack: a path crossing over
             // the room it leads to would read as the rooms being behind the map
@@ -328,7 +332,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var content = Ui.Panel("MapContent",
                     Place.Pin(ContentTop, ContentTop, UiVec.Zero),
                     UiSize.Fixed(UiFrames.Reference.X, MapLayout.MaxContentHeight),
-                    backdrops, trails, roots, nodes, heartPortraits, heartNames, walker, fog)
+                    backdrops, easedWood, trails, roots, nodes, heartPortraits, heartNames, walker, fog)
                 .AllowOverflow("the content rect is deliberately taller than the window it sits in - that overflow IS the scroll, and MapViewport clips it");
 
             screen.Content = content;
@@ -429,6 +433,25 @@ namespace PrincesPalace.Domain.UiKit.Screens
             return tile;
         }
 
+        // The same painting again, over the whole leg in ONE image: the
+        // controller gives it the easing material, which tiles the painting down
+        // the leg itself and shows it only inside the discs MapEasing lays
+        // around the rooms walked. Declared inactive: with the stock material it
+        // would paint the whole painting at full strength, so the controller
+        // shows it once the easing material is on.
+        private UiNode BuildEasedWood()
+        {
+            var eased = Ui.Sprite("MapEasedWood", BackgroundKey,
+                    Place.Pin(ContentTop, ContentTop, UiVec.Zero),
+                    UiSize.Fixed(MapLayout.BackgroundTileWidth, MapLayout.MaxContentHeight))
+                .AsDecor()
+                .AllowOverflow("the eased wood spans the whole leg, as tall as the content rect it sits in")
+                .Inactive();
+
+            EasedWood = eased;
+            return eased;
+        }
+
         // The party, standing in the wood. Declared at the entrance's own
         // standing spot and moved from there; sized off Shawn's 540x370 idle,
         // with the controller re-deriving the width from whatever art the
@@ -455,9 +478,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var label = Ui.Label("MapFogLabel", UiStrings.MapFog, new UiVec(320f, 80f), 15, "#6B6180",
                 Place.At(0f, 0f));
 
-            var fog = Ui.Solid("MapFog", "#040503EB",
+            // A fade, not a slab: scrim_floor is clear at its top and darkest
+            // at its bottom, so the painted wood runs under it to the very edge
+            // of the leg. A flat colour here read as the backdrop ending a
+            // quarter of the way up the screen.
+            var fog = Ui.Sprite("MapFog", "proc:scrim_floor",
                     OnContent(0f, -MapLayout.MaxContentHeight + FogHeight * 0.5f),
-                    UiSize.Fixed(UiFrames.Reference.X, FogHeight));
+                    UiSize.Fixed(UiFrames.Reference.X, FogHeight))
+                .Coloured("#040503EB")
+                .AsDecor();
 
             fog.Children.Add(label);
 

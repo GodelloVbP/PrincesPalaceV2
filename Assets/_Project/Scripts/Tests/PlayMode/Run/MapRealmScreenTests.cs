@@ -323,6 +323,141 @@ namespace PrincesPalace.PlayModeTests
                 "the slain anchor no longer stands at the heart");
         }
 
+        // ---- the wood and the entry ----------------------------------------------
+
+        // The painted wood is the whole backdrop: at the heart, the farthest the
+        // camera goes, the viewport's bottom edge must still be inside a tile.
+        [UnityTest]
+        public IEnumerator TheForestReachesTheViewportBottomAtTheHeart_AndTheFogIsAFadeNotASlab()
+        {
+            RunManager.StartRun(4242);
+            RealmPaths.StandBefore(RunManager.Map.Boss);
+            yield return Show();
+            yield return null;
+
+            var viewport = (RectTransform)Named("MapViewport").transform;
+            var corners = new Vector3[4];
+            viewport.GetWorldCorners(corners);
+            float viewBottom = corners[0].y;
+            float viewTop = corners[1].y;
+
+            var tiles = _map.GetComponentsInChildren<Image>(includeInactive: false)
+                .Where(i => i.name.StartsWith("MapBackdrop")).ToList();
+            Assert.IsNotEmpty(tiles, "no backdrop tile is shown");
+
+            float lowest = float.MaxValue;
+            float highest = float.MinValue;
+            foreach (var tile in tiles)
+            {
+                tile.rectTransform.GetWorldCorners(corners);
+                lowest = Mathf.Min(lowest, corners[0].y);
+                highest = Mathf.Max(highest, corners[1].y);
+            }
+
+            Assert.LessOrEqual(lowest, viewBottom + 0.5f, "the wood ends above the bottom of the screen");
+            Assert.GreaterOrEqual(highest, viewTop - 0.5f, "the wood starts below the top of the screen");
+
+            Assert.IsNotNull(Named("MapFog").GetComponent<Image>().sprite,
+                "the fog is a flat colour: a hard band across the painting");
+        }
+
+        // The party has left the entry, so it is a room walked, drawn like any
+        // other; left as a road not taken it dimmed to nothing and only its
+        // caption showed.
+        [UnityTest]
+        public IEnumerator TheEntryKeepsItsTileOnceThePartyHasLeftIt()
+        {
+            RunManager.StartRun(4242);
+            var entry = RunManager.Map.Entry;
+            Assert.IsTrue(RunManager.MoveTo(RunManager.Choices().First().Id));
+            RunManager.ClearCurrentRoom();
+            yield return Show();
+
+            var tile = NodeObject(entry).GetComponent<Button>().targetGraphic as Image;
+            Assert.IsNotNull(tile);
+            Assert.IsTrue(tile.gameObject.activeInHierarchy);
+            Assert.GreaterOrEqual(tile.color.a, 0.9f, "the entry's tile is faded out");
+            Assert.GreaterOrEqual(tile.color.r, 0.9f, "the entry's tile is darkened to the wood's colour");
+        }
+
+        // ---- the easing ----------------------------------------------------------
+
+        [UnityTest]
+        public IEnumerator TheRealmEasesAroundTheRoomsWalked_AndNowhereElse()
+        {
+            RunManager.StartRun(4242);
+            yield return Show();
+
+            var eased = Named("MapEasedWood");
+            Assert.IsNotNull(eased, "the tree has no eased wood");
+            Assert.IsEmpty(_map.EasedDiscs, "a fresh realm has walked nothing");
+            Assert.IsFalse(eased.activeSelf, "nothing is eased yet");
+
+            var graph = MapGraph.Of(RunManager.Map);
+            int first = RunManager.Choices().First().Id;
+            Assert.IsTrue(RunManager.MoveTo(first));
+            RunManager.ClearCurrentRoom();
+            _map.Refresh();
+
+            // The entry (left behind) and the cleared room, nothing more.
+            Assert.AreEqual(2, _map.EasedDiscs.Count);
+            var entryAt = graph.PositionOf(RunManager.Map.Entry.Id);
+            var roomAt = graph.PositionOf(first);
+            Assert.AreEqual(1f, MapEasing.Coverage(_map.EasedDiscs, entryAt.X, entryAt.Y), 0.0001f);
+            Assert.AreEqual(1f, MapEasing.Coverage(_map.EasedDiscs, roomAt.X, roomAt.Y), 0.0001f);
+            Assert.AreEqual(0f, MapEasing.Coverage(_map.EasedDiscs, graph.HeartCentre.X, graph.HeartCentre.Y), 0.0001f);
+            Assert.IsTrue(eased.activeSelf);
+
+            // Rebuilt from the run, not from what the screen remembers: a fresh
+            // controller over the same run draws the same mask.
+            var before = _map.EasedDiscs.ToList();
+            SharedScene.MarkDirty("reloads the map over a half-walked run");
+            yield return SceneManager.LoadSceneAsync("Map", LoadSceneMode.Single);
+            yield return null;
+            _map = Object.FindAnyObjectByType<MapController>();
+            _map.Refresh();
+
+            CollectionAssert.AreEquivalent(before.Select(d => (d.X, d.Y, d.Radius)),
+                _map.EasedDiscs.Select(d => (d.X, d.Y, d.Radius)));
+        }
+
+        [UnityTest]
+        public IEnumerator AFallenAnchorEasesTheHeart()
+        {
+            RunManager.StartRun(4242);
+            var anchor = RunManager.Map.Nodes.First(n => n.IsAnchor);
+            RunManager.Run.slainAnchorIds.Add(anchor.Id);
+            yield return Show();
+
+            var graph = MapGraph.Of(RunManager.Map);
+            Assert.AreEqual(1f, MapEasing.Coverage(_map.EasedDiscs, graph.HeartCentre.X, graph.HeartCentre.Y), 0.0001f);
+        }
+
+        // The mask arithmetic lives in two places, C# and the shader; the C#
+        // half writes properties the shader must declare under the same names.
+        // (_Discs is an array, which a Properties block cannot declare, so it is
+        // not checkable here; the realm test above reads it back through the
+        // controller instead.)
+        [Test]
+        public void TheEasingShaderDeclaresWhatTheControllerWrites()
+        {
+            var shader = Resources.Load<Shader>("Shaders/MapEasing");
+            Assert.IsNotNull(shader, "Resources/Shaders/MapEasing.shader is missing");
+
+            var material = new Material(shader);
+            try
+            {
+                foreach (var name in new[] { "_DiscCount", "_RectSize", "_TileHeight", "_MainTex", "_Color" })
+                {
+                    Assert.IsTrue(material.HasProperty(name), $"the shader has no {name}");
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(material);
+            }
+        }
+
         // ---- the opening ---------------------------------------------------------
 
         [UnityTest]
