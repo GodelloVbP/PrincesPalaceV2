@@ -197,8 +197,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> RowGains = new List<NodeRef>();
 
         public List<NodeRef> OfferButtons = new List<NodeRef>();
-        public NodeRef OfferTooltip;
-        public NodeRef OfferTooltipText;
         public List<NodeRef> OfferHalos = new List<NodeRef>();
         public List<NodeRef> OfferBursts = new List<NodeRef>();
 
@@ -364,10 +362,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .Themed(ButtonTheme.Gold);
             screen.LeaveButton = leave;
             offerChildren.Add(leave);
-
-            // Last, so the comparison draws over the cards, the buttons and
-            // the ledger.
-            offerChildren.Add(screen.BuildOfferTooltip());
 
             var offerPhase = Ui.Panel("ReckoningOfferPhase", Place.Stretch(), UiSize.Fill, offerChildren);
             screen.OfferPhase = offerPhase;
@@ -881,96 +875,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
             RowBarFills.Add(fill);
             RowGains.Add(gain);
             return group;
-        }
-
-        // How big the hover comparison is. Named because the placement
-        // arithmetic needs them and they must be the same numbers the box is
-        // actually built at.
-        public const float TooltipWidth = 300f;
-
-        // The TALLEST it gets, which is what the tree is emitted at and what
-        // the containment audit therefore solves. The controller shrinks it to
-        // whatever the text actually needs -- a squad of one produces three
-        // short lines, and a 300px box holding three lines reads as a slab
-        // dropped on the card next door rather than as a label belonging to
-        // the one being hovered.
-        //
-        // 590 covers a full three-member squad (SaveData.
-        // EffectiveMaxSquadSize, capped at FightHudSpec.StageSlotsPerSide =
-        // 3 even with the one purchasable extra slot bought) where a fully
-        // different three-slot Convergent item on both sides prints a
-        // heading, up to three gain lines, AND up to three "Losing: <name>"
-        // lines PER MEMBER (ItemStatLines.SquadBody, ModifierComparisonLines).
-        // FitTooltipToBody (below) is what keeps a body bigger than this
-        // authored ceiling from breaking the box rather than a wider
-        // constant here.
-        //
-        // 590, not the ~598 the ~615px interior would allow: the panel is
-        // AUTHORED at Place.At(0,0) -- the panel's centre -- specifically so
-        // the containment audit can solve it (see BuildOfferTooltip's own
-        // header), which means its authored half-height cannot exceed
-        // ContentTop (298.368, the tighter of the two bounds; see
-        // NothingSitsOnThePaintedBorder). 600 tried that and lost by 1.6px.
-        // 590 (half 295) leaves a real margin rather than shaving it to the
-        // audit's own +1f tolerance. This does not cover the absolute
-        // theoretical maximum (every stat/score field moving AND every affix
-        // slot rolled AND fully disjoint, on both members at once) -- that
-        // combination is not a real drop a player will see, and
-        // FitTooltipToBody already clamps and shrinks to whatever the actual
-        // body needs, same as before.
-        public const float TooltipHeight = 590f;
-
-        // And the shortest, so a one-line body still looks like a considered
-        // box rather than a strip.
-        public const float TooltipMinHeight = 96f;
-
-        // Air between the text and the box's edge, on every side.
-        public const float TooltipPad = 16f;
-
-        // What a hovered offer would actually DO, per squad member.
-        //
-        // BESIDE THE CARD, not under the row: a strip pinned across the
-        // bottom of the panel reads as a status line the screen always has,
-        // detached from any of the three cards, so nothing connects the
-        // numbers to the thing under the cursor. TooltipPlacement (shared
-        // with the dossier's pack) handles dodging the panel edge on the
-        // outer two cards.
-        //
-        // SQUARE, like the pack's, because the content is the same shape: a
-        // per-character stack of short delta lines, which runs deep rather than
-        // wide and wants height far more than the 116px the strip gave it.
-        //
-        // Decor, so the emitter clears raycastTarget across the subtree -- a
-        // tooltip that ate the click meant for the card underneath it would be
-        // a cruel bug on a screen whose only job is taking one click. That
-        // matters more now that it sits ON a card rather than below them all.
-        private UiNode BuildOfferTooltip()
-        {
-            var label = Ui.Label("ReckoningOfferTooltipText", UiString.Runtime,
-                    new UiVec(TooltipWidth - TooltipPad * 2f, TooltipHeight - TooltipPad * 2f), 15,
-                    "#D9CCF2", Place.At(0f, 0f))
-                .TextAligned(UiTextAlign.TopLeft);
-            OfferTooltipText = label;
-
-            // A FLAT GROUND, not a tab plate: that sprite is a wide 9-slice
-            // and a 300x300 crop of it reads as a button someone forgot to
-            // label; the pack's tooltip already established a plain dark
-            // sheet as the house tooltip surface.
-            //
-            // FULLY OPAQUE, where the pack's tooltip gets away with 95%: that
-            // one opens over the dossier's flat ground, this one over a
-            // neighbouring card's item art, and at F2 the coif behind it read
-            // straight through the comparison numbers -- confirmed in a
-            // capture, which is the only place it could be seen.
-            //
-            // Declared at the panel's centre and moved on every hover, exactly
-            // as the dossier's is -- an authored position an inactive node
-            // never draws at, chosen because it is somewhere the containment
-            // audit can solve.
-            var panel = Ui.Tooltip("ReckoningOfferTooltip", null, "#1D1226", Place.At(0f, 0f),
-                UiSize.Fixed(TooltipWidth, TooltipHeight), label);
-            OfferTooltip = panel;
-            return panel;
         }
 
         // ---- one page card's vertical bands -----------------------------------

@@ -60,10 +60,6 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text ledgerLabel;
         [SerializeField] internal Button leaveButton;
 
-        // Baked by ReckoningScreen but never shown: a page card's face is its
-        // whole detail. Dropping the node is a screen-tree change.
-        [SerializeField] internal GameObject offerTooltip;
-        [SerializeField] internal TMP_Text offerTooltipText;
         [SerializeField] internal Image[] offerHalos;
         [SerializeField] internal Image[] offerBursts;
         [SerializeField] internal Image[] offerIcons;

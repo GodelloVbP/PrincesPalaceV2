@@ -104,8 +104,6 @@ namespace PrincesPalace.PlayModeTests
                 .FirstOrDefault(r => r.name == name && r.gameObject.scene.IsValid())
                 ?.gameObject;
 
-        private static GameObject Tooltip => Node("ReckoningOfferTooltip");
-
         private static Image Halo(int index) =>
             Resources.FindObjectsOfTypeAll<Image>()
                 .FirstOrDefault(im => im.name == $"ReckoningOffer{index}Halo" && im.gameObject.scene.IsValid());
@@ -257,21 +255,6 @@ namespace PrincesPalace.PlayModeTests
         }
 
         // ---- no per-party box on a page card -----------------------------------
-
-        // The card face names its one recipient and that recipient's change
-        // (RewardCardFace). A squad-wide box beside it said "no change" for the
-        // very member the face promised +3 DMG, and covered the next card.
-        [UnityTest]
-        public IEnumerator SelectingOrHoveringAnOffer_OpensNoComparisonBox()
-        {
-            yield return ShowTheChoice();
-
-            Assert.IsFalse(Tooltip.activeSelf, "the selected card's face is its whole detail");
-
-            yield return Press(1f, 0f);
-
-            Assert.IsFalse(Tooltip.activeSelf, "moving the selection must not open one either");
-        }
 
         // ---- where the stick is standing, and what the halo means now -----------
         //

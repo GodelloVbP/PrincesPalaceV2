@@ -268,48 +268,6 @@ namespace PrincesPalace.Domain.Tests
                 "Fiery -- <color=#E0B84D>+20%</color> Fire dmg on hit", withModifiers);
         }
 
-        // ITEM-MODIFIER PLAN PHASE F: this used to assert the AFFIXES section
-        // printed ONCE, above every member, because the roll used to be one
-        // fact shared by the whole squad. It no longer is -- PHASE F diffs
-        // each member's line against what THAT member currently has
-        // equipped in the slot (see Core.ItemDescription.ModifierComparisonLines),
-        // so two members can legitimately see different colours for the
-        // exact same candidate. Each member now carries and prints its own
-        // AFFIXES block.
-        [Test]
-        public void SquadBody_PrintsEachMembersOwnAffixesUnderTheirOwnBlock()
-        {
-            var squad = new (string, ItemComparison, IReadOnlyList<string>)[]
-            {
-                ("Shawn", Comparison(Stats(atk: 2)), new[] { "Fiery -- <color=#E0B84D>+20%</color> Fire dmg on hit" }),
-                ("Wool", Comparison(candidateIsLive: false), new[] { "Fiery -- <color=#E0B84D>+20%</color> Fire dmg on hit" }),
-            };
-
-            string body = ItemStatLines.SquadBody(squad);
-
-            int firstOccurrence = body.IndexOf("Fiery", System.StringComparison.Ordinal);
-            int secondOccurrence = body.IndexOf("Fiery", firstOccurrence + 1, System.StringComparison.Ordinal);
-            Assert.AreNotEqual(-1, secondOccurrence,
-                "each member's own comparison can differ, so each member prints its own AFFIXES block");
-
-            StringAssert.Contains($"Shawn\n   <color={ItemStatLines.GainHex}>+2 Attack</color>\n" +
-                "   <color=#A695BC>AFFIXES</color>\n" +
-                "   Fiery -- <color=#E0B84D>+20%</color> Fire dmg on hit", body);
-        }
-
-        [Test]
-        public void SquadBody_OmitsAffixesForAMemberWithNoRolledLines()
-        {
-            var squad = new (string, ItemComparison, IReadOnlyList<string>)[]
-            {
-                ("Shawn", Comparison(Stats(atk: 2)), null),
-            };
-
-            string body = ItemStatLines.SquadBody(squad);
-
-            StringAssert.DoesNotContain("AFFIXES", body);
-        }
-
         // ---- requirements --------------------------------------------------
 
         [Test]

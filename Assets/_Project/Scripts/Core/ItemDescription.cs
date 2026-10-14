@@ -324,34 +324,6 @@ namespace PrincesPalace
         // resolver -- so an equipped-but-inert item's hover explains why it is
         // inert through the exact same path a bag item's hover uses to explain
         // what wearing it would do.
-        // The same comparison, for EVERY member of a squad at once.
-        //
-        // The Reckoning's prize goes to the stockpile rather than to a
-        // character, so "what would this replace" has as many answers as there
-        // are members. Each one runs the real Compare -- the clone-and-resolve
-        // path, not a shortcut -- so a swap that would knock another slot inert
-        // is accounted for per character, which is exactly the case a
-        // "best candidate only" summary would hide.
-        public static string SquadComparisonBody(IReadOnlyList<Character> squad, ItemInstance candidate)
-        {
-            if (squad == null || candidate == null) return "";
-
-            var rows = new List<(string, ItemComparison, IReadOnlyList<string>)>();
-            foreach (var member in squad)
-            {
-                if (member == null) continue;
-                var definition = ContentDatabase.GetCharacter(member.definitionId);
-                string name = definition == null || string.IsNullOrWhiteSpace(definition.Data.DisplayName)
-                    ? member.definitionId
-                    : definition.Data.DisplayName;
-                var equippedModifierIds = EquippedModifierIds(member, candidate);
-                rows.Add((name, Compare(member, candidate),
-                    ModifierComparisonLines(candidate, equippedModifierIds, member)));
-            }
-
-            return ItemStatLines.SquadBody(rows);
-        }
-
         public static string ComparisonBody(Character character, ItemInstance candidate)
         {
             if (character == null || candidate == null) return "";
