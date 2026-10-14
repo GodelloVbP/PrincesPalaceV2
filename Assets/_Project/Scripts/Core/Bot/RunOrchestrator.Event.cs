@@ -513,6 +513,10 @@ namespace PrincesPalace
         // event seen this run.
         internal static void CloseEventFields(RunSnapshot run)
         {
+            // The room's promise is kept once the event is left; a returning
+            // event walked away from must roll again on re-entry, and a finished
+            // one must stay refused, both by the ordinary roll.
+            run.nodeEvents?.RemoveAll(e => e == null || (e.nodeId == run.eventNodeId && e.eventId == run.eventId));
             run.eventId = "";
             run.eventNodeId = -1;
             run.eventPageId = "";
