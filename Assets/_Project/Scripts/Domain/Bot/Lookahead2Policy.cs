@@ -47,10 +47,9 @@ namespace PrincesPalace.Domain.Bot
         // multi-target consideration.
         private const int KillBonus = 1_000_000;
 
-        // The map/offer/relic brain is NOT re-specified here -- the plan
-        // says to reuse GreedyAggressive's IRunPolicy rather than invent a
-        // second map strategy for what is fundamentally still "play to
-        // win". Composition, not inheritance: BotRunDriver's own registry
+        // The offer/relic brain is NOT re-specified here -- the plan says to
+        // reuse GreedyAggressive's IRunPolicy for what is fundamentally still
+        // "play to win". The node choice scores the map itself (ChooseNode). Composition, not inheritance: BotRunDriver's own registry
         // (Core/Bot/BotRunDriver.cs) wants ONE object per archetype
         // implementing both interfaces, so this type implements IRunPolicy
         // itself and forwards every call.
@@ -350,8 +349,71 @@ namespace PrincesPalace.Domain.Bot
             return intent.HasValue ? intent.Value.ExpectedDamage : (enemy?.Attack ?? 0);
         }
 
-        public RealmNode ChooseNode(IReadOnlyList<RealmNode> choices, RunView view, SeededRandom rng) =>
-            _runBrain.ChooseNode(choices, view, rng);
+        // PATH RULE: looks two rooms ahead. Scores each room on offer as its
+        // own value plus its best follow-up room, less 0.3 a detour room, where
+        // a fight is worth prize x strength less strength^2 x (1.25 - HP) of
+        // risk, and a rest is worth 4 x missing HP. Highest score wins, the
+        // earlier offer on a tie. Without a map it plays GreedyAggressive's.
+        public RealmNode ChooseNode(IReadOnlyList<RealmNode> choices, RunView view, SeededRandom rng)
+        {
+            var map = view.Map;
+            if (map == null || choices.Count < 2) return _runBrain.ChooseNode(choices, view, rng);
+
+            RealmNode best = null;
+            float bestScore = float.MinValue;
+            foreach (var node in choices)
+            {
+                if (!map.Has(node)) continue;
+                var info = map.Of(node);
+                float follow = 0f;
+                bool anyNext = false;
+                foreach (var next in map.After(node))
+                {
+                    float value = RoomValue(next, view.PartyHpFraction);
+                    if (!anyNext || value > follow) follow = value;
+                    anyNext = true;
+                }
+
+                float score = RoomValue(info, view.PartyHpFraction) + follow - DetourCost * info.DetourRooms;
+                if (score > bestScore)
+                {
+                    bestScore = score;
+                    best = node;
+                }
+            }
+
+            return best ?? _runBrain.ChooseNode(choices, view, rng);
+        }
+
+        private const float DetourCost = 0.3f;
+
+        private static float PrizeValue(PrizeKind kind)
+        {
+            switch (kind)
+            {
+                case PrizeKind.Gold: return 1f;
+                case PrizeKind.Consumable: return 1.5f;
+                case PrizeKind.Item:
+                case PrizeKind.Book:
+                case PrizeKind.Relic: return 3f;
+                default: return 0.5f;
+            }
+        }
+
+        private static float RoomValue(MapNodeView room, float hp)
+        {
+            switch (room.Type)
+            {
+                case RoomType.Fight:
+                case RoomType.EliteFight:
+                    int strength = room.Strength < 1 ? 1 : room.Strength;
+                    return PrizeValue(room.Prize) * strength - strength * strength * (1.25f - hp);
+                case RoomType.Treasure: return 2f;
+                case RoomType.Rest: return 4f * (1f - hp);
+                case RoomType.Boss: return 0f;
+                default: return 1f;
+            }
+        }
 
         public int ChooseOffer(IReadOnlyList<ItemOffer> offers, RunView view, SeededRandom rng) =>
             _runBrain.ChooseOffer(offers, view, rng);

@@ -102,8 +102,14 @@ namespace PrincesPalace.Domain.Bot
 
         // ---- outside a fight, this IS GreedyAggressive ------------------------
 
+        // PATH RULE: keeps the front rank alive. Takes a pocket from 60% HP,
+        // a strength-3 fight from 80%, an anchor from 90%, the weakest fight
+        // first; the room-type order is GreedyAggressive's.
+        public static readonly PathRule Path = new PathRule(
+            pocketMinHp: 0.6f, strength3MinHp: 0.8f, anchorMinHp: 0.9f, prefersStrong: false);
+
         public RealmNode ChooseNode(IReadOnlyList<RealmNode> choices, RunView view, SeededRandom rng) =>
-            _greedy.ChooseNode(choices, view, rng);
+            _greedy.ChooseByType(Path.Narrow(choices, view), view);
 
         public int ChooseOffer(IReadOnlyList<ItemOffer> offers, RunView view, SeededRandom rng) =>
             _greedy.ChooseOffer(offers, view, rng);

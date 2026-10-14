@@ -58,7 +58,11 @@ param(
     [string]$GrantRelic = "",
     [string]$GrantTalent = "",
     [string]$GrantBook = "",
-    [switch]$NoTelegraphAnswer
+    [switch]$NoTelegraphAnswer,
+
+    # Opens the run on this floor (1 = a plain run); the depth cap counts from
+    # there. Pair with -Profiles Mid/Late for a deep floor. Not with -Career.
+    [int]$StartFloor = 1
 )
 
 # Runs a balance-bot batch headlessly, across one or several Unity instances.
@@ -165,6 +169,12 @@ param(
 # parser, so plain "--" throughout.
 
 $ErrorActionPreference = "Stop"
+
+# `-Archetypes A,B` binds a [string] parameter as the array joined with a
+# SPACE ("A B"); Start-Process then splits that into two argv entries and the
+# runner sees only "A". Re-join on commas so a list survives the hand-off.
+$Archetypes = (($Archetypes -split '[,\s]+') | Where-Object { $_ }) -join ","
+$Profiles = (($Profiles -split '[,\s]+') | Where-Object { $_ }) -join ","
 
 $SourceProject = Split-Path $PSScriptRoot -Parent
 . (Join-Path $PSScriptRoot "unity_path.ps1")
@@ -335,10 +345,10 @@ else {
     Write-Host "Running balance bot: $Runs runs/cell, seed $Seed, archetypes [$ArchetypesLabel], profiles [$Profiles],"
     Write-Host "depth cap $DepthCap steps, replay share $ReplayShare, shop policy $ShopPolicy, across $($shardList.Count) shard(s)."
 }
-if ($ForceEvent -or $EventChoice -or $NoTransform -or $GrantRelic -or $GrantTalent -or $GrantBook -or $NoTelegraphAnswer) {
+if ($ForceEvent -or $EventChoice -or $NoTransform -or $GrantRelic -or $GrantTalent -or $GrantBook -or $NoTelegraphAnswer -or $StartFloor -gt 1) {
     Write-Host "Probe: force event [$ForceEvent] floor $ForceEventFloor, event choice [$EventChoice], no transform $NoTransform,"
     Write-Host "       grant relic [$GrantRelic], grant talent [$GrantTalent], grant book [$GrantBook],"
-    Write-Host "       no telegraph answer $NoTelegraphAnswer."
+    Write-Host "       no telegraph answer $NoTelegraphAnswer, start floor $StartFloor."
 }
 
 # ---- launch ------------------------------------------------------------------
@@ -392,6 +402,7 @@ foreach ($shard in $shardList) {
     if ($GrantTalent) { $unityArgs += @("-botGrantTalent", $GrantTalent) }
     if ($GrantBook) { $unityArgs += @("-botGrantBook", $GrantBook) }
     if ($NoTelegraphAnswer) { $unityArgs += @("-botNoTelegraphAnswer", "1") }
+    if ($StartFloor -gt 1) { $unityArgs += @("-botStartFloor", $StartFloor) }
 
     Write-Host "  shard $($shard.Index): seeds $($shard.Seed)..$($shard.Seed + $shard.Runs - 1) in $($shard.Path)"
     $shard.Process = Start-UnityQuiet -FilePath $UnityExe -ArgumentList $unityArgs

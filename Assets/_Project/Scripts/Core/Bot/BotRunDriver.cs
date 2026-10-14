@@ -226,10 +226,16 @@ namespace PrincesPalace
             // the archetype alone decides, as before M6.
             public bool NoTelegraphAnswer;
 
+            // The run opens on this floor (realms advanced with the game's own
+            // AdvanceLeg) and the depth cap counts from there. 0 and 1 are
+            // floor 1. Pair with -Profiles Mid or Late: a Fresh party at floor
+            // 30 only measures how fast it dies.
+            public int StartFloor;
+
             public bool IsEmpty =>
                 string.IsNullOrEmpty(ForceEventId) && string.IsNullOrEmpty(EventChoiceText) && !NoTransform
                 && GrantRelicIds.Count == 0 && GrantTalentIds.Count == 0 && GrantBookIds.Count == 0
-                && !NoTelegraphAnswer;
+                && !NoTelegraphAnswer && StartFloor <= 1;
         }
 
         // The probe of the run in flight: set by PlayRun for its own duration
@@ -619,7 +625,9 @@ namespace PrincesPalace
                 return;
             }
 
-            PlayDescent(seed, save, fightPolicy, runPolicy, depthCapSteps, shopNodes, result);
+            for (int floor = 1; floor < (_probe?.StartFloor ?? 1); floor++) RunManager.AdvanceLeg();
+
+            PlayDescent(seed, save, fightPolicy, runPolicy, RunManager.Run.step + depthCapSteps, shopNodes, result);
         }
 
         // ONE DESCENT, on a save and a run StartRun has already opened: the
@@ -699,12 +707,13 @@ namespace PrincesPalace
                 // Never narrows the list and lets the archetype choose out of
                 // what is left. Everything else is the archetype's own rule,
                 // unchanged (ShopNodePreference).
-                var view = ViewOf(save);
+                var view = ViewOf(save).WithMap(BotMapView.Current());
                 var offered = ShopNodePreference.ChoicesFor(shopNodes, choices);
                 bool forceHere = ForcedEventDueOnThisFloor();
-                var node = (forceHere ? ForcedEventNode(offered) : null)
-                           ?? ShopNodePreference.PreferredNode(
-                               shopNodes, offered, view, runPolicy.RestBelowPartyHpFraction)
+                var forcedNode = forceHere ? ForcedEventNode(offered) : null;
+                var shopNode = forcedNode != null ? null : ShopNodePreference.PreferredNode(
+                    shopNodes, offered, view, runPolicy.RestBelowPartyHpFraction);
+                var node = forcedNode ?? shopNode
                            ?? runPolicy.ChooseNode(offered, view, StreamFor(seed, NodeStream, RunManager.Run.step, rooms));
 
                 if (node == null)
@@ -721,6 +730,8 @@ namespace PrincesPalace
                     RoomType = node.Type.ToString(),
                     PickedIndex = -1,
                 };
+
+                if (forcedNode == null && shopNode == null) RecordPathChoice(roomTrace, offered, node, view);
 
                 bool isFight = RunOrchestrator.IsFight(node.Type);
 
@@ -2012,6 +2023,32 @@ namespace PrincesPalace
                 .Where(e => e != null && e.count > 0)
                 .Where(e => ContentDatabase.GetItem(e.itemId)?.kind == ItemKind.Consumable)
                 .Sum(e => e.count) ?? 0;
+        }
+
+        // A strength-3 fight that is not an anchor: the anchor gate is a
+        // separate rule and would blur the strength-3 rate.
+        private static bool IsHeavyFight(MapView map, RealmNode node) =>
+            map.Has(node) && map.Of(node).Strength >= 3 && !map.Of(node).IsAnchor;
+
+        // What the node choice looked like, for the pocket-take and
+        // strength-3-take rates by HP band. A point with one room on offer is
+        // no choice and records nothing, and neither does one the shop
+        // preference or a forced event settled: those are the batch's, not
+        // the policy's.
+        private static void RecordPathChoice(RoomTrace trace, IReadOnlyList<RealmNode> offered, RealmNode node, RunView view)
+        {
+            var map = view.Map;
+            if (map == null || offered.Count < 2) return;
+
+            trace.ChoiceOptions = offered.Count;
+            trace.ChoiceHpPercent = (int)Math.Round(view.PartyHpFraction * 100f);
+            trace.ChoiceStrength = map.Has(node) ? map.Of(node).Strength : 0;
+            trace.ChoicePocketOffered = offered.Any(n => map.Has(n) && map.Of(n).InPocket)
+                                        && offered.Any(n => map.Has(n) && !map.Of(n).InPocket);
+            trace.ChoicePocketTaken = map.Has(node) && map.Of(node).InPocket;
+            trace.ChoiceStrength3Offered = offered.Any(n => IsHeavyFight(map, n))
+                                           && offered.Any(n => !IsHeavyFight(map, n));
+            trace.ChoiceStrength3Taken = IsHeavyFight(map, node);
         }
 
         // What an IRunPolicy is allowed to see. Deliberately the same handful

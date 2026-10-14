@@ -577,5 +577,31 @@ class SpellAcquisitionTests(unittest.TestCase):
         self.assertIsNone(out["shopVisitsShowingUnaffordableBookShare"])
 
 
+class PathChoiceTests(unittest.TestCase):
+    def _room(self, hp, pocket_offered=False, pocket_taken=False, heavy_offered=False, heavy_taken=False):
+        return {"choiceOptions": 2, "choiceHpPercent": hp,
+                "choicePocketOffered": pocket_offered, "choicePocketTaken": pocket_taken,
+                "choiceStrength3Offered": heavy_offered, "choiceStrength3Taken": heavy_taken}
+
+    def test_rates_split_by_hp_band_and_skip_unoffered(self):
+        rooms = [
+            self._room(30, pocket_offered=True, pocket_taken=False),
+            self._room(60, pocket_offered=True, pocket_taken=True, heavy_offered=True, heavy_taken=False),
+            self._room(79, pocket_offered=True, pocket_taken=False),
+            self._room(95, pocket_offered=True, pocket_taken=True, heavy_offered=True, heavy_taken=True),
+            self._room(100, heavy_offered=True, heavy_taken=True),
+            {"choiceOptions": 0, "choiceHpPercent": 0},
+        ]
+        out = bot_merge.path_choice([{"archetype": "A", "rooms": rooms}])["overall"]
+
+        self.assertEqual(0, out["lt50"]["pocketTakeRate"])
+        self.assertIsNone(out["lt50"]["strength3TakeRate"])
+        self.assertEqual(0.5, out["50to79"]["pocketTakeRate"])
+        self.assertEqual(0, out["50to79"]["strength3TakeRate"])
+        self.assertEqual(1, out["ge80"]["pocketTakeRate"])
+        self.assertEqual(1, out["ge80"]["strength3TakeRate"])
+        self.assertEqual(2, out["ge80"]["strength3Offered"])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

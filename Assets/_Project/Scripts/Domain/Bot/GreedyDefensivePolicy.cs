@@ -310,8 +310,14 @@ namespace PrincesPalace.Domain.Bot
             return null;
         }
 
+        // PATH RULE: guards the party. Takes a pocket from 75% HP, a
+        // strength-3 fight from 90%, never an anchor, the weakest fight first.
+        public static readonly PathRule Path = new PathRule(
+            pocketMinHp: 0.75f, strength3MinHp: 0.9f, anchorMinHp: 2f, prefersStrong: false);
+
         public RealmNode ChooseNode(IReadOnlyList<RealmNode> choices, RunView view, SeededRandom rng)
         {
+            choices = Path.Narrow(choices, view);
             if (choices.Count == 1) return choices[0];
 
             // Rest is checked BEFORE treasure and at a higher HP threshold

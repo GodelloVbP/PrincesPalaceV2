@@ -331,6 +331,17 @@ RoomTrace
                         event opened here
   EventForced   bool   -- the event was -ForceEvent's rather than the room's
                         own roll (see "Tuning probes" below)
+  ChoiceOptions int    -- rooms on offer at the node choice that led into
+                        this room; 0 when there was no map, a single exit,
+                        or the choice was the shop preference's or a forced
+                        event's rather than the policy's
+  ChoiceHpPercent int  -- party HP as a whole percent at that choice
+  ChoiceStrength int   -- strength 1-3 of the room taken, 0 when not a fight
+  ChoicePocketOffered bool -- a pocket room was on offer beside a spine room
+  ChoicePocketTaken bool   -- the room taken is a pocket room
+  ChoiceStrength3Offered bool -- a strength-3 fight that is not an anchor was
+                        on offer beside some other room
+  ChoiceStrength3Taken bool   -- the room taken is such a fight
 
 OfferEntry
   ItemId        string
@@ -384,12 +395,16 @@ EquipTrace
 
 `tools/bot.ps1 -ForceEvent <id> [-ForceEventFloor <n>] [-EventChoice <text>]
 [-NoTransform] [-GrantRelic <ids>] [-GrantTalent <ids>] [-GrantBook <ids>]
-[-NoTelegraphAnswer]`
+[-NoTelegraphAnswer] [-StartFloor <n>]`
 (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md M8a; the exact rules are
 `BotRunDriver.BotProbe`'s header). Each shard's `batch.json` records them as
 `forceEvent`, `forceEventFloor`, `eventChoice`, `noTransform`,
 `grantRelicIds`, `grantTalentIds`; `summary.json` does not carry them, so a
 probe batch is read from its shard files. Refused together with `-Career`.
+
+- `-StartFloor <n>` opens the run on floor n (the game's own `AdvanceLeg`, n-1
+  times) and counts the depth cap from there; `batch.json` records
+  `startFloor`. Pair it with `-Profiles Mid` or `Late`.
 
 - A floor-pinned forced event fires once per run, at the first room on that
   floor that is not a fight or a shop, and that room is only the event. A
@@ -585,6 +600,13 @@ mismatch on any one independent run would, keyed by that life's own
     }
   ],
   "decisionPressure": { "nodes": 0.31, "offers": 0.44, "relics": 0.52 },
+  "pathChoice": {            // docs/PLAN_RUN_MAP.md P3 gate
+    "overall": { "lt50": { "choices": 0, "pocketOffered": 0, "pocketTaken": 0,
+                           "pocketTakeRate": null, "strength3Offered": 0,
+                           "strength3Taken": 0, "strength3TakeRate": null },
+                 "50to79": {}, "ge80": {} },
+    "byArchetype": { "GreedyAggressive": { "lt50": {}, "50to79": {}, "ge80": {} } }
+  },
   "shopVsNoShop": {
     "pairs": 3000,
     "pairsWithAShopVisit": 1840,
@@ -874,6 +896,14 @@ impact, which is the point of shipping the loop before the flip).
   fielded character knows, so a shown-but-unaffordable book is the honest
   "wanted it, could not pay" reading without replaying per-character
   eligibility here. `null` when the cell had no shop visits.
+
+**`pathChoice`** — the node choices the runs made, by party HP band at the
+choice (`lt50`, `50to79`, `ge80`), overall and per archetype. Counted from
+`rooms[].choice*` over choices with two or more rooms on offer.
+`pocketTakeRate` is pocket rooms taken over choices that offered a pocket
+beside a spine room; `strength3TakeRate` likewise for a strength-3 non-anchor
+fight beside any other room. `null` where nothing was offered. RandomLegal ignores the map,
+so its rates are flat across bands by design.
 
 **`shopVsNoShop`** — the matched-seed comparison (§7.1 point 1), or `null`.
 

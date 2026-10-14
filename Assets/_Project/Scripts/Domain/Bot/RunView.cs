@@ -35,8 +35,12 @@ namespace PrincesPalace.Domain.Bot
         // in a better roll.
         public readonly IReadOnlyList<float> OfferScores;
 
+        // The realm map ahead of the party, filled at a node choice and null
+        // everywhere else (and in a view built without a run).
+        public readonly MapView Map;
+
         public RunView(float partyHpFraction, int step, int floor, int gold,
-            IReadOnlyList<string> heldRelicIds, IReadOnlyList<float> offerScores = null)
+            IReadOnlyList<string> heldRelicIds, IReadOnlyList<float> offerScores = null, MapView map = null)
         {
             PartyHpFraction = partyHpFraction;
             Step = step;
@@ -44,11 +48,15 @@ namespace PrincesPalace.Domain.Bot
             Gold = gold;
             HeldRelicIds = heldRelicIds ?? Array.Empty<string>();
             OfferScores = offerScores ?? Array.Empty<float>();
+            Map = map;
         }
 
         // The same view with offer scores attached. The driver builds the view
         // once per choice point and only the offer point has scores to add.
         public RunView WithOfferScores(IReadOnlyList<float> scores) =>
-            new RunView(PartyHpFraction, Step, Floor, Gold, HeldRelicIds, scores);
+            new RunView(PartyHpFraction, Step, Floor, Gold, HeldRelicIds, scores, Map);
+
+        public RunView WithMap(MapView map) =>
+            new RunView(PartyHpFraction, Step, Floor, Gold, HeldRelicIds, OfferScores, map);
     }
 }

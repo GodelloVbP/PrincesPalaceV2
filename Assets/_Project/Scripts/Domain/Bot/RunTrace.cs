@@ -246,6 +246,25 @@ namespace PrincesPalace.Domain.Bot
         // the bot's -ForceEvent rather than the room's own roll.
         public string EventId = "";
         public bool EventForced;
+
+        // ---- the node choice that led into this room ------------------------
+        //
+        // Zero/false for a room entered with nothing to choose between. Feeds
+        // pathChoice in summary.json: how often the pocket and the strength-3
+        // fight are taken when offered, by the party's HP band.
+        public int ChoiceOptions;
+        public int ChoiceHpPercent;
+
+        // Strength of the room taken, 0 when it is not a fight.
+        public int ChoiceStrength;
+
+        // A pocket room was on offer beside a spine room.
+        public bool ChoicePocketOffered;
+        public bool ChoicePocketTaken;
+
+        // A strength-3 fight (not an anchor) was on offer beside another room.
+        public bool ChoiceStrength3Offered;
+        public bool ChoiceStrength3Taken;
     }
 
     // One ChooseSpellAssignment answer and what the orchestrator did with

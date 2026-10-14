@@ -15,10 +15,10 @@ namespace PrincesPalace.Domain.Tests
         // ---- strength ----------------------------------------------------
 
         [TestCase(0, 1000, 1)]
-        [TestCase(339, 1000, 1)]
-        [TestCase(340, 1000, 2)]
-        [TestCase(609, 1000, 2)]
-        [TestCase(610, 1000, 3)]
+        [TestCase(269, 1000, 1)]
+        [TestCase(270, 1000, 2)]
+        [TestCase(479, 1000, 2)]
+        [TestCase(480, 1000, 3)]
         [TestCase(5000, 1000, 3)]
         [TestCase(10, 0, 3)]
         public void Strength_BandsOnTheEvSheetThresholds(double threat, double party, int expected)

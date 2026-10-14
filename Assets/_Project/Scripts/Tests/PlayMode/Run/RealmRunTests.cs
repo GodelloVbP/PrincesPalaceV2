@@ -76,14 +76,13 @@ namespace PrincesPalace.PlayModeTests
             CollectionAssert.AreEqual(before, RunManager.Run.nodeStrength.Select(e => (e.nodeId, e.strength)).ToList());
         }
 
-        // The mix the real starting squad sees on floor 1, on fixed seeds.
-        // The EV sheet fitted T1/T2 to 40/40/20 over floors 1-10 for a party
-        // that keeps pace with the enemy curve; a fresh squad can only be
-        // measured on floor 1, where the sheet expects an easy skew (64/32/4
-        // at its reference party, 4560). The real squad weighs 5760, so it
-        // reads easier still: measured 79/21/0 over seeds 1-100. Pinned with
-        // a tolerance, so a retune of the thresholds, the squad or the pool
-        // shows here (docs/handoffs/run_map/EV_SHEET.md section 2).
+        // The mix the real starting squad sees on floor 1, on fixed seeds. The
+        // EV sheet fitted T1/T2 to 40/40/20 over floors 1-10 for a party that
+        // keeps pace with the enemy curve, and expects floor 1 to skew easy
+        // (64/32/4 at its reference party). T1/T2 are rescaled to the squad's
+        // real weight, 5760; measured 60/35/4 over seeds 1-100. Pinned with a
+        // tolerance, so a retune of the thresholds, the squad or the pool shows
+        // here (docs/handoffs/run_map/EV_SHEET.md section 2).
         [Test]
         public void TheStartingSquadsFloorOneStrengthMixIsPinned()
         {
@@ -100,9 +99,9 @@ namespace PrincesPalace.PlayModeTests
             string mix = $"{s1:P0} / {s2:P0} / {s3:P0} over {total} fights";
             TestContext.WriteLine("floor-1 strength mix: " + mix);
 
-            Assert.That(s1, Is.InRange(0.69f, 0.89f), mix);
-            Assert.That(s2, Is.InRange(0.11f, 0.31f), mix);
-            Assert.That(s3, Is.InRange(0f, 0.05f), mix);
+            Assert.That(s1, Is.InRange(0.50f, 0.70f), mix);
+            Assert.That(s2, Is.InRange(0.25f, 0.45f), mix);
+            Assert.That(s3, Is.InRange(0.01f, 0.10f), mix);
         }
 
         // ---- the step contract ----------------------------------------------

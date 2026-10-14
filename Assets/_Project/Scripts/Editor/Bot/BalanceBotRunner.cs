@@ -167,12 +167,13 @@ namespace PrincesPalace.Editor.Bot
             o.Probe.GrantTalentIds = SplitList(Arg(args, "-botGrantTalent", ""));
             o.Probe.GrantBookIds = SplitList(Arg(args, "-botGrantBook", ""));
             o.Probe.NoTelegraphAnswer = ArgInt(args, "-botNoTelegraphAnswer", 0) != 0;
+            o.Probe.StartFloor = ArgInt(args, "-botStartFloor", 1);
 
             if (o.Career && !o.Probe.IsEmpty)
             {
                 throw new ArgumentException("-botCareer does not take the probe flags (-botForceEvent, -botEventChoice, " +
                                             "-botNoTransform, -botGrantRelic, -botGrantTalent, -botGrantBook, " +
-                                            "-botNoTelegraphAnswer)");
+                                            "-botNoTelegraphAnswer, -botStartFloor)");
             }
 
             if (o.ReplayShare < 0) o.ReplayShare = 0;
@@ -883,6 +884,13 @@ namespace PrincesPalace.Editor.Bot
                 // only the run's last one.
                 sb.Append(",\"eventId\":").Append(Str(r.EventId));
                 sb.Append(",\"eventForced\":").Append(r.EventForced ? "true" : "false");
+                sb.Append(",\"choiceOptions\":").Append(r.ChoiceOptions);
+                sb.Append(",\"choiceHpPercent\":").Append(r.ChoiceHpPercent);
+                sb.Append(",\"choiceStrength\":").Append(r.ChoiceStrength);
+                sb.Append(",\"choicePocketOffered\":").Append(r.ChoicePocketOffered ? "true" : "false");
+                sb.Append(",\"choicePocketTaken\":").Append(r.ChoicePocketTaken ? "true" : "false");
+                sb.Append(",\"choiceStrength3Offered\":").Append(r.ChoiceStrength3Offered ? "true" : "false");
+                sb.Append(",\"choiceStrength3Taken\":").Append(r.ChoiceStrength3Taken ? "true" : "false");
                 sb.Append(",\"learnedSpellCountAfterRoom\":").Append(r.LearnedSpellCountAfterRoom);
                 sb.Append(",\"unassignedSpellBookCountAfterRoom\":").Append(r.UnassignedSpellBookCountAfterRoom);
                 sb.Append(",\"spellAssignments\":[");
@@ -1052,6 +1060,7 @@ namespace PrincesPalace.Editor.Bot
             sb.Append("\"grantTalentIds\":").Append(StrList(o.Probe.GrantTalentIds)).Append(",\n");
             sb.Append("\"grantBookIds\":").Append(StrList(o.Probe.GrantBookIds)).Append(",\n");
             sb.Append("\"noTelegraphAnswer\":").Append(o.Probe.NoTelegraphAnswer ? "true" : "false").Append(",\n");
+            sb.Append("\"startFloor\":").Append(o.Probe.StartFloor).Append(",\n");
             sb.Append("\"elapsedSeconds\":").Append(Num(elapsed)).Append("\n");
             sb.Append("}\n");
             return sb.ToString();

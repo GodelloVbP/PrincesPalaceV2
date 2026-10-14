@@ -29,17 +29,20 @@ namespace PrincesPalace.Domain.Dungeon
     // r = threat / party, with threat and party each the sum of max HP x
     // attack. T1 and T2 are the P0 EV sheet's literals
     // (docs/handoffs/run_map/EV_SHEET.md section 2): the 40th and 80th
-    // percentile of r on floors 1-10 against the reference party
-    // ReferencePartyWeight. They hold while the real party at realm open is
-    // near that figure; RealmOpening logs the real one so the sheet can be
-    // redone against it.
+    // percentile of r on floors 1-10 against a reference party, rescaled to
+    // the starting squad's real weight (T = sheet T x 4560 / 5760): at the
+    // sheet's 0.34 / 0.61 the squad read floor 1 as 79 / 21 / 0 and no strength-3
+    // fight existed to choose against (P3 bot report). They hold while the
+    // real party at realm open is near ReferencePartyWeight; RealmOpening logs
+    // the real one so the sheet can be redone against it.
     public static class NodeStrength
     {
-        public const double T1 = 0.34;
-        public const double T2 = 0.61;
+        public const double T1 = 0.27;
+        public const double T2 = 0.48;
 
-        // Shawn, Bjorn and Odette unarmed: 200x7 + 260x10 + 140x4.
-        public const double ReferencePartyWeight = 4560;
+        // The starting squad's weight as RealmOpening logs it: max HP x attack
+        // summed over the fielded characters with their starting kit.
+        public const double ReferencePartyWeight = 5760;
 
         public const int Min = 1;
         public const int Max = 3;

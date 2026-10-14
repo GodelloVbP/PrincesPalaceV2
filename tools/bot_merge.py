@@ -962,6 +962,48 @@ def merge_headers(headers):
     }
 
 
+# Party HP bands at a node choice. Cut at the 50% and 80% marks: GreedyAggressive
+# rests below 50%, and 80% is where the defensive rules start to open up.
+PATH_BANDS = (("lt50", 0, 50), ("50to79", 50, 80), ("ge80", 80, 101))
+
+
+def path_choice(runs):
+    """Pocket-take and strength-3 take rates by party HP band (P3 gate).
+
+    Counted over node choices only: a room entered with nothing to choose
+    between records choiceOptions 0 and is skipped. A rate is pocket rooms
+    taken over choices that offered a pocket beside a spine room, and likewise
+    for strength 3 beside a weaker room. None where nothing was offered.
+    """
+
+    def tally(rows):
+        out = {}
+        for name, low, high in PATH_BANDS:
+            in_band = [r for r in rows if low <= r.get("choiceHpPercent", 0) < high]
+            pocket = [r for r in in_band if r.get("choicePocketOffered")]
+            heavy = [r for r in in_band if r.get("choiceStrength3Offered")]
+            pocket_taken = sum(1 for r in pocket if r.get("choicePocketTaken"))
+            heavy_taken = sum(1 for r in heavy if r.get("choiceStrength3Taken"))
+            out[name] = {
+                "choices": len(in_band),
+                "pocketOffered": len(pocket),
+                "pocketTaken": pocket_taken,
+                "pocketTakeRate": None if not pocket else num(share(pocket_taken, len(pocket))),
+                "strength3Offered": len(heavy),
+                "strength3Taken": heavy_taken,
+                "strength3TakeRate": None if not heavy else num(share(heavy_taken, len(heavy))),
+            }
+        return out
+
+    rows = [room for run in runs for room in run.get("rooms", []) if room.get("choiceOptions", 0) > 1]
+    by_archetype = {}
+    for archetype in sorted({run["archetype"] for run in runs}):
+        by_archetype[archetype] = tally(
+            [room for run in runs if run["archetype"] == archetype
+             for room in run.get("rooms", []) if room.get("choiceOptions", 0) > 1])
+    return {"overall": tally(rows), "byArchetype": by_archetype}
+
+
 # ------------------------------------------------------------------ merge
 
 
@@ -1035,6 +1077,7 @@ def merge(runs, headers, contents):
         "cells": cells,
         "decisionPressure": decision_pressure(runs, archetypes),
         "shopVsNoShop": shop_vs_no_shop(all_runs, cap),
+        "pathChoice": path_choice(runs),
         "coverage": coverage(runs, merge_content(contents)),
         "archetypeGap": gap,
         "bugs": bugs,
@@ -1086,6 +1129,20 @@ def plain_text(summary):
                 float(depth["cappedShare"]), float(cell["doomedShare"]), float(cell["swingShare"]),
             )
         )
+
+    path = summary.get("pathChoice")
+    if path:
+        lines.append("")
+        lines.append("path choice by party HP band (pocket take / strength-3 take, taken/offered)")
+        groups = [("all", path["overall"])] + sorted(path["byArchetype"].items())
+        for label, bands in groups:
+            cells = []
+            for name, _, _ in PATH_BANDS:
+                band = bands[name]
+                cells.append("{}: P {}/{} S3 {}/{}".format(
+                    name, band["pocketTaken"], band["pocketOffered"],
+                    band["strength3Taken"], band["strength3Offered"]))
+            lines.append("  {:<18}{}".format(label, "   ".join(cells)))
 
     by_name = {}
     example = {}

@@ -175,7 +175,17 @@ namespace PrincesPalace.Domain.Bot
             }
         }
 
-        public RealmNode ChooseNode(IReadOnlyList<RealmNode> choices, RunView view, SeededRandom rng)
+        // PATH RULE: greedy for prizes. Takes a pocket, an anchor or a
+        // strength-3 fight from half HP up, the strongest fight first.
+        public static readonly PathRule Path = new PathRule(
+            pocketMinHp: 0.5f, strength3MinHp: 0.5f, anchorMinHp: 0.5f, prefersStrong: true);
+
+        public RealmNode ChooseNode(IReadOnlyList<RealmNode> choices, RunView view, SeededRandom rng) =>
+            ChooseByType(Path.Narrow(choices, view), view);
+
+        // The room-type order: treasure, rest when hurt, fight, boss, elite.
+        // Takes the first of its kind, so the caller's ordering is the tie-break.
+        public RealmNode ChooseByType(IReadOnlyList<RealmNode> choices, RunView view)
         {
             if (choices.Count == 1) return choices[0];
 

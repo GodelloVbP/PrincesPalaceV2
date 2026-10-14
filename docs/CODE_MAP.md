@@ -91,7 +91,7 @@ screenshots all read it.
 | Settings | `Core/GameSettings.cs` | PlayerPrefs. |
 | RNG | `Domain/Rng/RngStreams.cs`, `SeededRandom.cs` | New stream = new constant. |
 | Ambience | `Domain/Ambience/`, `Core/StarTwinkle.cs`, `LanternFlicker.cs`, `SlowDrift.cs`, `MoteDrift.cs`, `KenBurnsDrift.cs` | |
-| Balance bot | `Domain/Bot/`, `Core/Bot/BotRunDriver.cs`, `Editor/Bot/BalanceBotRunner.cs`, `tools/bot.ps1` | Plays whole runs through `RunOrchestrator`. |
+| Balance bot | `Domain/Bot/`, `Core/Bot/BotRunDriver.cs`, `Editor/Bot/BalanceBotRunner.cs`, `tools/bot.ps1` | Plays whole runs through `RunOrchestrator`. Node choice: `Domain/Bot/MapView.cs` + `PathRule.cs`, built by `Core/Bot/BotMapView.cs`. |
 | Preview | `tools/preview.ps1`, `Editor/PreviewRequestWatcher.cs`, `Domain/Preview/PreviewProtocol.cs`, `Core/PreviewFight.cs` | One authored id → a fight to look at. |
 | Render pipeline | `Editor/PipelineBuilder.cs` | Generates URP asset, Renderer 2D, post profile. |
 | Screenshots | `Editor/SceneBuilder/ScreenshotTool.cs`, `tools/screenshot.ps1` | `KnownPanels` and the script's usage text move together. |
