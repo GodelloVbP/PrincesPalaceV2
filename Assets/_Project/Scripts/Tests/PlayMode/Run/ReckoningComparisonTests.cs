@@ -77,11 +77,10 @@ namespace PrincesPalace.PlayModeTests
         }
 
         // ITEM-MODIFIER PLAN PHASE E: an offer's rolled modifiers must show
-        // on the hover BEFORE the player takes it -- ItemOffer.Modifiers/
-        // are set the moment ItemOfferRoll rolls the offer (see
-        // ItemOffer's own header), well before Take() ever writes an
-        // InventoryEntry, and ReckoningController.OnOfferHover reads
-        // straight off the offer rather than off anything claimed. This
+        // on the hover BEFORE the player takes it -- a page card's copy
+        // carries its affixes from the moment the page is rolled, well before
+        // Take() equips anything, and ReckoningController.OnOfferHover reads
+        // straight off the card rather than off anything claimed. This
         // pins that at the model layer, the same "screen half is a
         // screenshot question" posture this whole file takes.
         [Test]

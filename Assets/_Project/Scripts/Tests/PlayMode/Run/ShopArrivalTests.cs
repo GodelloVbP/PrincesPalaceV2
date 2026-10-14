@@ -117,35 +117,6 @@ namespace PrincesPalace.PlayModeTests
 
         // ---- the extracted roll -------------------------------------------------
 
-        // THE REWARD ROLL IS EXACTLY THE TIER ROLL, THEN THE CHOICE.
-        //
-        // Rebuilt here from the public pieces: RarityTable.RollTier then
-        // ItemOfferTable.Choose, drawn in that ORDER off a stream opened at
-        // the same seed. Every draw shifts every draw after it, so a reordered
-        // or duplicated call inside ItemOfferRoll.Roll shows up as different
-        // items.
-        [Test]
-        public void TheRewardRollIsExactlyTheTierRollThenChoose()
-        {
-            const ulong Seed = 987654321UL;
-            const int Depth = 24;
-            const int Favor = 0;
-            const int Count = 3;
-
-            var rolled = ItemOfferRoll.Roll(EncounterClass.Normal, Depth, Favor, Draw(Seed), Count);
-
-            var next = Draw(Seed);
-            int maxTier = ItemOfferRoll.MaxTier;
-            var source = Content.ContentDatabase.GetRewardSource("normal_gear");
-            int target = RarityTable.RollTier(source, Depth, Favor, next);
-            var expected = ItemOfferTable.Choose(ItemOfferRoll.Candidates(), target, maxTier, next, Count);
-
-            CollectionAssert.AreEqual(
-                expected.Select(o => $"{o.ItemId}@{o.Tier}").ToList(),
-                rolled.Select(o => $"{o.ItemId}@{o.Tier}").ToList(),
-                "The reward roll no longer draws in the order the tier roll and the choice define.");
-        }
-
         // The shop's gear shelf is the same tier-targeted choice, so one
         // seed rolls one shelf.
         [Test]

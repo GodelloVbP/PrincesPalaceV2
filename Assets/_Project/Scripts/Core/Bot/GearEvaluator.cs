@@ -176,20 +176,85 @@ namespace PrincesPalace
             return best;
         }
 
-        // Every offer on the table, index-aligned, ready for RunView.
-        public static IReadOnlyList<float> ScoreOffers(
-            SaveData save, IReadOnlyList<Domain.Rewards.ItemOffer> offers, GearWeights weights)
+        // The one stat the swap moves most, for a card face: the axis (0 DMG,
+        // 1 HP, 2 DEF, 3 SPEED, 4 MANA REGEN) and its signed change. "Most"
+        // is relative to what the recipient has now, so a +6 speed on a 40
+        // speed member outranks a +9 health on a 400 health one; a zero
+        // baseline falls back to the raw change. False when the copy would be
+        // inert or changes nothing.
+        public static bool LargestDelta(Character character, ItemInstance copy, EquipmentSlot slot,
+            out int axis, out int delta)
         {
-            if (offers == null || offers.Count == 0) return Array.Empty<float>();
+            axis = 0;
+            delta = 0;
 
-            var scores = new float[offers.Count];
-            for (int i = 0; i < offers.Count; i++)
+            var change = DeltaFor(character, copy, slot);
+            if (!change.HasValue) return false;
+
+            var now = Measure(character);
+            int[] deltas = { change.Value.Offence, change.Value.Health, change.Value.Defence, change.Value.Speed, change.Value.ManaRegen };
+            int[] bases = { now.Offence, now.Health, now.Defence, now.Speed, now.ManaRegen };
+
+            double best = 0;
+            for (int i = 0; i < deltas.Length; i++)
             {
-                scores[i] = ScoreOffer(save, offers[i].ItemId, weights, offers[i].Tier);
+                if (deltas[i] == 0) continue;
+
+                double weight = Math.Abs(deltas[i]) / (double)Math.Max(1, Math.Abs(bases[i]));
+                if (weight <= best) continue;
+
+                best = weight;
+                axis = i;
+                delta = deltas[i];
             }
 
-            return scores;
+            return delta != 0;
         }
+
+        // WHAT ONE PAGE CARD IS WORTH, to its recipient and nobody else: the
+        // page made the card for that member, so the best-member read a loose
+        // offer needed does not apply. SimulateEquip puts the whole copy in
+        // the card's slot, so tier, affixes, quality and the slot's honing all
+        // count through the same resolver the sheet uses. An inert copy is
+        // worth nothing: it would change no stat.
+        public static float ScoreCard(SaveData save, Domain.Rewards.PendingCard card, GearWeights weights)
+        {
+            var recipient = RecipientOf(save, card);
+            if (recipient == null || card?.Copy == null) return 0f;
+
+            var delta = DeltaFor(recipient, card.Copy, card.Slot);
+            return delta.HasValue ? weights.Score(delta.Value) : 0f;
+        }
+
+        // What "hone instead" is worth: the recipient's own delta from +1 on
+        // the card's slot, measured by honing a moment and putting it back.
+        // Zero when the slot cannot be honed or holds nothing to improve.
+        public static float ScoreHone(SaveData save, Domain.Rewards.PendingCard card, GearWeights weights)
+        {
+            var recipient = RecipientOf(save, card);
+            var honing = save?.activeRun?.slotHoning;
+            if (recipient == null || honing == null || card == null) return 0f;
+            if (!SlotHoning.CanHone(honing, card.RecipientId, card.Slot)) return 0f;
+
+            var before = Measure(recipient);
+            var entry = honing.FirstOrDefault(e => e != null && e.characterId == card.RecipientId && e.slot == card.Slot);
+            int plus = entry == null ? 0 : entry.plus;
+
+            SlotHoning.Hone(honing, card.RecipientId, card.Slot);
+            try
+            {
+                return weights.Score(Difference(Measure(recipient), before));
+            }
+            finally
+            {
+                var touched = honing.First(e => e != null && e.characterId == card.RecipientId && e.slot == card.Slot);
+                if (entry == null) honing.Remove(touched);
+                else touched.plus = plus;
+            }
+        }
+
+        private static Character RecipientOf(SaveData save, Domain.Rewards.PendingCard card) =>
+            save?.roster?.FirstOrDefault(c => c != null && card != null && c.definitionId == card.RecipientId);
 
         // ---- the equip pass ---------------------------------------------------------
 

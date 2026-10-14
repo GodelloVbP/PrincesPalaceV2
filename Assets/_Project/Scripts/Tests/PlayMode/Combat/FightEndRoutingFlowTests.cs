@@ -102,13 +102,10 @@ namespace PrincesPalace.PlayModeTests
             // nothing, so a reload here still has both.
             CollectionAssert.AreEqual(new[] { "toll_of_the_flock", "bellwethers_bell" }, ReceiptsOnDisk());
 
-            // Through the pad: take the first offer, then Continue.
+            // Through the pad: the pages, then Continue.
             _input = NavSceneReuse.TakeOverInput();
             yield return null;
-            yield return Submit();
-            yield return WaitReal(0.5f);
-            Assert.AreEqual("ReckoningContinueButton", EventSystem.current.currentSelectedGameObject?.name,
-                "precondition: the choice spent, the selection on Continue");
+            yield return SubmitThroughThePages();
             yield return Submit();
 
             CollectionAssert.Contains(_loaded, Navigation.Map, "Continue leaves to the Map");
@@ -139,8 +136,7 @@ namespace PrincesPalace.PlayModeTests
 
             _input = NavSceneReuse.TakeOverInput();
             yield return null;
-            yield return Submit();
-            yield return WaitReal(0.5f);
+            yield return SubmitThroughThePages();
             yield return Submit();
             CollectionAssert.Contains(_loaded, Navigation.Map);
 
@@ -178,6 +174,21 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.IsFalse(continueButton.gameObject.activeInHierarchy, "Submit pressed Continue");
             CollectionAssert.Contains(_loaded, Navigation.Hub, "with no run, leaving goes to the hub");
+        }
+
+        // Submit takes the entry card of each page and then leaves it, page
+        // after page, until the summary's Continue is selected.
+        private IEnumerator SubmitThroughThePages()
+        {
+            for (int presses = 0; presses < 8
+                 && EventSystem.current.currentSelectedGameObject?.name != "ReckoningContinueButton"; presses++)
+            {
+                yield return Submit();
+                yield return WaitReal(0.5f);
+            }
+
+            Assert.AreEqual("ReckoningContinueButton", EventSystem.current.currentSelectedGameObject?.name,
+                "precondition: every page spent, the selection on Continue");
         }
 
         // ---- fixture ---------------------------------------------------------------------

@@ -78,6 +78,7 @@ namespace PrincesPalace.PlayModeTests
             _reckoning.Dismissed = () => dismissals++;
 
             Click("ReckoningOffer0");
+            Click("ReckoningLeaveButton");
             yield return null;
 
             var summary = Named("ReckoningSummaryPhase").GetComponent<RectTransform>();
@@ -105,7 +106,7 @@ namespace PrincesPalace.PlayModeTests
 
         // ---- A14: a second offer chosen while the bars are filling ----------------------
 
-        // `if (_taken ...) return` IS THE WHOLE GUARD, and everything else on
+        // `RewardPages.CanTake` IS THE WHOLE GUARD, and everything else on
         // this phase is presentation: the offers stay visible after one is
         // chosen (hiding them would erase the decision the player just made)
         // and merely go non-interactable. A test that only checked the
@@ -124,6 +125,7 @@ namespace PrincesPalace.PlayModeTests
             int itemsAfterFirst = ItemsHeld();
 
             // Straight into the bars, and press another card.
+            Click("ReckoningLeaveButton");
             Click("ReckoningOffer1");
             Click("ReckoningOffer2");
             yield return null;
@@ -146,7 +148,7 @@ namespace PrincesPalace.PlayModeTests
         // ---- C8: a scene arriving over the sweep -----------------------------------------
 
         // THE REWARD IS EITHER FULLY APPLIED OR NOT APPLIED, NEVER HALF. Taking
-        // an offer writes through RunOrchestrator.TakeOffer before any of the
+        // an offer writes through RewardPages.Take before any of the
         // animation starts, so a scene load landing mid-sweep must find the
         // save already whole -- the sweep is presentation over a decision that
         // has already been committed.
@@ -240,16 +242,7 @@ namespace PrincesPalace.PlayModeTests
             return reward;
         }
 
-        private static List<ItemOffer> Offers()
-        {
-            var ids = Content.ContentDatabase.Items
-                .Where(i => i != null && i.IsEquippable)
-                .Take(3)
-                .Select(i => i.id)
-                .ToList();
-
-            return ids.Select(id => new ItemOffer(id, 1)).ToList();
-        }
+        private static IReadOnlyList<PendingPage> Offers() => ReckoningPageFixtures.OneGearPage();
 
         private IEnumerator OpenIt()
         {
@@ -264,11 +257,10 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
         }
 
-        // EVERYTHING THE SAVE HOLDS, bag and worn slots together. TakeOffer
-        // puts the item in the bag and then auto-equips it into an empty slot
-        // if the squad has one -- so counting only the bag would report a taken
-        // item as missing, or as vanishing, depending on what the roster
-        // happened to be wearing.
+        // EVERYTHING THE SAVE HOLDS, bag and worn slots together. Taking a
+        // card equips it, and the copy it displaces goes to the bag -- so
+        // counting only the bag would report a taken item as missing, or as
+        // vanishing, depending on what the roster happened to be wearing.
         private static int ItemsHeld()
         {
             var save = SaveSlotManager.CurrentSave;

@@ -152,33 +152,5 @@ namespace PrincesPalace
 
             return squad + fromEvents;
         }
-
-        // The offers: one tier is rolled for the set, then the copies are
-        // drawn at it.
-        //
-        // `nextIndex` is upper-bound-exclusive and injected, matching the shape
-        // both Domain tables already take -- so a caller under test can hand in
-        // a seeded stand-in and get the same items every time.
-        //
-        // `count` defaults to ItemOfferTable.OfferCount, which is what every
-        // live caller wants; the parameter exists for a caller under test
-        // that wants a specific count instead.
-        public static List<ItemOffer> Roll(EncounterClass encounter, int depthStep, int favor, Func<int, int> nextIndex,
-            int count = ItemOfferTable.OfferCount)
-        {
-            var offers = new List<ItemOffer>();
-            if (nextIndex == null) return offers;
-
-            var candidates = Candidates();
-            if (candidates.Count == 0) return offers;
-
-            // The class's gear row in rewards.json carries the tier dials;
-            // no row (content not built) offers nothing rather than guessing.
-            var source = ContentDatabase.GetRewardSource(RewardSources.IdFor(encounter, RewardPageKind.Gear));
-            if (source == null) return offers;
-
-            int targetTier = RarityTable.RollTier(source, depthStep, favor, nextIndex);
-            return ItemOfferTable.Choose(candidates, targetTier, MaxTier, nextIndex, count);
-        }
     }
 }

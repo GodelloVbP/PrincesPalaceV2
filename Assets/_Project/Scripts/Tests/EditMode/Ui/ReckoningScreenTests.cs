@@ -170,18 +170,25 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void ThereIsOneOfferNodePerOfferTheRowShows()
+        public void ThereIsOneCardNodePerCardTheWidestPageShows()
         {
-            // ItemOfferTable.OfferCount is the contract. A tree with fewer
-            // buttons than the roll returns would silently drop an offer the
-            // player was supposed to be choosing between, and since the tree
-            // is emitted once for every save, it has to hold as many as the
-            // roll can ever produce.
+            // OfferRowLayout.MaxCards is the contract: a page shows k + 2 cards,
+            // and the tree is emitted once for every save, so it has to hold as
+            // many as the widest page can ever produce. Pinned to the literal,
+            // not to the formula that produced it: a boss and two anchors is
+            // three choices, five cards.
             var screen = ReckoningScreen.Build();
 
-            Assert.AreEqual(ItemOfferTable.OfferCount, screen.OfferButtons.Count);
-            Assert.AreEqual(ItemOfferTable.OfferCount, screen.OfferNames.Count);
-            Assert.AreEqual(ItemOfferTable.OfferCount, screen.OfferMetas.Count);
+            Assert.AreEqual(5, OfferRowLayout.MaxCards);
+            Assert.AreEqual(5, screen.OfferButtons.Count);
+            Assert.AreEqual(5, screen.OfferNames.Count);
+            Assert.AreEqual(5, screen.OfferMetas.Count);
+            Assert.AreEqual(5, screen.OfferRecipients.Count);
+            Assert.AreEqual(5, screen.OfferDeltas.Count);
+            Assert.AreEqual(5, screen.OfferFeatures.Count);
+            Assert.AreEqual(5, screen.OfferLoses.Count);
+            Assert.AreEqual(5, screen.OfferActions.Count);
+            Assert.AreEqual(5, screen.HoneButtons.Count);
         }
 
         [Test]

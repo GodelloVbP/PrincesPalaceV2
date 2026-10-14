@@ -160,11 +160,17 @@ namespace PrincesPalace.PlayModeTests
             {
                 AssertSelectedName("ReckoningOffer0", "the Reckoning opens on the choice, entry is the first card");
 
-                yield return PressSubmit(); // takes the entry offer, exactly once
-                yield return null; // the reselection onto Continue follows the phase change
+                yield return PressSubmit(); // takes the entry card, exactly once
+                yield return null; // the reselection onto the page's way off follows the choice
+
+                AssertSelectedName("ReckoningLeaveButton",
+                    "the cards are inert once the choice is spent, so the dispatcher should have moved on to the page's way off");
+
+                yield return PressSubmit(); // moves on to the summary
+                yield return new WaitForSecondsRealtime(0.5f);
 
                 AssertSelectedName("ReckoningContinueButton",
-                    "the offers are inert once one is taken, so the dispatcher should have moved on to Continue");
+                    "the last page spent sweeps to the summary, whose entry is Continue");
             }
             else
             {

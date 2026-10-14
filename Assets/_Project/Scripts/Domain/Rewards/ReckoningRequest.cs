@@ -25,10 +25,14 @@ namespace PrincesPalace.Domain.Rewards
     // event fight): no gold, experience or offers, a title naming the ending,
     // and the rest of the screen as always -- the relic chips, the tally and
     // the way out. Reward is the discriminator: null is the outcome form.
+    //
+    // THE PAGES are the run's pending settlement pages (docs/PLAN_ITEMS.md
+    // 1.2), by reference: the screen resolves them in place, so opening it
+    // again with the same list resumes at the first page with choices left.
     public sealed class ReckoningRequest
     {
         public readonly CombatReward Reward;
-        public readonly IReadOnlyList<ItemOffer> Offers;
+        public readonly IReadOnlyList<PendingPage> Pages;
         public readonly FightEnding Ending;
 
         // Relic receipts to show as chips (C2), in grant order.
@@ -40,12 +44,12 @@ namespace PrincesPalace.Domain.Rewards
 
         public bool IsOutcomeForm => Reward == null;
 
-        private ReckoningRequest(CombatReward reward, IReadOnlyList<ItemOffer> offers, FightEnding ending,
+        private ReckoningRequest(CombatReward reward, IReadOnlyList<PendingPage> pages, FightEnding ending,
             IReadOnlyList<string> receipts, IReadOnlyList<string> notices, IReadOnlyList<TallyMember> tally,
             CombatLedger ledger)
         {
             Reward = reward;
-            Offers = offers ?? new List<ItemOffer>();
+            Pages = pages ?? new List<PendingPage>();
             Ending = ending;
             Receipts = receipts ?? new List<string>();
             Notices = notices ?? new List<string>();
@@ -55,11 +59,11 @@ namespace PrincesPalace.Domain.Rewards
 
         // A paid fight. The tally, the ledger and the notices are the reward's
         // own, so the two forms cannot disagree about where those come from.
-        public static ReckoningRequest Full(CombatReward reward, IReadOnlyList<ItemOffer> offers,
+        public static ReckoningRequest Full(CombatReward reward, IReadOnlyList<PendingPage> pages,
             IReadOnlyList<string> receipts = null)
         {
             var tally = reward?.Characters.Select(c => new TallyMember(c.CharacterId, c.DisplayName)).ToList();
-            return new ReckoningRequest(reward, offers, FightEnding.Victory, receipts, reward?.Notices, tally,
+            return new ReckoningRequest(reward, pages, FightEnding.Victory, receipts, reward?.Notices, tally,
                 reward?.Ledger);
         }
 

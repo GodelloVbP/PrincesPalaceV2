@@ -8,6 +8,8 @@ using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 using PrincesPalace;
+using PrincesPalace.Domain.Content;
+using PrincesPalace.Domain.Equipment;
 using PrincesPalace.Domain.Rewards;
 using PrincesPalace.Domain.UiKit.Screens;
 
@@ -33,6 +35,7 @@ namespace PrincesPalace.PlayModeTests
             SaveSystem.RootOverride = _root;
             SaveSlotManager.CurrentSlot = 0;
             SaveSlotManager.Forget();
+            RunManager.ResetForTests();
 
             _wentTo = null;
             Navigation.LoadOverride = scene => _wentTo = scene;
@@ -51,6 +54,7 @@ namespace PrincesPalace.PlayModeTests
             Navigation.Reset();
             SaveSystem.RootOverride = null;
             SaveSlotManager.Forget();
+            RunManager.ResetForTests();
             if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
         }
 
@@ -92,7 +96,7 @@ namespace PrincesPalace.PlayModeTests
         }
 
         // THE FIGHT SCENE IS SHARED ACROSS THIS FIXTURE (SharedScene). Show()
-        // resets everything the screen paints (reward, offers, taken, phase,
+        // resets everything the screen paints (reward, pages, page, phase,
         // tab), so the reset is only what Show does not own: the screen is put
         // back down -- OnDisable stops its animation and removes its nav
         // context -- and the Dismissed handler the scene wired is put back
@@ -141,11 +145,11 @@ namespace PrincesPalace.PlayModeTests
             return dimmer;
         }
 
-        private IEnumerator ShowIt(CombatReward reward, List<ItemOffer> offers = null)
+        private IEnumerator ShowIt(CombatReward reward, IReadOnlyList<PendingPage> pages = null)
         {
             yield return OpenTheFight();
 
-            _reckoning.Show(reward, offers ?? new List<ItemOffer>());
+            _reckoning.Show(reward, pages ?? new List<PendingPage>());
 
             // Start() runs one frame AFTER SetActive, so the listeners do not
             // exist yet (.claude/rules/tests.md).
@@ -162,7 +166,7 @@ namespace PrincesPalace.PlayModeTests
             yield return OpenTheFight();
             Assert.IsFalse(_reckoning.gameObject.activeSelf, "the fight opens with the Reckoning down");
 
-            _reckoning.Show(Reward(), new List<ItemOffer>());
+            _reckoning.Show(Reward(), new List<PendingPage>());
             yield return null;
 
             Assert.IsTrue(_reckoning.gameObject.activeSelf);
@@ -224,213 +228,190 @@ namespace PrincesPalace.PlayModeTests
             Assert.GreaterOrEqual(ReckoningScreen.RowCount, Save.EffectiveMaxSquadSize());
         }
 
-        // ---- the one decision --------------------------------------------------------
+        // ---- the choices ---------------------------------------------------------------
 
-        private static List<ItemOffer> ThreeOffers()
-        {
-            var candidates = ItemOfferRoll.Candidates();
-            Assert.IsNotEmpty(candidates, "fixture: content has equippable items");
+        private static Character Recipient(PendingCard card) =>
+            Save.roster.First(c => c.definitionId == card.RecipientId);
 
-            // Three different bases: the second press is checked by id.
-            return candidates.GroupBy(c => c.ItemId).Select(g => g.First()).Take(3)
-                .Select(c => new ItemOffer(c.ItemId, 2)).ToList();
-        }
-
-        // Whether `itemId` at `tier` ended up ANYWHERE this save can hold it --
-        // the bag, or auto-equipped into a squad member's slot. Auto-equip
-        // (RunOrchestrator.AutoEquipIntoAnEmptySlot) moves a picked item
-        // straight into an empty slot instead of leaving it in the bag, so
-        // "the pick reached the save" can no longer be read off bag count
-        // alone -- only one of these two places will have gained it.
-        private static bool ItemLandedSomewhere(string itemId, int tier)
-        {
-            if (Save.stockpiledItems.Any(e => e.itemId == itemId && e.tier == tier)) return true;
-
-            foreach (var character in Save.ActiveSquad())
-            {
-                if (character?.equipment == null) continue;
-                foreach (var slot in Domain.Equipment.EquipmentSlots.All)
-                {
-                    if (character.equipment.Get(slot) == itemId && character.equipment.GetInstance(slot).Tier == tier)
-                    {
-                        return true;
-                    }
-                }
-            }
-
-            return false;
-        }
+        private static ItemInstance Worn(PendingCard card) => Recipient(card).equipment.GetInstance(card.Slot);
 
         [UnityTest]
-        public IEnumerator TakingAnOfferPutsItInTheSaveAtItsTierAndSavesIt()
+        public IEnumerator TakingACardEquipsItOnItsRecipientAtItsTierAndSavesIt()
         {
-            // NOT necessarily the bag any more -- every offer is an equippable
-            // item (ThreeOffers' own fixture guard), so a fresh Shawn with an
-            // empty slot for it auto-equips instead. Bag-or-equipped is the
-            // real guarantee this test states now; ItemLandedSomewhere checks
-            // both rather than assuming which one won.
-            var offers = ThreeOffers();
-            yield return ShowIt(Reward(rows: Row("shawn", "Shawn")), offers);
-
-            Assert.IsFalse(ItemLandedSomewhere(offers[0].ItemId, 2),
-                "fixture: should not exist anywhere in a fresh save before it is taken");
+            var pages = ReckoningPageFixtures.OneGearPage();
+            var card = pages[0].Cards[0];
+            yield return ShowIt(Reward(rows: Row("shawn", "Shawn")), pages);
 
             Named("ReckoningOffer0").GetComponent<Button>().onClick.Invoke();
             yield return null;
 
-            Assert.IsTrue(ItemLandedSomewhere(offers[0].ItemId, 2),
-                "the tier the offer was rolled at did not survive into the save, wherever it landed");
+            Assert.AreEqual(CardOutcome.Taken, card.Outcome);
+            Assert.AreEqual(card.Copy.ItemId, Worn(card).ItemId, "the card did not land on its recipient");
+            Assert.AreEqual(card.Copy.Tier, Worn(card).Tier, "the tier the card was rolled at did not survive");
 
             SaveSlotManager.Forget();
-            Assert.IsTrue(ItemLandedSomewhere(offers[0].ItemId, 2),
-                "the pick never reached the file");
-        }
-
-        // Three offers, each also carrying a real rolled Modifiers set --
-        // ThreeOffers() above stays modifier-free so every OTHER test in this
-        // file is unaffected by this axis existing.
-        private static List<ItemOffer> ThreeOffersWithRolls()
-        {
-            var pool = Content.ContentDatabase.Modifiers.Select(m => m.id).ToList();
-            Assert.IsNotEmpty(pool, "fixture: content has at least one modifier to roll");
-
-            var candidates = ItemOfferRoll.Candidates();
-            Assert.IsNotEmpty(candidates, "fixture: content has equippable items");
-
-            return candidates.GroupBy(c => c.ItemId).Select(g => g.First()).Take(3)
-                .Select(c => new ItemOffer(c.ItemId, 2)
-                    .WithModifiers(pool.Take(System.Math.Min(3, pool.Count)).ToList()))
-                .ToList();
-        }
-
-        // Whether `itemId` at `tier` with EXACTLY this modifier roll ended up
-        // anywhere the save can hold it -- the bag, or auto-equipped into a
-        // squad member's slot. Mirrors ItemLandedSomewhere, extended to the
-        // full stacking key rather than just (itemId, tier): a claim that
-        // dropped the roll on the floor would still pass the tier-only check,
-        // which is exactly the gap this test closes.
-        private static bool RolledItemLandedSomewhere(string itemId, int tier, List<string> modifierIds)
-        {
-            bool SameRoll(List<string> a) => new HashSet<string>(a ?? new List<string>()).SetEquals(modifierIds);
-
-            if (Save.stockpiledItems.Any(e => e.itemId == itemId && e.tier == tier && SameRoll(e.modifierIds)))
-            {
-                return true;
-            }
-
-            foreach (var character in Save.ActiveSquad())
-            {
-                if (character?.equipment == null) continue;
-                foreach (var slot in Domain.Equipment.EquipmentSlots.All)
-                {
-                    if (character.equipment.Get(slot) == itemId && character.equipment.GetInstance(slot).Tier == tier
-                        && SameRoll(character.equipment.GetModifierIds(slot)))
-                    {
-                        return true;
-                    }
-                }
-            }
-
-            return false;
+            Assert.AreEqual(card.Copy.ItemId, Worn(card).ItemId, "the pick never reached the file");
         }
 
         [UnityTest]
-        public IEnumerator TakingAnOfferPutsItsRollInTheSaveToo()
+        public IEnumerator ATakenCardKeepsItsAffixRollOnTheWornCopy()
         {
-            var offers = ThreeOffersWithRolls();
-            yield return ShowIt(Reward(rows: Row("shawn", "Shawn")), offers);
+            var pages = ReckoningPageFixtures.Settle(
+                new List<EncounterClass> { EncounterClass.Boss }, strength: 3);
+            var card = pages[0].Cards.OrderByDescending(c => c.Copy.ModifierIds.Count).First();
+            Assert.Greater(card.Copy.ModifierIds.Count, 0, "fixture: a strength-3 boss page rolls an affixed card");
+            int index = pages[0].Cards.IndexOf(card);
+            yield return ShowIt(Reward(rows: Row("shawn", "Shawn")), pages);
 
-            var taken = offers[0];
-            var modifierIds = taken.Modifiers.ToList();
+            Named($"ReckoningOffer{index}").GetComponent<Button>().onClick.Invoke();
+            yield return null;
 
-            Assert.IsFalse(RolledItemLandedSomewhere(taken.ItemId, taken.Tier, modifierIds),
-                "fixture: should not exist anywhere in a fresh save before it is taken");
+            CollectionAssert.AreEquivalent(card.Copy.ModifierIds, Worn(card).ModifierIds,
+                "the card's rolled affixes did not survive onto the worn copy");
+        }
+
+        [UnityTest]
+        public IEnumerator ACopyReplacedByATakeIsListedOnThePageAndKeptInTheBag()
+        {
+            var pages = ReckoningPageFixtures.OneGearPage();
+            var card = pages[0].Cards[0];
+
+            // The slot is filled first, so the take displaces something.
+            var incumbent = ItemInstance.Of(card.Copy.ItemId, 0);
+            Recipient(card).equipment.Put(card.Slot, incumbent);
+            yield return ShowIt(Reward(rows: Row("shawn", "Shawn")), pages);
 
             Named("ReckoningOffer0").GetComponent<Button>().onClick.Invoke();
             yield return null;
 
-            Assert.IsTrue(RolledItemLandedSomewhere(taken.ItemId, taken.Tier, modifierIds),
-                "the offer's rolled modifiers did not survive into the save, wherever it landed");
-        }
-
-        // AutoEquipIntoAnEmptySlot moves the item out of the bag via
-        // EquipMove.TryEquip, which keys its removal on the FULL
-        // (itemId, tier, modifierIds) stack now that modifiers
-        // exist. Passing only the tier there would look for the wrong stack
-        // and silently leave a rolled item stuck in the bag on a fresh
-        // character who should have auto-equipped it -- this pins that the
-        // roll specifically does not break auto-equip.
-        [UnityTest]
-        public IEnumerator ARolledOfferStillAutoEquipsIntoAnEmptySlot()
-        {
-            var offers = ThreeOffersWithRolls();
-            var taken = offers[0];
-            yield return ShowIt(Reward(rows: Row("shawn", "Shawn")), offers);
-
-            Named("ReckoningOffer0").GetComponent<Button>().onClick.Invoke();
-            yield return null;
-
-            // Same fixture guarantee ThreeOffers()/TakingAnOfferPutsItInThe-
-            // SaveAtItsTierAndSavesIt already relies on: a fresh Shawn has an
-            // empty slot for every offer, so this always auto-equips rather
-            // than sitting in the bag.
-            bool equipped = Save.ActiveSquad().Any(character =>
-                character?.equipment != null && Domain.Equipment.EquipmentSlots.All.Any(slot =>
-                    character.equipment.Get(slot) == taken.ItemId
-                    && character.equipment.GetInstance(slot).Tier == taken.Tier));
-
-            Assert.IsTrue(equipped,
-                "a rolled item did not auto-equip -- TryEquip likely could not find its stack in the bag " +
-                "because its modifierIds were not passed through to the removal key");
+            Assert.IsNotNull(card.Displaced, "the page did not record the copy it displaced");
+            Assert.IsTrue(Save.stockpiledItems.Any(e => e.itemId == incumbent.ItemId && e.tier == 0),
+                "the displaced copy is not in the bag");
+            StringAssert.Contains(RarityColors.NameOf(incumbent),
+                Named("ReckoningOfferLedger").GetComponent<TMP_Text>().text);
         }
 
         [UnityTest]
-        public IEnumerator OnlyOneOfferCanBeTaken()
+        public IEnumerator OnlyAsManyCardsAsTheChoicesGrantCanBeTaken()
         {
-            // It is a CHOICE. Two presses handing over two items would make the
-            // decision decorative. Counts bag PLUS equipped for the same reason
-            // TakingAnOfferPutsItInTheSaveAtItsTierAndSavesIt does -- a taken
-            // offer may auto-equip rather than sit in the bag, so "exactly one
-            // item arrived" has to be read off both.
-            var offers = ThreeOffers();
-            yield return ShowIt(Reward(rows: Row("shawn", "Shawn")), offers);
+            // It is a CHOICE. Two presses handing over two items on a
+            // one-choice page would make the decision decorative.
+            var pages = ReckoningPageFixtures.OneGearPage();
+            Assert.AreEqual(1, pages[0].Choices, "fixture: one chip is one choice");
+            yield return ShowIt(Reward(rows: Row("shawn", "Shawn")), pages);
 
             Named("ReckoningOffer0").GetComponent<Button>().onClick.Invoke();
             yield return null;
             Named("ReckoningOffer1").GetComponent<Button>().onClick.Invoke();
             yield return null;
 
-            Assert.IsTrue(ItemLandedSomewhere(offers[0].ItemId, 2), "the one offer taken must have arrived");
-            Assert.IsFalse(ItemLandedSomewhere(offers[1].ItemId, 2), "the second press must not also hand over its item");
+            Assert.AreEqual(CardOutcome.Taken, pages[0].Cards[0].Outcome);
+            Assert.AreEqual(CardOutcome.Open, pages[0].Cards[1].Outcome, "the second press also took");
             Assert.IsTrue(_reckoning.HasTakenAnItem);
         }
 
         [UnityTest]
-        public IEnumerator TheOffersNotTakenStayOnScreenButStopResponding()
+        public IEnumerator TheCardsNotTakenStayOnScreenButStopResponding()
         {
             // Hiding them would erase the decision the player just made from
             // the screen that asked for it.
-            yield return ShowIt(Reward(rows: Row("shawn", "Shawn")), ThreeOffers());
+            yield return ShowIt(Reward(rows: Row("shawn", "Shawn")), ReckoningPageFixtures.OneGearPage());
 
             Named("ReckoningOffer0").GetComponent<Button>().onClick.Invoke();
             yield return null;
 
-            Assert.IsTrue(Named("ReckoningOffer1").activeSelf, "the offer not taken vanished");
+            Assert.IsTrue(Named("ReckoningOffer1").activeSelf, "the card not taken vanished");
             Assert.IsFalse(Named("ReckoningOffer1").GetComponent<Button>().interactable);
+            Assert.IsTrue(Named("ReckoningOfferPhase").activeSelf, "the page left before the player moved on");
         }
 
         [UnityTest]
-        public IEnumerator AFightWithNoOffersSkipsStraightToTheSummary()
+        public IEnumerator AOneChipGearPageShowsThreeCardsAndABossPageFive()
         {
-            // Reachable: ItemOfferTable returns fewer than three when the
-            // candidate pool is genuinely smaller, and zero if content has no
-            // equippables at all.
+            yield return ShowIt(Reward(rows: Row("shawn", "Shawn")), ReckoningPageFixtures.OneGearPage());
+            Assert.AreEqual(3, Enumerable.Range(0, 5).Count(i => Named($"ReckoningOffer{i}").activeSelf));
+
+            var boss = ReckoningPageFixtures.BossAndTwoAnchors();
+            Assert.AreEqual(5, boss[0].Cards.Count, "fixture: three gear chips are five cards");
+            _reckoning.Show(Reward(rows: Row("shawn", "Shawn")), boss);
+            yield return null;
+
+            Assert.AreEqual(5, Enumerable.Range(0, 5).Count(i => Named($"ReckoningOffer{i}").activeSelf));
+            StringAssert.Contains("3 CHOICES LEFT", Named("ReckoningOfferHeading").GetComponent<TMP_Text>().text);
+        }
+
+        [UnityTest]
+        public IEnumerator HoneInsteadHonesTheCardsSlotForItsRecipientAndDiscardsTheCard()
+        {
+            var pages = ReckoningPageFixtures.OneGearPage();
+            var card = pages[0].Cards[0];
+            yield return ShowIt(Reward(rows: Row("shawn", "Shawn")), pages);
+
+            Assert.IsTrue(Named("ReckoningHone0").activeSelf, "a fresh slot offers hone instead");
+            Named("ReckoningHone0").GetComponent<Button>().onClick.Invoke();
+            yield return null;
+
+            Assert.AreEqual(CardOutcome.Honed, card.Outcome);
+            Assert.AreEqual(1, SlotHoning.PlusOf(RunManager.Run.slotHoning, card.RecipientId, card.Slot));
+            Assert.IsTrue(Recipient(card).equipment.IsEmpty(card.Slot) || Worn(card).Tier != card.Copy.Tier
+                || Worn(card).ItemId != card.Copy.ItemId, "the card was equipped as well as discarded");
+        }
+
+        [UnityTest]
+        public IEnumerator LeavingAPagePaysItsUnusedChoicesAndThenCarriesOn()
+        {
+            var pages = ReckoningPageFixtures.OneGearPage();
+            var card = pages[0].Cards[0];
+            yield return ShowIt(Reward(rows: Row("shawn", "Shawn")), pages);
+
+            Named("ReckoningLeaveButton").GetComponent<Button>().onClick.Invoke();
+            yield return null;
+
+            Assert.IsTrue(pages[0].Closed);
+            Assert.AreEqual(1, pages[0].UnusedHones, "the unused choice should have honed the first card's slot");
+            Assert.AreEqual(1, SlotHoning.PlusOf(RunManager.Run.slotHoning, card.RecipientId, card.Slot));
+            Assert.IsTrue(Named("ReckoningOfferPhase").activeSelf, "the page shows what leaving paid before moving on");
+            StringAssert.Contains("Left unused", Named("ReckoningOfferLedger").GetComponent<TMP_Text>().text);
+
+            Named("ReckoningLeaveButton").GetComponent<Button>().onClick.Invoke();
+            yield return null;
+            yield return null;
+
+            Assert.IsTrue(Named("ReckoningSummaryPhase").activeSelf, "the last page spent should land on the summary");
+        }
+
+        [UnityTest]
+        public IEnumerator ARelicCardJoinsTheRunAndHasNothingToHone()
+        {
+            var pages = ReckoningPageFixtures.Settle(
+                new List<EncounterClass> { EncounterClass.Elite }, new List<EncounterClass> { EncounterClass.Elite });
+            var relicPage = pages.First(p => p.Kind == RewardPageKind.Relic);
+            yield return ShowIt(Reward(rows: Row("shawn", "Shawn")), pages);
+
+            // The gear page first: leave it, then carry on.
+            Named("ReckoningLeaveButton").GetComponent<Button>().onClick.Invoke();
+            yield return null;
+            Named("ReckoningLeaveButton").GetComponent<Button>().onClick.Invoke();
+            yield return null;
+            StringAssert.Contains("RELIC PAGE", Named("ReckoningOfferHeading").GetComponent<TMP_Text>().text);
+            Assert.IsFalse(Named("ReckoningHone0").activeSelf, "a relic card has nothing to hone");
+
+            var card = relicPage.Cards[0];
+            Named("ReckoningOffer0").GetComponent<Button>().onClick.Invoke();
+            yield return null;
+
+            CollectionAssert.Contains(RunManager.Run.relicIds, card.RelicId);
+        }
+
+        [UnityTest]
+        public IEnumerator AFightWithNoPagesSkipsStraightToTheSummary()
+        {
+            // Reachable: a fight that paid no page (an emptied pool).
             //
-            // Now that the choice is its OWN phase and there is no skip on it,
-            // an empty offer list would be a phase with no way out at all --
-            // so it is bypassed rather than shown empty. Stronger than the old
-            // assertion, which only checked that a heading was hidden.
-            yield return ShowIt(Reward(rows: Row("shawn", "Shawn")), new List<ItemOffer>());
+            // Now that the choice is its OWN phase, a page list with nothing on
+            // it would be a phase with no way out at all -- so it is bypassed
+            // rather than shown empty.
+            yield return ShowIt(Reward(rows: Row("shawn", "Shawn")), new List<PendingPage>());
 
             Assert.IsFalse(Named("ReckoningOfferPhase").activeSelf,
                 "an offer phase with nothing on it has no way out");
@@ -439,11 +420,19 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
-        public IEnumerator AnOfferNamingContentThatIsGoneDegradesRatherThanThrowing()
+        public IEnumerator ACardNamingContentThatIsGoneDegradesRatherThanThrowing()
         {
-            var offers = new List<ItemOffer> { new ItemOffer("no_such_item_at_all", 3) };
+            ReckoningPageFixtures.OneGearPage();
+            var page = new PendingPage
+            {
+                SourceId = "normal_gear", Kind = RewardPageKind.Gear, Choices = 1, Step = 1,
+            };
+            page.Cards.Add(new PendingCard
+            {
+                Copy = ItemInstance.Of("no_such_item_at_all", 3), RecipientId = "shawn", Slot = EquipmentSlot.Weapon1,
+            });
 
-            yield return ShowIt(Reward(rows: Row("shawn", "Shawn")), offers);
+            yield return ShowIt(Reward(rows: Row("shawn", "Shawn")), new List<PendingPage> { page });
 
             Assert.IsTrue(Named("ReckoningOffer0").activeSelf);
             Assert.IsNotEmpty(Named("ReckoningOffer0Name").GetComponent<TMP_Text>().text);

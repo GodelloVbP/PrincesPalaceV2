@@ -165,7 +165,9 @@ namespace PrincesPalace.PlayModeTests
             var offer0 = Node("ReckoningOffer0");
             if (offer0 != null && offer0.activeInHierarchy)
             {
-                yield return Click(offer0); // takes the offer, exactly once
+                yield return Click(offer0); // takes the card, exactly once
+                yield return new WaitForSecondsRealtime(0.2f);
+                yield return Click(Node("ReckoningLeaveButton")); // the page waits to be moved on
             }
 
             // Polled, not a fixed one-frame wait: the summary's own Continue

@@ -83,7 +83,7 @@ namespace PrincesPalace.PlayModeTests
             NavSceneReuse.ForgetFocusMemory();
 
             var receipts = RelicIds(chips + 1).Skip(1).ToList();
-            _reckoning.Show(ReckoningRequest.Full(Reward(), new List<ItemOffer>(), receipts));
+            _reckoning.Show(ReckoningRequest.Full(Reward(), new List<PendingPage>(), receipts));
             yield return null;
             AssertSelected("ReckoningContinueButton", "the summary opens on Continue");
         }
@@ -245,7 +245,7 @@ namespace PrincesPalace.PlayModeTests
 
             // A full form after it gets the whole strip back where the tree put it.
             _reckoning.gameObject.SetActive(false);
-            _reckoning.Show(ReckoningRequest.Full(Reward(), new List<ItemOffer>(), new List<string>()));
+            _reckoning.Show(ReckoningRequest.Full(Reward(), new List<PendingPage>(), new List<string>()));
             yield return null;
             Assert.IsTrue(Node("ReckoningTab0").activeSelf);
             Assert.AreEqual(-250f, ((RectTransform)Node("ReckoningTab0").transform).anchoredPosition.x, 0.01f);

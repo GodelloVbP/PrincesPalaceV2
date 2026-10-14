@@ -33,15 +33,6 @@ namespace PrincesPalace.Domain.Rewards
         // number the design asks for: +5 is the "this changes the run" find.
         public const int MaxRungs = 5;
 
-        // Per-rung chance by encounter class, before luck.
-        //
-        // These are the dial. Normal is deliberately low: most fights are the
-        // run's texture, and a normal fight reliably paying out would leave
-        // elites and bosses with nothing to be.
-        public const float NormalStep = 0.22f;
-        public const float EliteStep = 0.30f;
-        public const float BossStep = 0.38f;
-
         // What one point of Prince's Favor buys, and the ceiling it buys
         // toward.
         //
@@ -51,32 +42,6 @@ namespace PrincesPalace.Domain.Rewards
         // 5% top rung. Favor makes the tail fatter, never certain.
         public const float FavorPerPoint = 0.006f;
         public const float MaxStep = 0.55f;
-
-        public static float StepChanceFor(EncounterClass encounter, int favor) =>
-            StepChanceFor(encounter, favor, NormalStep, EliteStep, BossStep, FavorPerPoint, MaxStep);
-
-        // The shared shape behind every "how likely is one rung" question
-        // this file and ModifierTable both ask: pick a base rate by
-        // encounter class, add favor at some per-point rate, cap it. Only
-        // the WIRING is shared here -- every constant is still a parameter,
-        // so ModifierTable's own step/favor/cap dials (deliberately
-        // different from this table's, see ModifierTable's own header for
-        // why) stay exactly as tunable as they were before this existed, and
-        // neither table can accidentally retune the other by sharing a
-        // constant.
-        public static float StepChanceFor(EncounterClass encounter, int favor,
-            float normalStep, float eliteStep, float bossStep, float favorPerPoint, float maxStep)
-        {
-            float baseStep;
-            switch (encounter)
-            {
-                case EncounterClass.Elite: baseStep = eliteStep; break;
-                case EncounterClass.Boss: baseStep = bossStep; break;
-                default: baseStep = normalStep; break;
-            }
-
-            return StepChance(baseStep, favor, favorPerPoint, maxStep);
-        }
 
         // One base rate plus Favor at a per-point rate, capped: the dial a
         // rewards.json row feeds (its tierStep or ladderStep).
@@ -130,8 +95,5 @@ namespace PrincesPalace.Domain.Rewards
 
         public static int Climb(float stepChance, Func<int, int> nextIndex) =>
             Climb(stepChance, MaxRungs, nextIndex);
-
-        public static int Climb(EncounterClass encounter, int favor, Func<int, int> nextIndex) =>
-            Climb(StepChanceFor(encounter, favor), MaxRungs, nextIndex);
     }
 }

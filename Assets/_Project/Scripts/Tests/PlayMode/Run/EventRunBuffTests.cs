@@ -260,23 +260,24 @@ namespace PrincesPalace.PlayModeTests
         }
 
         // A constant roll of 250 sits between the tier ladder's step threshold
-        // at favor 4 (0.22 + 4 x 0.002 = 0.228, threshold 228) and at favor 24
-        // (0.268, threshold 268): it fails the first rung before the grant and
-        // clears all five after it. Two feeds take 4 to 24.
+        // at favor 4 (0.22 + 4 x 0.006 = 0.244, threshold 244) and at favor 24
+        // (0.22 + 24 x 0.006 = 0.364, threshold 364): it fails the first rung
+        // before the grant and clears all five after it. Two feeds take 4 to 24.
         [Test]
-        public void AnActualOfferRollReadsTheBoostedFavor()
+        public void AnActualTierRollReadsTheBoostedFavor()
         {
             StartRunAndOpen(GatedEvent);
+            var source = Content.ContentDatabase.GetRewardSource("normal_gear");
+            Assert.IsNotNull(source, "fixture: the normal gear row is built");
 
-            var before = RunOrchestrator.RollOffers(null, _ => 250);
+            int before = Domain.Rewards.RarityTable.RollTier(source, 0, ItemOfferRoll.CurrentSquadFavor(), _ => 250);
             EventPicks.OnCurrentPage(Feed);
             EventPicks.OnCurrentPage(Feed);
-            var after = RunOrchestrator.RollOffers(null, _ => 250);
+            int after = Domain.Rewards.RarityTable.RollTier(source, 0, ItemOfferRoll.CurrentSquadFavor(), _ => 250);
 
             Assert.AreEqual(24, ItemOfferRoll.CurrentSquadFavor());
-            CollectionAssert.IsNotEmpty(before);
-            CollectionAssert.AreEqual(Enumerable.Repeat(0, before.Count).ToArray(), before.Select(o => o.Tier).ToArray());
-            CollectionAssert.AreEqual(Enumerable.Repeat(5, after.Count).ToArray(), after.Select(o => o.Tier).ToArray());
+            Assert.AreEqual(0, before);
+            Assert.AreEqual(5, after);
         }
 
         private static string Shelf(IEnumerable<ShopStockEntry> stock) =>

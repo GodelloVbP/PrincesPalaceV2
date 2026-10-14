@@ -43,6 +43,7 @@ namespace PrincesPalace.PlayModeTests
             SaveSystem.RootOverride = _root;
             SaveSlotManager.CurrentSlot = 0;
             SaveSlotManager.Forget();
+            RunManager.ResetForTests();
             Navigation.LoadOverride = _ => { };
         }
 
@@ -53,6 +54,7 @@ namespace PrincesPalace.PlayModeTests
             TestGlobals.ResetAll();
             SaveSystem.RootOverride = null;
             SaveSlotManager.Forget();
+            RunManager.ResetForTests();
             if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
         }
 
@@ -64,27 +66,10 @@ namespace PrincesPalace.PlayModeTests
             return reward;
         }
 
-        // Three offers, which is the row every player below level 50 sees --
-        // and the count the Rail's wrap is worth asserting against (a Rail of
-        // one has no neighbour and UiNavLinkBuilder deliberately links it
-        // nowhere).
-        private static List<ItemOffer> Offers()
-        {
-            // The HIGHEST tiers with art, so every squad member has
-            // something to gain from every card and the comparison body is
-            // never empty (SquadComparisonBody returning "" is a state
-            // OnOfferHover treats as "nothing to show", and a test that
-            // happened to land on it would be asserting against the wrong
-            // reason).
-            var picks = ContentDatabase.Equippables
-                .Where(i => i != null && !string.IsNullOrWhiteSpace(i.iconPath))
-                .Take(3)
-                .ToList();
-
-            Assert.AreEqual(3, picks.Count, "need three equippable items with art to offer");
-
-            return picks.Select(i => new ItemOffer(i.id, i.curve.maxTier)).ToList();
-        }
+        // One gear chip: three cards, the row almost every fight shows -- and
+        // the count the Rail's wrap is worth asserting against (a Rail of one
+        // has no neighbour and UiNavLinkBuilder deliberately links it nowhere).
+        private static IReadOnlyList<PendingPage> Offers() => ReckoningPageFixtures.OneGearPage();
 
         // Every test leaves the Reckoning up, so it is put away the way the
         // scene change after Continue does it, by deactivating it: OnDisable
@@ -93,7 +78,7 @@ namespace PrincesPalace.PlayModeTests
         // OnDisable). Show() then resets the rest itself -- offers, taken
         // flag, phase, tab -- and pushes a fresh context on its entry, the
         // same as on a fresh load.
-        private IEnumerator ShowTheReckoning(List<ItemOffer> offers)
+        private IEnumerator ShowTheReckoning(IReadOnlyList<PendingPage> offers)
         {
             yield return SharedScene.Ensure("Fight");
 
@@ -193,9 +178,7 @@ namespace PrincesPalace.PlayModeTests
 
             // Counted on the BUTTON, not on what Take does: "exactly once" is
             // a claim about the dispatch (one press must not also arrive as a
-            // click), and RunOrchestrator.TakeOffer's own effect is split
-            // between the bag and an empty loadout slot, which would make a
-            // count of the bag a weaker signal than it looks.
+            // click).
             int picks = 0;
             var card = (Button)Control("ReckoningOffer0");
             card.onClick.AddListener(() => picks++);
@@ -221,9 +204,9 @@ namespace PrincesPalace.PlayModeTests
             // exactly the case that rule exists for.
             yield return null;
 
-            AssertSelected("ReckoningContinueButton",
-                "the offers are inert once one is taken, so leaving the stick on a card would strand the " +
-                "player on a screen with nothing that answers Submit");
+            AssertSelected("ReckoningLeaveButton",
+                "the offers are inert once the choice is spent, so leaving the stick on a card would strand " +
+                "the player on a screen with nothing that answers Submit");
         }
 
         [UnityTest]
@@ -250,7 +233,7 @@ namespace PrincesPalace.PlayModeTests
             // No offers at all: Show() goes straight to the summary rather
             // than putting up an empty choice with no way out, which is the
             // one phase where leaving IS on offer to the mouse.
-            yield return ShowTheReckoning(new List<ItemOffer>());
+            yield return ShowTheReckoning(new List<PendingPage>());
 
             int dismissed = 0;
             _reckoning.Dismissed = () => dismissed++;
@@ -266,7 +249,7 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator OnTheSummary_UpFromContinue_ReachesTheTabStrip()
         {
-            yield return ShowTheReckoning(new List<ItemOffer>());
+            yield return ShowTheReckoning(new List<PendingPage>());
 
             AssertSelected("ReckoningContinueButton",
                 "precondition: the summary's entry is its own primary action");

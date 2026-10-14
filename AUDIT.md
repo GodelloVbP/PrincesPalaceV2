@@ -2006,9 +2006,8 @@ whether icon-only-by-colour stands.
 Confirmation gestures are inconsistent by feature: two-press for shop
 buy/leave and the Exits pane's lesser exits; a 1.2s hold for Exits' abandon
 and (per #219) nowhere else yet; a single press with no confirmation for shop
-sell (`Core/ShopController.cs:432-458` `SellRow`), a Reckoning offer pick
-(`Domain/UiKit/Screens/ReckoningScreen.cs`, `OfferButtons` at line 176, wired
-at 1075), an event choice (`Core/EventController.cs:706-746` `Press`), and
+sell (`Core/ShopController.cs:432-458` `SellRow`), a Reckoning take or hone instead
+(`Domain/UiKit/Screens/ReckoningScreen.cs`, `OfferButtons` and `HoneButtons`), an event choice (`Core/EventController.cs:706-746` `Press`), and
 map travel (`Core/MapController.cs:739-762` `OnNodePressed`). Owner: a
 proposed rule is that anything that spends or loses something confirms, and
 anything that only pays out doesn't — needs a decision before #219's fix (or
@@ -2342,8 +2341,8 @@ installed save-systems skill.
 Inline duplicates that re-run the same `FirstOrDefault` scan instead of
 routing through `Get*`: `Core/ShopController.cs:971`, `RewardApplier.cs:152`,
 `FightEncounterAdapter.cs:162,480,518,536,605,644`, `DefeatController.cs:182`,
-`RelicDraftController.cs:214`, `ItemOfferRoll.cs:175`,
-`ReckoningController.cs:969`, `PreviewFight.cs:218,400,432`.
+`RelicDraftController.cs:214`, `ItemOfferRoll.cs:145`,
+`PreviewFight.cs:218,400,432`.
 
 Fix: build id→def dictionaries in `EnsureLoaded`, route every listed site
 through `Get*`, and add a lint/test banning

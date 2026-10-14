@@ -61,17 +61,7 @@ namespace PrincesPalace.PlayModeTests
             return reward;
         }
 
-        private static List<ItemOffer> Offers()
-        {
-            var picks = ContentDatabase.Equippables
-                .Where(i => i != null && !string.IsNullOrWhiteSpace(i.iconPath))
-                .Take(3)
-                .ToList();
-
-            Assert.AreEqual(3, picks.Count, "need three equippable items with art to offer");
-
-            return picks.Select(i => new ItemOffer(i.id, i.curve.maxTier)).ToList();
-        }
+        private static IReadOnlyList<PendingPage> Offers() => ReckoningPageFixtures.OneGearPage();
 
         private static GameObject Node(string name) =>
             Resources.FindObjectsOfTypeAll<RectTransform>()

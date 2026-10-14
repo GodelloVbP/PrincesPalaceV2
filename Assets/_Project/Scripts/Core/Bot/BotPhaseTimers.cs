@@ -42,10 +42,10 @@ namespace PrincesPalace
         FightPlay = 5,
         SettleFight = 6,
 
-        // RollOffers + ChooseOffer + TakeOffer, and NESTED INSIDE this one is
-        // Equip: TakeOffer's own equip pass happens mid-Offer, before the
-        // "did it land in the bag or on the body" check that closes the
-        // phase out, so splitting Equip's time back out would mean the same
+        // Settling the fight's reward pages and playing them (take, hone
+        // instead, leave), and NESTED INSIDE this one is Equip: the equip pass
+        // happens mid-Offer, before the "did it land in the bag or on the
+        // body" check that closes the phase out, so splitting Equip's time back out would mean the same
         // "minus a subtotal" threading PersistSerialize/PersistWrite already
         // avoid below. Read Equip's row as "of the time in Offers, this much
         // was equipping", not as extra time on top of it.
@@ -55,7 +55,7 @@ namespace PrincesPalace
         RoomResolve = 8,
 
         // NESTED INSIDE the phases above, and deliberately so: a save write is
-        // triggered from inside TakeOffer, SettleFight and the draft, and
+        // triggered from inside the page play, SettleFight and the draft, and
         // pulling it out of their totals would mean threading a "minus
         // persistence" subtotal through every one of them. Read these two as
         // "of the time above, this much was the save", not as extra time.

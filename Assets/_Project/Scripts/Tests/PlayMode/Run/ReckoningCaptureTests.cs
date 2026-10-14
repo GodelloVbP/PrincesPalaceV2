@@ -58,33 +58,9 @@ namespace PrincesPalace.PlayModeTests
             return reward;
         }
 
-        // A DELIBERATELY MIXED set: the three offers should not all be the same
-        // shape, because the whole point of the capture is whether a long thin
-        // dagger and a squat pair of boots both sit right in the same card.
-        // THREE DIFFERENT RARITY BANDS, deliberately.
-        //
-        // Rarity comes from the item's tier (RarityBands.For), and Common's
-        // colour is near-white -- three Commons on a violet panel is the one
-        // sample that cannot show whether the rarity glow works at all, which
-        // is exactly what the first capture of this screen produced.
-        private static List<ItemOffer> Offers()
-        {
-            var picks = Content.ContentDatabase.Equippables
-                .Where(i => i != null && !string.IsNullOrWhiteSpace(i.iconPath))
-                .Take(3)
-                .ToList();
-
-            Assert.AreEqual(3, picks.Count, "need three equippable items WITH art to photograph");
-
-            // Three tiers across the art ladder, and a plus on the last two,
-            // so the "+N" suffix is in the shot too.
-            return new List<ItemOffer>
-            {
-                new ItemOffer(picks[0].id, 0),
-                new ItemOffer(picks[1].id, 6),
-                new ItemOffer(picks[2].id, 10),
-            };
-        }
+        // Real pages, rolled the way a won fight rolls them: one normal gear
+        // chip is three cards for the squad's recipients.
+        private static IReadOnlyList<PendingPage> Offers() => ReckoningPageFixtures.OneGearPage();
 
         [UnityTest]
         public IEnumerator CaptureTheChoicePhase()
@@ -138,6 +114,59 @@ namespace PrincesPalace.PlayModeTests
             Debug.Log($"[ReckoningCapture] wrote {hovered}");
         }
 
+        // A boss and two anchors settled together: the gear page with five
+        // cards and three choices, a card taken, then the relic page.
+        [UnityTest]
+        public IEnumerator CaptureTheBossSettlementPages()
+        {
+            if (!CanvasCapture.IsSupported)
+            {
+                Assert.Ignore("No graphics device. Run: tools/screenshot.ps1 -Runtime -RuntimeFilter ReckoningCaptureTests");
+            }
+
+            yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
+            yield return null;
+            yield return null;
+
+            _reckoning = Object.FindAnyObjectByType<ReckoningController>(FindObjectsInactive.Include);
+            Assert.IsNotNull(_reckoning, "the Reckoning was never wired into the fight scene");
+
+            var pages = ReckoningPageFixtures.BossAndTwoAnchors();
+            _reckoning.Show(Reward(), pages);
+            yield return new WaitForSecondsRealtime(2.5f);
+            yield return Shoot("Reckoning_boss_gear.png");
+
+            Press("ReckoningOffer1");
+            yield return new WaitForSecondsRealtime(0.5f);
+            yield return Shoot("Reckoning_boss_gear_taken.png");
+
+            Press("ReckoningLeaveButton");
+            yield return new WaitForSecondsRealtime(0.5f);
+            yield return Shoot("Reckoning_boss_gear_left.png");
+
+            Press("ReckoningLeaveButton");
+            yield return new WaitForSecondsRealtime(0.5f);
+            yield return Shoot("Reckoning_boss_relic.png");
+        }
+
+        private void Press(string name) =>
+            _reckoning.GetComponentsInChildren<UnityEngine.UI.Button>(includeInactive: true)
+                .First(b => b.name == name).onClick.Invoke();
+
+        private IEnumerator Shoot(string file)
+        {
+            var canvas = Object.FindObjectsByType<Canvas>(FindObjectsInactive.Exclude)
+                .FirstOrDefault(c => c.isRootCanvas);
+            Assert.IsNotNull(canvas);
+
+            Directory.CreateDirectory(OutputDir);
+            string path = Path.Combine(OutputDir, file);
+            CanvasCapture.RenderToFile(canvas, path);
+            Assert.IsTrue(File.Exists(path));
+            Debug.Log($"[ReckoningCapture] wrote {path}");
+            yield return null;
+        }
+
         // The summary phase's Continue plate against the spoils and tally
         // rows, at 16:9 and 4:3. The canvas renders at 1 unit per pixel, so the
         // 4:3 shot is the same canvas cropped to 1440x1080.
@@ -166,6 +195,10 @@ namespace PrincesPalace.PlayModeTests
             var offer = _reckoning.GetComponentsInChildren<UnityEngine.UI.Button>(includeInactive: true)
                 .First(b => b.name == "ReckoningOffer0");
             offer.onClick.Invoke();
+
+            // The page waits to be moved on; the same button carries on.
+            _reckoning.GetComponentsInChildren<UnityEngine.UI.Button>(includeInactive: true)
+                .First(b => b.name == "ReckoningLeaveButton").onClick.Invoke();
             yield return new WaitForSecondsRealtime(3f);
 
             var canvas = Object.FindObjectsByType<Canvas>(FindObjectsInactive.Exclude)

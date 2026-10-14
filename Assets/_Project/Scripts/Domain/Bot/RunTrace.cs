@@ -157,6 +157,18 @@ namespace PrincesPalace.Domain.Bot
         public int ModifierCount;
     }
 
+    // One reward page the bot played: the rewards.json row that rolled it and
+    // what each choice did, in order ("take:2", "hone:0", "pay:1"), then what
+    // leaving paid for the unused choices.
+    public sealed class PageTrace
+    {
+        public string SourceId = "";
+        public int Choices;
+        public List<string> Taken = new List<string>();
+        public int UnusedHones;
+        public int UnusedGold;
+    }
+
     // One room, fight or otherwise.
     public sealed class RoomTrace
     {
@@ -173,11 +185,16 @@ namespace PrincesPalace.Domain.Bot
         // off it by id alone and do not need the extra axes.
         public List<OfferEntry> Offers = new List<OfferEntry>();
 
+        // The room's reward pages, gear then relic (empty for a room that
+        // paid none). OfferItemIds, Offers and PickedIndex describe the gear
+        // page: PickedIndex is its first taken card, -1 for none.
+        public List<PageTrace> Pages = new List<PageTrace>();
+
         // The squad's Prince's Favor at the moment this room's offer was
         // rolled (ItemOfferRoll.CurrentSquadFavor()), and the encounter class
-        // RunOrchestrator.RollOffers actually rolled it against -- "Normal"
-        // or "Elite" exactly as that method computes them, not a class this
-        // room arguably deserves. Empty string for a room that made no offer.
+        // the settlement rolled its pages as (FightSession.EncounterClass),
+        // not a class this room arguably deserves. Empty string for a room
+        // that made no offer.
         public int Favor;
         public string EncounterClass = "";
 
@@ -412,6 +429,13 @@ namespace PrincesPalace.Domain.Bot
                 {
                     sb.Append(offer.ItemId).Append('/').Append(offer.Tier)
                       .Append('/').Append(offer.ModifierCount).Append('|');
+                }
+                sb.Append(',');
+                foreach (var page in room.Pages)
+                {
+                    sb.Append(page.SourceId).Append('/').Append(page.Choices).Append('/')
+                      .Append(string.Join("+", page.Taken)).Append('/').Append(page.UnusedHones).Append('/')
+                      .Append(page.UnusedGold).Append('|');
                 }
                 sb.Append(',');
                 foreach (var worn in room.Equipped)

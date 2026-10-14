@@ -307,11 +307,8 @@ namespace PrincesPalace.PlayModeTests
         // then be dismissed, there is nothing left on screen to press at all --
         // "it just hangs and you cant do anything anymore".
         //
-        // The elite is where this bites first: it is the first fight in a
-        // fresh run whose reward carries a choice (VictoryRewards.
-        // GuaranteesWeapon fires for boss or elite alike), so it is the
-        // first time the Reckoning opens on its offer phase rather than
-        // straight onto the summary.
+        // The elite is where this bites hardest: its Reckoning opens on a gear
+        // page and then a relic page, each of which has to be leavable.
         [UnityTest]
         public IEnumerator TheEliteCanBeLeftWhenItIsOver()
         {

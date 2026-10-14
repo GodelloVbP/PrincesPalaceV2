@@ -1243,7 +1243,7 @@ namespace PrincesPalace
 
             var receipts = RunOrchestrator.PendingRelicReceipts;
             var request = settled.Reward != null
-                ? Domain.Rewards.ReckoningRequest.Full(settled.Reward, RollOffers(), receipts)
+                ? Domain.Rewards.ReckoningRequest.Full(settled.Reward, SettlePages(), receipts)
                 : Domain.Rewards.ReckoningRequest.Outcome(
                     Domain.Rewards.FightEndRouting.RowFor(_session.EndReason).Ending,
                     receipts, settled.Notices, RunOrchestrator.TallyOf(_session), _session.Ledger);
@@ -1253,14 +1253,14 @@ namespace PrincesPalace
             return true;
         }
 
-        // The loot on offer, rolled against how deep the run is and what class
-        // of thing was just killed. Keyed to the run position, not drawn from
-        // UnityEngine.Random: the same settlement shows the same three, and the
-        // offer still cannot shift the fight's own beats (separate stream).
-        private System.Collections.Generic.List<Domain.Rewards.ItemOffer> RollOffers()
+        // The fight's reward pages, rolled once on the keyed reward stream
+        // and queued on the run: the same position shows the same pages, and
+        // the pages cannot shift the fight's own beats (separate stream).
+        private System.Collections.Generic.IReadOnlyList<Domain.Rewards.PendingPage> SettlePages()
         {
             var run = RunManager.Run;
-            return RunOrchestrator.RollOffers(_session, run?.runSeed ?? 0UL, run?.step ?? 0, run?.currentNodeId ?? 0);
+            return RunOrchestrator.SettleRewardPages(
+                SaveSlotManager.CurrentSave, _session, run?.step ?? 0, run?.currentNodeId ?? 0);
         }
 
         private void UseSatchelItem(int index)

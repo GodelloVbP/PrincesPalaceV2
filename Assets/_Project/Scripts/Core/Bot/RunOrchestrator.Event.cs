@@ -680,10 +680,10 @@ namespace PrincesPalace
                 }
 
                 case EventEffectKind.Item:
-                    // The Reckoning's destination (TakeOffer): the stockpile,
-                    // the single live bag. No auto-equip -- that is a reward
-                    // screen's convenience for a choice the player made among
-                    // three cards, not a rule of acquiring an item.
+                    // The stockpile, the single live bag. No auto-equip: a reward
+                    // page equips because its card was made for a named
+                    // recipient and slot, which an event grant has no
+                    // equivalent of.
                     if (ContentDatabase.GetItem(effect.Item) == null) return;
                     InventoryOps.Add(save.stockpiledItems, effect.Item, effect.Amount);
                     applied.Add(effect);

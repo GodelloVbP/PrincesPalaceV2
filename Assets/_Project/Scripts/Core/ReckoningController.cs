@@ -46,6 +46,19 @@ namespace PrincesPalace
         [SerializeField] internal Button[] offerButtons;
         [SerializeField] internal TMP_Text[] offerNames;
         [SerializeField] internal TMP_Text[] offerMetas;
+        [SerializeField] internal TMP_Text[] offerRecipients;
+        [SerializeField] internal TMP_Text[] offerDeltas;
+        [SerializeField] internal TMP_Text[] offerFeatures;
+        [SerializeField] internal TMP_Text[] offerLoses;
+        [SerializeField] internal TMP_Text[] offerActions;
+
+        // "Hone instead" under each gear card, the page's Favor line and
+        // ledger, and the button that leaves the page (or carries on once
+        // nothing is left to choose).
+        [SerializeField] internal Button[] honeButtons;
+        [SerializeField] internal TMP_Text favorLabel;
+        [SerializeField] internal TMP_Text ledgerLabel;
+        [SerializeField] internal Button leaveButton;
 
         [SerializeField] internal GameObject offerTooltip;
         [SerializeField] internal TMP_Text offerTooltipText;
@@ -55,8 +68,8 @@ namespace PrincesPalace
 
         [SerializeField] internal RectTransform[] offerBurstRects;
 
-        // The offer CARDS' own rects, so a row with fewer offers than the
-        // pool could fill can be re-centred; see OfferRowLayout.
+        // The page CARDS' own rects, so a row with fewer cards than the widest
+        // page can be re-centred; see OfferRowLayout.
         [SerializeField] internal RectTransform[] offerRects;
 
         // Item art, as two parallel arrays -- a scene serialises arrays and
@@ -189,8 +202,13 @@ namespace PrincesPalace
         private CombatReward _reward;
         private ReckoningRequest _request = ReckoningRequest.Full(null, null);
         private RelicChipStrip _gained;
-        private List<ItemOffer> _offers = new List<ItemOffer>();
-        private bool _taken;
+
+        // The run's pending pages, by reference: every choice resolves them in
+        // place, so opening the screen again resumes where it was left.
+        private IReadOnlyList<PendingPage> _pages = new List<PendingPage>();
+
+        // The page on screen, or null once every page is spent.
+        private PendingPage _page;
         private bool _wired;
         private Coroutine _animation;
 
@@ -247,6 +265,14 @@ namespace PrincesPalace
                 UnityEngine.EventSystems.EventSystem.current?.SetSelectedGameObject(continueButton.gameObject);
             Gained.Wire(_tooltips);
 
+            for (int i = 0; honeButtons != null && i < honeButtons.Length; i++)
+            {
+                int index = i;
+                honeButtons[i].onClick.AddListener(() => HoneInstead(index));
+            }
+
+            if (leaveButton != null) leaveButton.onClick.AddListener(LeaveOrAdvance);
+
             for (int i = 0; i < offerButtons.Length; i++)
             {
                 int index = i;
@@ -282,16 +308,17 @@ namespace PrincesPalace
 
         // ---- navigation (docs/GAMEPAD_NAVIGATION_PLAN.md) ------------------------
         //
-        // TWO STATES, one context. The choice phase is a Rail of the cards
-        // actually on screen; the summary it sweeps to is the page tabs plus
-        // Continue. Reconfigured rather than popped and re-pushed, which is
+        // TWO STATES, one context. The choice phase is a Rail of the open
+        // cards, a Rail of their "hone instead" buttons beneath, and the page's
+        // way off; the summary it sweeps to is the page tabs plus Continue.
+        // Reconfigured rather than popped and re-pushed, which is
         // NavContext.Reconfigure's own documented case -- the phase change is
         // the same screen showing something else, not a modal over it.
         //
-        // SUBMIT NEEDS NO CODE: an offer card is a real Button, so its
-        // OnSubmit fires the onClick that already calls Take(index) -- one
-        // path for the mouse and the pad, and Take's own `_taken` guard is
-        // what makes it once-only whichever input arrives.
+        // SUBMIT NEEDS NO CODE: a card is a real Button, so its OnSubmit fires
+        // the onClick that already calls Take(index) -- one path for the mouse
+        // and the pad, and RewardPages.CanTake is what makes each card
+        // once-only whichever input arrives.
         private void RefreshNavigation()
         {
             var groups = new List<UiNavGroup<Selectable>>();
@@ -301,24 +328,52 @@ namespace PrincesPalace
 
             if (_choosing)
             {
-                // Only the cards that are up: PaintOffers deactivates the
-                // rest, and a thin content pool really does roll fewer than
-                // ItemOfferTable.OfferCount.
+                // Only the cards still open: a spent card stays on screen as
+                // the record of what became of it, but answers nothing.
                 var cards = new List<Selectable>();
-                for (int i = 0; i < offerButtons.Length && i < _offers.Count; i++)
+                var hones = new List<Selectable>();
+                var openIndexes = new List<int>();
+                for (int i = 0; _page != null && i < offerButtons.Length && i < _page.Cards.Count; i++)
                 {
-                    if (offerButtons[i] != null) cards.Add(offerButtons[i]);
+                    if (offerButtons[i] == null || !offerButtons[i].interactable) continue;
+
+                    cards.Add(offerButtons[i]);
+                    openIndexes.Add(i);
+                    if (HoneShown(i)) hones.Add(honeButtons[i]);
                 }
 
-                groups.Add(RuntimeNavWiring.Group("reckoningOffers", UiNavGroupKind.Rail, cards));
+                var leave = leaveButton;
+                if (cards.Count > 0) groups.Add(RuntimeNavWiring.Group("reckoningOffers", UiNavGroupKind.Rail, cards));
+                if (hones.Count > 0) groups.Add(RuntimeNavWiring.Group("reckoningHones", UiNavGroupKind.Rail, hones));
+
+                // Down from a card is its own hone button, else the way off the
+                // page; Up from the way off is the first hone, else the first
+                // card.
+                foreach (int i in openIndexes)
+                {
+                    links.Add(RuntimeNavWiring.Link(offerButtons[i], UiNavDirection.Down,
+                        HoneShown(i) ? (Selectable)honeButtons[i] : leave));
+                    if (HoneShown(i))
+                    {
+                        links.Add(RuntimeNavWiring.Link(honeButtons[i], UiNavDirection.Up, offerButtons[i]));
+                        links.Add(RuntimeNavWiring.Link(honeButtons[i], UiNavDirection.Down, leave));
+                    }
+                }
+
+                if (leave != null)
+                {
+                    links.Add(RuntimeNavWiring.Link(leave, UiNavDirection.Up, First(hones) ?? First(cards)));
+                }
 
                 // THE GAMEOBJECT, never the Button. NavContext reads its
                 // entry back through `as GameObject` (it holds an opaque
                 // handle, being engine-free), so a Selectable put here
                 // resolves to null and the dispatcher's own reselection rule
                 // then clears the selection every single frame.
-                entry = First(cards)?.gameObject;
+                entry = (First(cards) ?? leave)?.gameObject;
                 Declare(selectables, cards);
+                Declare(selectables, hones);
+                if (leave != null) selectables[leave.name] = leave.gameObject;
             }
             else
             {
@@ -406,14 +461,13 @@ namespace PrincesPalace
             NavigationInputModule.Contexts?.Push(_navContext);
         }
 
-        // CANCEL IS A NO-OP WHILE THERE IS STILL A CHOICE TO MAKE, and that
-        // is the mouse path's own rule rather than a gamepad restriction:
-        // Show() opens on the offers with no Continue and no skip ("you
-        // always take something" -- see its own comment), so there is nothing
-        // for a back press to do and nowhere for it to go. Once the choice is
-        // spent, the summary DOES have a way out, and Cancel takes it -- the
-        // same action Continue's click raises, so the pad is not offered less
-        // than the mouse.
+        // CANCEL IS A NO-OP WHILE THERE ARE PAGES TO RESOLVE, and that is the
+        // mouse path's own rule rather than a gamepad restriction: leaving a
+        // page pays its unused choices, so it is a deliberate press on the
+        // page's own button, never a back press. Once the pages are spent,
+        // the summary DOES have a way out, and Cancel takes it -- the same
+        // action Continue's click raises, so the pad is not offered less than
+        // the mouse.
         private void HandleCancel()
         {
             if (_choosing) return;
@@ -447,43 +501,34 @@ namespace PrincesPalace
             _navContext = null;
         }
 
-        // Opened with what the fight paid and what it offers.
-        //
-        // Both are handed in rather than fetched. The controller reading
-        // FightBootstrap.LastReward itself would tie this screen to the one
-        // bootstrap that happens to own it today, and the Reckoning is the sort
-        // of thing a test wants to drive with a fixture.
-                // What this offer would do to every member of the squad.
+        // What this card would do to every member of the squad, for a gear
+        // card.
         //
         // Rebuilt on each hover rather than cached: it runs the real
         // clone-and-resolve Compare, and the squad's gear can change between
-        // one Reckoning and the next.
+        // one Reckoning and the next. A relic card says everything on its face,
+        // and a spent card has nothing left to compare.
         private void OnOfferHover(int index, bool entered)
         {
             if (offerTooltip == null) return;
 
-            if (!entered || _taken || index < 0 || index >= _offers.Count)
+            var card = _page != null && index >= 0 && index < _page.Cards.Count ? _page.Cards[index] : null;
+            if (!entered || card == null || !card.IsGear || card.Outcome != CardOutcome.Open || _page.ChoicesLeft == 0)
             {
                 offerTooltip.SetShown(false);
                 return;
             }
 
-            var item = ContentDatabase.GetItem(_offers[index].ItemId);
             var save = SaveSlotManager.CurrentSave;
-            if (item == null || save == null)
+            if (ContentDatabase.DefinitionOf(card.Copy) == null || save == null)
             {
                 offerTooltip.SetShown(false);
                 return;
             }
 
-            // ITEM-MODIFIER PLAN PHASE E: read straight off the OFFER, not
-            // off anything claimed -- an offer's Modifiers are set
-            // the moment ItemOfferRoll rolls it (see ItemOffer's own
-            // header), well before Take() ever writes an InventoryEntry, so
-            // the hover has real data to show for all three unclaimed cards.
-            var offer = _offers[index];
-            string body = ItemDescription.SquadComparisonBody(
-                save.ActiveSquad(), offer.Instance);
+            // Read straight off the card's copy: its affixes were rolled with
+            // the page, well before Take() ever equips it.
+            string body = ItemDescription.SquadComparisonBody(save.ActiveSquad(), card.Copy);
             if (string.IsNullOrEmpty(body))
             {
                 offerTooltip.SetShown(false);
@@ -532,7 +577,7 @@ namespace PrincesPalace
 
             // The card's own rect, so this reads the row as LAID OUT rather
             // than as emitted: LayOutOfferRow has already re-centred and
-            // re-widened it for the number of offers actually showing, and
+            // re-widened it for the number of cards actually showing, and
             // recomputing the position here from OfferRowLayout would be a
             // second answer to a question already answered.
             var card = offerRects != null && index < offerRects.Length ? offerRects[index] : null;
@@ -556,14 +601,18 @@ namespace PrincesPalace
         }
 
         // A paid fight with no relic receipts to show: the full form.
-        public void Show(CombatReward reward, List<ItemOffer> offers) => Show(ReckoningRequest.Full(reward, offers));
+        public void Show(CombatReward reward, IReadOnlyList<PendingPage> pages) =>
+            Show(ReckoningRequest.Full(reward, pages));
 
         public void Show(ReckoningRequest request)
         {
             _request = request ?? ReckoningRequest.Full(null, null);
             _reward = _request.Reward;
-            _offers = new List<ItemOffer>(_request.Offers);
-            _taken = false;
+            _pages = _request.Pages;
+
+            // The first page with choices left, so a screen opened again over
+            // the same pages resumes rather than starting over.
+            _page = _pages.FirstOrDefault(p => p != null && p.ChoicesLeft > 0);
 
             gameObject.SetActive(true);
             Wire();
@@ -574,13 +623,13 @@ namespace PrincesPalace
             // Only animate when the object is actually live in the hierarchy.
             // StartCoroutine on an inactive object throws, and a headless test
             // that never activates the canvas should still get correct numbers.
-            // OPENS ON THE CHOICE. You always take something, so the item
-            // phase is where the screen begins and the only way past it is to
-            // pick -- there is no skip and no Continue on it.
+            // OPENS ON THE FIRST PAGE WITH CHOICES LEFT. The only way past a
+            // page is to spend its choices or leave it (which pays them), so
+            // there is no Continue on this phase.
             //
-            // A fight that offers nothing goes straight to the summary rather
+            // A fight that paid no page goes straight to the summary rather
             // than showing an empty choice with no way out.
-            bool choosing = _offers.Count > 0;
+            bool choosing = _page != null;
 
             offerPhase.gameObject.SetActive(choosing);
             offerPhase.anchoredPosition = Vector2.zero;
@@ -699,20 +748,17 @@ namespace PrincesPalace
             PaintOffers();
         }
 
-        // Positions and sizes the offer row for the number of cards actually
+        // Positions and sizes the page's row for the number of cards actually
         // being shown.
         //
-        // The tree is emitted at ItemOfferTable.OfferCount cards dividing the
+        // The tree is emitted at OfferRowLayout.MaxCards cards dividing the
         // painted interior, because a screen is built once for every save. A
-        // thin content pool can still return fewer, which get the same
-        // interior split that many ways and so come out wider, not narrower.
+        // page of k + 2 cards gets the same interior split that many ways and
+        // so comes out wider, not narrower.
         //
         // Both widths come from OfferRowLayout, so the row the audit solved and
         // the row the game draws cannot disagree about the arithmetic -- only
         // about the count, which is the one thing that genuinely varies.
-        //
-        // Driven off `count` (what is on screen), which is exactly what a
-        // caller with fewer offers than the tree's width wants centred.
         private void LayOutOfferRow(int count)
         {
             if (count <= 0) return;
@@ -735,15 +781,33 @@ namespace PrincesPalace
                     rect.sizeDelta = size;
                 }
 
+                // "Hone instead" keeps its size, because a plate is a 3:1 art
+                // and stretching it with the row would bend it; only its x
+                // follows the card.
+                var hone = honeButtons != null && i < honeButtons.Length && honeButtons[i] != null
+                    ? honeButtons[i].transform as RectTransform
+                    : null;
+                if (hone != null)
+                {
+                    var position = hone.anchoredPosition;
+                    position.x = OfferRowLayout.CardX(i, count);
+                    hone.anchoredPosition = position;
+                }
+
                 SetWidth(RectAt(offerNames, i), labelWidth);
                 SetWidth(RectAt(offerMetas, i), labelWidth);
+                SetWidth(RectAt(offerRecipients, i), labelWidth);
+                SetWidth(RectAt(offerDeltas, i), labelWidth);
+                SetWidth(RectAt(offerFeatures, i), labelWidth);
+                SetWidth(RectAt(offerLoses, i), labelWidth);
+                SetWidth(RectAt(offerActions, i), labelWidth);
 
                 // THE ART TOO, which the labels' own comment below explains the
-                // general case of. The icon box is emitted at the four-card
+                // general case of. The icon box is emitted at the widest row's
                 // width because that is the row the audit solves; leaving it
-                // there would mean a three-card row -- every player below level
-                // 50 -- drawing its items 16% smaller than the card can hold,
-                // for no reason but the audit's convenience.
+                // there would mean a three-card row drawing its items smaller
+                // than the card can hold, for no reason but the audit's
+                // convenience.
                 SetWidth(RectAt(offerIcons, i), OfferRowLayout.IconWidth(count));
                 SetSquare(RectAt(offerHalos, i), OfferRowLayout.HaloDiameter(count));
                 SetSquare(RectAt(offerBursts, i), OfferRowLayout.BurstDiameter(count));
@@ -796,136 +860,335 @@ namespace PrincesPalace
 
         private void PaintOffers()
         {
-            bool any = _offers.Count > 0;
+            bool any = _page != null && _page.Cards.Count > 0;
             if (lootHeading != null) lootHeading.SetActive(any);
+            if (favorLabel != null) favorLabel.gameObject.SetShown(any && _page.Kind == RewardPageKind.Gear);
+            if (ledgerLabel != null) ledgerLabel.gameObject.SetShown(any);
+            if (leaveButton != null) leaveButton.gameObject.SetShown(any);
+
+            int count = any ? Mathf.Min(_page.Cards.Count, offerButtons.Length) : 0;
 
             // RE-CENTRE FIRST, before anything reads a position.
             //
-            // The row is emitted at ItemOfferTable.OfferCount wide because a
-            // screen is built once for every save. Fewer cards left at those
-            // positions would sit off-axis with a gap where the missing ones
-            // belong -- which is what a hidden card looks like if nobody moves
-            // the rest.
-            //
-            // Driven off _offers.Count, so a thin content pool that returns two
-            // offers centres two. That count is what is actually on screen.
-            LayOutOfferRow(_offers.Count);
+            // The row is emitted at OfferRowLayout.MaxCards wide because a
+            // screen is built once for every save. A page of k + 2 cards left
+            // at those positions would sit off-axis with a gap where the
+            // missing ones belong -- which is what a hidden card looks like if
+            // nobody moves the rest.
+            LayOutOfferRow(count);
 
+            var save = SaveSlotManager.CurrentSave;
             for (int i = 0; i < offerButtons.Length; i++)
             {
-                bool present = i < _offers.Count;
+                bool present = i < count;
                 offerButtons[i].gameObject.SetActive(present);
+                if (honeButtons != null && i < honeButtons.Length && honeButtons[i] != null)
+                {
+                    honeButtons[i].gameObject.SetActive(present && HoneShown(i));
+                }
+
                 if (!present) continue;
 
-                var offer = _offers[i];
-                var item = ContentDatabase.GetItem(offer.ItemId);
+                var card = _page.Cards[i];
+                bool open = card.Outcome == CardOutcome.Open && _page.ChoicesLeft > 0;
+                var face = card.IsGear ? RewardCardFace.OfGear(save, card) : RewardCardFace.OfRelic(card);
 
-                // Graceful degradation: an offer naming content that no longer
-                // exists shows its id rather than taking the screen down.
-                offerNames[i].SetContent(item == null
-                    ? offer.ItemId
-                    : RarityColors.NameOf(offer.Instance));
-                offerMetas[i].Set(UiStrings.ReckoningOfferMeta,
-                    item == null ? "?" : ItemQuality.DisplayName(ContentDatabase.QualityOf(offer.Instance)), offer.Tier);
+                // Graceful degradation: a card naming content that no longer
+                // exists shows what it can rather than taking the screen down.
+                SetText(offerNames, i, face.Name);
+                SetText(offerMetas, i, face.Meta);
+                SetText(offerRecipients, i, face.Recipient);
+                SetText(offerDeltas, i, face.Delta);
+                SetText(offerFeatures, i, face.Feature);
+                SetText(offerLoses, i, face.Loses);
+                SeatFeature(i, relic: !card.IsGear);
 
-                ItemIcons.Apply(offerIcons[i], icons, ItemIcons.KeyOf(offer.Instance));
+                // The frame colour is the QUALITY, and it is the burst and the
+                // halo that wear it, from the same table the name and the
+                // dossier's cell edges read. Held well under full alpha: it is
+                // a glow behind an object, and at full strength it competes
+                // with the object it exists to frame.
+                var glow = HexColour(face.Hex);
+                if (offerNames[i] != null) offerNames[i].color = glow;
 
-                // The burst wears the item's RARITY COLOUR, from the same table
-                // the name above it and the character overlay's cell edges read.
-                // Held well under full alpha: it is a glow behind an object, and
-                // at full strength it competes with the object it exists to
-                // frame.
-                var glow = item == null ? Color.white : RarityColors.For(offer.Instance);
-                glow.a = _taken ? 0.18f : 0.42f;
+                if (card.IsGear)
+                {
+                    ItemIcons.Apply(offerIcons[i], icons, ItemIcons.KeyOf(card.Copy));
+                }
+                else
+                {
+                    ItemIcons.Apply(offerIcons[i], relicArt, card.RelicId);
+                }
+
+                glow.a = open ? 0.42f : 0.18f;
                 offerBursts[i].color = glow;
 
                 // The halo carries the SAME colour at lower alpha. It is the
                 // part that survives being stood on: the burst's rays clear the
                 // icon, but its core is hidden behind the item, so on its own
-                // the rarity read as a few spikes rather than as a colour.
+                // the quality read as a few spikes rather than as a colour.
                 //
-                // ONE MEANING: this halo says only "this item is Legendary"
-                // (or whatever rarity), never also "this is the card you are
-                // on" -- mixing both would let a focused Common read
-                // brighter than an unfocused Legendary. Focus is the arrow's
-                // job (Core/FocusMarker.cs); rarity is this halo's, and only
-                // that.
+                // ONE MEANING: this halo says only "this is Rare" (or whatever
+                // quality), never also "this is the card you are on" -- focus
+                // is the arrow's job (Core/FocusMarker.cs).
                 if (offerHalos != null && i < offerHalos.Length && offerHalos[i] != null)
                 {
                     var soft = glow;
-                    soft.a = _taken ? 0.12f : 0.30f;
+                    soft.a = open ? 0.30f : 0.12f;
                     offerHalos[i].color = soft;
                     offerHalos[i].rectTransform.localScale = Vector3.one;
                 }
 
-                // Every offer stays visible after one is taken, and all of them
-                // stop responding. Hiding the two not chosen would erase the
+                PaintAction(i, card, open);
+                PaintHone(i, card);
+
+                // Every card stays visible once the page is spent, and none of
+                // them respond. Hiding the ones not chosen would erase the
                 // decision the player just made from the screen that asked for
                 // it.
-                offerButtons[i].interactable = !_taken;
+                offerButtons[i].interactable = open;
+            }
+
+            PaintPageChrome();
+        }
+
+        // The caption at the foot of a card: what it will do, then what became
+        // of it.
+        private void PaintAction(int i, PendingCard card, bool open)
+        {
+            if (i >= offerActions.Length || offerActions[i] == null) return;
+
+            switch (card.Outcome)
+            {
+                case CardOutcome.Taken: offerActions[i].Set(UiStrings.ReckoningTaken); break;
+                case CardOutcome.Honed: offerActions[i].Set(UiStrings.ReckoningHoned); break;
+                case CardOutcome.Paid: offerActions[i].Set(UiStrings.ReckoningPaid, card.GoldPaid); break;
+
+                // An unspent card on a spent page was never taken or honed: its
+                // caption is blank rather than a lie.
+                default:
+                    if (open) offerActions[i].Set(UiStrings.ReckoningTake);
+                    else offerActions[i].SetContent("");
+                    break;
             }
         }
 
-        // ---- the one decision -------------------------------------------------------
+        private void PaintHone(int i, PendingCard card)
+        {
+            if (!HoneShown(i)) return;
 
+            var label = honeButtons[i].GetComponentInChildren<TMP_Text>(includeInactive: true);
+            var save = SaveSlotManager.CurrentSave;
+            if (RewardPages.HoneInsteadFor(save, _page, i) == RewardPages.HoneInsteadResult.Gold)
+            {
+                label.Set(UiStrings.ReckoningSellInstead, RewardPages.SalePrice(card.Copy, _page.Step));
+            }
+            else
+            {
+                label.Set(UiStrings.ReckoningHoneInstead);
+            }
+        }
+
+        // Whether card `i` offers "hone instead": a gear page's open card whose
+        // slot can still be honed, or the one case where every slot is spent
+        // and the choice pays the card's price (RewardPages.HoneInsteadFor).
+        private bool HoneShown(int i) =>
+            _page != null && honeButtons != null && i < honeButtons.Length && honeButtons[i] != null
+            && i < _page.Cards.Count && _page.Kind == RewardPageKind.Gear
+            && RewardPages.HoneInsteadFor(SaveSlotManager.CurrentSave, _page, i) != RewardPages.HoneInsteadResult.Refused;
+
+        // The heading, the Favor line, the ledger and the page's button.
+        private void PaintPageChrome()
+        {
+            if (_page == null) return;
+
+            var heading = lootHeading == null ? null : lootHeading.GetComponent<TMP_Text>();
+            var pageName = PageName(_page);
+            if (heading != null)
+            {
+                string name = pageName.Format();
+                if (_page.ChoicesLeft == 0) heading.Set(UiStrings.ReckoningPageDone, name);
+                else if (_page.ChoicesLeft == 1) heading.Set(UiStrings.ReckoningChoiceLeft, name);
+                else heading.Set(UiStrings.ReckoningChoicesLeft, name, _page.ChoicesLeft);
+            }
+
+            if (favorLabel != null && _page.Kind == RewardPageKind.Gear)
+            {
+                int favor = ItemOfferRoll.CurrentSquadFavor();
+                GearPage.FavorEffect(ContentDatabase.GetRewardSource(_page.SourceId), favor,
+                    out int tierPoints, out int qualityPoints);
+                favorLabel.Set(UiStrings.ReckoningFavor, favor, tierPoints, qualityPoints);
+            }
+
+            if (ledgerLabel != null) ledgerLabel.SetContent(LedgerText(_page));
+
+            var leaveLabel = leaveButton == null ? null : leaveButton.GetComponentInChildren<TMP_Text>(includeInactive: true);
+            if (leaveLabel != null)
+            {
+                leaveLabel.Set(_page.ChoicesLeft > 0 ? UiStrings.ReckoningLeavePage : UiStrings.Continue);
+            }
+        }
+
+        private static UiString PageName(PendingPage page)
+        {
+            bool gear = page.Kind == RewardPageKind.Gear;
+            switch (page.SourceClass)
+            {
+                case EncounterClass.Boss: return gear ? UiStrings.ReckoningPageGearBoss : UiStrings.ReckoningPageRelicBoss;
+                case EncounterClass.Elite: return gear ? UiStrings.ReckoningPageGearAnchor : UiStrings.ReckoningPageRelicAnchor;
+                default: return gear ? UiStrings.ReckoningPageGear : UiStrings.ReckoningPageRelic;
+            }
+        }
+
+        // What the page did, in one paragraph: the copies it displaced into the
+        // bag, the slots it honed, and what leaving paid for the choices left
+        // unused.
+        private static string LedgerText(PendingPage page)
+        {
+            var parts = new List<string>();
+
+            var displaced = page.Cards
+                .Where(c => c.IsGear && c.Outcome == CardOutcome.Taken && c.Displaced != null)
+                .Select(c => RarityColors.NameOf(c.Displaced))
+                .ToList();
+            if (displaced.Count > 0) parts.Add(UiStrings.ReckoningLedgerDisplaced.Format(string.Join(", ", displaced)));
+
+            var honed = page.Cards
+                .Where(c => c.IsGear && c.Outcome == CardOutcome.Honed)
+                .Select(c => RewardApplier.DisplayNameFor(c.RecipientId) + " " + UiStrings.EquipmentSlotName(c.Slot).Format())
+                .ToList();
+            if (honed.Count > 0) parts.Add(UiStrings.ReckoningLedgerHoned.Format(string.Join(", ", honed)));
+
+            if (page.Closed && (page.UnusedHones > 0 || page.UnusedGold > 0))
+            {
+                var left = new List<string>();
+                if (page.UnusedHones > 0) left.Add(UiStrings.ReckoningLeftHones.Format(page.UnusedHones));
+                if (page.UnusedGold > 0) left.Add(UiStrings.ReckoningLeftGold.Format(page.UnusedGold));
+                parts.Add(UiStrings.ReckoningLedgerLeft.Format(string.Join(", ", left)));
+            }
+
+            return string.Join("  -  ", parts);
+        }
+
+        private static void SetText(TMP_Text[] labels, int index, string value)
+        {
+            if (labels != null && index < labels.Length && labels[index] != null) labels[index].SetContent(value);
+        }
+
+        private static Color HexColour(string hex) =>
+            ColorUtility.TryParseHtmlString(hex, out var parsed) ? parsed : Color.white;
+
+        // A relic's description takes the recipient and stat bands as well; a
+        // gear card's feature line sits in its own band.
+        private void SeatFeature(int i, bool relic)
+        {
+            var rect = RectAt(offerFeatures, i);
+            if (rect == null) return;
+
+            var position = rect.anchoredPosition;
+            position.y = relic ? ReckoningScreen.RelicFeatureCentre : ReckoningScreen.FeatureCentre;
+            rect.anchoredPosition = position;
+
+            var size = rect.sizeDelta;
+            size.y = relic ? ReckoningScreen.RelicFeatureHeight : ReckoningScreen.FeatureHeight;
+            rect.sizeDelta = size;
+        }
+
+        // ---- the decisions ------------------------------------------------------------
+
+        // A gear card equips on its recipient, a relic joins the run. The page
+        // stays on screen until the player moves on, so the displaced copy and
+        // the spent cards are readable.
         private void Take(int index)
         {
-            if (_taken || index < 0 || index >= _offers.Count) return;
-
             var save = SaveSlotManager.CurrentSave;
-            if (save == null) return;
+            if (save == null || !RewardPages.CanTake(_page, index)) return;
 
-            var offer = _offers[index];
-            _taken = true;
+            var card = _page.Cards[index];
+            if (!RewardPages.Take(save, _page, index)) return;
 
-            // Into the bag, and into an empty slot if the loadout has one --
-            // RunOrchestrator.TakeOffer, which is where the save-touching half
-            // of this decision moved so the bot takes its loot the same way
-            // (docs/PLAN_BALANCE_BOT.md F2). The guard above, the greying out
-            // below and the chosen-item line are this screen's.
-            RunOrchestrator.TakeOffer(save, offer);
-
-            if (_reward != null)
+            if (_reward != null && card.IsGear && string.IsNullOrEmpty(_reward.ChosenItemId))
             {
-                var item = ContentDatabase.GetItem(offer.ItemId);
-                _reward.ChosenItemId = offer.ItemId;
-                _reward.ChosenItemName = item == null ? offer.ItemId : RarityColors.NameOf(offer.Instance);
+                _reward.ChosenItemId = card.Copy.ItemId;
+                _reward.ChosenItemName = RarityColors.NameOf(card.Copy);
             }
 
-            offerNames[index].Set(UiStrings.ReckoningTaken);
+            AfterChoice();
+        }
+
+        private void HoneInstead(int index)
+        {
+            var save = SaveSlotManager.CurrentSave;
+            if (save == null || !RewardPages.CanTake(_page, index)) return;
+            if (RewardPages.HoneInstead(save, _page, index) == RewardPages.HoneInsteadResult.Refused) return;
+
+            AfterChoice();
+        }
+
+        // Leaving pays every unused choice and closes the page, which then
+        // shows what it paid; once nothing is left to choose the same button
+        // moves on to the next page, or to the summary after the last.
+        private void LeaveOrAdvance()
+        {
+            if (_page == null) return;
+
+            if (_page.ChoicesLeft > 0)
+            {
+                RewardPages.Leave(SaveSlotManager.CurrentSave, _page);
+                AfterChoice();
+                return;
+            }
+
+            _page = _pages.FirstOrDefault(p => p != null && p.ChoicesLeft > 0);
+            if (_page != null)
+            {
+                PaintOffers();
+                RefreshNavigation();
+                SelectEntry();
+                return;
+            }
+
+            // The last page is spent: the sweep to the summary is the
+            // transition, as it always was.
+            _choosing = false;
             PaintOffers();
 
-            // The choice IS the transition. Nothing else on this phase leads
-            // anywhere, which is what "you always take something" means.
-            if (_choosing)
+            if (isActiveAndEnabled)
             {
-                _choosing = false;
-
-                if (isActiveAndEnabled)
-                {
-                    if (_animation != null) StopCoroutine(_animation);
-                    _animation = StartCoroutine(SweepToSummary());
-                }
-                else
-                {
-                    offerPhase.gameObject.SetActive(false);
-                    summaryPhase.gameObject.SetActive(true);
-                }
+                if (_animation != null) StopCoroutine(_animation);
+                _animation = StartCoroutine(SweepToSummary());
+            }
+            else
+            {
+                offerPhase.gameObject.SetActive(false);
+                summaryPhase.gameObject.SetActive(true);
             }
 
-            // THE SUMMARY'S OWN GRAPH, now the offers are inert. Without
-            // this the stick would be standing on a card that no longer
-            // answers Submit, with Continue unreachable -- the phase change
-            // moves what is operable, so it has to move the declaration too.
-            // The selection follows on the next Process(): the dispatcher's
-            // reselection rule finds the old card outside the reconfigured
-            // set and resolves this context's new entry (Continue), which is
-            // exactly the case that rule exists for, and the sweep to the
-            // summary covers the frame.
             RefreshNavigation();
         }
 
-        public bool HasTakenAnItem => _taken;
+        // The save is written once per player action, here, since neither
+        // RewardPages nor the screen's other paths persist.
+        private void AfterChoice()
+        {
+            SaveSlotManager.SaveCurrent();
+            PaintOffers();
+            RefreshNavigation();
+
+            // Reselect NOW: the card the stick stood on no longer answers, and
+            // the dispatcher's next-frame rule would leave a frame unfocused.
+            SelectEntry();
+        }
+
+        private void SelectEntry() =>
+            UnityEngine.EventSystems.EventSystem.current?.SetSelectedGameObject(
+                NavigationInputModule.SelectionFor(_navContext));
+
+        public bool HasTakenAnItem =>
+            _pages.Any(p => p != null && p.Cards.Any(c => c.IsGear && c.Outcome == CardOutcome.Taken));
+
+        // The page on screen, for a test or a capture.
+        public PendingPage CurrentPage => _page;
 
         private void Update()
         {

@@ -52,12 +52,11 @@ namespace PrincesPalace.Domain.Combat.Session
 
         // ONE ranking, computed once, for every caller that needs to know
         // what kind of fight this was -- Boss beats Elite beats Normal.
-        // RunOrchestrator.RollOffers and Core/Bot/BotRunDriver's own trace
-        // used to each carry their own copy of this ranking; BotRunDriver's
-        // fell out of sync with RollOffers' own fix (Boss checked first) and
-        // silently kept reporting a boss room's offer as Elite/Normal in the
-        // balance-bot trace. One property, read by both, cannot drift apart
-        // again the same way.
+        // RunOrchestrator.SettleRewardPages and Core/Bot/BotRunDriver's own
+        // trace used to each carry their own copy of this ranking; the trace's
+        // fell out of sync (Boss checked first) and silently kept reporting a
+        // boss room's offer as Elite/Normal in the balance-bot trace. One
+        // property, read by both, cannot drift apart again the same way.
         public EncounterClass EncounterClass =>
             IsBossFight ? EncounterClass.Boss : IsEliteFight ? EncounterClass.Elite : EncounterClass.Normal;
 

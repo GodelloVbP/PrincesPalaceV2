@@ -136,7 +136,7 @@ namespace PrincesPalace.PlayModeTests
         {
             yield return OpenTheFight();
 
-            _reckoning.Show(Reward(characterId, "Shawn"), new List<ItemOffer>());
+            _reckoning.Show(Reward(characterId, "Shawn"), new List<PendingPage>());
             yield return null;
         }
 
@@ -183,7 +183,7 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
             Assert.IsTrue(Named("ReckoningTallyPage").activeSelf);
 
-            _reckoning.Show(Reward("shawn", "Shawn"), new List<ItemOffer>());
+            _reckoning.Show(Reward("shawn", "Shawn"), new List<PendingPage>());
             yield return null;
 
             Assert.IsTrue(Named("ReckoningSpoilsPage").activeSelf, "the tab did not reset on reopen");
@@ -223,7 +223,7 @@ namespace PrincesPalace.PlayModeTests
                 3, 0, 3, 0, 100, 0, isDowned: true));
 
             yield return OpenTheFight();
-            _reckoning.Show(reward, new List<ItemOffer>());
+            _reckoning.Show(reward, new List<PendingPage>());
             yield return null;
 
             Click("ReckoningTab2");

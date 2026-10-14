@@ -148,7 +148,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(heldBefore + 1, BagCount(card.contentId));
         }
 
-        // A purchase deliberately does NOT auto-equip, unlike TakeOffer: the
+        // A purchase deliberately does NOT auto-equip, unlike a reward page's Take: the
         // player already decided, with money, against the other cards.
         [Test]
         public void BuyingGearDoesNotEquipIt()

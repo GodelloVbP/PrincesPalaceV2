@@ -241,15 +241,11 @@ namespace PrincesPalace.PlayModeTests
             var reward = new CombatReward { GoldGained = 46 };
             reward.Characters.Add(new CharacterReward("shawn", "Shawn", 1, 0, 1, 79, 100, 79, expToNextBefore: 100));
 
-            // The highest tiers with art, so every card has a real icon and a
-            // real rarity halo -- which is the thing the arrow must no longer
-            // be confused with.
-            var offers = ContentDatabase.Equippables
-                .Where(i => i != null && !string.IsNullOrWhiteSpace(i.iconPath))
-                .Take(3)
-                .Select(i => new ItemOffer(i.id, i.curve.maxTier))
-                .ToList();
-            Assert.AreEqual(3, offers.Count, "need three equippable items with art to offer");
+            // Real pages: every card has the item a won fight would roll, and a
+            // quality frame -- which is the thing the arrow must no longer be
+            // confused with.
+            var offers = ReckoningPageFixtures.OneGearPage();
+            Assert.AreEqual(3, offers[0].Cards.Count, "a one-chip gear page shows three cards");
 
             reckoning.Show(reward, offers);
 

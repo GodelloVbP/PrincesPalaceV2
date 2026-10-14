@@ -143,6 +143,22 @@ namespace PrincesPalace.Domain.Rewards
         public const float QualityFavorPerPoint = LootLadder.FavorPerPoint;
         public const float QualityMaxStep = LootLadder.MaxStep;
 
+        // What squad Favor adds to this source's two ladders, in whole points
+        // of per-rung chance, after each dial's cap: the page header's Favor
+        // line. A Favor of 20 on a normal page reads tier +12, quality +12.
+        public static void FavorEffect(ResolvedRewardSource source, int favor, out int tierPoints, out int qualityPoints)
+        {
+            tierPoints = qualityPoints = 0;
+            if (source == null) return;
+
+            tierPoints = Points(source.TierStep,
+                LootLadder.StepChance(source.TierStep, favor, RarityTable.TierFavorPerPoint, RarityTable.TierMaxStep));
+            qualityPoints = Points(source.LadderStep,
+                LootLadder.StepChance(source.LadderStep, favor, QualityFavorPerPoint, QualityMaxStep));
+        }
+
+        private static int Points(float bare, float withFavor) => Math.Max(0, (int)Math.Round((withFavor - bare) * 100.0));
+
         // Weight of an empty slot against a filled one in the slot draw.
         public const int EmptySlotWeight = 3;
         public const int FilledSlotWeight = 1;

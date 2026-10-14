@@ -768,7 +768,7 @@ namespace PrincesPalace
 
         // Who actually stood on the stage. A squad member left out of the
         // encounter (at 0 HP when it was built) is downed rather than absent.
-        private static IReadOnlyList<string> FieldedIds(FightSession session)
+        internal static IReadOnlyList<string> FieldedIds(FightSession session)
         {
             // Guarded down to the party itself, not just the session: the
             // ledger fold above runs before the win check and so before
@@ -782,95 +782,40 @@ namespace PrincesPalace
                 .ToList();
         }
 
+        // A won fight's reward pages (docs/PLAN_ITEMS.md 1.2), rolled once and
+        // queued on the run: one gear page for the fight's class, plus a relic
+        // page for an anchor or a boss. The screen and the bot both settle
+        // through here, so the same position shows the same pages. Until the
+        // chip model (I3) every fight pays exactly one chip of its own class.
+        // Saves, since the pity counters moved.
+        public static IReadOnlyList<PendingPage> SettleRewardPages(
+            SaveData save, FightSession session, int step, int nodeId)
+        {
+            // Opened again for the same fight (a re-entered Reckoning): the
+            // pages already queued, with what was taken still taken.
+            var queued = RewardPages.Pages(save?.activeRun);
+            if (queued.Count > 0 && queued[0].Step == step && queued[0].NodeId == nodeId) return queued;
+
+            ChipsFor(session?.EncounterClass ?? EncounterClass.Normal, out var gearChips, out var relicChips);
+            int strength = RealmOpening.StrengthOf(save?.activeRun, nodeId);
+
+            var pages = RewardPages.Settle(save, step, nodeId, strength, gearChips, relicChips, FieldedIds(session));
+            SaveSlotManager.SaveCurrent();
+            return pages;
+        }
+
+        // The chips a won fight of this class pays: a gear chip of its class,
+        // and for an anchor or a boss a relic chip too. Pays nothing else
+        // until I3 prices chips by node.
+        public static void ChipsFor(EncounterClass cls, out List<EncounterClass> gearChips, out List<EncounterClass> relicChips)
+        {
+            gearChips = new List<EncounterClass> { cls };
+            relicChips = cls == EncounterClass.Normal ? new List<EncounterClass>() : new List<EncounterClass> { cls };
+        }
+
         // Who an outcome-form Reckoning tallies: the fielded party, named as
         // the reward rows name them. A paid fight's tally comes off its reward.
         public static List<TallyMember> TallyOf(FightSession session) =>
             FieldedIds(session).Select(id => new TallyMember(id, RewardApplier.DisplayNameFor(id))).ToList();
-
-        // ---- the loot on offer -------------------------------------------------------
-
-        // Rolled against how deep the run is and what class of thing was just
-        // killed.
-        //
-        // THE RANDOMNESS COMES IN FROM OUTSIDE so a test can hand in a fixed
-        // sequence. Production callers go through the keyed overload below.
-        // The screen's and the bot's roll: one keyed stream per
-        // (run seed, step, node, pickIndex), so the same position always
-        // shows the same offers (RngStreams.Reward).
-        public static List<ItemOffer> RollOffers(
-            FightSession session, ulong runSeed, int step, int nodeId, int pickIndex = 0)
-        {
-            var rng = RngStreams.Open(runSeed, RngStreams.Reward, step, nodeId, pickIndex);
-            return RollOffers(session, bound => rng.NextInt(0, bound));
-        }
-
-        public static List<ItemOffer> RollOffers(FightSession session, Func<int, int> nextIndex)
-        {
-            // BOSS CHECKED FIRST -- via FightSession.EncounterClass, the one
-            // ranking every caller shares: reading IsEliteFight alone would
-            // let a boss kill (which sets IsBossFight, not IsEliteFight)
-            // fall through to EncounterClass.Normal, so RarityTable's
-            // TierFloorFor(Boss)=3 guarantee and LootLadder's wider Boss
-            // step chance would never fire for the one fight class they
-            // exist for.
-            var encounter = session?.EncounterClass ?? EncounterClass.Normal;
-
-            int depth = session?.DepthStep ?? 0;
-            return ItemOfferRoll.Roll(encounter, depth, ItemOfferRoll.CurrentSquadFavor(), nextIndex);
-        }
-
-        // Taking one. The screen keeps the "only once" guard and the repaint;
-        // this is the half that touches the save.
-        public static void TakeOffer(SaveData save, ItemOffer offer)
-        {
-            if (save == null) return;
-
-            // Straight to the meta stash, which is the single live bag -- the
-            // same one the character overlay and the fight satchel read. The
-            // whole copy travels as one ItemInstance, roll included.
-            InventoryOps.Add(save.stockpiledItems, offer.Instance, 1);
-
-            // AUTO-EQUIP INTO AN EMPTY SLOT. A reward picked for a slot nobody
-            // is wearing anything in went to the bag and sat there until the
-            // player remembered to open the character sheet -- for a piece
-            // that fills a hole in the loadout rather than replacing a choice
-            // already made, that extra step is friction with no decision
-            // behind it. Only fires when the slot is EMPTY: a slot already
-            // holding something is a real choice (keep this, or swap it), and
-            // that choice stays the player's.
-            AutoEquipIntoAnEmptySlot(save, offer);
-
-            SaveSlotManager.SaveCurrent();
-        }
-
-        // First squad member (in ActiveSquad order, same order the loadout
-        // comparison tooltip already reads) with an empty slot this item
-        // fits. Not equippable, or every candidate slot already occupied
-        // across the whole squad: does nothing, and the item stays in the
-        // bag exactly as it did before this existed.
-        private static void AutoEquipIntoAnEmptySlot(SaveData save, ItemOffer offer)
-        {
-            var itemDef = ContentDatabase.GetItem(offer.ItemId);
-            if (itemDef == null || !itemDef.IsEquippable) return;
-
-            foreach (var character in save.ActiveSquad())
-            {
-                if (character?.equipment == null) continue;
-                if (character.equipment.FirstFreeSlotFor(itemDef.equipSlot) == null) continue;
-
-                // The SAME instance TakeOffer just added -- InventoryOps keys
-                // stacks on ItemInstance.SameStack, so anything less than the
-                // whole copy would look for the WRONG stack (the plain,
-                // unrolled one) and silently fail to find it.
-                //
-                // EquipmentOps.Equip carries the "measure max health first,
-                // rescale carried health after" pair; TakeOffer still owns
-                // the SaveCurrent below it. Taking an offer is a descent act,
-                // not a menu press, so it names Descent whatever scene it runs in.
-                EquipmentOps.Equip(MenuContext.Descent, save, character, offer.Instance, itemDef.equipSlot,
-                                   itemDef.IsEquippable);
-                return;
-            }
-        }
     }
 }

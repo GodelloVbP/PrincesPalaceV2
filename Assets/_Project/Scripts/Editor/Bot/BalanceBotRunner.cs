@@ -836,6 +836,22 @@ namespace PrincesPalace.Editor.Bot
                 }
                 sb.Append(']');
 
+                // THE PAGES THE ROOM PAID, gear then relic: the rewards.json
+                // row, the choices it granted, what each choice did in order
+                // ("take:2", "hone:0"), and what leaving paid for the rest.
+                sb.Append(",\"pages\":[");
+                for (int k = 0; k < r.Pages.Count; k++)
+                {
+                    if (k > 0) sb.Append(',');
+                    var page = r.Pages[k];
+                    sb.Append("{\"sourceId\":").Append(Str(page.SourceId));
+                    sb.Append(",\"choices\":").Append(page.Choices);
+                    sb.Append(",\"taken\":").Append(StrList(page.Taken));
+                    sb.Append(",\"unusedHones\":").Append(page.UnusedHones);
+                    sb.Append(",\"unusedGold\":").Append(page.UnusedGold).Append('}');
+                }
+                sb.Append(']');
+
                 // What was actually worn after this room, ids only. itemPickRate
                 // answers "how often is this taken when offered"; this answers
                 // the different and more interesting question of how often a

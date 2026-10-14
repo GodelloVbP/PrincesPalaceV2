@@ -125,9 +125,9 @@ four kinds:
   randomness injected as a `Func`.
 - `UnityEngine.Random` in Core is allowed only where the result is not part of
   the simulation: cosmetic motion (`StarTwinkle`, `SlowDrift`, `EmberFlare`,
-  `StageShake`), voice take choice (`CharacterVoice`), and the post-fight offer
-  roll in `FightController.Input` (must not shift a replay's beats). Apply that
-  test to any new use.
+  `StageShake`), and voice take choice (`CharacterVoice`). Reward pages roll on
+  the keyed `RngStreams.Reward`, so they never shift a replay's beats. Apply
+  that test to any new use.
 
 ## Error posture
 

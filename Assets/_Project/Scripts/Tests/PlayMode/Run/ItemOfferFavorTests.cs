@@ -64,32 +64,29 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(0, ItemOfferRoll.SquadFavor(null));
         }
 
-        // Favor is not a free dial: LootLadder caps the per-rung step chance at
-        // MaxStep, and each encounter class reaches that cap at a different
-        // Favor. This pins the ceilings rather than the arithmetic, because the
-        // track's Favor nodes are spread across all ten bands on the strength
-        // of them -- back-loading would buy nothing for two of the three
-        // classes.
-        //
-        // BOSS CAPS AT 29, not the 28 the handover records. 0.38 + 28 * 0.006
-        // is 0.548, which is still under the 0.55 cap; 29 is the first Favor
-        // that reaches it. Elite (42) and normal (55) in that document are
-        // right. Pinned here as one-below/at-cap pairs so the boundary itself
-        // is asserted and not just the plateau past it.
-        [TestCase(Domain.Rewards.EncounterClass.Boss, 29)]
-        [TestCase(Domain.Rewards.EncounterClass.Elite, 42)]
-        [TestCase(Domain.Rewards.EncounterClass.Normal, 55)]
-        public void FavorStopsBuyingAnythingOnceTheLadderCaps(
-            Domain.Rewards.EncounterClass encounter, int favorAtCap)
+        // Favor is not a free dial: each ladder caps its per-rung step chance
+        // (tier 0.45, quality 0.55), and each page class reaches the cap at a
+        // different Favor. This pins the ceilings rather than the arithmetic,
+        // because the track's Favor nodes are spread across all ten bands on the
+        // strength of them -- back-loading would buy nothing for some classes.
+        // The base steps are rewards.json's (normal 0.22/0.35, anchor 0.30/0.42,
+        // boss 0.38/0.45); pinned as one-below/at-cap pairs so the boundary
+        // itself is asserted and not just the plateau past it.
+        [TestCase(0.22f, 0.45f, 39)]
+        [TestCase(0.30f, 0.45f, 25)]
+        [TestCase(0.38f, 0.45f, 12)]
+        [TestCase(0.35f, 0.55f, 34)]
+        [TestCase(0.42f, 0.55f, 22)]
+        [TestCase(0.45f, 0.55f, 17)]
+        public void FavorStopsBuyingAnythingOnceALadderCaps(float baseStep, float cap, int favorAtCap)
         {
-            float justBelow = Domain.Rewards.LootLadder.StepChanceFor(encounter, favorAtCap - 1);
-            float atCap = Domain.Rewards.LootLadder.StepChanceFor(encounter, favorAtCap);
-            float wellPast = Domain.Rewards.LootLadder.StepChanceFor(encounter, 500);
+            const float PerPoint = 0.006f;
+            float justBelow = Domain.Rewards.LootLadder.StepChance(baseStep, favorAtCap - 1, PerPoint, cap);
+            float atCap = Domain.Rewards.LootLadder.StepChance(baseStep, favorAtCap, PerPoint, cap);
+            float wellPast = Domain.Rewards.LootLadder.StepChance(baseStep, 500, PerPoint, cap);
 
-            Assert.Less(justBelow, Domain.Rewards.LootLadder.MaxStep,
-                $"{encounter} was already capped one Favor below {favorAtCap}");
-            Assert.AreEqual(Domain.Rewards.LootLadder.MaxStep, atCap, 0.0001f,
-                $"{encounter} had not reached the cap at {favorAtCap} Favor");
+            Assert.Less(justBelow, cap, $"a {baseStep} ladder was already capped one Favor below {favorAtCap}");
+            Assert.AreEqual(cap, atCap, 0.0001f, $"a {baseStep} ladder had not reached the cap at {favorAtCap} Favor");
             Assert.AreEqual(atCap, wellPast, 0.0001f,
                 "Favor past the cap still moved the step chance, so the cap is not holding");
         }

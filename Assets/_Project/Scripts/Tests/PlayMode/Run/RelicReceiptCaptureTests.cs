@@ -76,12 +76,7 @@ namespace PrincesPalace.PlayModeTests
             return reward;
         }
 
-        private static List<ItemOffer> Offers() =>
-            ContentDatabase.Equippables
-                .Where(i => i != null && !string.IsNullOrWhiteSpace(i.iconPath))
-                .Take(3)
-                .Select(i => new ItemOffer(i.id, i.curve.maxTier))
-                .ToList();
+        private static IReadOnlyList<PendingPage> Offers() => ReckoningPageFixtures.OneGearPage();
 
         // ---- the Reckoning ----------------------------------------------------------------
 
@@ -107,10 +102,10 @@ namespace PrincesPalace.PlayModeTests
                 new List<string>(), tally, new CombatLedger()));
             yield return Shoot("Reckoning_outcome_fell.png");
 
-            yield return Show(reckoning, ReckoningRequest.Full(Reward(), new List<ItemOffer>(), new List<string>()));
+            yield return Show(reckoning, ReckoningRequest.Full(Reward(), new List<PendingPage>(), new List<string>()));
             yield return Shoot("Reckoning_chips_0.png");
 
-            yield return Show(reckoning, ReckoningRequest.Full(Reward(), new List<ItemOffer>(), Receipts));
+            yield return Show(reckoning, ReckoningRequest.Full(Reward(), new List<PendingPage>(), Receipts));
             yield return Shoot("Reckoning_chips_2.png");
 
             // Pad focus: Up from Continue onto the first chip.

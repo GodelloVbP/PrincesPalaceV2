@@ -16,8 +16,8 @@ namespace PrincesPalace
     // rescaled after it.
     //
     // That pair had three copies: CharacterDossierController.EquipFromPack,
-    // CharacterDossierController.UnequipSlot, and
-    // RunOrchestrator.AutoEquipIntoAnEmptySlot -- each with the same
+    // CharacterDossierController.UnequipSlot, and the Reckoning's old
+    // offer take (now RewardPages.Take) -- each with the same
     // "MEASURED BEFORE THE SWAP" comment, which is what three copies of a rule
     // look like just before one of them is edited alone. The bot is the fourth
     // caller and the reason it is one place now, exactly the bargain
@@ -27,8 +27,8 @@ namespace PrincesPalace
     //
     // DELIBERATELY DOES NOT PERSIST. The three callers differ on when they
     // write, and honestly so: the sheet saves immediately because gear lost to
-    // a crash between an equip and a save is unforgivable, TakeOffer saves
-    // once after the whole take, and the bot's equip pass saves once per pass.
+    // a crash between an equip and a save is unforgivable, the Reckoning saves
+    // once after each take, and the bot's equip pass saves once per pass.
     // EVERY CALLER NAMES ITS MenuContext, and a context that MenuPermissions
     // refuses gets false with nothing changed, so a fight cannot change gear by
     // any route, not only through the sheet's own buttons. The bot passes

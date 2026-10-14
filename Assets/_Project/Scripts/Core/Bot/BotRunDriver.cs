@@ -5,8 +5,10 @@ using System.Linq;
 using PrincesPalace.Content;
 using PrincesPalace.Domain.Bot;
 using PrincesPalace.Domain.Combat.Session;
+using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Dungeon;
 using PrincesPalace.Domain.Events;
+using PrincesPalace.Domain.Relics;
 using PrincesPalace.Domain.Rewards;
 using PrincesPalace.Domain.Rng;
 using PrincesPalace.Domain.UiKit;
@@ -1868,92 +1870,159 @@ namespace PrincesPalace
         public static bool ClaimTrackForTest(Character character) =>
             ClaimKeepingTheCarriedFraction(character);
 
-        // ---- the post-fight offer ------------------------------------------------
+        // ---- the post-fight reward pages -----------------------------------------
 
+        // Settles the fight's pages through the same seam the Reckoning opens
+        // with (RunOrchestrator.SettleRewardPages), then plays them: every
+        // choice is the better of Take and Hone instead, scored for the card's
+        // recipient alone, and the page is left once the policy stops choosing.
         private static void Offer(
             ulong seed, SaveData save, RealmNode node, IRunPolicy runPolicy,
             FightSession session, RoomTrace roomTrace, BotRunResult result)
         {
-            // The same keyed stream the screen rolls from (RngStreams.Reward),
-            // so a bot run and a played run see the same offers at a position.
-            List<ItemOffer> offers;
+            IReadOnlyList<PendingPage> pages;
             try
             {
-                offers = RunOrchestrator.RollOffers(session, seed, roomTrace.Step, node.Id);
+                pages = RunOrchestrator.SettleRewardPages(save, session, roomTrace.Step, node.Id);
             }
             catch (Exception e)
             {
                 result.Hits.Add(new InvariantHit("Exception",
-                    "rolling the offer: " + e.GetType().Name + ": " + e.Message + "\n" + e.StackTrace));
+                    "settling the reward pages: " + e.GetType().Name + ": " + e.Message + "\n" + e.StackTrace));
                 return;
             }
 
-            if (offers == null || offers.Count == 0)
+            var gear = pages.FirstOrDefault(p => p.Kind == RewardPageKind.Gear);
+            if (gear == null || gear.Cards.Count == 0)
             {
                 result.Hits.Add(new InvariantHit("EmptyOffer",
                     $"the fight at step {roomTrace.Step} node {node.Id} was won and offered nothing"));
                 return;
             }
 
-            roomTrace.OfferItemIds.AddRange(offers.Select(o => o.ItemId));
-
-            // WHAT DECIDED THIS OFFER, for the shop-balance batch
-            // (docs/PLAN_BALANCE_BOT.md §7 extension): the exact axes
-            // RarityTable/LootLadder rolled, and the favor/encounter-class
-            // that fed them. session.EncounterClass is the SAME ranking
-            // RunOrchestrator.RollOffers reads its own `encounter` from
-            // (Boss > Elite > Normal, FightSession.EncounterClass) -- one
-            // property, not two copies of the same ternary that could drift
-            // apart -- two copies checking the ranking differently would let
-            // a boss room's trace disagree with what RollOffers itself uses.
+            roomTrace.OfferItemIds.AddRange(gear.Cards.Select(c => c.Copy.ItemId));
             roomTrace.Favor = ItemOfferRoll.CurrentSquadFavor();
             roomTrace.EncounterClass = session.EncounterClass.ToString();
-            roomTrace.Offers.AddRange(offers.Select(o => new OfferEntry
+            roomTrace.Offers.AddRange(gear.Cards.Select(c => new OfferEntry
             {
-                ItemId = o.ItemId,
-                Tier = o.Tier,
-                ModifierCount = o.Modifiers?.Count ?? 0,
+                ItemId = c.Copy.ItemId,
+                Tier = c.Copy.Tier,
+                ModifierCount = c.Copy.ModifierIds?.Count ?? 0,
             }));
 
-            // WHAT EACH ONE IS ACTUALLY WORTH, priced by this archetype's own
-            // weights against the squad's current loadout. Without it
-            // ChooseOffer ranks on tier-then-plus, which is blind to the one
-            // thing that decides a pick: a tier-3 helm is worse than a tier-2
-            // sword to a character with an empty hand, and worthless to one
-            // already wearing a better helm.
-            var scores = GearEvaluator.ScoreOffers(save, offers, runPolicy.Gear);
-
-            // The policy's pick draws from its own stream; the offers themselves
-            // came from RngStreams.Reward above.
             var offerRng = StreamFor(seed, OfferStream, roomTrace.Step, node.Id);
-            int index = runPolicy.ChooseOffer(offers, ViewOf(save).WithOfferScores(scores), offerRng);
-            if (index < 0 || index >= offers.Count) return;
+            foreach (var page in pages)
+            {
+                var trace = new PageTrace { SourceId = page.SourceId, Choices = page.Choices };
+                roomTrace.Pages.Add(trace);
 
-            var taken = offers[index];
-            RunOrchestrator.TakeOffer(save, taken);
-            roomTrace.PickedIndex = index;
+                if (page.Kind == RewardPageKind.Gear) PlayGearPage(save, runPolicy, page, trace, offerRng, roomTrace);
+                else PlayRelicPage(save, runPolicy, page, trace, offerRng);
 
-            // AND THEN PUT IT ON, if it beats what is worn. TakeOffer already
-            // auto-equips into an EMPTY slot -- that is the game's own rule for
-            // a reward that fills a hole -- but a slot already holding
-            // something is deliberately left to the player, and this is the bot
-            // being that player.
+                RewardPages.Leave(save, page);
+                trace.UnusedHones = page.UnusedHones;
+                trace.UnusedGold = page.UnusedGold;
+            }
+
+            SaveSlotManager.SaveCurrent();
+
+            // AND THEN PUT IT ON, if it beats what is worn. A taken card is
+            // already on its recipient, but a displaced copy in the bag may be
+            // the better piece, and this is the bot being the player who
+            // tidies up after a fight.
             roomTrace.Equipped.AddRange(
                 EquipPassTraced(seed, save, runPolicy, roomTrace.Step, node.Id));
 
-            // "A taken offer not landing in stockpiledItems" (plan §3), with the
-            // one legitimate exception spelled out rather than assumed:
-            // TakeOffer auto-equips a piece into an EMPTY slot, which takes it
-            // straight back out of the bag. Checking the bag alone would fire
-            // on the majority of early picks, which is how a bug row stops
-            // being read.
-            bool inTheBag = save.stockpiledItems.Any(e => e != null && e.itemId == taken.ItemId && e.count > 0);
-            bool worn = save.roster.Any(c => c?.equipment != null && c.equipment.EquippedItemIds().Contains(taken.ItemId));
+            // "A taken card not landing on its recipient" (plan §3), with the
+            // one legitimate exception spelled out rather than assumed: the
+            // equip pass may swap a displaced copy back in, which puts the
+            // taken one in the bag.
+            var firstTaken = gear.Cards.FirstOrDefault(c => c.Outcome == CardOutcome.Taken);
+            if (firstTaken == null) return;
+
+            string takenId = firstTaken.Copy.ItemId;
+            bool inTheBag = save.stockpiledItems.Any(e => e != null && e.itemId == takenId && e.count > 0);
+            bool worn = save.roster.Any(c => c?.equipment != null && c.equipment.EquippedItemIds().Contains(takenId));
 
             if (!inTheBag && !worn)
             {
                 result.Hits.Add(new InvariantHit("OfferPickNotStockpiled",
-                    $"took '{taken.ItemId}' at step {roomTrace.Step} and it is neither in the stockpile nor worn"));
+                    $"took '{takenId}' at step {roomTrace.Step} and it is neither in the stockpile nor worn"));
+            }
+        }
+
+        // One choice at a time: the policy ranks the open cards by their score
+        // for their own recipients, then the best hone on the page is weighed
+        // against that card. A hone only wins when it is worth more.
+        private static void PlayGearPage(
+            SaveData save, IRunPolicy policy, PendingPage page, PageTrace trace, SeededRandom rng, RoomTrace roomTrace)
+        {
+            var weights = policy.Gear;
+            while (page.ChoicesLeft > 0)
+            {
+                var open = Enumerable.Range(0, page.Cards.Count)
+                    .Where(i => page.Cards[i].Outcome == CardOutcome.Open).ToList();
+                if (open.Count == 0) return;
+
+                var takeScores = open.Select(i => GearEvaluator.ScoreCard(save, page.Cards[i], weights)).ToList();
+                var offers = open.Select(i => new ItemOffer(
+                    page.Cards[i].Copy.ItemId, page.Cards[i].Copy.Tier, page.Cards[i].Copy.ModifierIds)).ToList();
+
+                int pick = policy.ChooseOffer(offers, ViewOf(save).WithOfferScores(takeScores), rng);
+                if (pick < 0 || pick >= open.Count) return;
+
+                int bestHone = -1;
+                float bestHoneScore = 0f;
+                foreach (int i in open)
+                {
+                    if (RewardPages.HoneInsteadFor(save, page, i) != RewardPages.HoneInsteadResult.Hone) continue;
+
+                    float score = GearEvaluator.ScoreHone(save, page.Cards[i], weights);
+                    if (bestHone < 0 || score > bestHoneScore)
+                    {
+                        bestHone = i;
+                        bestHoneScore = score;
+                    }
+                }
+
+                if (bestHone >= 0 && bestHoneScore > takeScores[pick])
+                {
+                    RewardPages.HoneInstead(save, page, bestHone);
+                    trace.Taken.Add("hone:" + bestHone);
+                    continue;
+                }
+
+                int card = open[pick];
+                if (!RewardPages.Take(save, page, card)) return;
+
+                trace.Taken.Add("take:" + card);
+                if (roomTrace.PickedIndex < 0) roomTrace.PickedIndex = card;
+            }
+        }
+
+        private static void PlayRelicPage(
+            SaveData save, IRunPolicy policy, PendingPage page, PageTrace trace, SeededRandom rng)
+        {
+            var known = RunOrchestrator.AvailableRelicOptions().ToList();
+            while (page.ChoicesLeft > 0)
+            {
+                var open = Enumerable.Range(0, page.Cards.Count)
+                    .Where(i => page.Cards[i].Outcome == CardOutcome.Open).ToList();
+                if (open.Count == 0) return;
+
+                var options = open.Select(i =>
+                {
+                    var card = page.Cards[i];
+                    var option = known.FirstOrDefault(o => o.Id == card.RelicId);
+                    return string.IsNullOrEmpty(option.Id) ? new RelicOption(card.RelicId, card.Rarity) : option;
+                }).ToList();
+
+                int pick = policy.ChooseRelic(options, ViewOf(save), rng);
+                if (pick < 0 || pick >= open.Count) return;
+
+                int chosen = open[pick];
+                if (!RewardPages.Take(save, page, chosen)) return;
+                trace.Taken.Add("take:" + chosen);
             }
         }
 

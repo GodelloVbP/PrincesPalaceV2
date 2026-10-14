@@ -33,6 +33,7 @@ namespace PrincesPalace.PlayModeTests
             SaveSystem.RootOverride = _root;
             SaveSlotManager.CurrentSlot = 0;
             SaveSlotManager.Forget();
+            RunManager.ResetForTests();
             Navigation.LoadOverride = _ => { };
 
             // ReckoningController's whole animation is unscaled -- see its
@@ -49,6 +50,7 @@ namespace PrincesPalace.PlayModeTests
             Navigation.Reset();
             SaveSystem.RootOverride = null;
             SaveSlotManager.Forget();
+            RunManager.ResetForTests();
             if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
         }
 
@@ -57,6 +59,14 @@ namespace PrincesPalace.PlayModeTests
                 .FirstOrDefault(t => t.name == name)?.gameObject;
 
         private void Click(string name) => Named(name).GetComponent<Button>().onClick.Invoke();
+
+        // Taking is one press; the page then waits to be moved on, and the
+        // same button that leaves a page carries on once nothing is left.
+        private void TakeAndMoveOn()
+        {
+            Click("ReckoningOffer0");
+            Click("ReckoningLeaveButton");
+        }
 
         // Why frames, not seconds. A wall-clock deadline races a coroutine
         // that only gets to advance once per Update, paying for a slow
@@ -143,16 +153,7 @@ namespace PrincesPalace.PlayModeTests
             return reward;
         }
 
-        private static List<ItemOffer> Offers()
-        {
-            var ids = Content.ContentDatabase.Items
-                .Where(i => i != null && i.IsEquippable)
-                .Take(3)
-                .Select(i => i.id)
-                .ToList();
-
-            return ids.Select(id => new ItemOffer(id, 1)).ToList();
-        }
+        private static IReadOnlyList<PendingPage> Offers() => ReckoningPageFixtures.OneGearPage();
 
         // THE FIGHT SCENE IS SHARED ACROSS THIS FIXTURE (SharedScene). Show()
         // re-seats both phases and restarts PlayIn, so the reset is only
@@ -170,7 +171,7 @@ namespace PrincesPalace.PlayModeTests
         private ReckoningController _capturedFor;
         private float _sceneGloom;
 
-        private IEnumerator OpenIt(List<ItemOffer> offers)
+        private IEnumerator OpenIt(IReadOnlyList<PendingPage> offers)
         {
             yield return SharedScene.Ensure("Fight");
 
@@ -223,7 +224,7 @@ namespace PrincesPalace.PlayModeTests
         {
             yield return OpenIt(Offers());
 
-            Click("ReckoningOffer0");
+            TakeAndMoveOn();
 
             yield return WaitForTheSweepToLand();
 
@@ -238,7 +239,7 @@ namespace PrincesPalace.PlayModeTests
         {
             yield return OpenIt(Offers());
 
-            Click("ReckoningOffer0");
+            TakeAndMoveOn();
             yield return WaitForTheSweepToLand();
 
             var summary = Named("ReckoningSummaryPhase").GetComponent<RectTransform>();
@@ -257,7 +258,7 @@ namespace PrincesPalace.PlayModeTests
             yield return OpenIt(Offers());
 
             var offer = Named("ReckoningOfferPhase").GetComponent<RectTransform>();
-            Click("ReckoningOffer0");
+            TakeAndMoveOn();
             yield return WaitForTheSweepToLand();
 
             Assert.Less(offer.anchoredPosition.x, 0f,
@@ -274,7 +275,7 @@ namespace PrincesPalace.PlayModeTests
         {
             yield return OpenIt(Offers());
 
-            Click("ReckoningOffer0");
+            TakeAndMoveOn();
             yield return WaitForTheSweepToLand();
 
             var summary = Named("ReckoningSummaryPhase");
@@ -298,7 +299,7 @@ namespace PrincesPalace.PlayModeTests
             // something still sliding, and neither gets read.
             yield return OpenIt(Offers());
 
-            Click("ReckoningOffer0");
+            TakeAndMoveOn();
 
             // MUST land the sweep first. Paint() writes each row's FINAL
             // gain text the moment Show() runs -- a preview, sitting there
@@ -419,7 +420,7 @@ namespace PrincesPalace.PlayModeTests
             // audit, the sprite would still be there, and the screen would
             // simply go dead.
             yield return OpenIt(Offers());
-            Click("ReckoningOffer0");
+            TakeAndMoveOn();
             yield return WaitForTheSweepToLand();
 
             var glow = Named("ReckoningContinueGlow").GetComponent<RectTransform>();

@@ -25,7 +25,7 @@ namespace PrincesPalace.PlayModeTests
     // proves the scaling seam reaches CombatantState. Nothing before this
     // file has rolled MULTIPLE real modifiers onto ONE item through the
     // real ItemOffer roll type, claimed that roll into a real save the way
-    // ReckoningController.Take does, equipped it through the real EquipMove
+    // the Reckoning's Take does, equipped it through the real EquipMove
     // seam, fought a real fight with it, AND round-tripped the save -- all
     // in one continuous chain. That chain, not any single link in it, is
     // what this file exists to protect.
@@ -224,8 +224,8 @@ namespace PrincesPalace.PlayModeTests
         //           (forced to a tier-3 copy with three modifiers for a
         //           deterministic assertion -- the pure RNG SHAPE of a roll is
         //           ItemOfferRollTests' job, not this file's)
-        //   claim:  InventoryOps.Add, the exact call ReckoningController.Take makes
-        //   equip:  EquipMove.TryEquip, the exact call RunOrchestrator.AutoEquipIntoAnEmptySlot makes
+        //   claim:  InventoryOps.Add, the exact call RewardPages.Take makes
+        //   equip:  EquipMove.TryEquip, the move EquipmentOps.Equip is built on
         //   fight:  FightEncounterAdapter.Build + a real FightSession swing
         //   reload: SaveSlotManager.SaveCurrent/Forget, the exact round-trip
         //           every other save-compat test in this plan already trusts

@@ -267,13 +267,16 @@ RoomTrace
                         this room made no offer
   Favor         int    -- ItemOfferRoll.CurrentSquadFavor() at roll time; 0
                         when this room made no offer
-  EncounterClass string -- "Normal" or "Elite", exactly as
-                        RunOrchestrator.RollOffers computed it for this
-                        roll (session.IsEliteFight ? Elite : Normal); ""
-                        when this room made no offer. IsBossFight is not
-                        consulted there, so a boss room's roll reads
-                        "Normal" today -- see BalanceBotRunner.RunRowJson's
-                        note on the same field.
+  EncounterClass string -- "Normal", "Elite" or "Boss": FightSession.
+                        EncounterClass, the class the settlement rolled its
+                        pages as; "" when this room made no offer.
+  Pages         PageTrace[] -- the room's reward pages, gear then relic;
+                        empty when it paid none. OfferItemIds, Offers and
+                        PickedIndex describe the gear page (PickedIndex is
+                        its first taken card).
+    PageTrace: SourceId (rewards.json row), Choices, Taken ("take:2",
+               "hone:0" in order), UnusedHones, UnusedGold (what leaving
+               paid for the choices left).
   Equipped      EquipTrace[] -- what the equip pass after this room put on.
                         Empty for most rooms, which is the honest answer: a
                         player does not re-dress after every fight either.

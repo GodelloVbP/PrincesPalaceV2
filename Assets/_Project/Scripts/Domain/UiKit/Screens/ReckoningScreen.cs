@@ -205,6 +205,19 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> OfferIcons = new List<NodeRef>();
         public List<NodeRef> OfferNames = new List<NodeRef>();
         public List<NodeRef> OfferMetas = new List<NodeRef>();
+        public List<NodeRef> OfferRecipients = new List<NodeRef>();
+        public List<NodeRef> OfferDeltas = new List<NodeRef>();
+        public List<NodeRef> OfferFeatures = new List<NodeRef>();
+        public List<NodeRef> OfferLoses = new List<NodeRef>();
+        public List<NodeRef> OfferActions = new List<NodeRef>();
+
+        // "Hone instead", one per gear card; the Favor line under the heading;
+        // the ledger of what the page did (displaced copies, hones, what
+        // leaving paid); and the way off the page.
+        public List<NodeRef> HoneButtons = new List<NodeRef>();
+        public NodeRef FavorLabel;
+        public NodeRef LedgerLabel;
+        public NodeRef LeaveButton;
 
         // Pulled in to 280 so a 520-wide column clears the painted border:
         // 280 +/- 260 lands at 540, inside ContentHalfWidth.
@@ -306,26 +319,54 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // ---- phase one: the choice ---------------------------------
             // Captured as LootHeading: it is the same node it always was, just
             // moved onto the phase that owns the choice.
-            var lootHeading = Ui.Label("ReckoningOfferHeading", UiStrings.ReckoningChooseOne,
-                    new UiVec(700f, 44f), 26, "#F2DB9E", Place.At(0f, 248f))
+            var lootHeading = Ui.Label("ReckoningOfferHeading", UiStrings.ReckoningChoicesLeft,
+                    new UiVec(900f, 44f), 24, "#F2DB9E", Place.At(0f, 262f))
                 .AsDecor()
                 .Styled(TypographyRole.FunctionalHeading);
             screen.LootHeading = lootHeading;
 
-            var offerChildren = new List<UiNode> { lootHeading };
+            // Squad Favor and what it moves on this page's ladders. Gear pages
+            // only: a relic page is drawn by rarity weight, which Favor does
+            // not touch.
+            var favor = Ui.Label("ReckoningOfferFavor", UiStrings.ReckoningFavor,
+                    new UiVec(OfferRowLayout.RowBudget, 24f), 14, "#B8A8D9", Place.At(0f, 226f))
+                .AsDecor();
+            screen.FavorLabel = favor;
 
-            // ItemOfferTable.OfferCount cards, edge to edge -- the tree is
-            // emitted once for every save, and that is the only width the
-            // offer roll ever asks for; nothing on the reward track widens
-            // it. A thinner content pool still shows fewer; see
-            // OfferRowLayout and ReckoningController.LayOutOfferRow for how
-            // the row re-centres for whatever count actually lands on
-            // screen.
-            for (int i = 0; i < ItemOfferTable.OfferCount; i++)
+            var offerChildren = new List<UiNode> { lootHeading, favor };
+
+            // OfferRowLayout.MaxCards cards, edge to edge -- the tree is
+            // emitted once for every save, and a page shows k + 2 of them.
+            // OfferRowLayout and ReckoningController.LayOutOfferRow re-centre
+            // the row for however many a page actually shows.
+            for (int i = 0; i < OfferRowLayout.MaxCards; i++)
             {
                 offerChildren.Add(screen.BuildOffer(i));
             }
 
+            for (int i = 0; i < OfferRowLayout.MaxCards; i++)
+            {
+                offerChildren.Add(screen.BuildHone(i));
+            }
+
+            var ledger = Ui.Label("ReckoningOfferLedger", UiString.Runtime,
+                    new UiVec(LedgerWidth, LedgerHeight), 15, "#D9CCF2", Place.At(0f, LedgerCentreY))
+                .AsDecor();
+            screen.LedgerLabel = ledger;
+            offerChildren.Add(ledger);
+
+            // Leave, and when nothing is left to choose, the same button
+            // carries on. Sized and seated like the summary's Continue so the
+            // two read as one control moving along.
+            var leaveSize = Ui.PlateNominalSizeFor(260f, 60f);
+            var leave = Ui.Button("ReckoningLeaveButton", UiStrings.ReckoningLeavePage, leaveSize, 18,
+                    Place.At(0f, ContentBottom + leaveSize.Y * 0.5f + 1f))
+                .Themed(ButtonTheme.Gold);
+            screen.LeaveButton = leave;
+            offerChildren.Add(leave);
+
+            // Last, so the comparison draws over the cards, the buttons and
+            // the ledger.
             offerChildren.Add(screen.BuildOfferTooltip());
 
             var offerPhase = Ui.Panel("ReckoningOfferPhase", Place.Stretch(), UiSize.Fill, offerChildren);
@@ -932,137 +973,135 @@ namespace PrincesPalace.Domain.UiKit.Screens
             return panel;
         }
 
-        // ---- one offer card's vertical band -----------------------------------
+        // ---- one page card's vertical bands -----------------------------------
         //
-        // ALL OF IT DERIVED FROM THREE NUMBERS: where the art starts, where it
-        // stops, and how tall the two lines under it are. Everything else --
-        // where the name sits, where the meta sits, how tall the card is and
-        // where its centre lands -- falls out.
+        // ALL OF IT DERIVED FROM THE BAND HEIGHTS, top to bottom: the art, the
+        // name, the quality line, who it is for, the one stat it moves, one line
+        // about it, what it loses, and the TAKE caption. Everything else (each
+        // band's centre, the card's height and centre) falls out, so a retune of
+        // one band moves the frame with it and the containment audit never sees
+        // a label hanging below its own card.
         //
-        // That is not tidiness: a fixed-height card with children placed by
-        // eye inside it lets a later retune grow the art without moving the
-        // frame, and the containment audit then refuses the build with name
-        // and meta hanging below their own card. Deriving the frame from its
-        // contents means a retune of the band cannot make that mistake.
+        // A relic card has no recipient or stat line, so its description takes
+        // those two bands as well (RelicFeatureBand).
+        private const float CardTop = 200f;
+        private const float IconBand = 170f;
+        private const float NameBand = 44f;
+        private const float MetaBand = 22f;
+        private const float RecipientBand = 22f;
+        private const float DeltaBand = 26f;
+        private const float FeatureBand = 64f;
+        private const float LosesBand = 38f;
+        private const float ActionBand = 24f;
+
+        private const float IconTop = CardTop;
+        private const float IconBottom = IconTop - IconBand;
+        private const float NameTop = IconBottom;
+        private const float MetaTop = NameTop - NameBand;
+        private const float RecipientTop = MetaTop - MetaBand;
+        private const float DeltaTop = RecipientTop - RecipientBand;
+        private const float FeatureTop = DeltaTop - DeltaBand;
+        private const float LosesTop = FeatureTop - FeatureBand;
+        private const float ActionTop = LosesTop - LosesBand;
+        private const float CardBottom = ActionTop - ActionBand;
+        private const float CardHeight = CardTop - CardBottom;
+        private const float CardCentreY = (CardTop + CardBottom) * 0.5f;
+
+        // Band centres relative to the CARD's centre, which is what a child's
+        // Place is measured from. Public where the controller re-seats a label
+        // for the other page kind.
+        private const float IconCentre = IconTop - IconBand * 0.5f - CardCentreY;
+        private const float NameCentre = NameTop - NameBand * 0.5f - CardCentreY;
+        private const float MetaCentre = MetaTop - MetaBand * 0.5f - CardCentreY;
+        private const float RecipientCentre = RecipientTop - RecipientBand * 0.5f - CardCentreY;
+        private const float DeltaCentre = DeltaTop - DeltaBand * 0.5f - CardCentreY;
+        private const float LosesCentre = LosesTop - LosesBand * 0.5f - CardCentreY;
+        private const float ActionCentre = ActionTop - ActionBand * 0.5f - CardCentreY;
+        public const float FeatureCentre = FeatureTop - FeatureBand * 0.5f - CardCentreY;
+        public const float FeatureHeight = FeatureBand;
+        public const float RelicFeatureHeight = RecipientBand + DeltaBand + FeatureBand;
+        public const float RelicFeatureCentre = RecipientTop - RelicFeatureHeight * 0.5f - CardCentreY;
+
+        // Under each gear card: "hone instead", and the ledger and the way out
+        // below them. All in the offer phase's own coordinates.
+        private const float HoneWidth = 172f;
+        private const float HoneGap = 8f;
+        private const float LedgerHeight = 44f;
+        private const float LedgerWidth = 960f;
+        private static float HoneHeight => Ui.PlateNominalSizeFor(HoneWidth, 40f).Y;
+        private static float LedgerCentreY => CardBottom - HoneGap - HoneHeight - 14f - LedgerHeight * 0.5f;
+
+        // One card of the page. A button, because taking is a click on the card
+        // itself, and a CARD across the width rather than a row in a list: the
+        // item is the object on this screen.
         //
-        // IconBottom is -195 and not lower because the painted interior stops
-        // at -317 (the old ContentBottom; the card is still sized to it) and these two lines plus their gaps come to
-        // 108px; the 20px left over is the meta line's clearance from the
-        // frame's bottom ornament.
-        private const float IconTop = 205f;
-        private const float IconBottom = -195f;
-
-        // 6px binds the name to the art (see BuildOffer); 4px separates the two
-        // lines from each other.
-        private const float IconToNameGap = 6f;
-        private const float NameToMetaGap = 4f;
-        private const float NameHeight = 66f;
-        private const float MetaHeight = 26f;
-
-        private const float IconCentreY = (IconTop + IconBottom) * 0.5f;
-        private const float NameCentreY = IconBottom - IconToNameGap - NameHeight * 0.5f;
-        private const float MetaCentreY =
-            NameCentreY - NameHeight * 0.5f - NameToMetaGap - MetaHeight * 0.5f;
-
-        // The card's top IS the art's top -- there is no chrome above it (see
-        // BuildOffer's "NO PLATE" note), so IconTop is used directly rather
-        // than aliased.
-        private const float CardBottom = MetaCentreY - MetaHeight * 0.5f;
-        private const float CardHeight = IconTop - CardBottom;
-        private const float CardCentreY = (IconTop + CardBottom) * 0.5f;
-
-
-        // One of the items on offer. A button, because picking one is the
-        // only decision this screen asks the player to make, and a CARD
-        // across the width rather than a row in a list: alone on their own
-        // phase, with no experience bar to share the panel with, the offers
-        // can be the thing the screen is about.
-        //
-        // Positioned for a FULL-WIDTH row. A narrower one is re-centred at
-        // runtime by ReckoningController, from the same OfferRowLayout.CardX
-        // this calls, so the two widths cannot drift apart.
+        // Positioned for a FULL-WIDTH row (MaxCards wide). A narrower one is
+        // re-centred at runtime by ReckoningController, from the same
+        // OfferRowLayout.CardX this calls, so the two widths cannot drift apart.
         private UiNode BuildOffer(int index)
         {
-            // Built at the tree's own row width, ItemOfferTable.OfferCount.
-            // ReckoningController resizes them again for whatever count is
-            // actually on screen -- fewer, if the content pool is thin -- from
-            // this same OfferRowLayout, so the two cannot drift.
-            float cardWidth = OfferRowLayout.CardWidth(ItemOfferTable.OfferCount);
-            float labelWidth = OfferRowLayout.LabelWidth(ItemOfferTable.OfferCount);
-            float x = OfferRowLayout.CardX(index, ItemOfferTable.OfferCount);
+            int count = OfferRowLayout.MaxCards;
+            float cardWidth = OfferRowLayout.CardWidth(count);
+            float labelWidth = OfferRowLayout.LabelWidth(count);
+            float x = OfferRowLayout.CardX(index, count);
 
-            // THE ITEM IS THE CARD, so it gets the room.
-            //
-            // A fixed 200x250 box is WIDTH-limited: a 260x384 sheet in a
-            // 200-wide box draws 169x250 and the last 80px of height goes to
-            // letterbox. The icon grows in the only direction that pays --
-            // the box is as wide as its card allows (OfferRowLayout.
-            // IconWidth) and deep enough that width stays the binding
-            // constraint at three cards. A three-card row draws its art
-            // about 60% larger than the fixed box would.
-            //
-            // -195, not lower: name and meta still hang below it, and the
-            // painted interior was measured to stop at -317 (the old ContentBottom, which the
-            // border check A5 measures). Those two lines plus their gaps come
-            // to 108px, and 20px of clearance keeps the meta line off the
-            // bottom ornament.
-            // The band is declared once at class scope -- see the block above
-            // BuildOffer. What is left here is the art's WIDTH, which depends
-            // on how many cards share the row and so cannot be a constant.
-            // Every y above is measured in the OFFER PHASE and every child is
-            // placed relative to its CARD, so each one is rebased by exactly
-            // the card's own offset from the phase axis.
-            const float IconCentre = IconCentreY - CardCentreY;
-
-            // Built at the same row width as the card for the same reason: the
-            // audit solves the emitted tree and cannot see the controller
-            // resize it. See ReckoningController.LayOutOfferRow for the other
-            // half.
-            float iconWidth = OfferRowLayout.IconWidth(ItemOfferTable.OfferCount);
-            float haloSize = OfferRowLayout.HaloDiameter(ItemOfferTable.OfferCount);
-            float burstSize = OfferRowLayout.BurstDiameter(ItemOfferTable.OfferCount);
+            // The art's box is as wide as its card allows (OfferRowLayout.
+            // IconWidth); ItemIcons.Apply fits the art inside it, so widening
+            // the box is the whole of "make the item bigger".
+            float iconWidth = OfferRowLayout.IconWidth(count);
+            float haloSize = OfferRowLayout.HaloDiameter(count);
+            float burstSize = OfferRowLayout.BurstDiameter(count);
 
             // TWO layers behind the icon, because one was not readable.
             //
             // The halo is the soft mass: a plain radial falloff, wider than the
-            // icon, carrying the rarity colour where the eye actually looks.
+            // icon, carrying the quality colour where the eye actually looks.
             // The burst is the rayed sprite, and its rays are the only part of
             // it that ever cleared the icon -- behind a solid object a starburst
-            // shows as a few spikes and nothing else, which is why the rarity
-            // read as "small and hidden behind the sprite".
+            // shows as a few spikes and nothing else.
             var halo = Ui.Sprite($"ReckoningOffer{index}Halo", "proc:radial_glow",
                     Place.At(0f, IconCentre), UiSize.Fixed(haloSize, haloSize))
                 .Coloured("#FFFFFF00")
                 .AsDecor()
-                .AllowOverflow("the halo is deliberately larger than the icon it sits behind - that bleed IS the rarity signal");
+                .AllowOverflow("the halo is deliberately larger than the icon it sits behind - that bleed IS the quality signal");
 
-            // the rays are meant to read THROUGH and around the icon
             var burst = Ui.Sprite($"ReckoningOffer{index}Burst", BurstKey,
                     Place.At(0f, IconCentre), UiSize.Fixed(burstSize, burstSize))
                 .Coloured("#FFFFFF00")
                 .AsDecor()
-                .AllowOverflow("the burst is deliberately larger than the icon it sits behind - that bleed IS the rarity signal");
+                .AllowOverflow("the burst is deliberately larger than the icon it sits behind - that bleed IS the quality signal");
 
-            // the icon stands on its own glow - covering the middle of it is
-            // the point
             var icon = Ui.Sprite($"ReckoningOffer{index}Icon", null,
-                    Place.At(0f, IconCentre), UiSize.Fixed(iconWidth, IconTop - IconBottom))
+                    Place.At(0f, IconCentre), UiSize.Fixed(iconWidth, IconBand))
                 .AsDecor();
 
-            // THE NAME BELONGS TO THE ITEM, so it sits directly under it --
-            // floating with nothing in the gap reads as two unrelated
-            // things rather than as a labelled object. 6px is enough to
-            // separate them and little enough to bind them.
-            var name = Ui.Label($"ReckoningOffer{index}Name", UiString.Runtime, new UiVec(labelWidth, NameHeight), 21,
-                    "#EDE6FF", Place.At(0f, NameCentreY - CardCentreY))
+            var name = Ui.Label($"ReckoningOffer{index}Name", UiString.Runtime, new UiVec(labelWidth, NameBand), 18,
+                    "#EDE6FF", Place.At(0f, NameCentre))
                 .AsDecor();
-            var meta = Ui.Label($"ReckoningOffer{index}Meta", UiString.Runtime, new UiVec(labelWidth, MetaHeight), 15,
-                    "#B8A8D9", Place.At(0f, MetaCentreY - CardCentreY))
+            var meta = Ui.Label($"ReckoningOffer{index}Meta", UiString.Runtime, new UiVec(labelWidth, MetaBand), 13,
+                    "#B8A8D9", Place.At(0f, MetaCentre))
+                .AsDecor();
+            var recipient = Ui.Label($"ReckoningOffer{index}Recipient", UiString.Runtime,
+                    new UiVec(labelWidth, RecipientBand), 12, "#D9CCF2", Place.At(0f, RecipientCentre))
+                .AsDecor();
+            var delta = Ui.Label($"ReckoningOffer{index}Delta", UiString.Runtime, new UiVec(labelWidth, DeltaBand), 16,
+                    "#F2DB9E", Place.At(0f, DeltaCentre))
+                .AsDecor();
+            var feature = Ui.Label($"ReckoningOffer{index}Feature", UiString.Runtime,
+                    new UiVec(labelWidth, FeatureBand), 13, "#D9CCF2", Place.At(0f, FeatureCentre))
+                .TextAligned(UiTextAlign.TopLeft)
+                .AsDecor();
+            var loses = Ui.Label($"ReckoningOffer{index}Loses", UiString.Runtime, new UiVec(labelWidth, LosesBand), 12,
+                    "#E58A8A", Place.At(0f, LosesCentre))
+                .TextAligned(UiTextAlign.TopLeft)
+                .AsDecor();
+            var action = Ui.Label($"ReckoningOffer{index}Action", UiString.Runtime, new UiVec(labelWidth, ActionBand), 16,
+                    "#F2DB9E", Place.At(0f, ActionCentre))
                 .AsDecor();
 
-            // NO PLATE. The card is its burst, its icon and its two lines --
-            // the item is the object, and a gold button frame behind it turned
-            // three treasures into three menu entries.
+            // NO PLATE. The card is its burst, its icon and its lines -- the
+            // item is the object, and a gold button frame behind it turned
+            // treasures into menu entries.
             //
             // Chromeless rather than an empty SpriteKey, which the emitter
             // reads as "use the shared button frame" and is exactly how this
@@ -1070,21 +1109,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // declared children and the plate came straight back from the
             // fallback.
             //
-            // The row runs to x 540 against a clip half-width of 540.3. That is
-            // deliberate -- the offers are sized to use the full interior --
-            // but it means widening a card by even a pixel fails A2 rather than
-            // quietly touching the paint. That constraint is why level 50's
-            // wider offer divides the same budget into four narrower cards:
-            // a fourth card at this width would need 1450px of a 1080px
-            // interior.
-            // NOT migrated to the semantic kit, even though picking one of
-            // these is this screen's "Accept" (Green, per the migration
-            // brief). NoChrome() a few lines below is deliberate design, not
-            // an oversight -- see BuildOffer's own "NO PLATE" note: a themed
-            // plate behind each card is precisely the mistake that note
-            // records fixing ("a gold button frame behind it turned three
-            // treasures into three menu entries"). Theming here would
-            // reintroduce it in a different colour.
+            // NOT migrated to the semantic kit, even though taking one is this
+            // screen's "Accept" (Green): a themed plate behind each card is
+            // precisely the mistake the note above records fixing.
             var button = Ui.Button($"ReckoningOffer{index}", UiString.Runtime,
                     new UiVec(cardWidth, CardHeight), 14, Place.At(x, CardCentreY))
                 .NoChrome();
@@ -1094,6 +1121,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
             button.Children.Add(icon);
             button.Children.Add(name);
             button.Children.Add(meta);
+            button.Children.Add(recipient);
+            button.Children.Add(delta);
+            button.Children.Add(feature);
+            button.Children.Add(loses);
+            button.Children.Add(action);
 
             OfferButtons.Add(button);
             OfferHalos.Add(halo);
@@ -1101,6 +1133,26 @@ namespace PrincesPalace.Domain.UiKit.Screens
             OfferIcons.Add(icon);
             OfferNames.Add(name);
             OfferMetas.Add(meta);
+            OfferRecipients.Add(recipient);
+            OfferDeltas.Add(delta);
+            OfferFeatures.Add(feature);
+            OfferLoses.Add(loses);
+            OfferActions.Add(action);
+            return button;
+        }
+
+        // "Hone instead", under its card. Fixed size at every card count: a
+        // plate is a 3:1 or 5:1 art and stretching it with the row would bend
+        // it, so only its x follows the card.
+        private UiNode BuildHone(int index)
+        {
+            var size = Ui.PlateNominalSizeFor(HoneWidth, 40f);
+            float x = OfferRowLayout.CardX(index, OfferRowLayout.MaxCards);
+            float y = CardBottom - HoneGap - size.Y * 0.5f;
+
+            var button = Ui.Button($"ReckoningHone{index}", UiStrings.ReckoningHoneInstead, size, 14, Place.At(x, y))
+                .Themed(ButtonTheme.Violet);
+            HoneButtons.Add(button);
             return button;
         }
     }

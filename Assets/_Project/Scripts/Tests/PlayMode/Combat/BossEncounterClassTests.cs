@@ -11,12 +11,10 @@ using PrincesPalace.Domain.Stats;
 namespace PrincesPalace.PlayModeTests
 {
     // Finding 4 (code review): Core/Bot/BotRunDriver.cs computed
-    // roomTrace.EncounterClass from its own inline copy of RunOrchestrator.
-    // RollOffers' ranking (session.IsEliteFight ? Elite : Normal), which
-    // never checked IsBossFight at all -- so once RollOffers itself was
-    // fixed to check Boss first, a boss room's TRACE kept reporting
-    // Elite/Normal even though the OFFER it traced had actually been rolled
-    // as Boss. The fix folds both call sites onto one property,
+    // roomTrace.EncounterClass from its own inline copy of a ranking
+    // (session.IsEliteFight ? Elite : Normal) that never checked IsBossFight
+    // at all, so a boss room's TRACE reported Elite/Normal while its pages
+    // were rolled as Boss. Both call sites read one property,
     // FightSession.EncounterClass, so they cannot drift apart again.
     public class BossEncounterClassTests
     {
@@ -44,26 +42,22 @@ namespace PrincesPalace.PlayModeTests
                 "Boss must win even if IsEliteFight also happens to be true");
         }
 
-        // RunOrchestrator.RollOffers' OWN read of a boss session: proven
-        // through the effect only a Boss classification produces (boss_gear
-        // centres one tier above the depth), since RollOffers does not
-        // expose the EncounterClass it resolved directly.
+        // The chips a fight of each class pays: pinned as literals, because the
+        // pages a settlement rolls are keyed to the highest class among them.
         [Test]
-        public void RollOffersReadsABossSessionAsBoss()
+        public void AFightPaysAGearChipOfItsClassAndAnchorsAndBossesARelicChipToo()
         {
-            var hero = new CombatantState("Shawn", true, 100, 0, 10, 10);
-            var foe = new CombatantState("Foe", false, 100, 0, 10, 10);
-            var session = new FightSession(new CombatEncounter(new[] { hero }, new[] { foe }),
-                null, null, new SeededRandom(1), isBossFight: true);
+            RunOrchestrator.ChipsFor(EncounterClass.Boss, out var bossGear, out var bossRelic);
+            CollectionAssert.AreEqual(new[] { EncounterClass.Boss }, bossGear);
+            CollectionAssert.AreEqual(new[] { EncounterClass.Boss }, bossRelic);
 
-            // bound - 1 fails every rung, so the tier is the bare centre:
-            // 1 for a boss at depth 0, 0 for anything else.
-            var offers = RunOrchestrator.RollOffers(session, bound => bound - 1);
+            RunOrchestrator.ChipsFor(EncounterClass.Elite, out var eliteGear, out var eliteRelic);
+            CollectionAssert.AreEqual(new[] { EncounterClass.Elite }, eliteGear);
+            CollectionAssert.AreEqual(new[] { EncounterClass.Elite }, eliteRelic);
 
-            const int floor = 1;
-            Assert.IsTrue(offers.All(o => o.Tier >= floor),
-                $"a Boss session at depth 0 must roll every offer at or above the boss centre ({floor}) -- " +
-                "a lower tier here means RollOffers read this session as Elite/Normal, not Boss");
+            RunOrchestrator.ChipsFor(EncounterClass.Normal, out var normalGear, out var normalRelic);
+            CollectionAssert.AreEqual(new[] { EncounterClass.Normal }, normalGear);
+            CollectionAssert.IsEmpty(normalRelic);
         }
 
         // BotRunDriver's own trace, end to end through a real run: every
@@ -86,7 +80,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(bossRoom,
                 "no seed in 1..10 reached a resolved boss room with an offer at depth 8 -- widen the seed range");
             Assert.AreEqual("Boss", bossRoom.EncounterClass,
-                "a boss room's own trace must report EncounterClass Boss, the same class RollOffers used to roll its offer");
+                "a boss room's own trace must report EncounterClass Boss, the same class the settlement rolled its pages as");
         }
     }
 }

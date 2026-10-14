@@ -210,7 +210,7 @@ namespace PrincesPalace
             entry.sold = true;
 
             // InventoryOps.Add and NOTHING ELSE. A purchase deliberately does
-            // NOT auto-equip, unlike TakeOffer: the player already decided,
+            // NOT auto-equip, unlike a reward page's Take: the player already decided,
             // with money, against the other cards, and placing the item for
             // them is a second decision taken on their behalf at the moment
             // they are most likely to be mid-plan (§2c).
