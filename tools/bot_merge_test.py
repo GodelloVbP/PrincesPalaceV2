@@ -606,17 +606,23 @@ class PathChoiceTests(unittest.TestCase):
 class BossByAnchorsTests(unittest.TestCase):
     def _run(self, archetype, *fights):
         return {"archetype": archetype, "fights": [
-            {"roomType": room, "heartAnchors": anchors, "won": won} for room, anchors, won in fights]}
+            {"roomType": room, "heartAnchors": anchors, "won": won,
+             "endReason": "None" if won is None else "Defeated"} for room, anchors, won in fights]}
 
     def test_buckets_count_boss_fights_only(self):
         runs = [self._run("A", ("Boss", 0, True), ("Boss", 1, False), ("Fight", -1, True)),
                 self._run("A", ("Boss", 2, False), ("Boss", 5, True), ("Boss", 6, False))]
         out = bot_merge.boss_by_anchors(runs)["overall"]
 
-        self.assertEqual({"fights": 1, "won": 1, "winRate": 1}, out["0"])
-        self.assertEqual({"fights": 1, "won": 0, "winRate": 0}, out["1"])
-        self.assertEqual({"fights": 1, "won": 0, "winRate": 0}, out["2"])
-        self.assertEqual({"fights": 2, "won": 1, "winRate": 0.5}, out["3+"])
+        self.assertEqual({"fights": 1, "won": 1, "stalled": 0, "winRate": 1}, out["0"])
+        self.assertEqual({"fights": 1, "won": 0, "stalled": 0, "winRate": 0}, out["1"])
+        self.assertEqual({"fights": 1, "won": 0, "stalled": 0, "winRate": 0}, out["2"])
+        self.assertEqual({"fights": 2, "won": 1, "stalled": 0, "winRate": 0.5}, out["3+"])
+
+    def test_a_stalled_fight_is_not_a_lost_boss(self):
+        out = bot_merge.boss_by_anchors([self._run("A", ("Boss", 3, None), ("Boss", 4, True))])["overall"]
+
+        self.assertEqual({"fights": 1, "won": 1, "stalled": 1, "winRate": 1}, out["3+"])
 
     def test_an_empty_bucket_has_no_rate(self):
         out = bot_merge.boss_by_anchors([self._run("A", ("Boss", 0, True))])["overall"]

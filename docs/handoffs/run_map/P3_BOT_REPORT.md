@@ -133,3 +133,41 @@ per the sheet's own rule (`T = 0.34 x 4560 / 5760`): `T1` 0.27, `T2` 0.48,
 `ReferencePartyWeight` 5760. Floor-1 mix is now 60 / 35 / 4 over seeds 1-100,
 matching the sheet's 64 / 32 / 4. Prize multipliers, pocket length, shop
 chance and anchor count were not touched.
+
+## P5 re-run: boss-fight win rate by heart anchors
+
+Run 2026-10-14 after the P5 leader rule landed (commit `485bcd4e`, plus the
+`endReason` field). `tools/bot.ps1 -Runs 250 -DepthCap 8 -StartFloor n -Profiles
+Mid|Late`, seed 1, five archetypes. Anchors are counted at the start of the boss
+fight (fielded plus queued, `roster.Anchors.Count`). That is the number of
+anchors the run left unslain on the map; the leader rule kills the rest with the
+boss. `bossByAnchors` in `summary.json`; a fight stopped by the runner (a stall,
+`endReason` None) is counted apart so it cannot read as a lost boss. `-Runs` was
+read from a clean `git archive` of `485bcd4e` because another session's
+uncommitted map screen did not compile at the time.
+
+Floor 10, Mid, 1250 runs (won/fights):
+
+| Anchors at the start | All | GreedyAggressive | GreedyDefensive | Lookahead2 | ProtectTheFront | RandomLegal |
+|---|---|---|---|---|---|---|
+| 0 | no fights | none | none | none | none | none |
+| 1 | no fights | none | none | none | none | none |
+| 2 | 6/9 (67%) | 2/3 | 1/2 | 1/1 | 2/3 | none |
+| 3+ | 1/43 (2%), 1 stalled | 0/12 | 1/10 | 0/9, 1 stalled | 0/12 | none |
+
+Floor 30 (Late and Mid, 250 runs per cell each): no boss fight is reached. Every
+run is doomed by step 233 to 234, one or two rooms into the realm, in every
+archetype and both profiles, so the table is empty. That is the floor-30 party
+being outclassed, not the anchors.
+
+Reading against the target (win rate falls as anchors rise, without reaching
+about 0% at 2): the direction holds, 67% at 2 anchors and 2% at 3 or more, but
+the cliff is at 3, not 2. Bucket 2 is nine fights and 0 and 1 have none: with
+three to six anchors on the map and the bot taking most elites, the heart has
+three or more waiting in nearly every run (43 of 52 fights). Three data gaps
+stop a tuning call on `HeartAnchors.HealthPermille` (500): too few fights at 2,
+none at 0 or 1, and none at floor 30. A floor-1 batch (which reaches the heart
+more often) and a profile that survives floor 30 would fill them; the literal is
+the orchestrator's call and is unchanged. 44 runs at floor 10 logged
+`TooManyCommands`; only one of those was a boss fight, and the stall is being
+diagnosed separately.

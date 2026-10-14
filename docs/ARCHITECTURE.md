@@ -107,7 +107,10 @@ four kinds:
   (`RealmMap.PocketSkippedBy`, in `RunManager.MoveTo`).
 - **A fight is a session object.** `Domain/Combat/Session/FightSession` owns
   one fight; `Core/FightController` holds references, paints session queries,
-  forwards input. Settlement into the run goes through
+  forwards input. In a fight the enemy list index is the stage slot; a queued
+  reinforcement takes a fallen index at the turn boundary, and the boss's fall
+  ends the fight and kills its followers (header of `Domain/Combat/CombatEncounter.cs`).
+  Settlement into the run goes through
   `Core/Bot/RunOrchestrator` (`SettleFight`), the same code the bot calls.
 - **Singletons:** `Core/SoundController.cs` (`DontDestroyOnLoad`); boot-time
   statics use `[RuntimeInitializeOnLoadMethod]` (`GameSettings`, `CursorController`, …).

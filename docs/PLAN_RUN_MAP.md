@@ -289,8 +289,8 @@ the heart. P1 adds the roll; P2 wires it.
 - **The boss's death ends the fight.** Anchors still standing or queued leave
   with it.
 - **Rewards:** an anchor pays its elite exp and gold, plus its prize chip, only
-  if it dies, on the map or at the heart. Anchors that leave with the boss
-  pay nothing (`FightSession.Outcome.cs:132` pays only the dead). Chips of
+  if it dies, on the map or at the heart. Anchors that die with the boss
+  (the leader rule, every boss fight) pay nothing (`FightSession.Outcome.cs:132` pays only the dead). Chips of
   anchors that die at the heart join the boss settlement in map order, before
   pages merge (`PLAN_ITEMS.md` §1.2).
 - **Tuning:** an anchor joins the boss fight at a fraction of its HP, a literal
@@ -324,7 +324,10 @@ the heart. P1 adds the roll; P2 wires it.
 - **Leader rule:** reuse the survival ending. `CombatEncounter.EndBySurvival`
   (`:367`) already ends a won fight with enemies alive
   (`FightSession.Rounds.cs:65,96`, `FightEndReason.Survived`). Add a
-  `LeaderFell` reason and caller.
+  `LeaderFell` reason and caller. Owner decision 2026-10-14: the rule holds in
+  every boss fight, and the followers die on stage (`CombatEncounter.DismissFollowers`,
+  the ordinary death fade in `FightController.BeginLeaderFallEnding`), not
+  vanish or stand until the Reckoning. Queued anchors need no presentation.
 
 Until P5, anchors are plain optional single-elite fights on the map with a
 visible prize, so the pocket decision is proven first.
@@ -371,7 +374,7 @@ only through `Domain/UiKit/Screens/MapScreen.cs` and `ScreenRegistry.cs`.
 | P2 | Integration: profile resolved and saved at realm open; step assignment and `roomsWalked`; the skip heal in `RunManager.MoveTo`; strength computed and saved at realm open; the preview on the Fight stream (§5); the consumable and gold prize payout, with `Item`, `Book` and `Relic` chips handed to the item pipeline (a no-op until item phase I3) and the node card reading the relic and book pools live for "empty pool → gold" (`PLAN_ITEMS.md` §1.1); `restBeforeBoss` and the `_map` cache key (`RunManager.cs:126-127`); debug jump (`DebugMenuController.JumpToBoss`); `MapNodePreview` and `RunEncounter.Preview` moved off `Depth`; SaveData v8→v9 (below); a column projection so the current screen stays playable (below); rewrite every test referencing `DescentMap`, `DescentNode`, `GenerateLegFor`, `ForcedTypeAt` or `Depth` (about 30 files, found by Grep, including the `Journey*` PlayMode set); update `CODE_MAP.md` and `ARCHITECTURE.md`. | senior, `Escalation: architecture` (replaces the map, step and save contracts) | `run_tests_parallel.ps1 -Changed -BuildScenes` |
 | P3 | Bot: `MapView` on `RunView` (route to the heart, pockets, anchors, strength, prizes) and path-aware choices in the four policies (`IRunPolicy.cs:19`). `MapView` includes Gear and Relic chips and anchor prizes. | implementer, then verifier | `-Changed`, plus a bot report at floors 1, 10 and 30: the pocket-take rate and the strength-3 take rate must each differ by HP band (not ~0% or ~100% in every band) |
 | P4 | Screen: the graph, node grammar, the extended detail card and comparison, walk, gamepad, overview. Needs §9.1–2. | implementer | `-Changed -BuildScenes`, diff `Art/`; `-Runtime` captures only if the owner allows them that session |
-| P5 | Anchors at the heart (§6): reseat contract, per-enemy elite flag, formation, reinforcement queue, leader rule, `slainAnchorIds`, anchor HP fraction, heart drawing. Combat tests with zero, one, two and four anchors alive; the boss killed with anchors queued; melee refused on a guarded boss; one test with a heart anchor carrying a Gear chip (`PLAN_ITEMS.md` §5.4). | senior, `Escalation: architecture` | `-Changed -BuildScenes`, plus the P3 bot report re-run with the boss-fight win rate by anchors left alive |
+| P5 | Anchors at the heart (§6): reseat contract, per-enemy elite flag, formation, reinforcement queue, leader rule, `slainAnchorIds`, anchor HP fraction, heart drawing. Combat tests with zero, one, two and four anchors alive; the boss killed with anchors queued; melee refused on a guarded boss; one test with a heart anchor carrying a Gear chip (`PLAN_ITEMS.md` §5.4). | senior, `Escalation: architecture` | `-Changed -BuildScenes`, plus the P3 bot report re-run with the boss-fight win rate by anchors left alive. Landed: core `a929520c`, remainder after it; the heart drawing moved to P4. Bot table: `handoffs/run_map/P3_BOT_REPORT.md` |
 | P6 | Easing mask: a one-day spike (hand-written UI shader keeping stencil/clip, content-space UVs, rebuilt from `clearedNodeIds` on load), then the build and the art swap. | implementer | headless mask test; `-Runtime` capture if allowed |
 | P7 | Cache, if signed (§9.3): a new `RoomType`, `RoomResolution`, `MapNodeCard.Caption`, medallion, deposit, and the `RunSettlement` exemption. | implementer | `-Changed -BuildScenes` |
 | P8 | Designed realms as content: a `realms` list in `ContentData` (`IOrderedContent`, `ContentBuilder`, `CONTENT_SCHEMA.md` rows) mapping a floor to its profile. It starts with the first designed realm. | implementer | `-Changed -BuildContent` |

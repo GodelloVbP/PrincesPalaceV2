@@ -20,7 +20,7 @@ prefix: `Tests/{EditMode,PlayMode}/<area>/<Prefix>*Tests.cs`.
 | Relic draft (in Hub) | `RelicDraftScreen.cs` | `Core/RelicDraftController.cs` | `OfferRowLayout.cs` | `WireRelicDraft` | `RelicDraft` |
 | Debug menu (in Hub) | `DebugMenuScreen.cs` | `Core/DebugMenuController.cs` | — | `WireDebugMenu` | `DebugMenu` |
 | Talents | `TalentScreen.cs` | `Core/TalentController.cs` (+`.Motion`) | `ConstellationLayout.cs` | `Talents()` scene | `Talent` |
-| Run Map | `MapScreen.cs` | `Core/MapController.cs` (+`.Walk`, `.Event`) | `MapLayout.cs`, `MapColumns.cs` (realm to columns, deleted in run map P4), `MapWalk.cs`, `MapNodeCard.cs` (room words), `Core/MapNodePreview.cs` (decided facts) | `Map()` scene | `Map` |
+| Run Map | `MapScreen.cs` | `Core/MapController.cs` (+`.Walk`, `.Event`, `.Heart`) | `MapLayout.cs` (pixels, camera, trails), `MapGraph.cs` (a realm placed: node slot = id, footprints, heart slots), `MapWalk.cs`, `MapNodeCard.cs` (room words), `Core/MapNodePreview.cs` (decided facts) | `Map()` scene | `Map` |
 | Shop (in Map) | `ShopScreen.cs` | `Core/ShopController.cs` | `ItemComparisonPanel.cs` | `WireShop` | `Shop` |
 | Event room (in Map) | `EventScreen.cs` | `Core/EventController.cs` | `DialogueStageLayout.cs` | `WireEvent` | `Event` |
 | Fight | `FightScreen.cs` | `Core/FightController.cs` (+6 parts, below) | `FightSubmenuLayout.cs`, `FightHudPalette.cs`, `FightRoundPresentation.cs`, `PcPlateArt.cs` | `Fight()` scene | `Fight` |
@@ -60,7 +60,7 @@ screenshots all read it.
 | Contact FX | `Core/ContactCues.cs`, `Core/StaticSwing.cs` | Melee arc/burst/thud asset paths and timings. |
 | Run rules | `Core/Bot/RunOrchestrator.cs` (+ parts below) | The one rulebook for a descent; screens and the bot both call it. |
 | Run lifecycle | `Core/RunManager.cs`, `Data/RunSnapshot.cs`, `Core/RealmOpening.cs` | Static accessor over the save; the realm regenerated from seed and saved profile. |
-| Realm map | `Domain/Dungeon/RealmMap.cs`, `RealmMapGenerator.cs`, `RealmMapRules.cs`, `RealmLayout.cs`, `RealmProfile.cs`, `PrizeKind.cs`, `NodeStrength.cs`, `RealmPrize.cs`; anchor roll `EncounterRoll.RollAnchor` (via `RunEncounter`); chips paid `Core/RealmPrizes.cs`; save 8 -> 9 `Data/RealmMigration.cs` | Plan: `docs/PLAN_RUN_MAP.md`. Strength and profile frozen per realm at open. |
+| Realm map | `Domain/Dungeon/RealmMap.cs`, `RealmMapGenerator.cs`, `RealmMapRules.cs`, `RealmLayout.cs`, `RealmProfile.cs`, `PrizeKind.cs`, `NodeStrength.cs`, `RealmPrize.cs`; anchor roll `EncounterRoll.RollAnchor` (via `RunEncounter`); heart `Domain/Dungeon/HeartAnchors.cs`, `RunEncounter.LivingAnchors`, `RunOrchestrator.PayHeartAnchors`; chips paid `Core/RealmPrizes.cs`; save 8 -> 9 `Data/RealmMigration.cs` | Plan: `docs/PLAN_RUN_MAP.md`. Strength and profile frozen per realm at open. |
 | Non-fight rooms | `Domain/Dungeon/RoomResolution.cs` → `Core/RoomResolver.cs` | Every room that does nothing says so. |
 | Events | `Core/Bot/RunOrchestrator.Event.cs`, `Domain/Events/`, `Core/RunEventContext.cs` | Authoring: `docs/EVENTS.md`. |
 | Shop stock/pricing | `Core/Bot/RunOrchestrator.Shop.cs`, `Domain/Rewards/ShopStock.cs`, `ShopPricing.cs` | |
@@ -106,7 +106,7 @@ screenshots all read it.
 - `Core/Content/ContentDatabase` → `.Effective`, `.Validation`
 - `Domain/Content/EventEntryResolver` → `.Dialogue`, `.Fights`, `.Shelves`
 - `Core/CharacterDossierController` → `.Loadout`, `.Sections`, `.Skills`
-- `Core/MapController` → `.Walk`, `.Event`
+- `Core/MapController` → `.Walk`, `.Event`, `.Heart`
 - `Core/RewardTrackController` → `.Input`, `.Motion`
 - `Core/TalentController` → `.Motion`
 - `Editor/SceneBuilder/SceneBuilder` → `.Typography`; `Editor/SceneBuilder/TmpBootstrap` → `.Typography`, `.DescriptionIcons`

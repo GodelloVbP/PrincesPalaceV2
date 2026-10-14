@@ -50,3 +50,12 @@ the full heal after each boss stays.
 
 Use `CLAUDE.md`'s routing table. Runtime screenshots: ask the owner at the
 start of your session and pass the answer into every brief.
+
+## P5 left to P4
+
+P5's one open item is the heart drawing on the map screen (boss in the rear,
+`HeartAnchors.FrontCount` anchors in front, the rest as small portraits behind,
+greybox roots from the heart to each anchor node that wither when the id is in
+`slainAnchorIds`; source `RunEncounter.LivingAnchors(run)`). P4 redraws that
+screen and owns it. Verify with a `UiAudit` tree test at four aspects and a
+`-Runtime` capture with 0, 2 and 5 living anchors.

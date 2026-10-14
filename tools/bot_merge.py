@@ -1012,15 +1012,18 @@ def boss_by_anchors(runs):
 
     One row per boss fight (fights[].heartAnchors >= 0). The anchors are the
     ones on the field or queued at the start, not the ones left alive at the
-    end. win rate is None for an empty bucket.
+    end. A fight the runner stopped (endReason "None": a stall) is counted
+    in `stalled` and left out of `fights`, so a fight bug does not read as a
+    lost boss. winRate is None for an empty bucket.
     """
 
     def tally(fights):
         out = {}
         for name, low, high in ANCHOR_BUCKETS:
-            rows = [f for f in fights if low <= f["heartAnchors"] <= high]
+            in_bucket = [f for f in fights if low <= f["heartAnchors"] <= high]
+            rows = [f for f in in_bucket if f.get("endReason") != "None"]
             won = sum(1 for f in rows if f.get("won"))
-            out[name] = {"fights": len(rows), "won": won,
+            out[name] = {"fights": len(rows), "won": won, "stalled": len(in_bucket) - len(rows),
                          "winRate": None if not rows else num(share(won, len(rows)))}
         return out
 
@@ -1180,7 +1183,8 @@ def plain_text(summary):
         lines.append("boss-fight win rate by heart anchors at the start (won/fights)")
         groups = [("all", boss["overall"])] + sorted(boss["byArchetype"].items())
         for label, buckets in groups:
-            cells = ["{}: {}/{}".format(name, buckets[name]["won"], buckets[name]["fights"])
+            cells = ["{}: {}/{} (+{} stalled)".format(name, buckets[name]["won"], buckets[name]["fights"],
+                                                      buckets[name]["stalled"])
                      for name, _, _ in ANCHOR_BUCKETS]
             lines.append("  {:<18}{}".format(label, "   ".join(cells)))
 

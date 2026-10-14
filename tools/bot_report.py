@@ -152,7 +152,8 @@ def render_text_summary(summary):
     boss = summary.get("bossByAnchors")
     if boss:
         lines.append("Boss win rate by heart anchors: " + ", ".join(
-            "{}: {}/{}".format(name, b["won"], b["fights"]) for name, b in boss["overall"].items()))
+            "{}: {}/{} (+{} stalled)".format(name, b["won"], b["fights"], b["stalled"])
+            for name, b in boss["overall"].items()))
 
     bug_count = len(summary.get("bugs", []))
     lines.append("Bugs: {}".format(bug_count))
@@ -538,12 +539,13 @@ def render_boss_by_anchors(summary):
 
     out = ["<h2>boss fights by heart anchors</h2>",
            '<table><thead><tr><th>archetype</th><th>anchors</th><th>fights</th>'
-           "<th>won</th><th>win rate</th></tr></thead><tbody>"]
+           "<th>won</th><th>stalled</th><th>win rate</th></tr></thead><tbody>"]
     groups = [("all", boss["overall"])] + sorted(boss["byArchetype"].items())
     for label, buckets in groups:
         for name, b in buckets.items():
-            out.append("<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>".format(
-                esc(label), esc(name), esc(b["fights"]), esc(b["won"]), fmt_num(b["winRate"])))
+            out.append("<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>".format(
+                esc(label), esc(name), esc(b["fights"]), esc(b["won"]), esc(b["stalled"]),
+                fmt_num(b["winRate"])))
     out.append("</tbody></table>")
     return "".join(out)
 

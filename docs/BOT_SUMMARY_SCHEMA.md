@@ -610,7 +610,7 @@ mismatch on any one independent run would, keyed by that life's own
     "byArchetype": { "GreedyAggressive": { "lt50": {}, "50to79": {}, "ge80": {} } }
   },
   "bossByAnchors": {         // docs/PLAN_RUN_MAP.md P5 gate
-    "overall": { "0": { "fights": 4, "won": 3, "winRate": 0.75 },
+    "overall": { "0": { "fights": 4, "won": 3, "stalled": 0, "winRate": 0.75 },
                  "1": {}, "2": {}, "3+": {} },
     "byArchetype": { "GreedyAggressive": { "0": {}, "1": {}, "2": {}, "3+": {} } }
   },
@@ -916,7 +916,8 @@ so its rates are flat across bands by design.
 fight opened with (`0`, `1`, `2`, `3+`), overall and per archetype, from
 `fights[].heartAnchors` (-1 on every non-boss fight). Anchors are counted at the
 start (fielded plus queued), not left alive: the leader rule kills the rest
-with the boss. `winRate` is `null` for an empty bucket.
+with the boss. A fight the runner stopped (`endReason` `None`, a stall) is counted in
+`stalled` and left out of `fights`. `winRate` is `null` for an empty bucket.
 
 **`shopVsNoShop`** — the matched-seed comparison (§7.1 point 1), or `null`.
 

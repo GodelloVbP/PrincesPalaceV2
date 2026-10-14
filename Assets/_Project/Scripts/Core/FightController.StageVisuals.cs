@@ -345,7 +345,14 @@ namespace PrincesPalace
 
         private CombatantState HandOver(RectTransform slot, CombatantState occupant)
         {
-            if (occupant == null) return null;
+            // A newcomer seated mid-round is not on stage until a beat says
+            // so, but the corpse it replaced is still fading in this slot:
+            // hiding the slot would stop that fade's coroutine for good.
+            if (occupant == null)
+            {
+                return _drawnIn.TryGetValue(slot, out var held) && held != null
+                       && DeathFadeFor(held)?.Fading == true ? held : null;
+            }
 
             if (_drawnIn.TryGetValue(slot, out var previous) && previous != null
                 && !ReferenceEquals(previous, occupant))

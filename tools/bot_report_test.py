@@ -36,7 +36,7 @@ class TextSummaryTests(unittest.TestCase):
         self.assertIn("RandomLegal / Fresh: depth median=12 (n=3)", text)
         self.assertIn("GreedyAggressive / Fresh: depth median=19 (n=3)", text)
         self.assertIn("Bugs: 1", text)
-        self.assertIn("Boss win rate by heart anchors: 0: 3/4, 1: 1/2, 2: 0/0, 3+: 0/1", text)
+        self.assertIn("Boss win rate by heart anchors: 0: 3/4 (+0 stalled), 1: 1/2 (+0 stalled), 2: 0/0 (+0 stalled), 3+: 0/1 (+2 stalled)", text)
         self.assertIn("Determinism: 1 mismatch(es) out of 6 checked", text)
 
 

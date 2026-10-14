@@ -789,6 +789,7 @@ namespace PrincesPalace.Editor.Bot
                 // decision matters most.
                 sb.Append(",\"won\":").Append(f.Won ? "true" : "false");
                 sb.Append(",\"heartAnchors\":").Append(f.HeartAnchors);
+                sb.Append(",\"endReason\":").Append(Str(f.EndReason));
                 sb.Append(",\"payoutGold\":").Append(f.PayoutGold);
                 sb.Append(",\"partyHpOut\":").Append(f.PartyHpOut);
 

@@ -173,6 +173,13 @@ namespace PrincesPalace
             Finished?.Invoke();
         }
 
+        // Unity stops a coroutine with its object; without this the fade would
+        // read as Fading forever and hold anything that waits on it.
+        private void OnDisable()
+        {
+            _running = null;
+        }
+
         private void SetFraction(float fraction)
         {
             SetImageAlpha(sprite, _spriteBaseAlpha * fraction);

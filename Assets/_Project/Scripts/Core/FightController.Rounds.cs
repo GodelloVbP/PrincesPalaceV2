@@ -337,11 +337,15 @@ namespace PrincesPalace
         {
             // One frame so a fade started this frame reports Fading.
             yield return null;
-            while (AnyEnemyFading()) yield return null;
+            float giveUp = Time.unscaledTime + LeaderFallWaitCapSeconds;
+            while (AnyEnemyFading() && Time.unscaledTime < giveUp) yield return null;
 
             _leaderEnding = false;
             OnPlaybackFinished();
         }
+
+        // A fade that never reports must not hold the Reckoning back.
+        private const float LeaderFallWaitCapSeconds = 6f;
 
         private bool _leaderEnded;
 
