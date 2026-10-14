@@ -194,7 +194,7 @@ designed. So the generator takes its shape from a **`RealmProfile`**:
 - **`anchorPrizeWeights`** is a `{kind, weight}` list like `prizeWeights`. The
   default is all weight 0: an anchor pays exp and gold only until item phase
   I3 sets it (`PLAN_ITEMS.md` §1.1).
-- **Designed realms** author their own profile later, as content (P8).
+- **Designed realms** author their own profile and display name as content: `ContentData/realms.json`, one row per floor (P8). A floor with no row is the default profile, named "The Descent".
 - **The generator reads no content.** The profile is resolved once when the
   realm opens (`StartRun`, `AdvanceLeg`), from the default table or (after
   P8) authored content. It is written into the save beside `bossEnemyId`,
@@ -377,7 +377,7 @@ only through `Domain/UiKit/Screens/MapScreen.cs` and `ScreenRegistry.cs`.
 | P5 | Anchors at the heart (§6): reseat contract, per-enemy elite flag, formation, reinforcement queue, leader rule, `slainAnchorIds`, anchor HP fraction, heart drawing. Combat tests with zero, one, two and four anchors alive; the boss killed with anchors queued; melee refused on a guarded boss; one test with a heart anchor carrying a Gear chip (`PLAN_ITEMS.md` §5.4). | senior, `Escalation: architecture` | `-Changed -BuildScenes`, plus the P3 bot report re-run with the boss-fight win rate by anchors left alive. Landed: core `a929520c`, remainder after it; the heart drawing moved to P4. Bot table: `handoffs/run_map/P3_BOT_REPORT.md` |
 | P6 | Easing mask: a one-day spike (hand-written UI shader keeping stencil/clip, content-space UVs, rebuilt from `clearedNodeIds` on load), then the build and the art swap. | implementer | headless mask test; `-Runtime` capture if allowed |
 | P7 | Cache (signed, landed): a new `RoomType`, `RoomResolution`, `MapNodeCard.Caption`, medallion, deposit, and the `RunSettlement` exemption. | implementer | `-Changed -BuildScenes` |
-| P8 | Designed realms as content: a `realms` list in `ContentData` (`IOrderedContent`, `ContentBuilder`, `CONTENT_SCHEMA.md` rows) mapping a floor to its profile. It starts with the first designed realm. | implementer | `-Changed -BuildContent` |
+| P8 | Designed realms as content: a `realms` list in `ContentData` (`IOrderedContent`, `ContentBuilder`, `CONTENT_SCHEMA.md` rows) mapping a floor to its profile and display name. **Landed with an empty list**: the path is proven by test fixtures; the first designed realm is a row in `realms.json`. The map header still reads the placeholder until `MapController` calls `RealmOpening.NameOf(run)`. | implementer | `-Changed -BuildContent` |
 
 If the P3 report fails, tune before P4. The levers are the prize multipliers,
 pocket length, shop chance and anchor count.

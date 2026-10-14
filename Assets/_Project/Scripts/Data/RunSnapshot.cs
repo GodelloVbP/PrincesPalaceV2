@@ -100,6 +100,10 @@ namespace PrincesPalace
         public int realmOpenedAt = -1;
         public RealmProfile realmProfile;
 
+        // The realm's display name, resolved beside the profile. Empty on a
+        // save from before names existed; read it through RealmOpening.NameOf.
+        public string realmName = "";
+
         // Each fight node's strength 1-3 against the party at realm open
         // (NodeStrength). Frozen, so levelling mid-realm never re-labels a
         // node the player already judged.

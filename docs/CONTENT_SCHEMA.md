@@ -194,6 +194,24 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 ## relics.json -- `RawRelicEntry`
 
 | Field | Type | Default | Description | Values |
+## realms.json -- `RawRealmEntry`
+
+| Field | Type | Default | Description | Values |
+|---|---|---|---|---|
+| `floor` | int | `0` | The floor this realm is. One row per floor; a floor with no row gets the default profile. |  |
+| `name` | string | `""` | The name the map header shows for this realm. |  |
+| `pocketCount` | int | `1` | Pockets (side branches) on the spine, 1-6. |  |
+| `pocketLengthMin` | int | `1` | Fewest rooms in a pocket; at least 1. |  |
+| `pocketLengthMax` | int | `2` | Most rooms in a pocket; at least pocketLengthMin, at most 4 (the map layout is sized for it). |  |
+| `forkCount` | int | `0` | Forks on the spine, 0-3 (the map layout is sized for it). |  |
+| `anchorCount` | int | `1` | Anchors (heart-guarding side fights), 0-6 (the map layout is sized for it). |  |
+| `shopChance` | float | `0.75` | Chance 0-1 that the realm has a shop. |  |
+| `waypointWeights` | RawRealmWeight[] (below) | `[]` | Relative weights of the rooms the generator rolls. kind is Fight, Event, Treasure, Rest or Cache, once each; at least one weight above 0. |  |
+| `prizeWeights` | RawRealmWeight[] (below) | `[]` | Relative weights of the chip a Fight node gets. kind is Gold, Consumable, Item, Book or Relic, once each; all 0 or empty gives no chip. |  |
+| `anchorPrizeWeights` | RawRealmWeight[] (below) | `[]` | Relative weights of the chip an anchor gets; same kinds as prizeWeights. All 0 or empty pays exp and gold only. |  |
+| `bossPool` | string[] | `[]` | Enemy ids the boss is drawn from. Empty means every boss. |  |
+| `restBeforeBoss` | bool | `false` | A Rest room on the spine node before the boss. |  |
+
 |---|---|---|---|---|
 | `id` | string | (none -- required) | Stable identifier; written into save data via unlock/achievement references. |  |
 | `displayName` | string | (none -- required) | The name shown for this relic when offered. |  |
@@ -579,6 +597,13 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 ### `RawSetPiece`
 
 | Field | Type | Default | Description | Values |
+### `RawRealmWeight`
+
+| Field | Type | Default | Description | Values |
+|---|---|---|---|---|
+| `kind` | string | `""` | The room type or chip kind this weight is for. |  |
+| `weight` | int | `0` | Relative weight, 0 or more. |  |
+
 |---|---|---|---|---|
 | `id` | string | (none -- required) | Stable identifier, unique only within its own set; the generated item id is '<set>_<piece>_p<tier>'. |  |
 | `displayName` | string | (none -- required) | The piece's own name, e.g. a Helmet for steel where leather has a Coif. |  |

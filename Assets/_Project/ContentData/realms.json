@@ -1,0 +1,4 @@
+{
+  "_readme": "Designed realms. One row per floor that is not the default; a floor with no row gets RealmProfiles.Default and the name The Descent. Fields in docs/CONTENT_SCHEMA.md.",
+  "realms": []
+}

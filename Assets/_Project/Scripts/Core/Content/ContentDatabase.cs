@@ -39,6 +39,7 @@ namespace PrincesPalace.Content
         private const string LevelCurveResourcePath = "Content/LevelCurve";
         private const string EventResourcePath = "Content/Events";
         private const string RewardSourceResourcePath = "Content/RewardSources";
+        private const string RealmResourcePath = "Content/Realms";
 
         private static List<CharacterDefinition> _characters;
         private static List<TalentDefinition> _talents;
@@ -55,6 +56,7 @@ namespace PrincesPalace.Content
         private static List<LevelCurveDefinition> _levelCurve;
         private static List<EventDefinition> _events;
         private static List<RewardSourceDefinition> _rewardSources;
+        private static List<ResolvedRealm> _realms;
 
         // The flat projection Domain actually reads, built once beside the
         // assets rather than per call: Character.ExpToNextLevel asks for it
@@ -168,6 +170,14 @@ namespace PrincesPalace.Content
         public static IReadOnlyList<RewardSourceDefinition> RewardSourceAssets
         {
             get { EnsureLoaded(); return _rewardSources; }
+        }
+
+        // realms.json: the designed realms, ascending by floor. Empty until a
+        // realm is designed; a floor with no row gets the default profile
+        // (RealmProfiles.Resolve).
+        public static IReadOnlyList<ResolvedRealm> Realms
+        {
+            get { EnsureLoaded(); return _realms; }
         }
 
         // Null when no row has this id (content not built, or a class with
@@ -513,6 +523,7 @@ namespace PrincesPalace.Content
             _levelCurve = null;
             _levelCosts = null;
             _rewardSources = null;
+            _realms = null;
 
             // Portraits are keyed by character id and resolved through the
             // roster above, so a swapped roster has to drop them too -- a test
@@ -1029,6 +1040,10 @@ namespace PrincesPalace.Content
             // table for the citation this mirrors.
             _rewardTracks = LoadOrdered<RewardTrackDefinitionAsset>(RewardTrackResourcePath);
             _rewardSources = LoadOrdered<RewardSourceDefinition>(RewardSourceResourcePath);
+            _realms = LoadOrdered<RealmDefinition>(RealmResourcePath)
+                .Where(row => row != null && row.Data != null)
+                .Select(row => row.Data)
+                .ToList();
 
             // LAST, and that is the whole of the guard above: everything this
             // method promises is in place before anything can skip it.

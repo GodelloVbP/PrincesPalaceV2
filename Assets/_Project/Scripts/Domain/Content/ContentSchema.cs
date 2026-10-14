@@ -39,6 +39,7 @@ namespace PrincesPalace.Domain.Content
             ("level_curve.json", typeof(RawLevelCurveEntry)),
             ("modifiers.json", typeof(RawModifierEntry)),
             ("pools.json", typeof(RawPoolEntry)),
+            ("realms.json", typeof(RawRealmEntry)),
             ("relics.json", typeof(RawRelicEntry)),
             ("reward_tracks.json", typeof(RawRewardTrackEntry)),
             ("rewards.json", typeof(RawRewardSourceEntry)),

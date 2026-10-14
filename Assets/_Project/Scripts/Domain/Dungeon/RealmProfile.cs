@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using PrincesPalace.Domain.Content;
 
 namespace PrincesPalace.Domain.Dungeon
 {
@@ -37,7 +38,8 @@ namespace PrincesPalace.Domain.Dungeon
     //
     // The generator clamps what it is given rather than trusting it: pockets
     // to 1..RealmMap.MaxPockets, lengths to at least 1, forks and anchors to
-    // the slots the shape has. A designed realm (P8) authors one of these.
+    // the slots the shape has. A designed realm authors one of these in
+    // realms.json (RealmEntryResolver).
     [Serializable]
     public sealed class RealmProfile
     {
@@ -72,6 +74,23 @@ namespace PrincesPalace.Domain.Dungeon
 
         // Rest on the spine node at offset 7 (reward-track level 30).
         public bool restBeforeBoss;
+
+        // A copy that shares no list with this one. A designed realm's profile
+        // lives in a content asset; the run saves and mutates its own copy.
+        public RealmProfile Clone() => new RealmProfile
+        {
+            pocketCount = pocketCount,
+            pocketLengthMin = pocketLengthMin,
+            pocketLengthMax = pocketLengthMax,
+            forkCount = forkCount,
+            anchorCount = anchorCount,
+            shopChance = shopChance,
+            waypointWeights = new List<RoomWeight>(waypointWeights),
+            prizeWeights = new List<PrizeWeight>(prizeWeights),
+            anchorPrizeWeights = new List<PrizeWeight>(anchorPrizeWeights),
+            bossPool = new List<string>(bossPool),
+            restBeforeBoss = restBeforeBoss,
+        };
     }
 
     // The profile for every floor without a designed realm, floor 100
@@ -83,11 +102,39 @@ namespace PrincesPalace.Domain.Dungeon
         public const int MaxDefaultAnchors = 6;
         public const int MaxDefaultPocketLength = 4;
 
-        // The profile a realm opening at `legStartStep` resolves to. Every
-        // floor is the default until designed realms land as content (P8);
-        // RealmOpening calls this once per realm and saves the result.
+        // What the map header calls a realm that has no designed name.
+        public const string DefaultName = "The Descent";
+
+        // The profile a realm opening at `legStartStep` resolves to when no
+        // realm is designed there.
         public static RealmProfile ForRealm(int legStartStep, bool restBeforeBoss = false) =>
             Default(RunDepth.FloorFor(legStartStep), restBeforeBoss);
+
+        // The profile and name a realm opening at `legStartStep` resolves to:
+        // the designed realm of that floor, else the default table and
+        // DefaultName. RealmOpening calls this once per realm and saves both.
+        // The result owns its profile: the run's own restBeforeBoss flag only
+        // ever turns the rest on, and never writes back into content.
+        public static ResolvedRealm Resolve(int legStartStep, bool restBeforeBoss,
+            IReadOnlyList<ResolvedRealm> designed)
+        {
+            int floor = RunDepth.FloorFor(legStartStep);
+
+            if (designed != null)
+            {
+                for (int i = 0; i < designed.Count; i++)
+                {
+                    var realm = designed[i];
+                    if (realm == null || realm.Floor != floor || realm.Profile == null) continue;
+
+                    var profile = realm.Profile.Clone();
+                    profile.restBeforeBoss |= restBeforeBoss;
+                    return new ResolvedRealm(floor, realm.Name, profile);
+                }
+            }
+
+            return new ResolvedRealm(floor, DefaultName, Default(floor, restBeforeBoss));
+        }
 
         public static RealmProfile Default(int floor, bool restBeforeBoss = false)
         {

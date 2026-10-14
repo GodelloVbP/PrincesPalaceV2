@@ -2,12 +2,13 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using PrincesPalace.Content;
+using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Dungeon;
 
 namespace PrincesPalace
 {
     // What happens once when a realm opens (docs/PLAN_RUN_MAP.md sections 2-4):
-    // its profile is resolved, its map generated, and every fight node's
+    // its profile and name are resolved (designed realm or default), its map generated, and every fight node's
     // strength weighed against the party standing at the door. All three are
     // written to the run and frozen for the realm.
     //
@@ -17,11 +18,18 @@ namespace PrincesPalace
     // caller owns its write.
     public static class RealmOpening
     {
-        public static RealmMap Open(SaveData save, RunSnapshot run)
+        public static RealmMap Open(SaveData save, RunSnapshot run) =>
+            Open(save, run, ContentDatabase.Realms);
+
+        // `designed` is the realms.json list; a floor it does not name gets the
+        // default profile and RealmProfiles.DefaultName.
+        public static RealmMap Open(SaveData save, RunSnapshot run, IReadOnlyList<ResolvedRealm> designed)
         {
             if (run == null) return null;
 
-            run.realmProfile = RealmProfiles.ForRealm(run.legStartStep, run.restBeforeBoss);
+            var realm = RealmProfiles.Resolve(run.legStartStep, run.restBeforeBoss, designed);
+            run.realmProfile = realm.Profile;
+            run.realmName = realm.Name;
             run.realmOpenedAt = run.legStartStep;
 
             var map = MapOf(run);
@@ -75,6 +83,11 @@ namespace PrincesPalace
                 yield return FightEncounterAdapter.PartyBody(character);
             }
         }
+
+        // The realm's display name for the map header; the default name for a
+        // run whose save predates names.
+        public static string NameOf(RunSnapshot run) =>
+            run == null || string.IsNullOrEmpty(run.realmName) ? RealmProfiles.DefaultName : run.realmName;
 
         // The frozen strength of a node, 0 when it has none.
         public static int StrengthOf(RunSnapshot run, int nodeId) =>

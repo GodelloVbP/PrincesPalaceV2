@@ -4,6 +4,7 @@ using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
 using PrincesPalace.Content;
+using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Dungeon;
 using PrincesPalace.Domain.Rewards;
 
@@ -53,10 +54,68 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(0, run.realmOpenedAt);
             Assert.IsNotNull(run.realmProfile);
             Assert.AreEqual(RealmProfiles.Default(1).pocketCount, run.realmProfile.pocketCount);
+            Assert.AreEqual("The Descent", run.realmName);
+            Assert.AreEqual("The Descent", RealmOpening.NameOf(run));
 
             var fights = RunManager.Map.Nodes.Where(IsFightNode).ToList();
             CollectionAssert.AreEquivalent(fights.Select(n => n.Id), run.nodeStrength.Select(e => e.nodeId));
             Assert.IsTrue(run.nodeStrength.All(e => e.strength >= 1 && e.strength <= 3));
+        }
+
+        // A designed realm for floor 3 (legStartStep 16), authored the way a
+        // realms.json row resolves.
+        private static ResolvedRealm DesignedFloorThree() => new ResolvedRealm(3, "The Ashen Court", new RealmProfile
+        {
+            pocketCount = 3,
+            pocketLengthMin = 1,
+            pocketLengthMax = 3,
+            forkCount = 2,
+            anchorCount = 4,
+            shopChance = 0.5f,
+            waypointWeights = new List<RoomWeight> { new RoomWeight(RoomType.Fight, 40), new RoomWeight(RoomType.Event, 30) },
+            prizeWeights = new List<PrizeWeight> { new PrizeWeight(PrizeKind.Relic, 5) },
+        });
+
+        [Test]
+        public void ADesignedRealmsProfileAndNameAreSavedAtOpenAndSurviveReload()
+        {
+            var save = SaveSlotManager.CurrentSave;
+            save.activeRun = new RunSnapshot { hasRun = true, runSeed = Seed, legStartStep = 16 };
+
+            var map = RealmOpening.Open(save, save.activeRun, new List<ResolvedRealm> { DesignedFloorThree() });
+
+            Assert.AreEqual("The Ashen Court", save.activeRun.realmName);
+            Assert.AreEqual(3, save.activeRun.realmProfile.pocketCount);
+            Assert.IsTrue(SaveSystem.Save(save, 0));
+
+            var reloaded = SaveSystem.Load(0).activeRun;
+
+            Assert.AreEqual("The Ashen Court", reloaded.realmName);
+            Assert.AreEqual("The Ashen Court", RealmOpening.NameOf(reloaded));
+            Assert.AreEqual(16, reloaded.realmOpenedAt);
+            var profile = reloaded.realmProfile;
+            Assert.AreEqual((3, 1, 3, 2, 4), (profile.pocketCount, profile.pocketLengthMin, profile.pocketLengthMax, profile.forkCount, profile.anchorCount));
+            Assert.AreEqual(0.5f, profile.shopChance);
+            CollectionAssert.AreEqual(
+                new[] { new RoomWeight(RoomType.Fight, 40), new RoomWeight(RoomType.Event, 30) }, profile.waypointWeights);
+            CollectionAssert.AreEqual(new[] { new PrizeWeight(PrizeKind.Relic, 5) }, profile.prizeWeights);
+            Assert.AreEqual(map.Nodes.Count, RealmOpening.MapOf(reloaded).Nodes.Count,
+                "the saved profile regenerates the realm it opened");
+        }
+
+        [Test]
+        public void AnUndesignedFloorSavesTheDefaultNameAndAnOldSaveReadsAsIt()
+        {
+            var save = SaveSlotManager.CurrentSave;
+            save.activeRun = new RunSnapshot { hasRun = true, runSeed = Seed, legStartStep = 24 };
+
+            RealmOpening.Open(save, save.activeRun, new List<ResolvedRealm> { DesignedFloorThree() });
+
+            Assert.AreEqual("The Descent", save.activeRun.realmName);
+            Assert.AreEqual(RealmProfiles.Default(4).pocketCount, save.activeRun.realmProfile.pocketCount);
+
+            var old = JsonUtility.FromJson<RunSnapshot>("{\"hasRun\":true,\"runSeed\":5,\"legStartStep\":0}");
+            Assert.AreEqual("The Descent", RealmOpening.NameOf(old));
         }
 
         [Test]

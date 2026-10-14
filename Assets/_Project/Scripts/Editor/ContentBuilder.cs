@@ -27,6 +27,7 @@ public static class ContentBuilder
     private const string PoolsPath = ContentRoot + "/Pools";
     private const string EventsPath = ContentRoot + "/Events";
     private const string RewardSourcesPath = ContentRoot + "/RewardSources";
+    private const string RealmsPath = ContentRoot + "/Realms";
 
     // ---- progression v2 phase 2: the authored level cost table ----------
     private const string LevelCurvePath = ContentRoot + "/LevelCurve";
@@ -281,6 +282,11 @@ public static class ContentBuilder
         // Depends on nothing above: every rewards.json field is checked
         // against code (enums, RngStreams), not other content.
         BuildRewardSources();
+
+        // Depends on nothing above: a realm is checked against code (room and
+        // chip enums, the map layout's capacities). Its bossPool ids are not
+        // checked against enemies here.
+        BuildRealms();
     }
 
     // THE SHAPE EIGHT OF THE ELEVEN CONTENT TYPES SHARE, written once.
@@ -632,6 +638,21 @@ public static class ContentBuilder
             LevelCurveEntryResolver.TryResolveAll,
             (asset, row) => asset.SetData(row),
             row => $"level_{row.Level:D2}");
+
+    // realms.json: one asset per designed realm, named by floor. The folder is
+    // made with the first asset, not up front: an empty realms list writes
+    // nothing, and an empty folder would leave a .meta nothing tracks.
+    private static void BuildRealms() =>
+        Build<RawRealmEntry, ResolvedRealm, RealmDefinition>(
+            "BuildRealms", "Assets/_Project/ContentData/realms.json", RealmsPath, "realms",
+            json => JsonUtility.FromJson<RawRealmFile>(json).realms,
+            RealmEntryResolver.TryResolveAll,
+            (asset, row) =>
+            {
+                if (!preflight) EnsureFolder(RealmsPath);
+                asset.SetData(row);
+            },
+            row => $"floor_{row.Floor:D3}");
 
     // rewards.json (docs/PLAN_ITEMS.md 2.4): one asset per settlement page
     // class, named by id.
