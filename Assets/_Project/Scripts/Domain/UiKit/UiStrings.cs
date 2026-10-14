@@ -302,7 +302,6 @@ namespace PrincesPalace.Domain.UiKit
         // Every floor without a designed realm (P8) is the default realm, and
         // its name is the descent itself.
         public static readonly UiString MapTitle = UiString.Define("map.title", "FLOOR {0}", "FLOOR 99");
-        public static readonly UiString MapRealmDefaultName = UiString.Define("map.realm.default", "THE DESCENT");
         // Worst-case samples, like every other template: without one the label
         // renders its raw "{0}" at rest, which is what the resting screenshot
         // showed -- and E1 has nothing to measure the box against.

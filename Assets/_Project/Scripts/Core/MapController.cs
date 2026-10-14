@@ -419,7 +419,7 @@ namespace PrincesPalace
             var cleared = new HashSet<int>(run.clearedNodeIds);
 
             titleLabel.Set(UiStrings.MapTitle, run.floor);
-            depthLabel.Set(UiStrings.MapDepth, UiStrings.MapRealmDefaultName.Format(), run.roomsWalked);
+            depthLabel.Set(UiStrings.MapDepth, RealmOpening.NameOf(run).ToUpperInvariant(), run.roomsWalked);
             if (run.bankedGold > 0) goldLabel.Set(UiStrings.MapGoldBanked, run.gold, run.bankedGold);
             else goldLabel.Set(UiStrings.MapGold, run.gold);
             overviewLabel.Set(_overview ? UiStrings.MapOverview : UiStrings.MapOverviewHint);
@@ -746,10 +746,13 @@ namespace PrincesPalace
         // clamped to the content.
         private float OverviewScroll(MapGraph graph, float scale, float focusY)
         {
+            // The realm sits between the header band and the cards: a realm
+            // that fits is pushed DOWN by the top inset (a negative scroll).
             float height = viewport.rect.height;
-            float max = Mathf.Max(0f, graph.ContentHeight * scale - height);
+            float min = -MapLayout.OverviewTopInset;
+            float max = Mathf.Max(min, graph.ContentHeight * scale - (height - MapLayout.OverviewBottomInset));
             float target = -height * 0.5f - focusY * scale;
-            return Mathf.Clamp(target, 0f, max);
+            return Mathf.Clamp(target, min, max);
         }
 
         // Y: the whole realm at a glance. Read-only -- the d-pad inspects every

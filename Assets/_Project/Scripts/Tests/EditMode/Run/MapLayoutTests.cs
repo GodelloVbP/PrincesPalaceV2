@@ -254,11 +254,25 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0f, MapLayout.Scroll(-900f, 700f, viewport), 0.01f);
         }
 
+        // The header's labels, badge and message occupy the top band; the first
+        // row must stand below it, and so must everything the overview draws.
+        [Test]
+        public void TheHeaderBandIsClearOfTheFirstRow_AndOfTheWholeOverview()
+        {
+            Assert.AreEqual(220f, MapLayout.HeaderBand);
+            var entry = MapLayout.Footprint(RoomType.Entry, new UiVec(0f, -MapLayout.TopMargin));
+            Assert.GreaterOrEqual(-entry.Top, MapLayout.HeaderBand, "the entry's tag stands in the header band");
+
+            Assert.AreEqual(230f, MapLayout.OverviewTopInset);
+            Assert.AreEqual(190f, MapLayout.OverviewBottomInset);
+            Assert.AreEqual(1080f - 230f - 190f, MapLayout.ContentHeight(12) * MapLayout.OverviewScale(MapLayout.ContentHeight(12), 1080f), 0.01f);
+        }
+
         [Test]
         public void TheOverviewShrinksTheRealmToFitButNeverEnlargesIt()
         {
             Assert.AreEqual(1f, MapLayout.OverviewScale(500f, 1080f), 0.0001f);
-            Assert.AreEqual(780f / 3000f, MapLayout.OverviewScale(3000f, 1080f), 0.0001f);
+            Assert.AreEqual(660f / 3000f, MapLayout.OverviewScale(3000f, 1080f), 0.0001f);
         }
 
         [Test]

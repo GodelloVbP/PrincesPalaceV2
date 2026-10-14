@@ -380,6 +380,29 @@ namespace PrincesPalace.PlayModeTests
             Assert.GreaterOrEqual(tile.color.r, 0.9f, "the entry's tile is darkened to the wood's colour");
         }
 
+        // Header text never meets a node: the bar covers what scrolls under it, so
+        // every header element has to sit inside the bar.
+        [UnityTest]
+        public IEnumerator EveryHeaderElementSitsInsideTheOpaqueBar()
+        {
+            yield return OpenTheMap();
+
+            var corners = new Vector3[4];
+            var bar = Named("MapHeaderBar");
+            Assert.IsNotNull(bar, "no header bar");
+            ((RectTransform)bar.transform).GetWorldCorners(corners);
+            float barBottom = corners[0].y;
+
+            foreach (var name in new[] { "MapTitleLabel", "MapDepthLabel", "MapGoldLabel", "MapOverviewLabel",
+                         "AbandonRunButton", "MapAttentionBadge", "MapRoomMessageLabel" })
+            {
+                var go = Named(name);
+                Assert.IsNotNull(go, name);
+                ((RectTransform)go.transform).GetWorldCorners(corners);
+                Assert.GreaterOrEqual(corners[0].y, barBottom - 0.5f, $"{name} reaches below the header bar");
+            }
+        }
+
         // ---- the easing ----------------------------------------------------------
 
         [UnityTest]

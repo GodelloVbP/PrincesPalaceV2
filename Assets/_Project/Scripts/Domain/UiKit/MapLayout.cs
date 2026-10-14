@@ -171,13 +171,25 @@ namespace PrincesPalace.Domain.UiKit
 
         public static bool BackgroundTileIsMirrored(int index) => index % 2 == 1;
 
-        // The overview's zoom: the whole realm inside the viewport, never
-        // magnified.
-        public const float OverviewMargin = 150f;
+        // THE HEADER BAND. The floor, the realm name, the gold, the hints and
+        // the attention badge and room message all live in the top band, and
+        // none of them may ever sit on a node or its chip. The screen draws an
+        // opaque bar this tall over the scrolling wood (MapScreen.BuildHeaderBar),
+        // so whatever scrolls under it is hidden, not overlapped, and the first
+        // row (TopMargin) still stands clear below it.
+        public const float HeaderBand = 220f;
+
+        // A soft edge under the bar, so the wood does not end on a hard line.
+        public const float HeaderFade = 48f;
+
+        // The overview's zoom: the whole realm between the header band and the
+        // detail cards, never magnified.
+        public const float OverviewTopInset = HeaderBand + 10f;
+        public const float OverviewBottomInset = 190f;
 
         public static float OverviewScale(float contentHeight, float viewportHeight)
         {
-            float room = viewportHeight - OverviewMargin * 2f;
+            float room = viewportHeight - OverviewTopInset - OverviewBottomInset;
             if (contentHeight <= 0f || room <= 0f) return 1f;
             float fit = room / contentHeight;
             return fit < 1f ? fit : 1f;

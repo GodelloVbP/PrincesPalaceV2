@@ -212,17 +212,19 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var screen = new MapScreen();
 
             // THE TOP BAND (plan section 7): the floor, the realm's name with the
-            // rooms walked, and the gold.
+            // rooms walked, and the gold. Every element is pinned to the TOP edge,
+            // like the wood and the header bar behind it: a centre anchor would
+            // drift them off the bar in any frame that is not 16:9.
             //
             // FunctionalHeading, not CeremonialTitle -- the map is a working
             // screen the player passes through every room, not a title or a
             // ceremonial moment the way Defeat/Reckoning's own titles are.
             var title = Ui.Label("MapTitleLabel", UiStrings.MapTitle, new UiVec(700f, 60f), 40, "#EDE6FF",
-                Place.At(0f, 452f)).Styled(TypographyRole.FunctionalHeading);
+                OnContent(0f, -88f)).Styled(TypographyRole.FunctionalHeading);
             var depth = Ui.Label("MapDepthLabel", UiStrings.MapDepth, new UiVec(420f, 34f), 20, "#B8A8D9",
-                Place.At(0f, 404f)).Styled(TypographyRole.TacticalData);
+                OnContent(0f, -136f)).Styled(TypographyRole.TacticalData);
             var gold = Ui.Label("MapGoldLabel", UiStrings.MapGold, new UiVec(460f, 40f), 22, "#F2DB9E",
-                Place.At(690f, 452f)).Styled(TypographyRole.TacticalData);
+                OnContent(690f, -88f)).Styled(TypographyRole.TacticalData);
 
             // THE BOOK/POINT/REWARD NUDGE, as a badge and not a line: neither
             // the shop nor the menu is guaranteed to be the next thing the
@@ -236,7 +238,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .TextAligned(UiTextAlign.Centre)
                 .Styled(TypographyRole.Body)
                 .Inactive();
-            var attentionBadge = Ui.OutlineBox("MapAttentionBadge", Place.At(-660f, 372f), AttentionBadgeSize,
+            var attentionBadge = Ui.OutlineBox("MapAttentionBadge", OnContent(-660f, -168f), AttentionBadgeSize,
                 FightHudPalette.PanelPrimary, FightHudPalette.BorderGold, new[] { attention })
                 .Inactive();
             screen.AttentionBadge = attentionBadge;
@@ -251,7 +253,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // ThemedButtonAspectLintTests. Height down to nominal, width kept.
             var abandonSize = Ui.PlateNominalSizeFor(240f, 60f);
             var abandon = Ui.Button("AbandonRunButton", UiStrings.MapAbandon, abandonSize, 16,
-                    Place.At(-800f, 452f))
+                    OnContent(-800f, -88f))
                 .Themed(ButtonTheme.Silver);
 
             // What the room the party just walked into did.
@@ -264,13 +266,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // shop's apology -- so a placeholder message cannot overflow a box
             // fitted to the short ones.
             var roomMessage = Ui.Label("MapRoomMessageLabel", UiStrings.MapRoomShop,
-                new UiVec(760f, 32f), 18, "#C8BBE4", Place.At(190f, 364f))
+                new UiVec(760f, 32f), 18, "#C8BBE4", OnContent(190f, -176f))
                 .Styled(TypographyRole.Body);
 
             // The hint for Y, and the overview's own banner in its place while
             // it is up; the same label, its text swapped by the controller.
             var overview = Ui.Label("MapOverviewLabel", UiStrings.MapOverviewHint, new UiVec(460f, 28f), 18,
-                    FightHudPalette.GoldLight, Place.At(660f, 410f))
+                    FightHudPalette.GoldLight, OnContent(660f, -130f))
                 .TextAligned(UiTextAlign.Right)
                 .Styled(TypographyRole.TacticalData);
             screen.OverviewLabel = overview;
@@ -382,7 +384,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.Debug = debug;
 
             screen.Root = Ui.Panel("MapPanel", UiSize.Fill,
-                viewport, title, depth, gold, attentionBadge, previewPanel, comparePanel, abandon,
+                viewport, screen.BuildHeaderBar(), title, depth, gold, attentionBadge, previewPanel, comparePanel, abandon,
                 roomMessage, overview, shop.Root, eventRoom.Root, systemMenu.Root, debug.Root);
 
             return screen;
@@ -431,6 +433,27 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // so it cannot be the normal state of this one.
             Backdrops.Add(tile);
             return tile;
+        }
+
+        // The header's own ground: an opaque bar over the scrolling wood and
+        // the nodes on it, HeaderBand tall with a soft edge, so a room that has
+        // scrolled up under the title is hidden rather than overlapped by it.
+        // Between the viewport and the headings, so it covers the one and sits
+        // under the other.
+        private UiNode BuildHeaderBar()
+        {
+            var bar = Ui.Solid("MapHeaderBar", "#050704",
+                    Place.Pin(ContentTop, ContentTop, UiVec.Zero),
+                    UiSize.FillWidth(MapLayout.HeaderBand))
+                .AsDecor();
+
+            var fade = Ui.Sprite("MapHeaderFade", "proc:scrim_ceiling",
+                    Place.Pin(ContentTop, ContentTop, new UiVec(0f, -MapLayout.HeaderBand)),
+                    UiSize.FillWidth(MapLayout.HeaderFade))
+                .Coloured("#050704")
+                .AsDecor();
+
+            return Ui.Panel("MapHeader", Place.Stretch(), UiSize.Fill, bar, fade).AsDecor();
         }
 
         // The same painting again, over the whole leg in ONE image: the
