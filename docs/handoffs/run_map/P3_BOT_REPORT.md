@@ -253,3 +253,43 @@ floor 10 the 2-anchor bucket is 0 of 9, on target, but 3+ anchors win 24% (8
 of 34), above the 2 bucket. Samples are 2, 9 and 34 fights; no tuning call on
 `HeartAnchors.HealthPermille` (500) is supported, and the literal is unchanged.
 33 floor-10 runs logged `TooManyCommands`.
+
+## After bot fixes
+
+Same flags and seed; batches (uncommitted) `reports/bot/20261014-114107`
+(floor 1 Fresh x1500), `-114325` (floor 10 Mid x250), `-114506` (floor 30 Late
+x250).
+
+Lookahead2 inversion: `Lookahead2Policy.PrizeValue` priced Gear, Book and
+Relic chips at 3 against a risk term of strength^2 x (1.25 - HP). The 3 was
+written when those chips had weight 0; I3 made them 30% of fights and all
+anchors, so a pocket anchor at strength 1 paid more than its risk at any HP.
+Now Gold 1, Consumable, Gear, Book and Relic 1.5. No other archetype reads the
+prize. Pinned by `Lookahead2TakesAGearChipStrengthThreePocketOnlyWhenHealthy`.
+
+Lookahead2, taken/offered (<50 / 50-79 / >=80):
+
+| Floor | Pocket | Strength 3 |
+|---|---|---|
+| 1 | 58% (23/40), 57% (158/277), 46% (419/908) | 20% (1/5), 15% (2/13), 34% (10/29) |
+| 10 | 30% (41/135), 48% (15/31), 17% (9/53) | 42% (45/107), 38% (10/26), 58% (53/91) |
+| 30 | none, 32% (6/19), 10% (3/30) | none, 55% (6/11), 38% (36/94) |
+
+Strength 3 now rises with HP at floors 1, 10 and partly 30 (38% at >=80, was
+24%; preliminary 85%). It does not return to the preliminary level: the
+preliminary numbers came from anchors worth 0.5, and anchors now pay a page.
+At floor 1 the strength-3 spine and the pocket are the same choice, so the
+pocket rate falls as strength 3 rises; the pocket rate is no longer 79-90%
+at every HP.
+
+Honing (`GearEvaluator.TakeRest`, `HoneAtTheShop`; trace field `hones`):
+
+| Batch | Runs | Shop visits | Shop hones | Hones per run (shop) | Rests | Heal | Hone |
+|---|---|---|---|---|---|---|---|
+| Floor 1 | 7500 | 1689 | 83 | 0.011 | 0 | 0 | 0 |
+| Floor 10 | 1250 | 86 | 6 | 0.005 | 61 | 46 | 15 |
+| Floor 30 | 1250 | 19 | 0 | 0 | 19 | 10 | 9 |
+
+Rest hones per run: floor 10 0.012, floor 30 0.007. Shop hones are rare
+because arrival gold is spent on gear first and floor-30 shops cost more than
+the purse. RandomLegal never hones in the shop (its gear weights are zero).

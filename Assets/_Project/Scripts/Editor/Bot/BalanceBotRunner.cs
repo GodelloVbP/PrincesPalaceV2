@@ -867,6 +867,7 @@ namespace PrincesPalace.Editor.Bot
                 sb.Append(",\"goldOnArrival\":").Append(r.GoldOnArrival);
                 sb.Append(",\"goldSpent\":").Append(r.GoldSpent);
                 sb.Append(",\"goldOnLeave\":").Append(r.GoldOnLeave);
+                sb.Append(",\"hones\":").Append(StrList(r.Hones));
                 sb.Append(",\"purchasesBySection\":").Append(IntList(r.PurchasesBySection));
                 sb.Append(",\"rerollsBySection\":").Append(IntList(r.RerollsBySection));
 

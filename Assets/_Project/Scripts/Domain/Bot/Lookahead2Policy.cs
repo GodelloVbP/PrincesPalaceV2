@@ -387,15 +387,21 @@ namespace PrincesPalace.Domain.Bot
 
         private const float DetourCost = 0.3f;
 
+        // A prize stays within what the fight's risk term can offset
+        // (strength^2 x (1.25 - HP)), so HP can still turn a room down. A Gear,
+        // Book or Relic chip at 3 outweighed the risk of a strength-1 fight at
+        // every HP: every pocket anchor looked free and a strength-3 fight
+        // looked worse than two plain ones. A page chip is worth about a
+        // consumable here; the page's value is the card, not a sure gain.
         private static float PrizeValue(PrizeKind kind)
         {
             switch (kind)
             {
                 case PrizeKind.Gold: return 1f;
-                case PrizeKind.Consumable: return 1.5f;
+                case PrizeKind.Consumable:
                 case PrizeKind.Item:
                 case PrizeKind.Book:
-                case PrizeKind.Relic: return 3f;
+                case PrizeKind.Relic: return 1.5f;
                 default: return 0.5f;
             }
         }

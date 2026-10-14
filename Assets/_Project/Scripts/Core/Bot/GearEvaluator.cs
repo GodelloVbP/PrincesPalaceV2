@@ -229,28 +229,112 @@ namespace PrincesPalace
         // What "hone instead" is worth: the recipient's own delta from +1 on
         // the card's slot, measured by honing a moment and putting it back.
         // Zero when the slot cannot be honed or holds nothing to improve.
-        public static float ScoreHone(SaveData save, Domain.Rewards.PendingCard card, GearWeights weights)
+        public static float ScoreHone(SaveData save, Domain.Rewards.PendingCard card, GearWeights weights) =>
+            card == null ? 0f : ScoreHone(save, card.RecipientId, card.Slot, weights);
+
+        public static float ScoreHone(SaveData save, string characterId, EquipmentSlot slot, GearWeights weights)
         {
-            var recipient = RecipientOf(save, card);
+            var recipient = save?.roster?.FirstOrDefault(c => c != null && c.definitionId == characterId);
             var honing = save?.activeRun?.slotHoning;
-            if (recipient == null || honing == null || card == null) return 0f;
-            if (!SlotHoning.CanHone(honing, card.RecipientId, card.Slot)) return 0f;
+            if (recipient == null || honing == null) return 0f;
+            if (!SlotHoning.CanHone(honing, characterId, slot)) return 0f;
 
             var before = Measure(recipient);
-            var entry = honing.FirstOrDefault(e => e != null && e.characterId == card.RecipientId && e.slot == card.Slot);
+            var entry = honing.FirstOrDefault(e => e != null && e.characterId == characterId && e.slot == slot);
             int plus = entry == null ? 0 : entry.plus;
 
-            SlotHoning.Hone(honing, card.RecipientId, card.Slot);
+            SlotHoning.Hone(honing, characterId, slot);
             try
             {
                 return weights.Score(Difference(Measure(recipient), before));
             }
             finally
             {
-                var touched = honing.First(e => e != null && e.characterId == card.RecipientId && e.slot == card.Slot);
+                var touched = honing.First(e => e != null && e.characterId == characterId && e.slot == slot);
                 if (entry == null) honing.Remove(touched);
                 else touched.plus = plus;
             }
+        }
+
+        // The honeable (member, slot) pair ScoreHone rates highest across the
+        // fielded squad, first in squad then slot order on a tie. False when
+        // every slot is at the cap.
+        public static bool BestHone(
+            SaveData save, GearWeights weights, out string characterId, out EquipmentSlot slot, out float score)
+        {
+            characterId = null;
+            slot = default;
+            score = 0f;
+            var honing = save?.activeRun?.slotHoning;
+            if (honing == null) return false;
+
+            bool found = false;
+            foreach (var member in save.ActiveSquad())
+            {
+                if (member == null) continue;
+
+                foreach (EquipmentSlot candidate in Enum.GetValues(typeof(EquipmentSlot)))
+                {
+                    if (!SlotHoning.CanHone(honing, member.definitionId, candidate)) continue;
+
+                    float value = ScoreHone(save, member.definitionId, candidate, weights);
+                    if (found && value <= score) continue;
+
+                    found = true;
+                    characterId = member.definitionId;
+                    slot = candidate;
+                    score = value;
+                }
+            }
+
+            return found;
+        }
+
+        // The bot's Rest rule: under this party HP fraction the room heals,
+        // at or above it the free +1 is taken instead.
+        public const float RestHealsBelowPartyHp = 0.7f;
+
+        // Takes the Rest room: heal when hurt or when nothing can be honed,
+        // otherwise a free hone on the best slot. Returns the trace entry
+        // ("heal" or "hone:<character>:<slot>"), null when no Rest was open.
+        public static string TakeRest(SaveData save, GearWeights weights, float partyHpFraction)
+        {
+            if (partyHpFraction >= RestHealsBelowPartyHp
+                && BestHone(save, weights, out string id, out var slot, out _)
+                && RunOrchestrator.RestHone(id, slot))
+            {
+                return "hone:" + id + ":" + slot;
+            }
+
+            return RunOrchestrator.RestHeal() ? "heal" : null;
+        }
+
+        // The bot's shop hone rule, run after its buy decisions are done:
+        // while the purse covers the best slot's hone and that hone's gain
+        // per gold beats `bestCardPerGold()` (the best gear card still
+        // buyable, score per gold, re-read after every purchase), buy it.
+        // Returns one "<character>:<slot>:<price>" entry per hone bought.
+        public static List<string> HoneAtTheShop(SaveData save, GearWeights weights, Func<float> bestCardPerGold)
+        {
+            var bought = new List<string>();
+            var run = RunManager.Run;
+            if (run == null) return bought;
+
+            // The price climbs with every +1 and the purse only falls, so
+            // this ends well inside the bound; the bound is a hang guard.
+            for (int guard = 0; guard < 8 * 10 * 4; guard++)
+            {
+                if (!BestHone(save, weights, out string id, out var slot, out float gain)) break;
+
+                int price = RunOrchestrator.HonePriceFor(id, slot);
+                if (price <= 0 || run.gold < price) break;
+                if (gain / price <= bestCardPerGold()) break;
+                if (!RunOrchestrator.BuyHone(id, slot).Applied) break;
+
+                bought.Add(id + ":" + slot + ":" + price);
+            }
+
+            return bought;
         }
 
         private static Character RecipientOf(SaveData save, Domain.Rewards.PendingCard card) =>

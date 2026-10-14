@@ -815,9 +815,13 @@ namespace PrincesPalace
                     continue;
                 }
 
-                // The bot always takes the heal; the free hone is the player's
-                // choice to make (PLAN_ITEMS 1.5).
-                if (arrival == RunOrchestrator.Arrival.Rest) RunOrchestrator.RestHeal();
+                // A Rest room: heal under 70% party HP, the free hone above
+                // it (PLAN_ITEMS 1.5; GearEvaluator.TakeRest).
+                if (arrival == RunOrchestrator.Arrival.Rest)
+                {
+                    string rest = GearEvaluator.TakeRest(save, runPolicy.Gear, ViewOf(save).PartyHpFraction);
+                    if (rest != null) roomTrace.Hones.Add("rest:" + rest.Replace("hone:", ""));
+                }
 
                 if (!isFight)
                 {
@@ -1139,10 +1143,32 @@ namespace PrincesPalace
 
             ShopAtTheStockInFront(seed, save, runPolicy, roomTrace);
 
+            // Honing comes after the buy decisions, on what the policy left.
+            var scoreCache = new Dictionary<(string, int), float>();
+            foreach (string hone in GearEvaluator.HoneAtTheShop(save, runPolicy.Gear,
+                () => BestCardPerGold(ShopViewOf(save, runPolicy, scoreCache))))
+            {
+                roomTrace.Hones.Add("shop:" + hone);
+            }
+
             RunOrchestrator.LeaveShop();
 
             roomTrace.GoldOnLeave = run.gold;
             roomTrace.GoldSpent = roomTrace.GoldOnArrival - roomTrace.GoldOnLeave;
+        }
+
+        // The best score per gold among the gear cards still on sale and
+        // affordable; 0 when there are none.
+        private static float BestCardPerGold(ShopView view)
+        {
+            float best = 0f;
+            foreach (var card in view.Cards)
+            {
+                if (card.Kind != ShopEntryKind.Gear || !card.Buyable || card.Price <= 0) continue;
+                best = Math.Max(best, card.Score / card.Price);
+            }
+
+            return best;
         }
 
         // THE BUYING LOOP, SHARED by the room shop (VisitShop) and an event's

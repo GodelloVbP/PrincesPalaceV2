@@ -196,6 +196,28 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreSame(realm.Spine, policy.ChooseNode(offer, realm.View(0.4f), Rng()));
         }
 
+        // The I3 inversion: a Gear chip (prize 3) on a strength-3 pocket fight
+        // outweighed its risk at every HP, so a hurt party still took it.
+        [Test]
+        public void Lookahead2TakesAGearChipStrengthThreePocketOnlyWhenHealthy()
+        {
+            var realm = new Realm(RoomType.Fight, 1, PrizeKind.Gold, RoomType.Fight, 3, PrizeKind.Item);
+            var policy = new Lookahead2Policy();
+            var offer = realm.Offer(realm.Spine, realm.Pocket);
+
+            // Full HP: spine 0.75; pocket 4.5 - 2.25 + 0.75 - 0.3 = 2.7.
+            Assert.AreSame(realm.Pocket, policy.ChooseNode(offer, realm.View(1f), Rng()));
+
+            // 80% HP: spine 0.55; pocket 4.5 - 4.05 + 0.55 - 0.3 = 0.7.
+            Assert.AreSame(realm.Pocket, policy.ChooseNode(offer, realm.View(0.8f), Rng()));
+
+            // 60% HP: spine 0.35; pocket 4.5 - 5.85 + 0.35 - 0.3 = -1.3.
+            Assert.AreSame(realm.Spine, policy.ChooseNode(offer, realm.View(0.6f), Rng()));
+
+            // 30% HP: spine 0.05; pocket 4.5 - 8.55 + 0.05 - 0.3 = -4.3.
+            Assert.AreSame(realm.Spine, policy.ChooseNode(offer, realm.View(0.3f), Rng()));
+        }
+
         [Test]
         public void Lookahead2ValuesARestByMissingHp()
         {

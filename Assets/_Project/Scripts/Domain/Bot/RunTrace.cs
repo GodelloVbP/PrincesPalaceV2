@@ -203,6 +203,11 @@ namespace PrincesPalace.Domain.Bot
         // fight either.
         public List<EquipTrace> Equipped = new List<EquipTrace>();
 
+        // The hones the bot took here, in order. A shop visit lists
+        // "shop:<character>:<slot>:<price>", a Rest room "rest:<character>:<slot>"
+        // for the free hone or "rest:heal" for the heal. Empty elsewhere.
+        public List<string> Hones = new List<string>();
+
         // ---- gold, and what the shop did with it -----------------------------
         //
         // GoldOnArrival IS RECORDED FOR EVERY ROOM, not only for shops, and

@@ -296,6 +296,13 @@ RoomTrace
                         folded into GoldSpent as one difference, so a
                         sale, which moves gold the other way, cannot hide
                         inside a subtraction.
+  Hones         string[] -- the hones the bot took in this room, in order:
+                        "shop:<character>:<slot>:<price>" per shop hone
+                        (bought after its buy decisions, while the best slot
+                        rates more per gold than the best gear card left),
+                        "rest:<character>:<slot>" for a Rest room's free hone
+                        (party HP at or above 70%), "rest:heal" for its heal.
+                        Empty in any other room. JSON key "hones".
   PurchasesBySection int[] -- indexed by ShopStock's section constants
                         (gear 0, books 1, relics 2).
                         Sized by the runner, so a section added later
