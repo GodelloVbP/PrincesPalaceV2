@@ -730,7 +730,9 @@ namespace PP.FocusGuardEntryJob {
         [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
         [DllImport("user32.dll")] public static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool fAttach);
         [DllImport("kernel32.dll")] public static extern uint GetCurrentThreadId();
-        [DllImport("user32.dll")] public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
+        [DllImport("user32.dll")] public static extern bool IsWindow(IntPtr hWnd);
+        [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr hWnd);
+        [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr hWnd);
         [DllImport("kernel32.dll", SetLastError = true)] public static extern IntPtr CreateToolhelp32Snapshot(uint dwFlags, uint th32ProcessID);
         [DllImport("kernel32.dll")] public static extern bool Process32First(IntPtr hSnapshot, ref PROCESSENTRY32 lppe);
         [DllImport("kernel32.dll")] public static extern bool Process32Next(IntPtr hSnapshot, ref PROCESSENTRY32 lppe);
@@ -741,8 +743,7 @@ namespace PP.FocusGuardEntryJob {
 
         $prevForeground = [IntPtr]$PrevForegroundLong
         $SW_MINIMIZE = 6
-        $VK_MENU = 0x12
-        $KEYEVENTF_KEYUP = 0x2
+        $logPath = Join-Path ([IO.Path]::GetTempPath()) "pp_focusguard.log"
 
         # $stolenFg is whatever window currently holds foreground WITH --
         # attaching to ITS thread while it still legitimately owns the
@@ -767,11 +768,10 @@ namespace PP.FocusGuardEntryJob {
 
             # AttachThreadInput refused too (rare -- seen only when the thief's
             # own thread has already lost the lock by the time this runs).
-            # Fall back to the plain call, then the ALT-tap workaround that
-            # relaxes the foreground lock for whichever thread sent it.
-            if ([PP.FocusGuardEntryJob.NativeMethods]::SetForegroundWindow($hwnd)) { return }
-            [PP.FocusGuardEntryJob.NativeMethods]::keybd_event($VK_MENU, 0, 0, [UIntPtr]::Zero)
-            [PP.FocusGuardEntryJob.NativeMethods]::keybd_event($VK_MENU, 0, $KEYEVENTF_KEYUP, [UIntPtr]::Zero)
+            # One plain retry and nothing more: the previous Alt-key tap
+            # (keybd_event VK_MENU) is a SYNTHETIC KEYSTROKE delivered to
+            # whatever window the owner is typing in, and the minimize that
+            # follows hands focus to the next window in z-order anyway.
             [PP.FocusGuardEntryJob.NativeMethods]::SetForegroundWindow($hwnd) | Out-Null
         }
 
@@ -876,12 +876,27 @@ namespace PP.FocusGuardEntryJob {
                 [uint32]$fgPid = 0
                 [PP.FocusGuardEntryJob.NativeMethods]::GetWindowThreadProcessId($fg, [ref]$fgPid) | Out-Null
                 if ($descendants.Contains([int]$fgPid)) {
-                    # ORDER MATTERS: restore focus to the recorded window
-                    # WHILE the thief's window is still the one holding the
-                    # foreground lock, THEN minimize the thief. See the
-                    # header comment on Restore-Foreground above.
-                    Restore-Foreground $prevForeground $fg
+                    # ORDER MATTERS: restore focus to the last window the
+                    # OWNER had WHILE the thief's window is still the one
+                    # holding the foreground lock, THEN minimize the thief.
+                    # See the header comment on Restore-Foreground above.
+                    # $prevForeground is refreshed on every out-of-tree poll
+                    # below, so an app switch the owner made after the gate
+                    # started is what comes back, not the window from launch
+                    # time. A window that has since closed is never targeted.
+                    $target = $prevForeground
+                    if ($target -ne [IntPtr]::Zero -and [PP.FocusGuardEntryJob.NativeMethods]::IsWindow($target)) {
+                        Restore-Foreground $target $fg
+                    }
                     [PP.FocusGuardEntryJob.NativeMethods]::ShowWindow($fg, $SW_MINIMIZE) | Out-Null
+                    # Evidence for the next "it alt-tabbed me" report: who
+                    # held the foreground, and what it was restored to.
+                    try {
+                        $thief = (Get-Process -Id ([int]$fgPid) -ErrorAction SilentlyContinue).ProcessName
+                        Add-Content -LiteralPath $logPath -Value ("{0:HH:mm:ss.fff} thief pid={1} name={2} hwnd={3} restored={4}" -f (Get-Date), $fgPid, $thief, $fg, $target)
+                    } catch {}
+                } elseif ([PP.FocusGuardEntryJob.NativeMethods]::IsWindowVisible($fg) -and -not [PP.FocusGuardEntryJob.NativeMethods]::IsIconic($fg)) {
+                    $prevForeground = $fg
                 }
             }
 

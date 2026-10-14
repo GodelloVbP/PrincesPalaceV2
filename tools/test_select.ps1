@@ -411,6 +411,7 @@ function Invoke-GitText {
     $quoted = @("-C", $AreasProjectRoot) + $GitArgs | ForEach-Object { '"' + ($_ -replace '"', '\"') + '"' }
     $psi.Arguments = $quoted -join ' '
     $psi.UseShellExecute = $false
+    $psi.CreateNoWindow = $true
     $psi.RedirectStandardOutput = $true
     $psi.RedirectStandardError = $true
     $psi.StandardOutputEncoding = [Text.Encoding]::UTF8
