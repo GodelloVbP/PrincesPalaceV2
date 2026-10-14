@@ -93,7 +93,7 @@ namespace PrincesPalace
             var run = RunManager.Run;
             if (run == null || section < 0 || section >= ShopStock.SectionCount) return ShopPricing.RerollCeiling;
 
-            return ShopPricing.RerollPrice(RerollsUsed(run, section));
+            return ShopPricing.RerollPrice(RerollsUsed(run, section), run.step);
         }
 
         private static int RerollsUsed(RunSnapshot run, int section)
@@ -102,8 +102,9 @@ namespace PrincesPalace
             return used != null && section >= 0 && section < used.Length ? used[section] : 0;
         }
 
-        // What one bag stack is worth to buy, which is what its sell price is
-        // computed from. Equippables are priced by the shop's own formula;
+        // What one bag stack costs to buy in STEP-0 gold, which is what its
+        // sell price is computed from (the sale is scaled at the step it
+        // happens). Equippables are priced by the shop's own formula;
         // everything else -- potions, the hand-authored one-offs -- keeps its
         // AUTHORED cost, which F6 found to be the one sensible number on
         // ItemDefinition.cost (a health potion at 15 is two thirds of a
@@ -115,14 +116,14 @@ namespace PrincesPalace
             if (definition == null) return 0;
 
             return definition.IsEquippable
-                ? ShopPricing.GearPrice(ContentDatabase.Effective(entry.Instance).Value.Tier, entry.modifierIds.Count)
+                ? ShopPricing.GearAuthored(ContentDatabase.Effective(entry.Instance).Value.Tier, entry.modifierIds.Count)
                 : definition.cost;
         }
 
         public static int SellPriceOf(InventoryEntry entry)
         {
             int buy = BuyPriceOf(entry);
-            return buy <= 0 ? 0 : ShopPricing.SellPrice(buy);
+            return buy <= 0 ? 0 : ShopPricing.SellPrice(buy, RunManager.Run?.step ?? 0);
         }
 
         // ---- arriving and leaving ------------------------------------------------
@@ -349,7 +350,7 @@ namespace PrincesPalace
             if (!ShopIsOpen(run)) return ShopResult.Refused(ShopRefusal.NoShop);
             if (section < 0 || section >= ShopStock.SectionCount) return ShopResult.Refused(ShopRefusal.BadIndex);
 
-            int price = ShopPricing.RerollPrice(RerollsUsed(run, section));
+            int price = ShopPricing.RerollPrice(RerollsUsed(run, section), run.step);
             if (run.gold < price) return ShopResult.Refused(ShopRefusal.NotEnoughGold);
             if (Refused()) return ShopResult.Refused(ShopRefusal.Injected);
 
@@ -421,10 +422,10 @@ namespace PrincesPalace
 
             if (section == ShopStock.RelicSection)
             {
-                return ShopStock.RollRelics(AvailableRelicOptions(), next);
+                return ShopStock.RollRelics(AvailableRelicOptions(), run.step, next);
             }
 
-            return ShopStock.RollBooks(AvailableBookOptions(), next);
+            return ShopStock.RollBooks(AvailableBookOptions(), run.step, next);
         }
 
         // THE GEAR ROLL, on whichever stream the caller opened: the room

@@ -5,11 +5,15 @@ namespace PrincesPalace.Domain.Rewards
 {
     // WHAT THE SHOP CHARGES. One table, pure, engine-free.
     //
-    // PRICE IS A FUNCTION OF TIER AND AFFIXES -- NEVER OF DEPTH.
-    // docs/PLAN_SHOP.md §2a/assumption 2: depth already enters the shop on
-    // the STOCK side, through RarityTable.FloorTier deciding which tiers get
-    // offered at all. A depth term here would count the same climb twice, and
-    // the two rules would then have to be moved together forever.
+    // EVERY PRICE IS AUTHORED IN STEP-0 GOLD AND CHARGED THROUGH ScalePrice.
+    // docs/PLAN_ITEMS.md 1.6: gold income rides DifficultyCurve.ScaleReward,
+    // so a price that did not would shrink against it with every step. The
+    // authored amounts (a tier, its affixes, a rarity, a book band, a
+    // reroll count, a hone) are depth-free; the step enters once, at the
+    // charge. Depth also enters the STOCK side (RarityTable.FloorTier decides
+    // which tiers a shelf offers), and the two do not double count: one
+    // chooses WHICH item, the other keeps what it costs in step with what a
+    // fight pays.
     //
     // Every number below is pinned by ShopPricingTests as a LITERAL, never
     // recomputed from these formulas -- a test that recomputes the formula
@@ -19,13 +23,10 @@ namespace PrincesPalace.Domain.Rewards
     {
         // ---- depth ----------------------------------------------------------
 
-        // THE copy-model price curve (docs/PLAN_ITEMS.md 1.6): every price is
-        // authored in step-0 gold and charged through this, on the curve
-        // fight gold rides (DifficultyCurve.ScaleReward), so what a fight pays
-        // and what the shop asks keep today's ratio at every depth. Not yet
-        // called by the prices below; they move onto it with the copy model
-        // (docs/handoffs/item_redesign/I2A_REMAINING.md), and the "never of
-        // depth" rule above goes with them.
+        // THE price curve: step-0 gold in, the gold that is asked at `step`
+        // out, on the curve fight gold rides (DifficultyCurve.ScaleReward), so
+        // what a fight pays and what the shop asks keep one ratio at every
+        // depth.
         public static int ScalePrice(int amount, int step) => Dungeon.DifficultyCurve.ScaleReward(amount, step);
 
         // ---- gear ---------------------------------------------------------
@@ -56,10 +57,21 @@ namespace PrincesPalace.Domain.Rewards
         // exact .5 is a sell price (see SellPrice), and to-even takes it
         // down. Nothing here picks a rounding mode for a reason -- what
         // matters is that the choice is pinned, not which one it is.
-        public static int GearPrice(int tier, int affixes = 0)
+        public static int GearAuthored(int tier, int affixes = 0)
         {
             return (int)Math.Round(BaseFor(tier) * AffixFactor(affixes));
         }
+
+        public static int GearPrice(int tier, int affixes, int step) => ScalePrice(GearAuthored(tier, affixes), step);
+
+        // One more point of honing on a slot already honed to `plus`: the
+        // gear base, climbing 35% of itself per point.
+        public static int HoneAuthored(int plus)
+        {
+            return (int)Math.Round(GearBase * (1.00 + PlusStep * (plus < 0 ? 0 : plus)));
+        }
+
+        public static int HonePrice(int plus, int step) => ScalePrice(HoneAuthored(plus), step);
 
         // ---- relics -------------------------------------------------------
 
@@ -72,7 +84,7 @@ namespace PrincesPalace.Domain.Rewards
         // extrapolation: RelicPool.WeightOf gives it the default weight 1,
         // rarer than Mythic's 2, so it prices above Mythic. A number to move
         // in the balance pass, not a measured one -- like every other row.
-        public static int RelicPrice(RelicRarity rarity)
+        public static int RelicAuthored(RelicRarity rarity)
         {
             switch (rarity)
             {
@@ -85,6 +97,8 @@ namespace PrincesPalace.Domain.Rewards
                 default: return 60;
             }
         }
+
+        public static int RelicPrice(RelicRarity rarity, int step) => ScalePrice(RelicAuthored(rarity), step);
 
         // ---- books --------------------------------------------------------
 
@@ -101,7 +115,7 @@ namespace PrincesPalace.Domain.Rewards
         // saying so.
         public const int MaxBookTier = 4;
 
-        public static int BookPrice(int bookTier)
+        public static int BookAuthored(int bookTier)
         {
             switch (bookTier)
             {
@@ -113,6 +127,8 @@ namespace PrincesPalace.Domain.Rewards
             }
         }
 
+        public static int BookPrice(int bookTier, int step) => ScalePrice(BookAuthored(bookTier), step);
+
         // ---- selling ------------------------------------------------------
 
         // Thirty percent, floored at 1. "Not supposed to make you rich":
@@ -121,12 +137,13 @@ namespace PrincesPalace.Domain.Rewards
         // catalogue rather than at the three depths §2c happened to tabulate.
         public const double SellFraction = 0.30;
 
-        public static int SellPrice(int buyPrice)
+        // `authoredBuyPrice` is the step-0 gold the thing costs to buy (the
+        // *Authored functions above, or a consumable's authored cost); the
+        // sale is charged through ScalePrice like every other price.
+        public static int SellPrice(int authoredBuyPrice, int step)
         {
-            if (buyPrice <= 0) return 1;
-
-            int sell = (int)Math.Round(SellFraction * buyPrice);
-            return sell < 1 ? 1 : sell;
+            int sell = authoredBuyPrice <= 0 ? 1 : (int)Math.Round(SellFraction * authoredBuyPrice);
+            return ScalePrice(sell < 1 ? 1 : sell, step);
         }
 
         // ---- rerolling ----------------------------------------------------
@@ -146,7 +163,7 @@ namespace PrincesPalace.Domain.Rewards
 
         // Computed in long and clamped, so the saturation is arithmetic
         // rather than a promise about how far a player can press a button.
-        public static int RerollPrice(int rerollsUsed)
+        public static int RerollAuthored(int rerollsUsed)
         {
             if (rerollsUsed <= 0) return RerollBase;
             if (rerollsUsed >= 31) return RerollCeiling;
@@ -154,5 +171,7 @@ namespace PrincesPalace.Domain.Rewards
             long price = (long)RerollBase << rerollsUsed;
             return price >= RerollCeiling ? RerollCeiling : (int)price;
         }
+
+        public static int RerollPrice(int rerollsUsed, int step) => ScalePrice(RerollAuthored(rerollsUsed), step);
     }
 }

@@ -46,7 +46,7 @@ namespace PrincesPalace.Domain.Tests
             // Pinned with literals, not recomputed: band 4 has its own price
             // and band 5 falls through to the default arm.
             Assert.AreEqual(4, ShopPricing.MaxBookTier);
-            Assert.AreEqual(145, ShopPricing.BookPrice(4));
+            Assert.AreEqual(145, ShopPricing.BookAuthored(4));
         }
 
         // ---- B5: no plain attack, no plain-attack staging ------------------

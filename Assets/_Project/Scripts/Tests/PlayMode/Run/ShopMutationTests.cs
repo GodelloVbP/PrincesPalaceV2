@@ -272,7 +272,7 @@ namespace PrincesPalace.PlayModeTests
             var sellable = Content.ContentDatabase.Offerable.First();
             InventoryOps.Add(save.stockpiledItems, sellable.id, 3, tier: 1);
 
-            int expected = ShopPricing.SellPrice(ShopPricing.GearPrice(1));
+            int expected = 8; // a tier-1 piece is 26 gold authored; 30% of 26 is 7.8 -> 8, at step 0
             int goldBefore = RunManager.Run.gold;
 
             var result = RunOrchestrator.Sell(0, 2);
@@ -299,7 +299,7 @@ namespace PrincesPalace.PlayModeTests
             var sellable = Content.ContentDatabase.Offerable.First();
             InventoryOps.Add(save.stockpiledItems, sellable.id, 1, tier: 1);
 
-            int expected = ShopPricing.SellPrice(ShopPricing.GearPrice(1));
+            int expected = 8; // a tier-1 piece is 26 gold authored; 30% of 26 is 7.8 -> 8, at step 0
             Assert.Greater(expected, 0, "fixture: the item has to be worth something to sell");
 
             int heldBefore = RunManager.Run.gold;
@@ -372,7 +372,7 @@ namespace PrincesPalace.PlayModeTests
             var result = RunOrchestrator.RerollSection(ShopStock.GearSection);
 
             Assert.AreEqual(ShopOutcome.Ok, result.Outcome);
-            Assert.AreEqual(goldBefore - ShopPricing.RerollPrice(0), RunManager.Run.gold);
+            Assert.AreEqual(goldBefore - 15, RunManager.Run.gold, "the first reroll of a section costs 15 at step 0");
             Assert.AreEqual(1, RunManager.Run.shopRerollsUsed[ShopStock.GearSection]);
             Assert.AreEqual(0, RunManager.Run.shopRerollsUsed[ShopStock.RelicSection]);
 
@@ -629,8 +629,8 @@ namespace PrincesPalace.PlayModeTests
                 {
                     for (int affixes = 0; affixes <= 3; affixes++)
                     {
-                        int buy = ShopPricing.GearPrice(tier, affixes);
-                        Assert.Less(ShopPricing.SellPrice(buy), buy,
+                        int buy = ShopPricing.GearAuthored(tier, affixes);
+                        Assert.Less(ShopPricing.SellPrice(buy, 0), buy,
                             $"{item.id} at tier {tier} with {affixes} affixes sold for at least its price.");
                     }
                 }

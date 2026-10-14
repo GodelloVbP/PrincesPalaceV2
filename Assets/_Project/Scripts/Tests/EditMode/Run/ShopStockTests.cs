@@ -79,7 +79,7 @@ namespace PrincesPalace.EditModeTests
                 CollectionAssert.AllItemsAreUnique(gear.Select(e => e.contentId),
                     "The same card twice at the same price is not variety; it reads as a broken roll.");
 
-                var relics = ShopStock.RollRelics(Relics(12), Stream(seed));
+                var relics = ShopStock.RollRelics(Relics(12), 0, Stream(seed));
                 CollectionAssert.AllItemsAreUnique(relics.Select(e => e.contentId));
             }
         }
@@ -90,7 +90,7 @@ namespace PrincesPalace.EditModeTests
         [Test]
         public void AnUndersizedPoolRendersNoOfferRatherThanShrinking()
         {
-            var relics = ShopStock.RollRelics(Relics(1), Stream(7));
+            var relics = ShopStock.RollRelics(Relics(1), 0, Stream(7));
 
             Assert.AreEqual(ShopStock.RelicCount, relics.Count);
             Assert.IsFalse(relics[0].noOffer);
@@ -98,7 +98,7 @@ namespace PrincesPalace.EditModeTests
             Assert.AreEqual(1, relics[1].index, "The placeholder kept the slot it was standing in.");
             Assert.AreEqual(ShopEntryKind.Relic, relics[1].kind);
 
-            var empty = ShopStock.RollRelics(Relics(0), Stream(7));
+            var empty = ShopStock.RollRelics(Relics(0), 0, Stream(7));
             Assert.AreEqual(ShopStock.RelicCount, empty.Count);
             Assert.IsTrue(empty.All(e => e.noOffer));
         }
@@ -119,7 +119,7 @@ namespace PrincesPalace.EditModeTests
         [Test]
         public void AnEmptyBookPoolIsAllNoOffer()
         {
-            var books = ShopStock.RollBooks(new List<ShopStock.BookCandidate>(), Stream(11));
+            var books = ShopStock.RollBooks(new List<ShopStock.BookCandidate>(), 0, Stream(11));
 
             Assert.AreEqual(ShopStock.BookCount, books.Count);
             Assert.IsTrue(books.All(e => e.noOffer && e.kind == ShopEntryKind.Book));
@@ -132,7 +132,7 @@ namespace PrincesPalace.EditModeTests
         public void ANullBookPoolConsumesNothingFromItsStream()
         {
             int draws = 0;
-            ShopStock.RollBooks(null, bound => { draws++; return 0; });
+            ShopStock.RollBooks(null, 0, bound => { draws++; return 0; });
 
             Assert.AreEqual(0, draws);
         }
@@ -152,7 +152,7 @@ namespace PrincesPalace.EditModeTests
                 new ShopStock.BookCandidate("cinderfault", 4),
             };
 
-            var books = ShopStock.RollBooks(candidates, Stream(13));
+            var books = ShopStock.RollBooks(candidates, 0, Stream(13));
 
             Assert.AreEqual(ShopStock.BookCount, books.Count);
             var offered = books.Where(e => !e.noOffer).ToList();
@@ -162,7 +162,7 @@ namespace PrincesPalace.EditModeTests
             foreach (var entry in offered)
             {
                 var source = candidates.First(c => c.SkillId == entry.contentId);
-                Assert.AreEqual(ShopPricing.BookPrice(source.BookTier), entry.price);
+                Assert.AreEqual(ShopPricing.BookAuthored(source.BookTier), entry.price);
             }
         }
 
@@ -173,7 +173,7 @@ namespace PrincesPalace.EditModeTests
         public void FewerBookCandidatesThanSlotsPadsWithNoOffer()
         {
             var candidates = new List<ShopStock.BookCandidate> { new ShopStock.BookCandidate("mud_burst", 1) };
-            var books = ShopStock.RollBooks(candidates, Stream(14));
+            var books = ShopStock.RollBooks(candidates, 0, Stream(14));
 
             Assert.AreEqual(ShopStock.BookCount, books.Count);
             Assert.AreEqual(1, books.Count(e => !e.noOffer));
@@ -183,15 +183,16 @@ namespace PrincesPalace.EditModeTests
         [Test]
         public void AGearCardIsPricedByItsTier()
         {
-            var shelf = ShopStock.RollGear(Pool(30, tier: 2), 8, 10, Stream(5));
+            var shelf = ShopStock.RollGear(Pool(30, tier: 2), 0, 10, Stream(5));
 
             foreach (var entry in shelf)
             {
                 // Pinned against ShopPricingTests' own literal (GearBase/
                 // GearPerTier 21/5), not against a recomputed formula: a
-                // tier-2 piece with no affix is 31 gold. The candidate pool
-                // is all tier 2, so the tier-boosted TARGET this rolls
-                // against cannot move which tier actually prices here.
+                // tier-2 piece with no affix is 31 gold at step 0. The
+                // candidate pool is all tier 2, so the tier-boosted TARGET
+                // this rolls against cannot move which tier actually prices
+                // here.
                 Assert.AreEqual(31, entry.price);
                 Assert.AreEqual(2, entry.tier, "the card carries the tier of the copy it sells");
                 Assert.IsEmpty(entry.modifiers);
@@ -232,9 +233,28 @@ namespace PrincesPalace.EditModeTests
         [Test]
         public void ARelicCardIsPricedByItsRarity()
         {
-            var shelf = ShopStock.RollRelics(Relics(6, RelicRarity.Rare), Stream(9));
+            var shelf = ShopStock.RollRelics(Relics(6, RelicRarity.Rare), 0, Stream(9));
 
             Assert.IsTrue(shelf.All(e => e.price == 190));
+        }
+
+        // Every price on a shelf is its step-0 amount through ScalePrice at
+        // the step the shelf is rolled at (1.075 a step, floored). Literals
+        // hand-derived at step 8, where the multiplier is 1.7835: a Rare
+        // relic 190 -> 338, a tier-4 book 145 -> 258, a tier-1 gear card
+        // 26 -> 46.
+        [Test]
+        public void EveryShelfPriceIsScaledByTheStepItWasRolledAt()
+        {
+            var relics = ShopStock.RollRelics(Relics(6, RelicRarity.Rare), 8, Stream(9));
+            Assert.IsTrue(relics.All(e => e.price == 338));
+
+            var books = ShopStock.RollBooks(
+                new List<ShopStock.BookCandidate> { new ShopStock.BookCandidate("cinderfault", 4) }, 8, Stream(13));
+            Assert.AreEqual(258, books.Single(e => !e.noOffer).price);
+
+            var gear = ShopStock.RollGear(Pool(30, tier: 1), 8, 10, Stream(5));
+            Assert.IsTrue(gear.All(e => e.price == 46), string.Join(",", gear.Select(e => e.price)));
         }
 
         // Same position, same shelf, forever -- otherwise quitting inside a
@@ -299,7 +319,7 @@ namespace PrincesPalace.EditModeTests
 
             for (ulong seed = 1; seed <= 50; seed++)
             {
-                var shelf = ShopStock.RollRelics(RelicPool.Available(all, new HashSet<string>()), Stream(seed));
+                var shelf = ShopStock.RollRelics(RelicPool.Available(all, new HashSet<string>()), 0, Stream(seed));
 
                 Assert.IsFalse(shelf.Any(e => e.contentId == "kinship"), $"seed {seed}");
                 Assert.AreEqual(1, shelf.Count(e => !e.noOffer), $"seed {seed}");

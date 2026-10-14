@@ -297,8 +297,8 @@ namespace PrincesPalace.Domain.Rewards
         // higher on that same table than a fight reward would.
         public const int GearTierBoost = 1;
 
-        public static int PriceOf(ItemOffer offer) =>
-            ShopPricing.GearPrice(offer.Tier, offer.Modifiers.Count);
+        public static int PriceOf(ItemOffer offer, int step) =>
+            ShopPricing.GearPrice(offer.Tier, offer.Modifiers.Count, step);
 
         // ---- the gear shelf --------------------------------------------------
 
@@ -326,7 +326,7 @@ namespace PrincesPalace.Domain.Rewards
             for (int i = 0; i < chosen.Count; i++)
             {
                 var offer = chosen[i];
-                entries.Add(ShopStockEntry.Gear(i, offer.ItemId, offer.Tier, offer.Modifiers, PriceOf(offer)));
+                entries.Add(ShopStockEntry.Gear(i, offer.ItemId, offer.Tier, offer.Modifiers, PriceOf(offer, depthStep)));
             }
 
             return PadTo(entries, GearSection, GearCount, ShopEntryKind.Gear);
@@ -342,7 +342,7 @@ namespace PrincesPalace.Domain.Rewards
         // here either, and it returns fewer than asked when the pool is
         // smaller. Those slots become NO OFFER rather than shrinking the row.
         public static List<ShopStockEntry> RollRelics(
-            IReadOnlyList<RelicOption> available, Func<int, int> nextIndex)
+            IReadOnlyList<RelicOption> available, int step, Func<int, int> nextIndex)
         {
             var entries = new List<ShopStockEntry>();
             if (available == null || nextIndex == null)
@@ -353,7 +353,7 @@ namespace PrincesPalace.Domain.Rewards
             var drawn = RelicPool.DraftWeighted(available, nextIndex, RelicCount);
             for (int i = 0; i < drawn.Count && i < RelicCount; i++)
             {
-                entries.Add(ShopStockEntry.Relic(i, drawn[i].Id, ShopPricing.RelicPrice(drawn[i].Rarity)));
+                entries.Add(ShopStockEntry.Relic(i, drawn[i].Id, ShopPricing.RelicPrice(drawn[i].Rarity, step)));
             }
 
             return PadTo(entries, RelicSection, RelicCount, ShopEntryKind.Relic);
@@ -389,7 +389,7 @@ namespace PrincesPalace.Domain.Rewards
         // without touching the stream, so there is no phantom consumption
         // to preserve and this draw's numbers are the first that stream has
         // ever produced.
-        public static List<ShopStockEntry> RollBooks(IReadOnlyList<BookCandidate> available, Func<int, int> nextIndex)
+        public static List<ShopStockEntry> RollBooks(IReadOnlyList<BookCandidate> available, int step, Func<int, int> nextIndex)
         {
             var entries = new List<ShopStockEntry>();
             if (available == null || available.Count == 0 || nextIndex == null)
@@ -409,7 +409,7 @@ namespace PrincesPalace.Domain.Rewards
                 var picked = remaining[roll];
                 remaining.RemoveAt(roll);
 
-                entries.Add(ShopStockEntry.Book(i, picked.SkillId, ShopPricing.BookPrice(picked.BookTier)));
+                entries.Add(ShopStockEntry.Book(i, picked.SkillId, ShopPricing.BookPrice(picked.BookTier, step)));
             }
 
             return PadTo(entries, BookSection, BookCount, ShopEntryKind.Book);
@@ -431,9 +431,9 @@ namespace PrincesPalace.Domain.Rewards
                 case GearSection:
                     return RollGear(gearCandidates, depthStep, maxTier, nextIndex);
                 case BookSection:
-                    return RollBooks(availableBooks, nextIndex);
+                    return RollBooks(availableBooks, depthStep, nextIndex);
                 case RelicSection:
-                    return RollRelics(availableRelics, nextIndex);
+                    return RollRelics(availableRelics, depthStep, nextIndex);
                 default:
                     return new List<ShopStockEntry>();
             }

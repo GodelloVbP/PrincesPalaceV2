@@ -179,7 +179,7 @@ namespace PrincesPalace
             var fakeRng = RngStreams.Open(run.runSeed, RngStreams.ShelfFakes, step, node, shelfKey);
 
             var entries = MerchantShelf.Build(
-                gear, ConsumableCandidates(), recipe.ConsumableCount,
+                gear, ConsumableCandidates(step), recipe.ConsumableCount,
                 recipe.PriceFactorPercent, recipe.FakeShare,
                 card => MerchantShelf.LotFor(eventId, shelfId, step, node, card),
                 bound => consumableRng.NextInt(0, bound),
@@ -207,14 +207,15 @@ namespace PrincesPalace
         private static int ShelfKey(string eventId, string shelfId) =>
             RngStreams.KeyOf((eventId ?? "") + "/" + (shelfId ?? ""));
 
-        // Every consumable in the catalogue, in authored order, at the room
-        // shop's price for it (its authored cost, BuyPriceOf's rule). The room
+        // Every consumable in the catalogue, in authored order, at the price
+        // it is charged at `step` (its authored cost through ScalePrice, like
+        // every other price). The room
         // shop's gear pool (ContentDatabase.Offerable) is generated gear only,
         // which is why a merchant's consumables need a pool of their own.
-        private static List<MerchantShelf.ConsumableCandidate> ConsumableCandidates() =>
+        private static List<MerchantShelf.ConsumableCandidate> ConsumableCandidates(int step) =>
             ContentDatabase.Consumables
                 .Where(i => i != null && !string.IsNullOrEmpty(i.id))
-                .Select(i => new MerchantShelf.ConsumableCandidate(i.id, i.cost))
+                .Select(i => new MerchantShelf.ConsumableCandidate(i.id, ShopPricing.ScalePrice(i.cost, step)))
                 .ToList();
     }
 }
