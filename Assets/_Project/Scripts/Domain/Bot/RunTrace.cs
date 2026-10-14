@@ -50,6 +50,10 @@ namespace PrincesPalace.Domain.Bot
         public int DamageTaken;
         public List<TurnTrace> TurnTraces = new List<TurnTrace>();
         public bool Won;
+
+        // Heart anchors the boss fight opened with (fielded or queued); -1 for
+        // every other fight. Feeds bossByAnchors in summary.json.
+        public int HeartAnchors = -1;
         public int PayoutGold;
         public int PayoutExp;
 

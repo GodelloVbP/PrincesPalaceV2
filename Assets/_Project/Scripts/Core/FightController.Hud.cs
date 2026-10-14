@@ -2575,7 +2575,7 @@ namespace PrincesPalace
 
             // THE DARKENED ENDING HAS NOTHING LEFT TO EXPLAIN: whoever stood is
             // fading into it.
-            if (_darknessEnding)
+            if (_darknessEnding || _leaderEnding)
             {
                 statusBox.SetShown(false);
                 return;

@@ -332,11 +332,15 @@ namespace PrincesPalace.Domain.Combat.Session
             if (enemy != null) _anchors.Add(new KeyValuePair<CombatantState, int>(enemy, nodeId));
         }
 
+        // How many map anchors were marked: on the field or queued at the start.
+        public int AnchorCount => _anchors.Count;
+
         // The anchors that died in this fight, in the order they were marked.
         // Those still standing or queued when the leader fell are not here:
-        // they left with it and pay nothing.
+        // they died with it (DismissedEnemies) and pay nothing.
         public IReadOnlyList<int> FallenAnchorNodeIds =>
-            _anchors.Where(pair => !pair.Key.IsAlive).Select(pair => pair.Value).ToList();
+            _anchors.Where(pair => !pair.Key.IsAlive && !_encounter.DismissedEnemies.Contains(pair.Key))
+                .Select(pair => pair.Value).ToList();
 
         // The session's one turn advance: the encounter seats any queued
         // reinforcement into a fallen slot as it advances, and the log says

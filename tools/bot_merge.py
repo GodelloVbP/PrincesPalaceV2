@@ -1004,6 +1004,35 @@ def path_choice(runs):
     return {"overall": tally(rows), "byArchetype": by_archetype}
 
 
+ANCHOR_BUCKETS = (("0", 0, 0), ("1", 1, 1), ("2", 2, 2), ("3+", 3, 10 ** 6))
+
+
+def boss_by_anchors(runs):
+    """Boss-fight win rate by heart anchors the fight opened with (P5 gate).
+
+    One row per boss fight (fights[].heartAnchors >= 0). The anchors are the
+    ones on the field or queued at the start, not the ones left alive at the
+    end. win rate is None for an empty bucket.
+    """
+
+    def tally(fights):
+        out = {}
+        for name, low, high in ANCHOR_BUCKETS:
+            rows = [f for f in fights if low <= f["heartAnchors"] <= high]
+            won = sum(1 for f in rows if f.get("won"))
+            out[name] = {"fights": len(rows), "won": won,
+                         "winRate": None if not rows else num(share(won, len(rows)))}
+        return out
+
+    def boss_fights(selected):
+        return [f for run in selected for f in run.get("fights", [])
+                if f.get("roomType") == "Boss" and f.get("heartAnchors", -1) >= 0]
+
+    by_archetype = {a: tally(boss_fights([r for r in runs if r["archetype"] == a]))
+                    for a in sorted({r["archetype"] for r in runs})}
+    return {"overall": tally(boss_fights(runs)), "byArchetype": by_archetype}
+
+
 # ------------------------------------------------------------------ merge
 
 
@@ -1078,6 +1107,7 @@ def merge(runs, headers, contents):
         "decisionPressure": decision_pressure(runs, archetypes),
         "shopVsNoShop": shop_vs_no_shop(all_runs, cap),
         "pathChoice": path_choice(runs),
+        "bossByAnchors": boss_by_anchors(runs),
         "coverage": coverage(runs, merge_content(contents)),
         "archetypeGap": gap,
         "bugs": bugs,
@@ -1142,6 +1172,16 @@ def plain_text(summary):
                 cells.append("{}: P {}/{} S3 {}/{}".format(
                     name, band["pocketTaken"], band["pocketOffered"],
                     band["strength3Taken"], band["strength3Offered"]))
+            lines.append("  {:<18}{}".format(label, "   ".join(cells)))
+
+    boss = summary.get("bossByAnchors")
+    if boss:
+        lines.append("")
+        lines.append("boss-fight win rate by heart anchors at the start (won/fights)")
+        groups = [("all", boss["overall"])] + sorted(boss["byArchetype"].items())
+        for label, buckets in groups:
+            cells = ["{}: {}/{}".format(name, buckets[name]["won"], buckets[name]["fights"])
+                     for name, _, _ in ANCHOR_BUCKETS]
             lines.append("  {:<18}{}".format(label, "   ".join(cells)))
 
     by_name = {}

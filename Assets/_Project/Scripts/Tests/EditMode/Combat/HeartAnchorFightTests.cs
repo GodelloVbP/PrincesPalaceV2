@@ -181,7 +181,10 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(heart.Session.IsOver);
             Assert.IsTrue(heart.Session.PlayerWon);
             Assert.AreEqual(FightEndReason.LeaderFell, heart.Session.EndReason);
-            Assert.AreEqual(1, heart.Encounter.Reinforcements.Count, "the last anchor never came on");
+            Assert.AreEqual(0, heart.Encounter.Reinforcements.Count, "the queue left with the leader");
+            CollectionAssert.AreEqual(new[] { heart.Anchors[2], heart.Anchors[1] },
+                heart.Encounter.DismissedEnemies.ToList(), "the two standing anchors died with the boss");
+            Assert.AreEqual(0, heart.Encounter.LivingEnemies.Count());
 
             // Paid: the boss (100 exp, 50 gold) and one elite anchor (20 x 1.56
             // = 31.2 -> 31 exp; 10 x 1.56 = 15.6 -> 16 gold), at depth 0. The

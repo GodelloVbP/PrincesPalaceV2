@@ -89,6 +89,8 @@ namespace PrincesPalace
 
             _darknessEnded = false;
             _darknessEnding = false;
+            _leaderEnded = false;
+            _leaderEnding = false;
             if (roundDarkness != null)
             {
                 SetDarknessAlpha(_presentation.HasDarkness ? _presentation.DarknessAlphaFor(1) : 0f);
@@ -299,6 +301,53 @@ namespace PrincesPalace
             _darknessEnding = false;
             OnPlaybackFinished();
         }
+
+        // THE LEADER'S FALL: whoever stood beside it dies with it, and the
+        // stage shows that -- each survivor takes the ordinary death fade, and
+        // the Reckoning waits until the last body is gone. Queued anchors never
+        // stood on the stage and have nothing to play. Returns true when it
+        // took over; the caller runs again once it is done.
+        private bool BeginLeaderFallEnding()
+        {
+            if (_leaderEnded || _session == null || _session.EndReason != FightEndReason.LeaderFell) return false;
+
+            _leaderEnded = true;
+            _leaderEnding = true;
+            foreach (var enemy in _session.Encounter.DismissedEnemies)
+            {
+                var fade = DeathFadeFor(enemy);
+                if (fade == null) continue;
+
+                var corpse = enemy;
+                fade.Finished = () => OnCorpseFadeFinished(corpse);
+                fade.PlayIfNotAlready();
+            }
+
+            for (int slot = 0; slot < (enemyStatusStrips?.Length ?? 0); slot++)
+            {
+                PaintEnemyStatusRow(slot, null, EmptyStatusRows);
+            }
+
+            RefreshStatusBox();
+            StartCoroutine(LeaderFallRoutine());
+            return true;
+        }
+
+        private System.Collections.IEnumerator LeaderFallRoutine()
+        {
+            // One frame so a fade started this frame reports Fading.
+            yield return null;
+            while (AnyEnemyFading()) yield return null;
+
+            _leaderEnding = false;
+            OnPlaybackFinished();
+        }
+
+        private bool _leaderEnded;
+
+        // Busy with nothing playing, like _darknessEnding: the stranded-turn
+        // rescue must not "recover" it into the Reckoning.
+        private bool _leaderEnding;
 
         private bool AnyEnemyFading()
         {

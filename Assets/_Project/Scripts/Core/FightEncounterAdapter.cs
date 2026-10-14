@@ -533,7 +533,7 @@ namespace PrincesPalace
             var encounter = new CombatEncounter(party, enemies);
 
             // THE LEADER RULE: in a boss room the boss's death ends the fight,
-            // and whoever still stands or waits leaves with it.
+            // and whoever still stands or waits dies with it.
             if (leader != null) encounter.DeclareLeader(leader);
 
             // A CLOSURE OVER THIS BUILD'S OWN depthStep/isElite, so a rat

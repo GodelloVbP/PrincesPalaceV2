@@ -174,6 +174,8 @@ FightTrace
   DamageTaken   int  -- total across all enemy actions this fight
   TurnTraces    TurnTrace[]
   Won           bool
+  HeartAnchors  int  -- heart anchors a boss fight opened with (fielded plus
+                        queued); -1 on every other fight
   PayoutGold    int  -- 0 when Won is false
   PayoutExp     int  -- 0 when Won is false
   EventId       string -- the event's id for an event fight
@@ -607,6 +609,11 @@ mismatch on any one independent run would, keyed by that life's own
                  "50to79": {}, "ge80": {} },
     "byArchetype": { "GreedyAggressive": { "lt50": {}, "50to79": {}, "ge80": {} } }
   },
+  "bossByAnchors": {         // docs/PLAN_RUN_MAP.md P5 gate
+    "overall": { "0": { "fights": 4, "won": 3, "winRate": 0.75 },
+                 "1": {}, "2": {}, "3+": {} },
+    "byArchetype": { "GreedyAggressive": { "0": {}, "1": {}, "2": {}, "3+": {} } }
+  },
   "shopVsNoShop": {
     "pairs": 3000,
     "pairsWithAShopVisit": 1840,
@@ -904,6 +911,12 @@ choice (`lt50`, `50to79`, `ge80`), overall and per archetype. Counted from
 beside a spine room; `strength3TakeRate` likewise for a strength-3 non-anchor
 fight beside any other room. `null` where nothing was offered. RandomLegal ignores the map,
 so its rates are flat across bands by design.
+
+**`bossByAnchors`** — boss-fight win rate bucketed by the heart anchors the
+fight opened with (`0`, `1`, `2`, `3+`), overall and per archetype, from
+`fights[].heartAnchors` (-1 on every non-boss fight). Anchors are counted at the
+start (fielded plus queued), not left alive: the leader rule kills the rest
+with the boss. `winRate` is `null` for an empty bucket.
 
 **`shopVsNoShop`** — the matched-seed comparison (§7.1 point 1), or `null`.
 

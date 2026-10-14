@@ -104,6 +104,10 @@ namespace PrincesPalace.Domain.Combat.Session
 
             if (_encounter.PlayerWon)
             {
+                // The leader's followers die with it before pay is counted;
+                // the dismissed are not kills and are filtered out below.
+                _encounter.DismissFollowers();
+
                 // PLUS THE BOUNTY, which nothing collected until now.
                 //
                 // The Bounty Hunter Contract paid into BountyEarned on every
@@ -133,7 +137,8 @@ namespace PrincesPalace.Domain.Combat.Session
                 // fallen anchors pay as elites beside a boss that is not one.
                 // Two sums, each rounded once; a room whose kits all agree
                 // puts everything in one of them, as before.
-                var fallen = _enemyKits.Where(pair => !pair.Key.IsAlive).Select(pair => pair.Value).ToList();
+                var fallen = _enemyKits.Where(pair => !pair.Key.IsAlive && !_encounter.DismissedEnemies.Contains(pair.Key))
+                    .Select(pair => pair.Value).ToList();
                 var plain = VictoryRewards.For(fallen.Where(kit => !kit.IsElite), false, DepthStep);
                 var elite = VictoryRewards.For(fallen.Where(kit => kit.IsElite), true, DepthStep);
                 Payout = new VictoryRewards.Payout(plain.Experience + elite.Experience,

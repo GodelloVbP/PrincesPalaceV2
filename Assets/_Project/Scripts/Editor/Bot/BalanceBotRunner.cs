@@ -788,6 +788,7 @@ namespace PrincesPalace.Editor.Bot
                 // Fresh band toward 0 at exactly the depths where a shop
                 // decision matters most.
                 sb.Append(",\"won\":").Append(f.Won ? "true" : "false");
+                sb.Append(",\"heartAnchors\":").Append(f.HeartAnchors);
                 sb.Append(",\"payoutGold\":").Append(f.PayoutGold);
                 sb.Append(",\"partyHpOut\":").Append(f.PartyHpOut);
 

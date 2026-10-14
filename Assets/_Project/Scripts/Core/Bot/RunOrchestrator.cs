@@ -628,7 +628,7 @@ namespace PrincesPalace
         // ANCHORS THAT DIED AT THE HEART (PLAN_RUN_MAP.md 6; PLAN_ITEMS.md 5.4):
         // each one's chip joins the boss settlement in map order, before the
         // boss's pages merge, and it is slain. Their exp and gold are already
-        // in the session's payout (per-enemy elite pay). Those that left with
+        // in the session's payout (per-enemy elite pay). Those that died with
         // the boss are not in FallenAnchorNodeIds and pay nothing.
         private static List<string> PayHeartAnchors(FightSession session, RunSnapshot run)
         {

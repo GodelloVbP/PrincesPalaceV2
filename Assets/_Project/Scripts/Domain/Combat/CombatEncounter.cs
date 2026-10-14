@@ -399,7 +399,7 @@ namespace PrincesPalace.Domain.Combat
 
         // Fills every fallen enemy's index, front to rear, from the queue.
         // Returns how many were seated. Nothing moves once the fight is over:
-        // the queue leaves with the leader (LeaderFell).
+        // the queue is emptied with the leader (LeaderFell, DismissFollowers).
         public int ReseatFallen()
         {
             int seated = 0;
@@ -447,6 +447,37 @@ namespace PrincesPalace.Domain.Combat
         // dead, and nothing has to remember to set it.
         public bool LeaderFell => Leader != null && !Leader.IsAlive;
 
+        // THE FOLLOWERS DIE WITH THE LEADER, in every boss fight: whoever still
+        // stood (summons, anchors) is brought to zero health so the stage can
+        // play their ordinary death, and the queue is emptied unseen. They
+        // are listed here, not credited: nobody killed them, so neither the
+        // payout nor the anchor settlement counts them. Idempotent; refused
+        // while the leader stands.
+        public int DismissFollowers()
+        {
+            if (!LeaderFell) return 0;
+
+            int dismissed = 0;
+            foreach (var enemy in _enemies.Where(e => e.IsAlive).ToList())
+            {
+                enemy.CurrentHealth = 0;
+                _dismissed.Add(enemy);
+                dismissed++;
+            }
+
+            dismissed += _reinforcements.Count;
+            _reinforcements.Clear();
+            if (dismissed > 0) _followersLeftWithLeader = true;
+            return dismissed;
+        }
+
+        // Who died by the leader's fall, in field order. Queued anchors are
+        // not here: they never stood on the stage.
+        public IReadOnlyList<CombatantState> DismissedEnemies => _dismissed;
+
+        private readonly List<CombatantState> _dismissed = new List<CombatantState>();
+        private bool _followersLeftWithLeader;
+
         // Whether any enemy is still standing or still waiting to come on.
         private bool AnyEnemyLeft => LivingEnemies.Any() || _reinforcements.Count > 0;
 
@@ -487,7 +518,7 @@ namespace PrincesPalace.Domain.Combat
 
         // The leader fell with enemies still standing or queued: they leave
         // with it, and the ending says so rather than "every enemy is down".
-        public bool EndedByLeaderFalling => PlayerWon && !EndedBySurvival && LeaderFell && AnyEnemyLeft;
+        public bool EndedByLeaderFalling => PlayerWon && !EndedBySurvival && LeaderFell && (AnyEnemyLeft || _followersLeftWithLeader);
 
         // The next `count` turns, starting with whoever is acting right now,
         // for the initiative tracker to display.

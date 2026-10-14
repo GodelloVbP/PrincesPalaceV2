@@ -149,6 +149,11 @@ def render_text_summary(summary):
             fmt_num(versus["medianDepth"]["Never"]),
             versus["pairs"]))
 
+    boss = summary.get("bossByAnchors")
+    if boss:
+        lines.append("Boss win rate by heart anchors: " + ", ".join(
+            "{}: {}/{}".format(name, b["won"], b["fights"]) for name, b in boss["overall"].items()))
+
     bug_count = len(summary.get("bugs", []))
     lines.append("Bugs: {}".format(bug_count))
 
@@ -525,6 +530,24 @@ def render_shop_vs_no_shop(summary):
     return "".join(out)
 
 
+def render_boss_by_anchors(summary):
+    """Boss-fight win rate by heart anchors at the start (P5 gate)."""
+    boss = summary.get("bossByAnchors")
+    if not boss:
+        return ""
+
+    out = ["<h2>boss fights by heart anchors</h2>",
+           '<table><thead><tr><th>archetype</th><th>anchors</th><th>fights</th>'
+           "<th>won</th><th>win rate</th></tr></thead><tbody>"]
+    groups = [("all", boss["overall"])] + sorted(boss["byArchetype"].items())
+    for label, buckets in groups:
+        for name, b in buckets.items():
+            out.append("<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>".format(
+                esc(label), esc(name), esc(b["fights"]), esc(b["won"]), fmt_num(b["winRate"])))
+    out.append("</tbody></table>")
+    return "".join(out)
+
+
 def render_death_causes(cell):
     rows = cell.get("deathCauses", [])
     if not rows:
@@ -706,6 +729,7 @@ def render_html(summary, previous, batch_dir, previous_dir):
     parts = []
     parts.append("<title>Balance bot report -- {}</title>".format(esc(batch.get("timestamp", ""))))
     parts.append("<style>{}</style>".format(CSS))
+    parts.append(render_boss_by_anchors(summary))
     parts.append("<h1>Balance bot report</h1>")
     parts.append(
         '<div class="subtitle">{} &middot; commit {} &middot; {} runs/cell &middot; seeds from {} '

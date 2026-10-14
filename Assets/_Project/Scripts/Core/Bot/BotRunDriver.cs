@@ -1574,6 +1574,7 @@ namespace PrincesPalace
                 RoomType = node.Type.ToString(),
                 PartyHpIn = session.Encounter.PlayerParty.Sum(c => c.CurrentHealth),
             };
+            if (session.IsBossFight) fightTrace.HeartAnchors = session.AnchorCount;
             fightTrace.EnemyIds.AddRange(session.Encounter.Enemies
                 .Select(e => session.SourceFor(e)?.Source.Id ?? "")
                 .Where(id => !string.IsNullOrEmpty(id)));

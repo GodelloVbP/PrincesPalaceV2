@@ -1405,7 +1405,7 @@ namespace PrincesPalace
 
         private void RescueAStrandedTurn()
         {
-            if (!_isBusy || _session == null || _darknessEnding) return;
+            if (!_isBusy || _session == null || _darknessEnding || _leaderEnding) return;
             if (beatPlayer == null || beatPlayer.IsPlaying) return;
 
             if (!_reportedStrandedTurn)
@@ -1479,6 +1479,7 @@ namespace PrincesPalace
         {
             // A darkened fight closes its darkness first and re-enters here.
             if (BeginDarknessEnding()) return;
+            if (BeginLeaderFallEnding()) return;
 
             _isBusy = false;
 

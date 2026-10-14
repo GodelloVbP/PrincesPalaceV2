@@ -25,7 +25,7 @@ namespace PrincesPalace.Domain.Combat.Session
         Fell,
 
         // The leader (a boss with anchors) fell with enemies still standing or
-        // queued: a win, and they leave with it (PLAN_RUN_MAP.md 6).
+        // queued: a win, and they die with it (PLAN_RUN_MAP.md 6).
         LeaderFell,
     }
 

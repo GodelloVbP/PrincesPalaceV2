@@ -342,6 +342,56 @@ namespace PrincesPalace.PlayModeTests
                 "the leg did not advance, so the descent has nowhere left to go");
         }
 
+        // THE LEADER RULE, SEEN: the boss falls with followers standing, the
+        // followers die with it (zero health, a played death fade), the
+        // Reckoning waits for the last body, and the fight routes as a
+        // Victory.
+        [UnityTest]
+        public IEnumerator ABossFightEndsWithItsStandingFollowersDead_AndRoutesAsVictory()
+        {
+            RunManager.StartRun(Seed);
+            LevelTheSquadTo(90);
+
+            var bossNode = RunManager.Map.Nodes.FirstOrDefault(n => n.Type == RoomType.Boss);
+            Assert.IsNotNull(bossNode, "leg 1 has no boss");
+            RunManager.Run.currentNodeId = bossNode.Id;
+
+            FightController fight = null;
+            yield return OpenTheRoom(f => fight = f);
+            TolerateTheStalledTurnWatchdog();
+
+            var session = fight.Session;
+            var encounter = session.Encounter;
+            Assert.IsNotNull(encounter.Leader, "fixture: a boss room declares its leader");
+            var follower = encounter.Enemies.FirstOrDefault(e => e != encounter.Leader && e.IsAlive);
+            Assert.IsNotNull(follower, "fixture: the boss room fielded nobody beside the boss");
+
+            bool settled = false;
+            fight.FightEnded += _ => settled = true;
+
+            // The boss falls, then the party's swing settles the fight.
+            encounter.Leader.CurrentHealth = 0;
+            Assert.IsTrue(session.ExecuteAttack(follower), "fixture: the swing was refused");
+            typeof(FightController).GetMethod("AfterResolution",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                .Invoke(fight, null);
+
+            float deadline = Time.realtimeSinceStartup + 60f;
+            while (!settled && Time.realtimeSinceStartup < deadline) yield return null;
+            Assert.IsTrue(settled, "FightEnded never fired");
+
+            Assert.AreEqual(Domain.Combat.Session.FightEndReason.LeaderFell, session.EndReason);
+            Assert.AreEqual(Domain.Rewards.FightEnding.Victory,
+                Domain.Rewards.FightEndRouting.RowFor(session.EndReason).Ending);
+            Assert.AreEqual(0, encounter.LivingEnemies.Count(), "a follower survived the leader");
+            Assert.AreEqual(0, follower.CurrentHealth);
+
+            var fades = fight.GetComponentsInChildren<StageDeathFade>(includeInactive: true);
+            Assert.IsFalse(fades.Any(f => f.Fading), "the Reckoning opened with a body still fading");
+            Assert.GreaterOrEqual(fades.Count(f => f.Faded), encounter.DismissedEnemies.Count + 1,
+                "every dismissed follower and the boss should have played the death fade");
+        }
+
         // ---- the harness ------------------------------------------------------------
 
         // A PRE-EXISTING PRODUCTION FAULT THESE TESTS TRIP, NOT ONE THEY CAUSE.
