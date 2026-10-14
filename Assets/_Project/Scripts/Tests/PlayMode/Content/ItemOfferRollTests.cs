@@ -120,25 +120,16 @@ namespace PrincesPalace.PlayModeTests
             }
         }
 
+        // A boss centres one tier above the depth (boss_gear tierOffset 1);
+        // the ladder only climbs, so nothing pays below that centre.
         [Test]
-        public void ABossNeverOffersTheBottomOfTheLadder()
+        public void ABossNeverOffersBelowItsCentre()
         {
-            // RarityTable's one hard guarantee rather than a distribution: a
-            // boss handing over grey loot reads as the fight having been
-            // pointless. Asserted through the roll, since that is the path the
-            // game actually takes.
-            int floor = RarityTable.TierFloorFor(EncounterClass.Boss);
-
             for (int depth = 0; depth < 30; depth += 3)
             {
                 foreach (var offer in ItemOfferRoll.Roll(EncounterClass.Boss, depth, 0, First))
                 {
-                    // ItemOfferTable widens its band when the pool is thin, so
-                    // the assertion is on the TIER THE TABLE TARGETED, which is
-                    // what the floor governs.
-                    Assert.GreaterOrEqual(
-                        RarityTable.RollTier(EncounterClass.Boss, depth, ItemOfferRoll.MaxTier, 0, First),
-                        floor, $"at depth {depth}");
+                    Assert.GreaterOrEqual(offer.Tier, depth / 16 + 1, $"at depth {depth}");
                 }
             }
         }
@@ -155,8 +146,7 @@ namespace PrincesPalace.PlayModeTests
         // A floor-3 boss offering tier 1 / +1 items traced back to
         // RunOrchestrator.RollOffers reading session.IsEliteFight only --
         // IsBossFight was never checked, so every boss kill rolled as
-        // EncounterClass.Normal and RarityTable's TierFloorFor(Boss)==3
-        // guarantee never fired. Exercised through the real seam (a
+        // EncounterClass.Normal and the boss row's dials never applied. Exercised through the real seam (a
         // FightSession with IsBossFight true) rather than by calling
         // ItemOfferRoll directly with EncounterClass.Boss, which would pass
         // even with the bug still in place -- this is the test that would
@@ -178,7 +168,8 @@ namespace PrincesPalace.PlayModeTests
         public void RollOffers_RoutesABossKillToTheBossRewardBand()
         {
             var session = BossSession();
-            int floor = RarityTable.TierFloorFor(EncounterClass.Boss);
+            // Depth 23 centres a boss on tier 2 (FloorTier 1, +1).
+            const int floor = 2;
 
             for (int seed = 0; seed < 50; seed++)
             {
@@ -204,14 +195,16 @@ namespace PrincesPalace.PlayModeTests
             var first = OfferIds(12345UL, 23, 5, 0);
             CollectionAssert.AreEqual(first, OfferIds(12345UL, 23, 5, 0),
                 "the same (seed, step, node, pick) must show the same offers");
+            string all = string.Join(",", first) + " / " + string.Join(",", OfferIds(12345UL, 23, 5, 1)) + " / " +
+                         string.Join(",", OfferIds(12345UL, 23, 6, 0));
             CollectionAssert.AreEqual(
-                new[] { "brigandine_gloves@3", "brigandine_boots@3", "silk_gloves@3" }, first);
+                new[] { "brigandine_gloves@3", "brigandine_boots@3", "silk_gloves@3" }, first, all);
             CollectionAssert.AreEqual(
-                new[] { "court_coronet@3", "vellum_hood@3", "regalia_slippers@3" },
-                OfferIds(12345UL, 23, 5, 1));
+                new[] { "court_coronet@2", "vellum_hood@2", "regalia_slippers@2" },
+                OfferIds(12345UL, 23, 5, 1), all);
             CollectionAssert.AreEqual(
-                new[] { "wool_jumper@3", "bulwark_tassets@3", "wool_hood@3" },
-                OfferIds(12345UL, 23, 6, 0));
+                new[] { "wool_jumper@2", "bulwark_tassets@2", "wool_hood@2" },
+                OfferIds(12345UL, 23, 6, 0), all);
         }
 
         // ---- weapon/armour affix-pool split: a staff must never roll a
@@ -223,8 +216,8 @@ namespace PrincesPalace.PlayModeTests
             // The exact shape of the original bug: at depth 23 (floor 3),
             // FloorTier(23) == 1, so an EncounterClass.Normal roll centres
             // on tier 1 with no floor at all -- exactly the "tier 1 / +1"
-            // the report described. Once routed to Boss, TierFloorFor(Boss)
-            // forces every offer to tier 3 or better regardless of roll
+            // the report described. Once routed to Boss, boss_gear's +1
+            // centre puts every offer at tier 2 or better regardless of roll
             // luck, so the Normal-band low end (tier 0-1) must never appear.
             var session = BossSession();
             var rng = new SeededRandom(20260903);

@@ -139,7 +139,14 @@ namespace PrincesPalace.Domain.Relics
         // silently changes the distribution is the kind of thing that gets
         // passed wrong once and never noticed.
         public static List<RelicOption> DraftWeighted(
-            IReadOnlyList<RelicOption> available, System.Func<int, int> nextIndex, int count = OfferCount)
+            IReadOnlyList<RelicOption> available, System.Func<int, int> nextIndex, int count = OfferCount) =>
+            DraftWeighted(available, WeightOf, nextIndex, count);
+
+        // The same draw with the weights handed in: a rewards.json row's
+        // relicWeights (docs/PLAN_ITEMS.md 2.4).
+        public static List<RelicOption> DraftWeighted(
+            IReadOnlyList<RelicOption> available, System.Func<RelicRarity, int> weightOf,
+            System.Func<int, int> nextIndex, int count)
         {
             var offer = new List<RelicOption>();
             if (available == null || available.Count == 0 || nextIndex == null) return offer;
@@ -149,7 +156,7 @@ namespace PrincesPalace.Domain.Relics
 
             for (int i = 0; i < wanted; i++)
             {
-                int total = remaining.Sum(r => WeightOf(r.Rarity));
+                int total = remaining.Sum(r => weightOf(r.Rarity));
                 if (total <= 0) break;
 
                 int roll = nextIndex(total);
@@ -160,7 +167,7 @@ namespace PrincesPalace.Domain.Relics
                 int picked = remaining.Count - 1;
                 for (int j = 0; j < remaining.Count; j++)
                 {
-                    running += WeightOf(remaining[j].Rarity);
+                    running += weightOf(remaining[j].Rarity);
                     if (roll < running) { picked = j; break; }
                 }
 

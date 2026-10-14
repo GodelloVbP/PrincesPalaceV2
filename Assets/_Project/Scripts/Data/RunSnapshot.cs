@@ -221,6 +221,19 @@ namespace PrincesPalace
         // is never read.
         public List<SlotHoningEntry> slotHoning = new List<SlotHoningEntry>();
 
+        // Gear pages in a row with no Legendary card shown, and whether the
+        // last gear page's best card was Common: the two counters the next
+        // gear page's floors read (docs/PLAN_ITEMS.md 1.2 step 7). Written
+        // only by RewardPages.Settle. Additive, no CurrentVersion entry
+        // (plan 2.5).
+        public int legendaryPity;
+        public bool lastPageBestCommon;
+
+        // The settlement's pages, gear then relic, rolled once and held in
+        // memory only (plan 2.5): a run on disk is settled, never resumed.
+        [System.NonSerialized]
+        public List<Domain.Rewards.PendingPage> pendingPages = new List<Domain.Rewards.PendingPage>();
+
         // Whether this descent guarantees a rest on the step before each boss.
         //
         // Nothing grants this today. RunManager.StartRun leaves this at its

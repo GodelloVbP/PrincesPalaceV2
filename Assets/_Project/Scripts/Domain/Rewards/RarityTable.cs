@@ -47,87 +47,27 @@ namespace PrincesPalace.Domain.Rewards
             return depthStep <= 0 ? 0 : depthStep / StepsPerTier;
         }
 
-        // The lowest tier a class may ever pay out, at any depth.
-        //
-        // The BOSS FLOOR OF 3 IS ABSOLUTE: a boss never drops Common, on any
-        // floor, at any depth. It is the one hard guarantee in this file —
-        // everything else is a distribution — because a boss handing over
-        // grey loot reads as the fight having been pointless, and no amount
-        // of "it was statistically unlikely" repairs that when it happens.
-        public static int TierFloorFor(EncounterClass encounter)
-        {
-            switch (encounter)
-            {
-                case EncounterClass.Elite: return 1;
-                case EncounterClass.Boss: return 3;
-                default: return 0;
-            }
-        }
-
-        // Offsets from the depth's expected tier, with weights out of 100.
-        //
-        // Normal is WIDE AND MOSTLY LOW, centred just below the depth: the
-        // majority of fights are the run's texture rather than its rewards,
-        // and a normal fight reliably matching the depth would make elites
-        // and bosses pointless.
-        //
-        // Elite is NARROWER AND BIASED UP, centred on the depth.
-        //
-        // Boss is centred ABOVE the depth and carries a genuine tail — the
-        // +5 at 5% is the "real chance of a big jump" the design asks for,
-        // and it is the only entry in this file that can move a run's power
-        // level in one payout.
-        // The tier this encounter pays out at this depth, clamped into
-        // [class floor, maxTier].
-        //
-        // maxTier is passed rather than assumed so a thin or re-authored
-        // catalogue cannot be asked for a tier that does not exist — the same
-        // reason ItemOfferTable takes it.
-        // Favor's effect on the TIER roll -- deliberately SMALL, so a Favor
-        // stack barely moves how often the tier ladder climbs an extra rung.
-        public const float TierFavorPerPoint = 0.002f;
+        // The tier climb (docs/PLAN_ITEMS.md 1.2 step 5). The source's
+        // tierStep is the per-rung chance at Favor 0; Favor adds
+        // TierFavorPerPoint a point, capped at TierMaxStep. Favor 20 adds
+        // 0.12: a normal card then climbs at least one tier 34% of the time
+        // instead of 22%.
+        public const float TierFavorPerPoint = 0.006f;
         public const float TierMaxStep = 0.45f;
 
-        public static int RollTier(EncounterClass encounter, int depthStep, int maxTier, int favor, Func<int, int> nextIndex)
+        // Centre FloorTier(depthStep) + tierOffset; the ladder only climbs,
+        // up to LootLadder.MaxRungs, and every roll caps at
+        // ItemInstance.TierCap (1.6). No class floor: a boss's edge is its
+        // +1 centre and its wider step, not a guaranteed tier.
+        public static int RollTier(int depthStep, int tierOffset, float tierStep, int favor, Func<int, int> nextIndex)
         {
-            if (maxTier < 0)
-            {
-                return 0;
-            }
-
-            // The depth sets the EXPECTATION and the ladder sets the surprise.
-            //
-            // The old shape rolled an offset in [-3, +1], so the very best a
-            // normal fight could ever do was one tier above depth -- which is
-            // why an early run only ever produced tier 0 and 1 and read as
-            // stale. The ladder only ever climbs, and can climb five, so a
-            // floor-1 fight can still hand over something that changes the run.
-            //
-            // TierFavorPerPoint/TierMaxStep, not LootLadder.Climb's own
-            // (encounter, favor) convenience overload: the tier's OWN small
-            // favor dial.
-            int centre = FloorTier(depthStep);
-            float tierStep = LootLadder.StepChanceFor(encounter, favor,
-                LootLadder.NormalStep, LootLadder.EliteStep, LootLadder.BossStep,
-                TierFavorPerPoint, TierMaxStep);
-            int offset = LootLadder.Climb(tierStep, LootLadder.MaxRungs, nextIndex);
-
-            int floor = TierFloorFor(encounter);
-            if (floor > maxTier)
-            {
-                // A catalogue too short to honour the boss floor gets the best
-                // it has rather than nothing. Degrading gracefully beats
-                // refusing to pay out.
-                return maxTier;
-            }
-
-            int tier = centre + offset;
-            if (tier < floor)
-            {
-                return floor;
-            }
-
-            return tier > maxTier ? maxTier : tier;
+            int centre = FloorTier(depthStep) + (tierOffset < 0 ? 0 : tierOffset);
+            float step = LootLadder.StepChance(tierStep, favor, TierFavorPerPoint, TierMaxStep);
+            return ItemInstance.ClampTier(centre + LootLadder.Climb(step, LootLadder.MaxRungs, nextIndex));
         }
+
+        public static int RollTier(ResolvedRewardSource source, int depthStep, int favor, Func<int, int> nextIndex) =>
+            source == null ? ItemInstance.ClampTier(FloorTier(depthStep))
+                : RollTier(depthStep, source.TierOffset, source.TierStep, favor, nextIndex);
     }
 }

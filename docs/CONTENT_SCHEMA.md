@@ -214,6 +214,25 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `characterId` | string | `""` | The character this track belongs to; matches a characters.json id. |  |
 | `levels` | RawTrackLevel[] (below) | `[]` | One entry per level from 2 to RewardTrack.MaxLevel, in any order; see RawTrackLevel. |  |
 
+## rewards.json -- `RawRewardSourceEntry`
+
+| Field | Type | Default | Description | Values |
+|---|---|---|---|---|
+| `id` | string | (none -- required) | Unique id. Named <class>_<kind>: normal_gear, anchor_gear, boss_gear, anchor_relic, boss_relic (RewardSources.IdFor). |  |
+| `kind` | string | (none -- required) | Which page this source fills. | Gear, Relic |
+| `extraCards` | int | `2` | Cards shown beyond one per chip: a page of k chips shows k + extraCards cards and grants k choices. |  |
+| `tierOffset` | int | `0` | Gear: added to RarityTable.FloorTier(step) to centre the tier roll (boss +1). |  |
+| `tierStep` | float | `0` | Gear: per-rung chance of the tier climb at Favor 0, 0-1 (normal 0.22, anchor 0.30, boss 0.38). |  |
+| `ladderStep` | float | `0` | Gear: per-rung chance of the quality climb at Favor 0, 0-1 (normal 0.35, anchor 0.42, boss 0.45). |  |
+| `qualityFloor` | string | `"Common"` | Gear: the quality every card starts at; the climb has the rungs left above it. | Common, Uncommon, Rare, Legendary |
+| `weaponGuarantee` | bool | `false` | Gear: one card on the page is a weapon card (step 2). |  |
+| `weaponFloor` | string | `"Common"` | Gear: the least quality the guaranteed weapon card shows (boss Rare). Common means no floor. | Common, Uncommon, Rare, Legendary |
+| `relicWeights` | int[] | `[]` | Relic: draw weight per RelicRarity, six ints in enum order, Common first. |  |
+| `relicRarityMin` | string | `"Common"` | Relic: the lowest rarity this page may show. | Common, Uncommon, Rare, UltraRare, Mythic, Godlike |
+| `unusedPays` | string | (none -- required) | What a choice left unused on leaving the page pays. | Hone, CheapestSale |
+| `stream` | string | `"Reward"` | The RngStreams constant the page rolls on, by name (Reward). |  |
+| `sortOrder` | int | `0` | Display and load order. |  |
+
 ## skills.json -- `RawSkillEntry`
 
 | Field | Type | Default | Description | Values |

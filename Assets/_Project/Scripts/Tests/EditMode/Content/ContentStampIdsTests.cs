@@ -329,6 +329,10 @@ namespace PrincesPalace.Domain.Tests
                 ["LevelCurve"] = Resolve<RawLevelCurveEntry, ResolvedLevelCost>(
                     "level_curve.json", ContentDataFiles.ParseFile<RawLevelCurveFile>(ContentDataFiles.DataPath("level_curve.json")).levels,
                     LevelCurveEntryResolver.TryResolveAll, row => $"level_{row.Level:D2}"),
+
+                ["RewardSources"] = Resolve<RawRewardSourceEntry, ResolvedRewardSource>(
+                    "rewards.json", ContentDataFiles.ParseFile<RawRewardSourceFile>(ContentDataFiles.DataPath("rewards.json")).sources,
+                    RewardSourceEntryResolver.TryResolveAll, row => row.Id),
             };
 
         [Test]

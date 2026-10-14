@@ -45,9 +45,9 @@ namespace PrincesPalace.PlayModeTests
         }
 
         // RunOrchestrator.RollOffers' OWN read of a boss session: proven
-        // through the effect only a Boss classification produces
-        // (RarityTable.TierFloorFor(Boss)'s guarantee), since RollOffers
-        // does not expose the EncounterClass it resolved directly.
+        // through the effect only a Boss classification produces (boss_gear
+        // centres one tier above the depth), since RollOffers does not
+        // expose the EncounterClass it resolved directly.
         [Test]
         public void RollOffersReadsABossSessionAsBoss()
         {
@@ -56,11 +56,13 @@ namespace PrincesPalace.PlayModeTests
             var session = new FightSession(new CombatEncounter(new[] { hero }, new[] { foe }),
                 null, null, new SeededRandom(1), isBossFight: true);
 
-            var offers = RunOrchestrator.RollOffers(session, bound => 0);
+            // bound - 1 fails every rung, so the tier is the bare centre:
+            // 1 for a boss at depth 0, 0 for anything else.
+            var offers = RunOrchestrator.RollOffers(session, bound => bound - 1);
 
-            int floor = RarityTable.TierFloorFor(EncounterClass.Boss);
+            const int floor = 1;
             Assert.IsTrue(offers.All(o => o.Tier >= floor),
-                $"a Boss session must roll every offer at or above RarityTable's Boss floor ({floor}) -- " +
+                $"a Boss session at depth 0 must roll every offer at or above the boss centre ({floor}) -- " +
                 "a lower tier here means RollOffers read this session as Elite/Normal, not Boss");
         }
 

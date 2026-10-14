@@ -75,6 +75,13 @@ namespace PrincesPalace.Domain.Rewards
                 default: baseStep = normalStep; break;
             }
 
+            return StepChance(baseStep, favor, favorPerPoint, maxStep);
+        }
+
+        // One base rate plus Favor at a per-point rate, capped: the dial a
+        // rewards.json row feeds (its tierStep or ladderStep).
+        public static float StepChance(float baseStep, int favor, float favorPerPoint, float maxStep)
+        {
             if (favor < 0) favor = 0;
 
             float step = baseStep + favor * favorPerPoint;
@@ -98,7 +105,11 @@ namespace PrincesPalace.Domain.Rewards
         {
             if (nextIndex == null || stepChance <= 0f || maxRungs <= 0) return 0;
 
-            int threshold = (int)(stepChance * Resolution);
+            // ROUNDED, not truncated: 0.22f is 0.2199999988f, and whether
+            // the product is kept in float (.NET) or widened to double
+            // (Unity's Mono) decides between 220 and 219 under truncation, so
+            // the same seed rolled different pages on the two hosts.
+            int threshold = (int)Math.Round((double)stepChance * Resolution);
             if (threshold <= 0) return 0;
             if (threshold > Resolution) threshold = Resolution;
 

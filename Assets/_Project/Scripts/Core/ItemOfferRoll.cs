@@ -4,6 +4,7 @@ using System.Linq;
 using PrincesPalace.Domain.Events;
 using PrincesPalace.Content;
 using PrincesPalace.Domain.Combat;
+using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Rewards;
 
 namespace PrincesPalace
@@ -171,7 +172,12 @@ namespace PrincesPalace
             var candidates = Candidates();
             if (candidates.Count == 0) return offers;
 
-            int targetTier = RarityTable.RollTier(encounter, depthStep, MaxTier, favor, nextIndex);
+            // The class's gear row in rewards.json carries the tier dials;
+            // no row (content not built) offers nothing rather than guessing.
+            var source = ContentDatabase.GetRewardSource(RewardSources.IdFor(encounter, RewardPageKind.Gear));
+            if (source == null) return offers;
+
+            int targetTier = RarityTable.RollTier(source, depthStep, favor, nextIndex);
             return ItemOfferTable.Choose(candidates, targetTier, MaxTier, nextIndex, count);
         }
     }

@@ -1,0 +1,67 @@
+{
+  "_readme": "Reward sources (docs/PLAN_ITEMS.md 1.2, 2.2). One row per settlement page class; fields in docs/CONTENT_SCHEMA.md.",
+  "sources": [
+    {
+      "id": "normal_gear",
+      "kind": "Gear",
+      "extraCards": 2,
+      "tierOffset": 0,
+      "tierStep": 0.22,
+      "ladderStep": 0.35,
+      "qualityFloor": "Common",
+      "weaponGuarantee": false,
+      "weaponFloor": "Common",
+      "unusedPays": "Hone",
+      "stream": "Reward",
+      "sortOrder": 0
+    },
+    {
+      "id": "anchor_gear",
+      "kind": "Gear",
+      "extraCards": 2,
+      "tierOffset": 0,
+      "tierStep": 0.30,
+      "ladderStep": 0.42,
+      "qualityFloor": "Common",
+      "weaponGuarantee": true,
+      "weaponFloor": "Common",
+      "unusedPays": "Hone",
+      "stream": "Reward",
+      "sortOrder": 1
+    },
+    {
+      "id": "boss_gear",
+      "kind": "Gear",
+      "extraCards": 2,
+      "tierOffset": 1,
+      "tierStep": 0.38,
+      "ladderStep": 0.45,
+      "qualityFloor": "Uncommon",
+      "weaponGuarantee": true,
+      "weaponFloor": "Rare",
+      "unusedPays": "Hone",
+      "stream": "Reward",
+      "sortOrder": 2
+    },
+    {
+      "id": "anchor_relic",
+      "kind": "Relic",
+      "extraCards": 2,
+      "relicWeights": [100, 45, 18, 6, 2, 1],
+      "relicRarityMin": "Common",
+      "unusedPays": "CheapestSale",
+      "stream": "Reward",
+      "sortOrder": 3
+    },
+    {
+      "id": "boss_relic",
+      "kind": "Relic",
+      "extraCards": 2,
+      "relicWeights": [100, 45, 18, 6, 2, 1],
+      "relicRarityMin": "Uncommon",
+      "unusedPays": "CheapestSale",
+      "stream": "Reward",
+      "sortOrder": 4
+    }
+  ]
+}

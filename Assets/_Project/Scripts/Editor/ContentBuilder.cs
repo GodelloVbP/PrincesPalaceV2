@@ -26,6 +26,7 @@ public static class ContentBuilder
     private const string RewardTracksPath = ContentRoot + "/RewardTracks";
     private const string PoolsPath = ContentRoot + "/Pools";
     private const string EventsPath = ContentRoot + "/Events";
+    private const string RewardSourcesPath = ContentRoot + "/RewardSources";
 
     // ---- progression v2 phase 2: the authored level cost table ----------
     private const string LevelCurvePath = ContentRoot + "/LevelCurve";
@@ -133,6 +134,7 @@ public static class ContentBuilder
         EnsureFolder(PoolsPath);
         EnsureFolder(LevelCurvePath);
         EnsureFolder(EventsPath);
+        EnsureFolder(RewardSourcesPath);
         Mark("folders");
 
         // ONE IMPORT PASS FOR THE WHOLE CATALOGUE, not one per asset.
@@ -275,6 +277,10 @@ public static class ContentBuilder
         // And after enemies: a fight's `enemies` names them and counts
         // their slotSpan (PLAN_EVENTS_BELL_AND_CARAVAN 3.5).
         BuildEvents(characters, itemIds, relicDisplayNames, enemySlotSpans);
+
+        // Depends on nothing above: every rewards.json field is checked
+        // against code (enums, RngStreams), not other content.
+        BuildRewardSources();
     }
 
     // THE SHAPE EIGHT OF THE ELEVEN CONTENT TYPES SHARE, written once.
@@ -626,6 +632,16 @@ public static class ContentBuilder
             LevelCurveEntryResolver.TryResolveAll,
             (asset, row) => asset.SetData(row),
             row => $"level_{row.Level:D2}");
+
+    // rewards.json (docs/PLAN_ITEMS.md 2.4): one asset per settlement page
+    // class, named by id.
+    private static void BuildRewardSources() =>
+        Build<RawRewardSourceEntry, ResolvedRewardSource, RewardSourceDefinition>(
+            "BuildRewardSources", "Assets/_Project/ContentData/rewards.json", RewardSourcesPath, "reward sources",
+            json => JsonUtility.FromJson<RawRewardSourceFile>(json).sources,
+            RewardSourceEntryResolver.TryResolveAll,
+            (asset, row) => asset.SetData(row),
+            row => row.Id);
 
     // No enum mapping step here, unlike BuildItems: SkillEffect and
     // SkillTargeting live in Domain and are used directly on both sides.

@@ -136,7 +136,8 @@ namespace PrincesPalace.PlayModeTests
 
             var next = Draw(Seed);
             int maxTier = ItemOfferRoll.MaxTier;
-            int target = RarityTable.RollTier(EncounterClass.Normal, Depth, maxTier, Favor, next);
+            var source = Content.ContentDatabase.GetRewardSource("normal_gear");
+            int target = RarityTable.RollTier(source, Depth, Favor, next);
             var expected = ItemOfferTable.Choose(ItemOfferRoll.Candidates(), target, maxTier, next, Count);
 
             CollectionAssert.AreEqual(

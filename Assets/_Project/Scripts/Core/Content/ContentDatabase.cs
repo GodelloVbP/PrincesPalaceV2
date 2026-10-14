@@ -38,6 +38,7 @@ namespace PrincesPalace.Content
         private const string PoolResourcePath = "Content/Pools";
         private const string LevelCurveResourcePath = "Content/LevelCurve";
         private const string EventResourcePath = "Content/Events";
+        private const string RewardSourceResourcePath = "Content/RewardSources";
 
         private static List<CharacterDefinition> _characters;
         private static List<TalentDefinition> _talents;
@@ -53,6 +54,7 @@ namespace PrincesPalace.Content
         private static List<PoolDefinition> _pools;
         private static List<LevelCurveDefinition> _levelCurve;
         private static List<EventDefinition> _events;
+        private static List<RewardSourceDefinition> _rewardSources;
 
         // The flat projection Domain actually reads, built once beside the
         // assets rather than per call: Character.ExpToNextLevel asks for it
@@ -159,6 +161,21 @@ namespace PrincesPalace.Content
         public static IReadOnlyList<RewardTrackDefinitionAsset> RewardTrackAssets
         {
             get { EnsureLoaded(); return _rewardTracks; }
+        }
+
+        // rewards.json: the dials each settlement page class rolls with
+        // (docs/PLAN_ITEMS.md 2.4).
+        public static IReadOnlyList<RewardSourceDefinition> RewardSourceAssets
+        {
+            get { EnsureLoaded(); return _rewardSources; }
+        }
+
+        // Null when no row has this id (content not built, or a class with
+        // no page of this kind, e.g. normal_relic).
+        public static ResolvedRewardSource GetRewardSource(string id)
+        {
+            EnsureLoaded();
+            return _rewardSources.FirstOrDefault(s => s != null && s.id == id)?.Data;
         }
 
         // The talents a given character can actually see and take: their own
@@ -495,6 +512,7 @@ namespace PrincesPalace.Content
             _pools = null;
             _levelCurve = null;
             _levelCosts = null;
+            _rewardSources = null;
 
             // Portraits are keyed by character id and resolved through the
             // roster above, so a swapped roster has to drop them too -- a test
@@ -1010,6 +1028,7 @@ namespace PrincesPalace.Content
             // this field. See docs/archive/PLAN_REWARD_TRACKS.md §4's touch-point
             // table for the citation this mirrors.
             _rewardTracks = LoadOrdered<RewardTrackDefinitionAsset>(RewardTrackResourcePath);
+            _rewardSources = LoadOrdered<RewardSourceDefinition>(RewardSourceResourcePath);
 
             // LAST, and that is the whole of the guard above: everything this
             // method promises is in place before anything can skip it.
