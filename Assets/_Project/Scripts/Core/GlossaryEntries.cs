@@ -233,7 +233,10 @@ namespace PrincesPalace
                 new GlossaryEntry("mech_hone", "Honing", "Mechanic",
                     $"Honing raises a weapon's damage by {ItemUpgrade.PercentPerPlus}% per plus, up to " +
                     $"+{ItemUpgrade.MaxPlus} -- a fully honed weapon deals {1f + ItemUpgrade.PercentPerPlus * ItemUpgrade.MaxPlus / 100f:0.0}x " +
-                    "its base damage. Worn armour hones the same way, for whatever stats it grants."),
+                    "its base damage. Worn armour hones the same way, for whatever stats it grants. " +
+                    "Honing belongs to a character's slot, not to the item in it: swap the item and the " +
+                    "honing stays. Hone instead of taking a reward, buy a +1 at the shop on any slot, or " +
+                    "take one free at a Rest instead of healing. It ends with the run."),
             };
         }
 

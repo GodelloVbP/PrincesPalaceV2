@@ -49,6 +49,9 @@ namespace PrincesPalace.Domain.Rewards
         // A spell-book operation the menu context does not allow
         // (MenuPermissions). Nothing was touched.
         NotPermitted,
+
+        // Hone only: the slot is already at ItemUpgrade.MaxPlus.
+        FullyHoned,
     }
 
     public enum ShopOutcome

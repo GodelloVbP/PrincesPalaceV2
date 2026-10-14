@@ -37,6 +37,8 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text leaveButtonLabel;
         [SerializeField] internal Button buyButton;
         [SerializeField] internal Button packButton;
+        [SerializeField] internal Button honeButton;
+        [SerializeField] internal HoneController hone;
 
         // The character picker: who the comparison panel
         // below is comparing a selected gear card AGAINST. Defaults to the
@@ -199,6 +201,7 @@ namespace PrincesPalace
 
             if (buyButton != null) buyButton.onClick.AddListener(Buy);
             if (packButton != null) packButton.onClick.AddListener(OpenPack);
+            if (honeButton != null) honeButton.onClick.AddListener(OpenHone);
             if (leaveButton != null) leaveButton.onClick.AddListener(Leave);
 
             if (prevCharacterButton != null) prevCharacterButton.onClick.AddListener(() => StepCharacter(-1));
@@ -406,6 +409,22 @@ namespace PrincesPalace
             Paint();
         }
 
+        // HONE: the honing modal over the shelf, on the character the picker
+        // shows. It owns input while open; closing it repaints the purse.
+        private void OpenHone()
+        {
+            if (hone == null || Merchant) return;
+
+            _selectedSection = -1;
+            _selectedIndex = -1;
+            _leaveArmed = false;
+            _refusal = default;
+
+            hone.Finished = Paint;
+            hone.Open(HoneMode.Shop, _charIndex);
+            Paint();
+        }
+
         private void ClosePack()
         {
             _packOpen = false;
@@ -503,6 +522,7 @@ namespace PrincesPalace
             SetShown(bookReroll, !merchant);
             SetShown(relicReroll, !merchant);
             SetShown(packButton, !merchant);
+            SetShown(honeButton, !merchant);
             PlaceBuyButton(packShown: !merchant);
             if (bookHeader != null)
                 bookHeader.Set(merchant ? UiStrings.ShopSectionConsumables : UiStrings.ShopSectionBooks);
@@ -1075,7 +1095,7 @@ namespace PrincesPalace
             var relic = Shown(relicCards);
             var book = Shown(bookCards);
             var gear = Shown(gearCards);
-            var actions = Shown(new[] { buyButton, packButton, leaveButton });
+            var actions = Shown(new[] { buyButton, packButton, honeButton, leaveButton });
 
             var groups = new List<UiNavGroup<Selectable>>();
             void AddGroup(string id, UiNavGroupKind kind, List<Button> members, int gridRowLength = 1)

@@ -198,6 +198,11 @@ namespace PrincesPalace
             // -- it resolves on the spot and comes back Resolved.
             Event,
 
+            // A rest room: Heal or one free hone, picked on a page. A FOURTH
+            // ROOM THAT LEADS TO A SCREEN, so it clears on RestHeal or
+            // RestHone rather than on arrival.
+            Rest,
+
             // Anything else resolved on the spot and the room is cleared.
             Resolved,
         }
@@ -258,6 +263,15 @@ namespace PrincesPalace
             {
                 RoomResolver.Reset();
                 if (EnsureCache()) return Arrival.Event;
+            }
+
+            // A REST IS A PAGE: the choice is persisted open, and the room
+            // clears when the player picks (RestHeal / RestHone).
+            if (target.Type == RoomType.Rest)
+            {
+                RoomResolver.Reset();
+                OpenRest();
+                return Arrival.Rest;
             }
 
             // Everything else resolves HERE and the map redraws, which is

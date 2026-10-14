@@ -815,6 +815,10 @@ namespace PrincesPalace
                     continue;
                 }
 
+                // The bot always takes the heal; the free hone is the player's
+                // choice to make (PLAN_ITEMS 1.5).
+                if (arrival == RunOrchestrator.Arrival.Rest) RunOrchestrator.RestHeal();
+
                 if (!isFight)
                 {
                     result.Trace.Rooms.Add(roomTrace);

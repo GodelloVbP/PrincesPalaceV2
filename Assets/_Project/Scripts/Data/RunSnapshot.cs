@@ -231,6 +231,14 @@ namespace PrincesPalace
         // is never read.
         public List<SlotHoningEntry> slotHoning = new List<SlotHoningEntry>();
 
+        // The Rest room the party stands in has not been spent yet: Heal or
+        // one free hone is still to be picked (docs/PLAN_ITEMS.md 1.5).
+        // Open only while the current node is an uncleared Rest
+        // (RunOrchestrator.RestIsOpen); a bool rather than a node id because
+        // a save written before this field reads a missing int as 0, a real
+        // node.
+        public bool restOpen;
+
         // Gear pages in a row with no Legendary card shown, and whether the
         // last gear page's best card was Common: the two counters the next
         // gear page's floors read (docs/PLAN_ITEMS.md 1.2 step 7). Written

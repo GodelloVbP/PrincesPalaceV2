@@ -48,6 +48,26 @@ namespace PrincesPalace.EditModeTests
             Assert.AreEqual(expected, ShopPricing.GearAuthored(tier, affixes));
         }
 
+        // A trait prices as two affixes, not as the one modifier it is on the
+        // copy: tier, affixes (traits excluded), traits, authored price.
+        // 31 x (1 + 0.5 x 2) = 62; 36 x (1 + 0.5 x 3) = 90; 41 x (1 + 0.5 x 4) = 123.
+        [TestCase(2, 0, 1, 62)]
+        [TestCase(3, 1, 1, 90)]
+        [TestCase(4, 2, 1, 123)]
+        [TestCase(2, 1, 0, 46)]
+        public void GearAuthored_PricesATraitAsTwoAffixes(int tier, int affixes, int traits, int expected)
+        {
+            Assert.AreEqual(expected, ShopPricing.GearAuthored(tier, affixes, traits));
+        }
+
+        [Test]
+        public void ATraitCostsMoreThanTheOneModifierItWasCountedAs()
+        {
+            Assert.AreEqual(46, ShopPricing.GearAuthored(2, 1), "the old count: one modifier");
+            Assert.AreEqual(62, ShopPricing.GearAuthored(2, 0, 1), "the same copy with that modifier a trait");
+            Assert.AreEqual(62, ShopPricing.GearPrice(2, 0, 0, traits: 1));
+        }
+
         // tier, affixes, step, charged price. Step 8 is the end of floor 1,
         // step 16 the end of floor 2.
         [TestCase(0, 0, 0, 21)]

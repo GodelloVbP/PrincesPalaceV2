@@ -48,6 +48,10 @@ namespace PrincesPalace.Domain.Rewards
         // And one affix on a copy.
         public const double AffixStep = 0.50;
 
+        // A trait is priced as this many affixes (docs/PLAN_ITEMS.md 2.3),
+        // not as the one modifier it is on the copy.
+        public const int TraitAsAffixes = 2;
+
         public static int BaseFor(int tier) => GearBase + GearPerTier * (tier < 0 ? 0 : tier);
 
         public static double AffixFactor(int affixes) => 1.00 + AffixStep * (affixes < 0 ? 0 : affixes);
@@ -57,12 +61,16 @@ namespace PrincesPalace.Domain.Rewards
         // exact .5 is a sell price (see SellPrice), and to-even takes it
         // down. Nothing here picks a rounding mode for a reason -- what
         // matters is that the choice is pinned, not which one it is.
-        public static int GearAuthored(int tier, int affixes = 0)
+        //
+        // `affixes` excludes traits; each trait adds TraitAsAffixes.
+        public static int GearAuthored(int tier, int affixes = 0, int traits = 0)
         {
-            return (int)Math.Round(BaseFor(tier) * AffixFactor(affixes));
+            int weighted = (affixes < 0 ? 0 : affixes) + TraitAsAffixes * (traits < 0 ? 0 : traits);
+            return (int)Math.Round(BaseFor(tier) * AffixFactor(weighted));
         }
 
-        public static int GearPrice(int tier, int affixes, int step) => ScalePrice(GearAuthored(tier, affixes), step);
+        public static int GearPrice(int tier, int affixes, int step, int traits = 0) =>
+            ScalePrice(GearAuthored(tier, affixes, traits), step);
 
         // One more point of honing on a slot already honed to `plus`: the
         // gear base, climbing 35% of itself per point.

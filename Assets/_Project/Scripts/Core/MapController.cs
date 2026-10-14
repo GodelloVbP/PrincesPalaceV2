@@ -89,6 +89,9 @@ namespace PrincesPalace
         // ShowEventPanel (MapController.Event.cs).
         [SerializeField] internal EventController eventPanel;
 
+        // The honing modal a Rest room opens (OpenRest).
+        [SerializeField] internal HoneController honePanel;
+
         // The debug menu, F1 in the editor or a development build only -- the
         // same gate and the same reason as HubController's copy.
         [SerializeField] internal GameObject debugMenuPanel;
@@ -185,6 +188,7 @@ namespace PrincesPalace
         {
             Refresh();
             if (RunOrchestrator.EventIsOpen) OpenEvent();
+            else if (RunOrchestrator.RestIsOpen) OpenRest();
         }
 
         private void Wire()
@@ -379,6 +383,16 @@ namespace PrincesPalace
         }
 
         partial void ShowEventPanel();
+
+        // A Rest room's page: Heal or one free hone. Reopened on a Map start
+        // that finds the room still unspent.
+        public void OpenRest()
+        {
+            if (honePanel == null || !RunOrchestrator.RestIsOpen) return;
+
+            honePanel.Finished = Refresh;
+            honePanel.Open(HoneMode.Rest);
+        }
 
         public void Refresh()
         {

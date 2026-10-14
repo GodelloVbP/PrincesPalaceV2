@@ -148,15 +148,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const float DetailToActionsGap = 24f;
         private const float ActionsTop = DetailBottom - DetailToActionsGap;
         private const float ActionsGoldHeight = 62f;
-        private const float ActionsPairWidth = 300f;
+        private const float ActionsPairWidth = 196f;
         private const float ActionsPairGap = 16f;
 
-        // BUY's x in the keeper panel: left of PACK while PACK shows, centred
-        // over LEAVE when it is stood down (a merchant shelf has no pack), so
-        // the row never shows a half-empty pair. ShopController applies it
+        // BUY's x in the keeper panel: left of PACK (and HONE) while PACK
+        // shows, centred over LEAVE when it is stood down (a merchant shelf
+        // has no pack and sells no honing), so the row never shows a
+        // half-empty trio. ShopController applies it
         // every paint; the tree is built at the room shop's shape.
         public static float BuyButtonX(bool packShown) =>
-            packShown ? -(ActionsPairWidth + ActionsPairGap) * 0.5f : 0f;
+            packShown ? -(ActionsPairWidth + ActionsPairGap) : 0f;
 
         // 532 + 24 + 532 + 24 + 696 = 1808 = the full inner width. The wide
         // column is the prototype's 1.3fr rounded to a whole number that
@@ -293,6 +294,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef LeaveButtonLabel;
         public NodeRef BuyButton;
         public NodeRef PackButton;
+        public NodeRef HoneButton;
 
         // The character picker: defaults to the party leader, stepped by
         // the arrows or by LB/RB via ShopController.StepSection.
@@ -681,7 +683,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
             parts.Add(Ui.OutlineBox("ShopGoldPlate", Place.At(0f, goldY),
                 new UiVec(inner, ActionsGoldHeight), GoldPlateFill, PanelRim, new[] { gold }));
 
-            float pairHalfGap = ActionsPairGap * 0.5f;
             var buy = Ui.Button("ShopBuyButton", UiStrings.ShopBuy, pairSize, 26,
                     Place.At(BuyButtonX(packShown: true), pairY))
                 .Themed(ButtonTheme.Gold);
@@ -689,10 +690,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
             parts.Add(buy);
 
             var pack = Ui.Button("ShopPackButton", UiStrings.ShopPack, pairSize, 26,
-                    Place.At(pairSize.X * 0.5f + pairHalfGap, pairY))
+                    Place.At(0f, pairY))
                 .Themed(ButtonTheme.Silver);
             PackButton = pack;
             parts.Add(pack);
+
+            var hone = Ui.Button("ShopHoneButton", UiStrings.ShopHone, pairSize, 26,
+                    Place.At(ActionsPairWidth + ActionsPairGap, pairY))
+                .Themed(ButtonTheme.Silver);
+            HoneButton = hone;
+            parts.Add(hone);
 
             var leave = Ui.Button("ShopLeaveButton", UiStrings.ShopLeave, leaveSize, 32,
                     Place.At(0f, leaveY))

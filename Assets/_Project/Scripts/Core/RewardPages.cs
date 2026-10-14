@@ -283,7 +283,7 @@ namespace PrincesPalace
         // A gear copy's sale price at this step (ShopPricing.SellPrice of its
         // authored buy price).
         public static int SalePrice(ItemInstance copy, int step) =>
-            copy == null ? 0 : ShopPricing.SellPrice(ShopPricing.GearAuthored(copy.Tier, copy.ModifierIds.Count), step);
+            copy == null ? 0 : ShopPricing.SellPrice(ContentDatabase.AuthoredPriceOf(copy), step);
 
         // ---- inputs ------------------------------------------------------------------
 
@@ -313,7 +313,7 @@ namespace PrincesPalace
                 .Any(t => t.Data.Effects.Length > 0 && t.Data.Effects[0].Kind == mechanic));
         }
 
-        private static void Hone(SaveData save, string characterId, EquipmentSlot slot)
+        public static void Hone(SaveData save, string characterId, EquipmentSlot slot)
         {
             var character = save.roster?.FirstOrDefault(c => c != null && c.definitionId == characterId);
 

@@ -88,6 +88,17 @@ namespace PrincesPalace.Content
             return ItemQuality.Of(copy.ModifierIds.Count - traits, traits);
         }
 
+        // The step-0 gold `copy` costs to buy: tier, affixes, and a trait
+        // priced as ShopPricing.TraitAsAffixes affixes. Sale prices derive
+        // from it.
+        public static int AuthoredPriceOf(ItemInstance copy)
+        {
+            if (copy == null) return 0;
+
+            int traits = TraitRowsOf(copy).Count;
+            return PrincesPalace.Domain.Rewards.ShopPricing.GearAuthored(copy.Tier, copy.ModifierIds.Count - traits, traits);
+        }
+
         // The copy's trait rows (a Legendary has one), in rolled order.
         public static List<ModifierDefinition> TraitRowsOf(ItemInstance copy)
         {

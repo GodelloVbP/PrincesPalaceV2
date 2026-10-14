@@ -180,6 +180,10 @@ namespace PrincesPalace
                     OpenEvent();
                     return;
 
+                case RunOrchestrator.Arrival.Rest:
+                    OpenRest();
+                    return;
+
                 case RunOrchestrator.Arrival.Resolved:
                     Refresh();
                     return;

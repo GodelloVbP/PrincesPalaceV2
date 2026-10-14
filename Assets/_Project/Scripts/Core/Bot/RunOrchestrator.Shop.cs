@@ -116,7 +116,7 @@ namespace PrincesPalace
             if (definition == null) return 0;
 
             return definition.IsEquippable
-                ? ShopPricing.GearAuthored(ContentDatabase.Effective(entry.Instance).Value.Tier, entry.modifierIds.Count)
+                ? ContentDatabase.AuthoredPriceOf(entry.Instance)
                 : definition.cost;
         }
 

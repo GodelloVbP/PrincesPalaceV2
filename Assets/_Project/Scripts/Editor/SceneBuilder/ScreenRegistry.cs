@@ -695,6 +695,13 @@ public static class ScreenRegistry
                 eventController = WireEvent(result, screen.Event);
                 map.eventPanel = eventController;
                 eventController.systemMenu = map.systemMenu;
+
+                // The honing modal: one instance, opened by the shop's HONE
+                // and by a Rest room.
+                var honeController = WireHone(result, screen.Hone);
+                map.honePanel = honeController;
+                shopController.hone = honeController;
+                honeController.systemMenu = map.systemMenu;
             },
 
             // Gate 2's own count bindings (docs/PLAN_SHOP.md §7.3): the six
@@ -816,6 +823,21 @@ public static class ScreenRegistry
             .Select(key => new IconEntry(key, SceneBuilder.LoadSpriteByKey(key)))
             .Where(entry => entry.Sprite != null)
             .ToArray();
+
+    private static HoneController WireHone(UiEmitResult result, HoneScreen screen)
+    {
+        var hone = result.Attach<HoneController>(screen.Root);
+        UiAutoBind.Bind(result, hone, screen);
+
+        hone.slotNames = screen.Rows.Select(r => result.Tmp(r.SlotName)).ToArray();
+        hone.levels = screen.Rows.Select(r => result.Tmp(r.Level)).ToArray();
+        hone.prices = screen.Rows.Select(r => result.Tmp(r.Price)).ToArray();
+        hone.honeButtons = screen.Rows.Select(r => result.Button(r.HoneButton)).ToArray();
+        hone.honeButtonLabels = screen.Rows.Select(r => result.Tmp(r.HoneButtonLabel)).ToArray();
+        // NO CountBindings: every row array is Select'd from the same
+        // screen.Rows list, so they are the same length by construction.
+        return hone;
+    }
 
     private static EventController WireEvent(UiEmitResult result, EventScreen screen)
     {

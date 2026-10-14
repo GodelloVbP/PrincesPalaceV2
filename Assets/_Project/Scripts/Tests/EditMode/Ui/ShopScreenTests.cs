@@ -39,8 +39,9 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void BuySitsLeftOfPackWhilePackShows_AndCentresAlone()
         {
-            // Pair 300 wide with a 16 gap: BUY's centre is (300 + 16) / 2 left.
-            Assert.AreEqual(-158f, ShopScreen.BuyButtonX(packShown: true), 0.001f);
+            // Three 196-wide buttons with 16 gaps, PACK in the middle: BUY's
+            // centre is 196 + 16 left of it.
+            Assert.AreEqual(-212f, ShopScreen.BuyButtonX(packShown: true), 0.001f);
             Assert.AreEqual(0f, ShopScreen.BuyButtonX(packShown: false), 0.001f);
         }
 
@@ -48,7 +49,7 @@ namespace PrincesPalace.Domain.Tests
         public void TheBuiltBuyButtonIsAtTheRoomShopsSlot()
         {
             var screen = ShopScreen.Build();
-            Assert.AreEqual(-158f, screen.BuyButton.Node.Place.Offset.X, 0.001f);
+            Assert.AreEqual(-212f, screen.BuyButton.Node.Place.Offset.X, 0.001f);
         }
 
         [Test]

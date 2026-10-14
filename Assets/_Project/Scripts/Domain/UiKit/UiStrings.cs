@@ -777,6 +777,8 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString DefeatKept = UiString.Define("defeat.kept", "KEPT");
         public static readonly UiString DefeatGoldLost =
             UiString.Define("defeat.gold_lost", "{0} GOLD, UNBANKED", "99999 GOLD, UNBANKED");
+        public static readonly UiString DefeatGoldBanked =
+            UiString.Define("defeat.gold_banked", "{0} gold banked", "999999 gold banked");
         public static readonly UiString DefeatEmbers =
             UiString.Define("defeat.embers", "+{0} EMBERS", "+99 EMBERS");
         public static readonly UiString DefeatEmbersNone =
@@ -1045,6 +1047,24 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString ShopSellOneButton = UiString.Define("shop.sell_one_button", "SELL 1");
         public static readonly UiString ShopSellAllButton =
             UiString.Define("shop.sell_all_button", "SELL ALL {0}", "SELL ALL 99");
+
+        // --- honing: the shop's HONE and the Rest room (docs/PLAN_ITEMS.md 1.5) ----
+
+        // The title and hint labels are sized for the widest of their states.
+        public static readonly UiString HoneTitleShop = UiString.Define("hone.title_shop", "HONE");
+        public static readonly UiString HoneTitleRest = UiString.Define("hone.title_rest", "REST");
+        public static readonly UiString HoneHintShop =
+            UiString.Define("hone.hint_shop", "Honing belongs to the slot, not to the item in it.");
+        public static readonly UiString HoneHintRest =
+            UiString.Define("hone.hint_rest", "Heal the party, or hone one slot for free.");
+        public static readonly UiString HoneLevel = UiString.Define("hone.level", "+{0}  >  +{1}", "+10  >  +10");
+        public static readonly UiString HoneLevelMax = UiString.Define("hone.level_max", "+{0}  MAX", "+10  MAX");
+        public static readonly UiString HonePrice = UiString.Define("hone.price", "{0} G", "999999 G");
+        public static readonly UiString HoneFree = UiString.Define("hone.free", "FREE");
+        public static readonly UiString HoneButton = UiString.Define("hone.button", "HONE");
+        public static readonly UiString HoneMaxButton = UiString.Define("hone.max_button", "MAX");
+        public static readonly UiString HoneHeal = UiString.Define("hone.heal", "HEAL THE PARTY");
+        public static readonly UiString ShopHone = UiString.Define("shop.hone", "HONE");
 
         // --- the LOADOUT book row (docs/PLAN_SHOP.md §1g) ---------------------------
 

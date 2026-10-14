@@ -181,6 +181,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // so Start opens the menu OVER an event, as it does over the shop.
         public EventScreen Event;
 
+        // The honing modal: the shop's HONE opens it over the shop, a Rest
+        // room opens it with a HEAL beside the rows. Before the system menu
+        // among Root's children for the same reason as the shop.
+        public HoneScreen Hone;
+
         // The debug menu, the hub's own copy mounted here too (F1, dev
         // builds only): spell books, relics and every Tools row act on the
         // descent, and the hub has none to act on.
@@ -367,6 +372,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var eventRoom = EventScreen.Build();
             screen.Event = eventRoom;
 
+            var hone = HoneScreen.Build();
+            screen.Hone = hone;
+
             // The old paperdoll is gone; the system menu's Character pane is
             // the character screen now. SheetPanel opens the menu instead, so
             // every caller -- C, I, Escape, the hub's building -- reaches the
@@ -385,7 +393,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             screen.Root = Ui.Panel("MapPanel", UiSize.Fill,
                 viewport, screen.BuildHeaderBar(), title, depth, gold, attentionBadge, previewPanel, comparePanel, abandon,
-                roomMessage, overview, shop.Root, eventRoom.Root, systemMenu.Root, debug.Root);
+                roomMessage, overview, shop.Root, eventRoom.Root, hone.Root, systemMenu.Root, debug.Root);
 
             return screen;
         }
