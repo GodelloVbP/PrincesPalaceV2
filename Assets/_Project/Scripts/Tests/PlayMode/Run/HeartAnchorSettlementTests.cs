@@ -178,5 +178,34 @@ namespace PrincesPalace.PlayModeTests
             Assert.GreaterOrEqual(session.Payout.Value.Experience, rawExp,
                 "the payout covers the boss and both dead anchors (elite pay only raises it)");
         }
+
+        // A page never outgrows the offer row: the boss's gear chip and three
+        // heart anchors' Gear chips make k 3 (5 cards); the third anchor's chip
+        // pays gold with one notice.
+        [Test]
+        public void ThreeHeartAnchorGearChips_CapTheBossPageAtFiveCards_TheThirdPaysGold()
+        {
+            var bossNode = OpenAHeart(3);
+            var run = RunManager.Run;
+            var save = SaveSlotManager.CurrentSave;
+            var anchors = RunManager.Map.Nodes.Where(n => n.IsAnchor).Take(3).ToList();
+            foreach (var a in anchors) a.Prize = PrizeKind.Item;
+            var chips = new Domain.Rewards.PageChips();
+            chips.AddBoss();
+            int goldBefore = run.gold;
+
+            var notices = new List<string>();
+            foreach (var a in anchors) notices.AddRange(RealmPrizes.Pay(save, run, a, chips));
+
+            Assert.AreEqual(3, chips.Gear.Count);
+            Assert.AreEqual(1, notices.Count, "one gold line for the converted chip");
+            Assert.Greater(run.gold, goldBefore);
+
+            var fielded = save.ActiveSquad().Select(c => c.definitionId).ToList();
+            var pages = RewardPages.Settle(save, run.step, bossNode.Id, 3, chips.Gear, chips.Relic, fielded);
+            var gear = pages.First(p => p.Kind == Domain.Content.RewardPageKind.Gear);
+            Assert.AreEqual(3, gear.Choices);
+            Assert.AreEqual(5, gear.Cards.Count);
+        }
     }
 }

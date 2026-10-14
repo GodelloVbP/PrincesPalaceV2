@@ -16,6 +16,13 @@ namespace PrincesPalace.Domain.Rewards
         // strength floors.
         public int Strength;
 
+        // A page shows k + 2 cards and the offer row fits MaxCards, so a
+        // page takes at most this many chips; a chip past it pays gold.
+        public static readonly int MaxChips = UiKit.OfferRowLayout.MaxCards - 2;
+
+        public bool GearFull => Gear.Count >= MaxChips;
+        public bool RelicFull => Relic.Count >= MaxChips;
+
         public bool IsEmpty => Gear.Count == 0 && Relic.Count == 0;
 
         // A relic page exists for anchors and bosses only (rewards.json has no

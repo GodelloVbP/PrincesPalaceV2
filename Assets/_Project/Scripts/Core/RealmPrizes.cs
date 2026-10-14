@@ -68,15 +68,25 @@ namespace PrincesPalace
                     break;
 
                 case PrizeKind.Item:
-                    chips?.Gear.Add(ClassOf(node));
+                    if (chips != null && chips.GearFull) notices.AddRange(PayOverflow(run, node));
+                    else chips?.Gear.Add(ClassOf(node));
                     break;
 
                 case PrizeKind.Relic:
-                    chips?.AddRelic(ClassOf(node));
+                    if (chips != null && chips.RelicFull) notices.AddRange(PayOverflow(run, node));
+                    else chips?.AddRelic(ClassOf(node));
                     break;
             }
 
             return notices;
+        }
+
+        // A Gear or Relic chip past the page's card limit pays its node's gold
+        // instead, with the gold notice.
+        private static IEnumerable<string> PayOverflow(RunSnapshot run, RealmNode node)
+        {
+            int gold = RealmPrize.GoldFor(RealmOpening.StrengthOf(run, node.Id), run.legStartStep + node.Offset);
+            if (RunManager.CreditPayout(gold)) yield return UiStrings.PrizePaidGold.Format(gold);
         }
 
         // One book from the spell pool into unassignedSpellBooks, no
