@@ -59,7 +59,7 @@ namespace PrincesPalace.PlayModeTests
         // label and row Paint is responsible for is blanked and hidden, so
         // each test sees only what its own Show wrote.
         private static readonly System.Text.RegularExpressions.Regex PaintedLabel =
-            new System.Text.RegularExpressions.Regex(@"^(DefeatGoldLost|DefeatExp|DefeatDepth|DefeatEmbers|DefeatRow\d+(Stats|Name))$");
+            new System.Text.RegularExpressions.Regex(@"^(DefeatGoldLost|DefeatGoldBanked|DefeatExp|DefeatDepth|DefeatEmbers|DefeatRow\d+(Stats|Name))$");
         private static readonly System.Text.RegularExpressions.Regex PaintedRow =
             new System.Text.RegularExpressions.Regex(@"^DefeatRow\d+$");
 
@@ -130,6 +130,25 @@ namespace PrincesPalace.PlayModeTests
             StringAssert.Contains("29", TextOf("DefeatDepth"));
             StringAssert.Contains("13", TextOf("DefeatDepth"));
             StringAssert.Contains("2", TextOf("DefeatEmbers"));
+        }
+
+        [UnityTest]
+        public IEnumerator BankedGoldShowsBesideTheLostGoldOnlyWhenThereIsSome()
+        {
+            yield return OpenTheFight();
+
+            var settlement = Settlement("shawn");
+            settlement.GoldBanked = 135;
+            _defeat.Show(settlement);
+            yield return null;
+
+            Assert.IsTrue(Named("DefeatGoldBanked").activeSelf);
+            Assert.AreEqual("135 gold banked", TextOf("DefeatGoldBanked"));
+
+            _defeat.Show(Settlement("shawn"));
+            yield return null;
+
+            Assert.IsFalse(Named("DefeatGoldBanked").activeSelf, "nothing banked, nothing said");
         }
 
         [UnityTest]

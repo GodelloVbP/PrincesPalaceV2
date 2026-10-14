@@ -35,6 +35,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef Frame;
 
         public NodeRef GoldLostLabel;
+        public NodeRef GoldBankedLabel;
         public NodeRef EmbersLabel;
         public NodeRef DepthLabel;
         public NodeRef ExpLabel;
@@ -82,6 +83,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .Styled(TypographyRole.TacticalData);
             screen.GoldLostLabel = goldLost;
             inside.Add(goldLost);
+
+            // The cache's gold, paid to the wallet whatever the ending; shown
+            // only when there is some (DefeatController).
+            var goldBanked = Ui.Label("DefeatGoldBanked", UiStrings.DefeatGoldBanked, new UiVec(600f, 30f), 18,
+                    "#F2DB9E", Place.At(ColumnX, 148f))
+                .AsDecor()
+                .Styled(TypographyRole.TacticalData);
+            screen.GoldBankedLabel = goldBanked;
+            inside.Add(goldBanked);
 
             inside.Add(Ui.Label("DefeatKeptHeading", UiStrings.DefeatKept, new UiVec(600f, 34f), 20,
                 "#B8A8D9", Place.At(ColumnX, 110f)).AsDecor().Styled(TypographyRole.FunctionalHeading));

@@ -20,6 +20,7 @@ namespace PrincesPalace
         [SerializeField] internal RectTransform frame;
 
         [SerializeField] internal TMP_Text goldLostLabel;
+        [SerializeField] internal TMP_Text goldBankedLabel;
         [SerializeField] internal TMP_Text embersLabel;
         [SerializeField] internal TMP_Text depthLabel;
         [SerializeField] internal TMP_Text expLabel;
@@ -133,6 +134,8 @@ namespace PrincesPalace
             var settlement = _settlement ?? new RunSettlement.Result();
 
             goldLostLabel.Set(UiStrings.DefeatGoldLost, settlement.GoldLost);
+            goldBankedLabel.gameObject.SetActive(settlement.GoldBanked > 0);
+            if (settlement.GoldBanked > 0) goldBankedLabel.Set(UiStrings.DefeatGoldBanked, settlement.GoldBanked);
             expLabel.Set(UiStrings.DefeatExp, settlement.ExpEarned);
             depthLabel.Set(UiStrings.DefeatDepth, settlement.DeepestStep, settlement.RoomsCleared);
 
