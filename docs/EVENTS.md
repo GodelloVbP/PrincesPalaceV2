@@ -265,6 +265,7 @@ show a caption; `reason` on an event-level or outcome row is ignored.
 | `item` | how many of `item` go to the stockpile | `+2 Health Potion` |
 | `counter` | added to `counter` | none |
 | `relic` | ignored. Adds `relic` to the run's relics; already held does nothing (no line). The build refuses an id not in `relics.json` | `Relic: Kinship` |
+| `bankGold` | 1-100, a percent of the held gold (at least 1 coin). Moves it from the purse to `RunSnapshot.bankedGold`, which a death keeps; used by the cache room's `the_cache` event | `<n> gold banked` |
 | `princesFavor` | > 0. Added to the squad's Prince's favor for the rest of the **run**, after the squad's best member (item offers and shop stock rolled from now on; a shelf already rolled is not rerolled) | `+10 Prince's favor` |
 | `fillSpecialPool` | exactly 1. For the rest of this **leg**, each character's special pool (signature, else primary) is full when their turn opens | `Special pools full each turn this leg` |
 | `fight` + `fight` | none (refused). Starts the event's own fight by id; see **Fights** | none |

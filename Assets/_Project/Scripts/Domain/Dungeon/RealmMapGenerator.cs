@@ -228,6 +228,7 @@ namespace PrincesPalace.Domain.Dungeon
             // Rest before the boss is already placed; otherwise one fork
             // sibling may roll Rest.
             bool restUsed = profile.restBeforeBoss;
+            bool cacheUsed = false;
             var typed = new Dictionary<int, RealmNode>();
 
             // Id order is topological, so every predecessor is typed first and
@@ -242,6 +243,7 @@ namespace PrincesPalace.Domain.Dungeon
                 {
                     var allowed = new List<RoomType> { RoomType.Fight, RoomType.Event };
                     if (node.Role == RealmNodeRole.Pocket) allowed.Add(RoomType.Treasure);
+                    if (node.Role == RealmNodeRole.Pocket && !cacheUsed) allowed.Add(RoomType.Cache);
                     if (node.Role == RealmNodeRole.ForkSibling && !restUsed) allowed.Add(RoomType.Rest);
 
                     bool eventBefore = preds.TryGetValue(node.Id, out var before)
@@ -257,6 +259,7 @@ namespace PrincesPalace.Domain.Dungeon
 
                     node.Type = PickRoom(profile.waypointWeights, allowed, rng);
                     if (node.Type == RoomType.Rest) restUsed = true;
+                    if (node.Type == RoomType.Cache) cacheUsed = true;
                 }
 
                 if (node.Type == RoomType.Fight)
@@ -325,7 +328,7 @@ namespace PrincesPalace.Domain.Dungeon
             return PrizeKind.None;
         }
 
-        // Relax order, last step: a pocket with no anchor, shop or Treasure
+        // Relax order, last step: a pocket with no anchor, shop, Treasure or Cache
         // gets its first room made Treasure. A prize-less pocket holds no
         // placed room, so nothing placed is overwritten.
         private static void FillPrizelessPockets(RealmMap map)
@@ -335,7 +338,8 @@ namespace PrincesPalace.Domain.Dungeon
                 bool hasPrize = pocket.Rooms.Any(id =>
                 {
                     var type = map.Node(id).Type;
-                    return type == RoomType.EliteFight || type == RoomType.Shop || type == RoomType.Treasure;
+                    return type == RoomType.EliteFight || type == RoomType.Shop || type == RoomType.Treasure
+                        || type == RoomType.Cache;
                 });
                 if (hasPrize) continue;
 

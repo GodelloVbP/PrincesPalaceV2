@@ -252,6 +252,14 @@ namespace PrincesPalace
                 if (EnsureEvent()) return Arrival.Event;
             }
 
+            // A CACHE IS AN EVENT PAGE WITH A FIXED PICK: the room clears on
+            // LeaveEvent, like any event. Missing content falls through.
+            if (target.Type == RoomType.Cache)
+            {
+                RoomResolver.Reset();
+                if (EnsureCache()) return Arrival.Event;
+            }
+
             // Everything else resolves HERE and the map redraws, which is
             // where the next choice lives anyway: RoomResolver.Resolve pays
             // out treasure, heals a rest, and reports what happened, rather

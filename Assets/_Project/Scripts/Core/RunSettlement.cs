@@ -27,6 +27,10 @@ namespace PrincesPalace
             // rather than only documented.
             public int GoldLost;
 
+            // Banked at a cache and paid to the profile wallet whatever the
+            // run's ending.
+            public int GoldBanked;
+
             // Kept, for a screen that wants to say what survived.
             public int RoomsCleared;
             public int DeepestStep;
@@ -48,8 +52,14 @@ namespace PrincesPalace
             // not there is a save to charge it against, so a screen can say it
             // either way.
             result.GoldLost = run.gold > 0 ? run.gold : 0;
+            result.GoldBanked = run.bankedGold > 0 ? run.bankedGold : 0;
 
             if (save == null) return result;
+
+            // THE CACHE'S PROMISE: the banked gold is out of the wager. It
+            // joins the hub wallet, where gold is spent between runs
+            // (CurrencyType); only the purse the party carried is forfeited.
+            save.wallet.gold += result.GoldBanked;
 
             // FOLDED INTO THE LIFETIME TOTALS before the run is discarded.
             // Runs here rather than in EndRun because this is already the

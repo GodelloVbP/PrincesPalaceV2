@@ -67,6 +67,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 case RoomType.Rest: return RestIconKey;
                 case RoomType.Event: return EventIconKey;
                 case RoomType.Treasure: return TreasureIconKey;
+
+                // No painted medallion yet: the chest stands in (art brief).
+                case RoomType.Cache: return TreasureIconKey;
                 default: return null;
             }
         }
@@ -215,7 +218,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 Place.At(0f, 452f)).Styled(TypographyRole.FunctionalHeading);
             var depth = Ui.Label("MapDepthLabel", UiStrings.MapDepth, new UiVec(420f, 34f), 20, "#B8A8D9",
                 Place.At(0f, 404f)).Styled(TypographyRole.TacticalData);
-            var gold = Ui.Label("MapGoldLabel", UiStrings.MapGold, new UiVec(320f, 40f), 22, "#F2DB9E",
+            var gold = Ui.Label("MapGoldLabel", UiStrings.MapGold, new UiVec(460f, 40f), 22, "#F2DB9E",
                 Place.At(690f, 452f)).Styled(TypographyRole.TacticalData);
 
             // THE BOOK/POINT/REWARD NUDGE, as a badge and not a line: neither

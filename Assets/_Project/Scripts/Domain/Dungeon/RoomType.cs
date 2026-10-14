@@ -34,5 +34,11 @@ namespace PrincesPalace.Domain.Dungeon
         // actually entered. Never generated (the map shows every room); kept
         // because RoomResolution and the map icons still handle the value.
         Unknown,
+
+        // Appended, never inserted: RealmProfile.waypointWeights serializes
+        // this enum as an int. At most one per realm, in a pocket. Entering
+        // it opens the cache event (RunOrchestrator.EnsureCache), where gold
+        // is banked out of death's reach (RunSnapshot.bankedGold).
+        Cache,
     }
 }

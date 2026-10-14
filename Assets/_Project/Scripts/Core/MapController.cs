@@ -418,7 +418,8 @@ namespace PrincesPalace
 
             titleLabel.Set(UiStrings.MapTitle, run.floor);
             depthLabel.Set(UiStrings.MapDepth, UiStrings.MapRealmDefaultName.Format(), run.roomsWalked);
-            goldLabel.Set(UiStrings.MapGold, run.gold);
+            if (run.bankedGold > 0) goldLabel.Set(UiStrings.MapGoldBanked, run.gold, run.bankedGold);
+            else goldLabel.Set(UiStrings.MapGold, run.gold);
             overviewLabel.Set(_overview ? UiStrings.MapOverview : UiStrings.MapOverviewHint);
 
             RefreshAttention();
@@ -1073,6 +1074,7 @@ namespace PrincesPalace
         private static Color TintFor(MapTileState state)
         {
             switch (state)
+                case RoomType.Cache: return treasureIcon;
             {
                 case MapTileState.Current: return CurrentTint;
                 case MapTileState.Walked: return WalkedTint;

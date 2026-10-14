@@ -97,7 +97,8 @@ namespace PrincesPalace.Domain.Dungeon
                     continue;
                 }
 
-                if (!rooms.Any(r => r.IsAnchor || r.Type == RoomType.Shop || r.Type == RoomType.Treasure))
+                if (!rooms.Any(r => r.IsAnchor || r.Type == RoomType.Shop || r.Type == RoomType.Treasure
+                                   || r.Type == RoomType.Cache))
                 {
                     Add("pocket without a prize", rooms[0].Id);
                 }
@@ -108,6 +109,7 @@ namespace PrincesPalace.Domain.Dungeon
             // Placement by type.
             int shops = 0;
             int rests = 0;
+            int caches = 0;
             foreach (var node in map.Nodes)
             {
                 if (node.Type == RoomType.Shop)
@@ -119,6 +121,12 @@ namespace PrincesPalace.Domain.Dungeon
                 if (node.Type == RoomType.Treasure && node.Role != RealmNodeRole.Pocket)
                 {
                     Add("treasure outside a pocket", node.Id);
+                }
+
+                if (node.Type == RoomType.Cache)
+                {
+                    caches++;
+                    if (node.Role != RealmNodeRole.Pocket) Add("cache outside a pocket", node.Id);
                 }
 
                 if (node.Type == RoomType.Rest)
@@ -138,6 +146,7 @@ namespace PrincesPalace.Domain.Dungeon
             }
 
             if (shops > 1) Add("more than one shop");
+            if (caches > 1) Add("more than one cache");
             if (rests > 1) Add("more than one rest");
             if (map.Profile.restBeforeBoss && rests != 1) Add("rest before the boss missing");
 

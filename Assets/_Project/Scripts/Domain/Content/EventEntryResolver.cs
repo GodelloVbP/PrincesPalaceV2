@@ -686,7 +686,7 @@ namespace PrincesPalace.Domain.Content
                 {
                     error = $"{label}: effect kind '{row.kind}' is not a known EventEffectKind " +
                             "(gold, healPercent, damagePercent, exp, item, counter, relic, princesFavor, fillSpecialPool, " +
-                            "fight, finish, shelf, takeShelf).";
+                            "fight, finish, shelf, takeShelf, bankGold).";
                     return false;
                 }
 
@@ -830,6 +830,16 @@ namespace PrincesPalace.Domain.Content
                             string.IsNullOrWhiteSpace(relicName) ? row.relic : relicName));
                         break;
                     }
+
+                    case EventEffectKind.BankGold:
+                        if (row.amount < 1 || row.amount > 100)
+                        {
+                            error = $"{label}: bankGold effect amount is a percent of held gold, 1-100, was {row.amount}.";
+                            return false;
+                        }
+
+                        list.Add(EventEffect.BankGold(row.amount));
+                        break;
 
                     case EventEffectKind.PrincesFavor:
                         if (row.amount <= 0)

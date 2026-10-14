@@ -1,0 +1,143 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a04c8e410f566d4c95baac0a724b55d, type: 3}
+  m_Name: the_cache
+  m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.EventDefinition
+  data:
+    Id: the_cache
+    SortOrder: 4
+    Floors: e7030000i
+    Requires: []
+    Pages:
+    - Id: cache
+      ArtKey: 
+      Title: A Cache
+      Body: A loose stone in the wall hides a hollow. Whatever is left here is still here when the party is not. Coins put in are safe from a death.
+      Choices:
+      - Text: Bank a quarter of your gold
+        Requires:
+        - Kind: 4
+          CharacterId: 
+          CharacterDisplayName: 
+          Ability: 0
+          Min: 1
+          HasMin: 1
+          Max: 0
+          HasMax: 0
+          CounterId: 
+          RequireStanding: 0
+          AuthoredReason: 
+        HiddenUntilMet: 0
+        Effects:
+        - Kind: 13
+          Amount: 25
+          Item: 
+          CounterId: 
+          CharacterId: 
+          CharacterDisplayName: 
+          RelicId: 
+          RelicDisplayName: 
+          FightId: 
+          ShelfId: 
+          Reveal: 0
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: The coins go into the wall.
+          GoTo: 
+          IsLeave: 1
+        HideOutcome: 0
+      - Text: Bank half of your gold
+        Requires:
+        - Kind: 4
+          CharacterId: 
+          CharacterDisplayName: 
+          Ability: 0
+          Min: 1
+          HasMin: 1
+          Max: 0
+          HasMax: 0
+          CounterId: 
+          RequireStanding: 0
+          AuthoredReason: 
+        HiddenUntilMet: 0
+        Effects:
+        - Kind: 13
+          Amount: 50
+          Item: 
+          CounterId: 
+          CharacterId: 
+          CharacterDisplayName: 
+          RelicId: 
+          RelicDisplayName: 
+          FightId: 
+          ShelfId: 
+          Reveal: 0
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: The coins go into the wall.
+          GoTo: 
+          IsLeave: 1
+        HideOutcome: 0
+      - Text: Bank all of your gold
+        Requires:
+        - Kind: 4
+          CharacterId: 
+          CharacterDisplayName: 
+          Ability: 0
+          Min: 1
+          HasMin: 1
+          Max: 0
+          HasMax: 0
+          CounterId: 
+          RequireStanding: 0
+          AuthoredReason: 
+        HiddenUntilMet: 0
+        Effects:
+        - Kind: 13
+          Amount: 100
+          Item: 
+          CounterId: 
+          CharacterId: 
+          CharacterDisplayName: 
+          RelicId: 
+          RelicDisplayName: 
+          FightId: 
+          ShelfId: 
+          Reveal: 0
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: The coins go into the wall.
+          GoTo: 
+          IsLeave: 1
+        HideOutcome: 0
+      - Text: Leave it
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: 
+          GoTo: 
+          IsLeave: 1
+        HideOutcome: 0
+      BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
+      Cast: []
+      Lines: []
+    BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
+    MayReturn: 0
+    Speakers: []
+    Fights: []
+    Shelves: []

@@ -99,6 +99,13 @@ namespace PrincesPalace.Domain.Dungeon
                         "not by RoomResolution.Resolve -- ArriveAt should have " +
                         "handled it before this was called.");
 
+                // A cache is an event page, opened by ArriveAt like a shop. It
+                // reaches here only when that page is not in the built content;
+                // the room then clears as the empty room it is rather than
+                // throwing mid-descent.
+                case RoomType.Cache:
+                    return new Outcome(Kind.Empty);
+
                 // Placeholders. They generate, they draw on the map, they can
                 // be entered and cleared -- only the content behind them is
                 // missing, and each says so rather than resolving in silence.

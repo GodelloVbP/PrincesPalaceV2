@@ -115,7 +115,7 @@ route), not in the picture, so it needs explicit sign-off against that line
 | Shop | 0 or 1 per realm (profile's chance), always inside a pocket | skipping the pocket means no shop this realm |
 | Rest | at most one per realm: the spine node at offset 7 when `restBeforeBoss`, otherwise a fork sibling | reachable without paying a pocket |
 | Treasure | pockets only | a pocket prize |
-| Cache | **new, if signed (§9.3)**: at most one per realm, in a pocket | banks gold, safe from death (owner ask G2, `OWNER_DECISIONS_2026-09-26.md:133`; gold is lost on death per `RunSettlement.cs:50`) |
+| Cache | at most one per realm, in a pocket (signed, §9.3; landed P7) | opens the `the_cache` event: bank a quarter, half or all of the purse into `RunSnapshot.bankedGold`. A death or abandon pays the bank to the hub wallet and forfeits the purse (owner ask G2, `OWNER_DECISIONS_2026-09-26.md:133`; `RunSettlement.Settle`). Banked gold is plain gold, never rescaled. A pocket prize. Medallion art: the chest stands in. |
 
 Forks decide *which* node you get. Pockets decide *how much more* you take on.
 Every pocket holds at least one of: an anchor, the shop, Treasure, or Cache.
@@ -337,7 +337,7 @@ visible prize, so the pocket decision is proven first.
 1920×1080, scrolling vertically with the camera following the party. Built
 only through `Domain/UiKit/Screens/MapScreen.cs` and `ScreenRegistry.cs`.
 
-- **Top band:** realm name, floor, gold, and the cache balance once P7 lands.
+- **Top band:** realm name, floor, gold, and the cache balance ("N GOLD  ·  M BANKED") once something is banked.
 - **Bottom detail card** (the existing `MapNodeCard`, extended): type,
   enemies, strength, prize, the skip heal on a spine choice, and (for an
   anchor) that it will guard the boss if left alive. When two choices are
@@ -376,7 +376,7 @@ only through `Domain/UiKit/Screens/MapScreen.cs` and `ScreenRegistry.cs`.
 | P4 | Screen: the graph, node grammar, the extended detail card and comparison, walk, gamepad, overview. Needs §9.1–2. | implementer | `-Changed -BuildScenes`, diff `Art/`; `-Runtime` captures only if the owner allows them that session |
 | P5 | Anchors at the heart (§6): reseat contract, per-enemy elite flag, formation, reinforcement queue, leader rule, `slainAnchorIds`, anchor HP fraction, heart drawing. Combat tests with zero, one, two and four anchors alive; the boss killed with anchors queued; melee refused on a guarded boss; one test with a heart anchor carrying a Gear chip (`PLAN_ITEMS.md` §5.4). | senior, `Escalation: architecture` | `-Changed -BuildScenes`, plus the P3 bot report re-run with the boss-fight win rate by anchors left alive. Landed: core `a929520c`, remainder after it; the heart drawing moved to P4. Bot table: `handoffs/run_map/P3_BOT_REPORT.md` |
 | P6 | Easing mask: a one-day spike (hand-written UI shader keeping stencil/clip, content-space UVs, rebuilt from `clearedNodeIds` on load), then the build and the art swap. | implementer | headless mask test; `-Runtime` capture if allowed |
-| P7 | Cache, if signed (§9.3): a new `RoomType`, `RoomResolution`, `MapNodeCard.Caption`, medallion, deposit, and the `RunSettlement` exemption. | implementer | `-Changed -BuildScenes` |
+| P7 | Cache (signed, landed): a new `RoomType`, `RoomResolution`, `MapNodeCard.Caption`, medallion, deposit, and the `RunSettlement` exemption. | implementer | `-Changed -BuildScenes` |
 | P8 | Designed realms as content: a `realms` list in `ContentData` (`IOrderedContent`, `ContentBuilder`, `CONTENT_SCHEMA.md` rows) mapping a floor to its profile. It starts with the first designed realm. | implementer | `-Changed -BuildContent` |
 
 If the P3 report fails, tune before P4. The levers are the prize multipliers,

@@ -1540,6 +1540,58 @@
       ]
     },
     {
+      "id": "the_cache",
+      "floors": [999],
+      "requires": [],
+      "backdrop": "",
+      "pages": [
+        {
+          "id": "cache",
+          "artPath": "",
+          "title": "A Cache",
+          "body": "A loose stone in the wall hides a hollow. Whatever is left here is still here when the party is not. Coins put in are safe from a death.",
+          "choices": [
+            {
+              "text": "Bank a quarter of your gold",
+              "requires": [ { "kind": "gold", "min": 1 } ],
+              "hiddenUntilMet": false,
+              "effects": [ { "kind": "bankGold", "amount": 25 } ],
+              "outcomes": [
+                { "requires": [], "effects": [], "result": "The coins go into the wall.", "goTo": "Leave" }
+              ]
+            },
+            {
+              "text": "Bank half of your gold",
+              "requires": [ { "kind": "gold", "min": 1 } ],
+              "hiddenUntilMet": false,
+              "effects": [ { "kind": "bankGold", "amount": 50 } ],
+              "outcomes": [
+                { "requires": [], "effects": [], "result": "The coins go into the wall.", "goTo": "Leave" }
+              ]
+            },
+            {
+              "text": "Bank all of your gold",
+              "requires": [ { "kind": "gold", "min": 1 } ],
+              "hiddenUntilMet": false,
+              "effects": [ { "kind": "bankGold", "amount": 100 } ],
+              "outcomes": [
+                { "requires": [], "effects": [], "result": "The coins go into the wall.", "goTo": "Leave" }
+              ]
+            },
+            {
+              "text": "Leave it",
+              "requires": [],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                { "requires": [], "effects": [], "result": "", "goTo": "Leave" }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
       "id": "demo_dialogue",
       "floors": [999],
       "requires": [

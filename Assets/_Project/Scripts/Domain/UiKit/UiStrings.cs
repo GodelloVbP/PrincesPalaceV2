@@ -312,6 +312,8 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("map.depth", "{0}  ·  ROOM {1}", "THE DESCENT  ·  ROOM 999");
         public static readonly UiString MapGold =
             UiString.Define("map.gold", "{0} GOLD", "99999 GOLD");
+        public static readonly UiString MapGoldBanked =
+            UiString.Define("map.gold_banked", "{0} GOLD  ·  {1} BANKED", "99999 GOLD  ·  99999 BANKED");
         public static readonly UiString MapAbandon = UiString.Define("map.abandon", "Abandon Run");
         // The map's hint that somebody wants looking at (plan C20): what waits,
         // from CharacterAttention, and the key that opens the menu on it. Only
@@ -350,6 +352,8 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("map.preview.shop", "A trader. The stock is set when you step in.");
         public static readonly UiString MapPreviewEvent =
             UiString.Define("map.preview.event", "Something waits here. What, you learn when you step in.");
+        public static readonly UiString MapPreviewCache =
+            UiString.Define("map.preview.cache", "A cache. Gold banked here survives a death.");
         public static readonly UiString MapPreviewStart =
             UiString.Define("map.preview.start", "Where this stretch of the descent began.");
         // The realm's facts on the card (docs/PLAN_RUN_MAP.md sections 2-3).
@@ -439,6 +443,8 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("event.effect_gold_gain", "+{0} gold", "+9999 gold");
         public static readonly UiString EventEffectGoldSpend =
             UiString.Define("event.effect_gold_spend", "-{0} gold", "-9999 gold");
+        public static readonly UiString EventEffectBankedGold =
+            UiString.Define("event.effect_banked_gold", "{0} gold banked", "9999 gold banked");
         public static readonly UiString EventEffectHeal =
             UiString.Define("event.effect_heal", "Party healed {0}%", "Party healed 100%");
         public static readonly UiString EventEffectDamage =
@@ -474,6 +480,8 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("event.preview_relic", "Relic: {0}", "Relic: Ceremonial Greatsword of Undy");
         public static readonly UiString EventPreviewFight = UiString.Define("event.preview_fight", "Starts a fight");
         public static readonly UiString EventPreviewShelf = UiString.Define("event.preview_shelf", "Opens the wares");
+        public static readonly UiString EventPreviewBankGold =
+            UiString.Define("event.preview_bank_gold", "Banks {0}% of your gold", "Banks 100% of your gold");
         public static readonly UiString EventPreviewTakeShelf = UiString.Define("event.preview_take_shelf", "Takes the wares");
 
         // A takeShelf's line (the caravan robbed): the one card the scuffle

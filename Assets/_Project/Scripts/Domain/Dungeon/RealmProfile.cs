@@ -52,10 +52,10 @@ namespace PrincesPalace.Domain.Dungeon
         public float shopChance = 0.75f;
 
         // Relative weights for the rooms the generator rolls: Fight, Event,
-        // Treasure and Rest. Each role filters the table to what it may hold
-        // (RealmMapGenerator), so Treasure only rolls in pockets and Rest only
-        // on a fork sibling, once. Shop and anchors are placed, not rolled.
-        // Cache joins here with its RoomType in P7.
+        // Treasure, Rest and Cache. Each role filters the table to what it may
+        // hold (RealmMapGenerator), so Treasure only rolls in pockets, Rest
+        // only on a fork sibling, once, and Cache only in a pocket, once.
+        // Shop and anchors are placed, not rolled.
         public List<RoomWeight> waypointWeights = new List<RoomWeight>();
 
         // The chip a Fight node gets. All zero gives None.
@@ -122,6 +122,7 @@ namespace PrincesPalace.Domain.Dungeon
                     new RoomWeight(RoomType.Event, 20),
                     new RoomWeight(RoomType.Treasure, 12),
                     new RoomWeight(RoomType.Rest, 8),
+                    new RoomWeight(RoomType.Cache, 6),
                 },
                 prizeWeights = new List<PrizeWeight>
                 {

@@ -34,6 +34,11 @@ namespace PrincesPalace.Domain.Events
         // scuffle first.
         Shelf,
         TakeShelf,
+
+        // The cache: moves gold from the purse into the run's bank, which a
+        // death does not take. Amount is a percent of the held gold (1-100)
+        // as authored, and the gold actually moved in the applied record.
+        BankGold,
     }
 
     // One effect. [Serializable] with public fields for the same reason
@@ -137,6 +142,10 @@ namespace PrincesPalace.Domain.Events
 
         public static EventEffect StartFight(string fightId) =>
             new EventEffect(EventEffectKind.Fight, 0, "", "") { FightId = fightId ?? "" };
+
+        // `amount`: the percent of held gold when authored, the gold moved
+        // when recording what was applied.
+        public static EventEffect BankGold(int amount) => new EventEffect(EventEffectKind.BankGold, amount, "", "");
 
         public static EventEffect Finish() => new EventEffect(EventEffectKind.Finish, 0, "", "");
 

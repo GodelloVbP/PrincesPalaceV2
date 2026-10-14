@@ -471,8 +471,8 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 
 | Field | Type | Default | Description | Values |
 |---|---|---|---|---|
-| `kind` | string | `""` | Which EventEffectKind this is: gold, healPercent, damagePercent, exp, item, counter, relic, princesFavor, fillSpecialPool, fight, finish, shelf or takeShelf. | Gold, HealPercent, DamagePercent, Exp, Item, Counter, Relic, PrincesFavor, FillSpecialPool, Fight, Finish, Shelf, TakeShelf |
-| `amount` | int | `0` | The amount this effect changes: gold (+ gain/- spend), heal/damage percent (1-100), exp, a counter delta, or princesFavor's run-long bonus (> 0). fillSpecialPool takes exactly 1; relic ignores it; fight, finish and shelf refuse it; takeShelf reads it as how many unsold cards are lost first (0 or more). |  |
+| `kind` | string | `""` | Which EventEffectKind this is: gold, healPercent, damagePercent, exp, item, counter, relic, princesFavor, fillSpecialPool, fight, finish, shelf, takeShelf or bankGold. | Gold, HealPercent, DamagePercent, Exp, Item, Counter, Relic, PrincesFavor, FillSpecialPool, Fight, Finish, Shelf, TakeShelf, BankGold |
+| `amount` | int | `0` | The amount this effect changes: gold (+ gain/- spend), heal/damage percent (1-100), exp, a counter delta, princesFavor's run-long bonus (> 0), or bankGold's percent of held gold to bank (1-100). fillSpecialPool takes exactly 1; relic ignores it; fight, finish and shelf refuse it; takeShelf reads it as how many unsold cards are lost first (0 or more). |  |
 | `item` | string | `""` | The item id granted; required by item. |  |
 | `counter` | string | `""` | The counter id this effect changes; required by counter. |  |
 | `character` | string | `""` | Optional on healPercent and exp: that one character id instead of the whole squad. healPercent never revives (a member at 0 HP stays at 0); exp goes to that member alone rather than being split. Refused on any other kind. |  |

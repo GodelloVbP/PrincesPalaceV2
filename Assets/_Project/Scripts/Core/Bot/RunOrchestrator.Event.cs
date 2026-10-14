@@ -171,7 +171,30 @@ namespace PrincesPalace
             run.eventsSeen ??= new List<string>();
             string picked = EventRoll.Pick(pool, run.floor, run.eventsSeen, new RunEventContext(save, run), rng);
 
-            return !string.IsNullOrEmpty(picked) && OpenEventHere(run, picked);
+        // The title the event page at a room will open with, "" when the pool
+        // is empty. Reads, draws from no shared stream.
+        internal static string PreviewEventTitle(RunSnapshot run, RealmNode node)
+        {
+            var save = SaveSlotManager.CurrentSave;
+            if (run == null || node == null || save == null) return "";
+
+            return FindEvent(RollEvent(save, run, run.legStartStep + node.Offset, node.Id))?.StartPage?.Title ?? "";
+        }
+
+        // The cache event's id (events.json). It sits on floor 999 so the
+        // ordinary roll never draws it; a Cache room opens it by name.
+        public const string CacheEventId = "the_cache";
+
+        // THE CACHE ROOM'S ARRIVAL, an event's lifecycle with the pick fixed
+        // instead of rolled: persisted before the panel shows, cleared by
+        // LeaveEvent. False when content has no such event (the room then
+        // resolves as an empty one).
+        public static bool EnsureCache()
+        {
+            var run = RunManager.Run;
+            if (run == null) return false;
+
+            return EventIsOpenOn(run) || OpenEventHere(run, CacheEventId);
         }
 
         // THE DEBUG MENU'S DOOR: open a named event where the party stands,
@@ -597,6 +620,22 @@ namespace PrincesPalace
                     RunEncounter.HealPartyByPercent(run, effect.Amount);
                     applied.Add(effect);
                     return;
+
+                case EventEffectKind.BankGold:
+                {
+                    // A percent of the purse, at least 1 gold while there is
+                    // any. Banked gold touches neither goldEarned nor the
+                    // purse's other rules: it is the same gold, moved.
+                    if (run.gold <= 0) return;
+
+                    int banked = effect.Amount >= 100
+                        ? run.gold
+                        : System.Math.Max(1, (int)((long)run.gold * effect.Amount / 100));
+                    run.gold -= banked;
+                    run.bankedGold += banked;
+                    applied.Add(EventEffect.BankGold(banked));
+                    return;
+                }
 
                 case EventEffectKind.DamagePercent:
                     RunEncounter.HurtPartyByPercent(run, effect.Amount);

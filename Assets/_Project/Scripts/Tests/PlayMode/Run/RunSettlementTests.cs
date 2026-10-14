@@ -103,6 +103,20 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [Test]
+        public void BankedGoldReachesTheWalletWhileThePurseIsLost()
+        {
+            int before = Save.wallet.Get(CurrencyType.Gold);
+            var run = Run(gold: 240);
+            run.bankedGold = 75;
+
+            var result = RunSettlement.Settle(Save, run);
+
+            Assert.AreEqual(240, result.GoldLost);
+            Assert.AreEqual(75, result.GoldBanked);
+            Assert.AreEqual(before + 75, Save.wallet.Get(CurrencyType.Gold));
+        }
+
+        [Test]
         public void LostGoldNeverReachesTheBankedWallet()
         {
             // The whole point of the at-risk pile. If this ever fails, retreat

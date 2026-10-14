@@ -117,6 +117,12 @@ namespace PrincesPalace
 
         public int gold;
 
+        // Gold the cache has banked (RoomType.Cache). Not at risk: a death or
+        // an abandon pays it to the profile wallet (RunSettlement.Settle)
+        // while `gold` is forfeited. Plain gold, never rescaled by depth.
+        // Purely additive, so CurrentVersion does not move.
+        public int bankedGold;
+
         // `grantedGold` is gone: a tree-wide grep found exactly one hit, the
         // declaration. Neither EndRun nor RunSettlement read or wrote it, and
         // there is no banking left to subtract from -- a run's gold is

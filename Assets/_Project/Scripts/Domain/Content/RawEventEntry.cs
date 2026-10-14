@@ -32,9 +32,9 @@ namespace PrincesPalace.Domain.Content
     [Serializable]
     public class RawEventEffect
     {
-        [ContentDoc("Which EventEffectKind this is: gold, healPercent, damagePercent, exp, item, counter, relic, princesFavor, fillSpecialPool, fight, finish, shelf or takeShelf.")]
+        [ContentDoc("Which EventEffectKind this is: gold, healPercent, damagePercent, exp, item, counter, relic, princesFavor, fillSpecialPool, fight, finish, shelf, takeShelf or bankGold.")]
         public string kind = "";
-        [ContentDoc("The amount this effect changes: gold (+ gain/- spend), heal/damage percent (1-100), exp, a counter delta, or princesFavor's run-long bonus (> 0). fillSpecialPool takes exactly 1; relic ignores it; fight, finish and shelf refuse it; takeShelf reads it as how many unsold cards are lost first (0 or more).")]
+        [ContentDoc("The amount this effect changes: gold (+ gain/- spend), heal/damage percent (1-100), exp, a counter delta, princesFavor's run-long bonus (> 0), or bankGold's percent of held gold to bank (1-100). fillSpecialPool takes exactly 1; relic ignores it; fight, finish and shelf refuse it; takeShelf reads it as how many unsold cards are lost first (0 or more).")]
         public int amount;
         [ContentDoc("The item id granted; required by item.")]
         public string item = "";

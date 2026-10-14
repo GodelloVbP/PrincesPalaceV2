@@ -110,6 +110,7 @@ namespace PrincesPalace.Domain.UiKit
             facts.Strength > 0
                 ? UiStrings.MapPreviewStrength.Format(Caption(facts.Type), facts.Strength)
                 : Caption(facts.Type);
+                case RoomType.Cache: return "CACHE";
 
         // Fights name their enemies, the base payout and the chip; a treasure
         // room names its stash. Shop and event pay out of rolls made on
@@ -132,7 +133,12 @@ namespace PrincesPalace.Domain.UiKit
                 case RoomType.Treasure: lines.Add(UiStrings.MapPreviewTreasure.Format(facts.StashGold)); break;
                 case RoomType.Rest: lines.Add(UiStrings.MapPreviewRest.Format()); break;
                 case RoomType.Shop: lines.Add(UiStrings.MapPreviewShop.Format()); break;
-                case RoomType.Event: lines.Add(UiStrings.MapPreviewEvent.Format()); break;
+                case RoomType.Event:
+                    // The title is the whole line: the stock sentence promises
+                    // a mystery, which a named event is not.
+                    lines.Add(facts.EventTitle.Length > 0 ? facts.EventTitle : UiStrings.MapPreviewEvent.Format());
+                    break;
+                case RoomType.Cache: lines.Add(UiStrings.MapPreviewCache.Format()); break;
                 case RoomType.Entry: lines.Add(UiStrings.MapPreviewStart.Format()); break;
             }
 

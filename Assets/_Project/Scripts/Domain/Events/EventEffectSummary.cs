@@ -139,6 +139,10 @@ namespace PrincesPalace.Domain.Events
                     return preview ? UiStrings.EventPreviewFight.Format() : "";
                 case EventEffectKind.Shelf:
                     return preview ? UiStrings.EventPreviewShelf.Format() : "";
+                case EventEffectKind.BankGold:
+                    return preview
+                        ? UiStrings.EventPreviewBankGold.Format(effect.Amount)
+                        : UiStrings.EventEffectBankedGold.Format(effect.Amount);
                 case EventEffectKind.PrincesFavor:
                     return UiStrings.EventEffectPrincesFavor.Format(effect.Amount);
                 case EventEffectKind.FillSpecialPool:
