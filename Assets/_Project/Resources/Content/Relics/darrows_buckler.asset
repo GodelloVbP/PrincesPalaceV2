@@ -27,6 +27,7 @@ MonoBehaviour:
       AgainstType: 0
       HasAgainst: 1
       AgainstMagical: 0
+      AgainstWearer: 0
       SkillId: 
     - Kind: 6
       Magnitude: 25
@@ -34,6 +35,7 @@ MonoBehaviour:
       AgainstType: 0
       HasAgainst: 0
       AgainstMagical: 1
+      AgainstWearer: 0
       SkillId: 
     RequiresConvergenceAbility: 0
     Bearer: 

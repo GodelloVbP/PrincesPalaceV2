@@ -49,18 +49,16 @@ namespace PrincesPalace.PlayModeTests
             return character;
         }
 
-        // POST-AFFIX-SPLIT: Fire's family used to be one bundled "fiery" id
-        // (ElementalDamageOnHitPercent + ResistanceFlat at once). A
-        // designer pass split it into "fiery" (damage) and "emberguard"
-        // (resistance) -- see modifiers.json's own entries. The two used to
-        // be proven together in one test; now each affix scales on its own.
+        // "attuned" is the damage rider in the wearer's own attack type and
+        // "veiled" the resistance to every magical type -- the two rows the
+        // twelve element mirrors became. Each affix scales on its own.
         [Test]
-        public void FieryModifier_ScalesItsDamageEffectByTheItemsOwnTier()
+        public void AttunedModifier_ScalesItsDamageEffectByTheItemsOwnTier()
         {
             var item = TierFiveEquippable();
             Assert.IsNotNull(item, "fixture: content has an equippable the first character can wear at tier 5");
 
-            var character = FreshCharacterWearing(item, "fiery");
+            var character = FreshCharacterWearing(item, "attuned");
 
             Assert.IsTrue(ContentDatabase.ActiveLoadout(character).IsLive(item.equipSlot),
                 "fixture check: the item must actually be LIVE (requirement met), or ModifierEffects reads nothing");
@@ -68,49 +66,49 @@ namespace PrincesPalace.PlayModeTests
             var effects = ContentDatabase.CharacterEffects(character);
             Assert.IsFalse(effects.IsEmpty, "a real, live-equipped modifier must produce real effects");
 
-            // fiery's authored base: ElementalDamageOnHitPercent 10 (Fire) -- halved
-            // from 20 in the affix-power-down pass (AUDIT-adjacent balance
-            // call; see modifiers.json's own header).
+            // attuned's authored base: ElementalDamageOnHitPercent 10, in the
+            // wearer's own attack type (Physical when they have none).
             // Scale = TierMultiplier(5) = 3.0517578125, so 10 x that = 30.52,
             // away-from-zero rounded to 31.
             var onHit = effects.All.Single(e => e.Kind == EffectKind.ElementalDamageOnHitPercent);
-            Assert.AreEqual(DamageType.Fire, onHit.Against);
+            Assert.AreEqual(OwnAttackType(character), onHit.Against);
+            Assert.IsFalse(onHit.AgainstWearer, "resolved to the wearer's element before combat reads it");
             Assert.AreEqual(31, onHit.Magnitude);
         }
 
+        private static DamageType OwnAttackType(Character character) =>
+            ContentDatabase.GetCharacter(character.definitionId).Data.AttackType;
+
         [Test]
-        public void EmberguardModifier_ScalesItsResistanceEffectByTheItemsOwnTier()
+        public void VeiledModifier_ScalesItsResistanceEffectByTheItemsOwnTier()
         {
             var item = TierFiveEquippable();
             Assert.IsNotNull(item, "fixture: content has an equippable the first character can wear at tier 5");
 
-            var character = FreshCharacterWearing(item, "emberguard");
+            var character = FreshCharacterWearing(item, "veiled");
             var effects = ContentDatabase.CharacterEffects(character);
             Assert.IsFalse(effects.IsEmpty, "a real, live-equipped modifier must produce real effects");
 
-            // emberguard's authored base: ResistanceFlat 8 (Fire) -- halved from 15.
-            // Scale = TierMultiplier(5) = 3.0517578125, so 8 x that = 24.41,
-            // away-from-zero rounded to 24.
+            // veiled's authored base: ResistanceFlat 4 against every magical
+            // type. Scale = TierMultiplier(5) = 3.0517578125, so 4 x that =
+            // 12.21, away-from-zero rounded to 12.
             var resist = effects.All.Single(e => e.Kind == EffectKind.ResistanceFlat);
-            Assert.AreEqual(DamageType.Fire, resist.Against);
-            Assert.AreEqual(24, resist.Magnitude);
+            Assert.IsTrue(resist.AgainstMagical);
+            Assert.AreEqual(12, resist.Magnitude);
         }
 
         [Test]
-        public void FieryAndEmberguard_CanBothBeEquippedTogether_AndBothStillApply()
+        public void AttunedAndVeiled_CanBothBeEquippedTogether_AndBothStillApply()
         {
-            // The two split-off Fire affixes are still free to land on the
-            // SAME item across two different affix slots -- proving the two
-            // rules can coexist, the same claim the old bundled "fiery"
-            // entry made on its own, now via two ids instead of one.
+            // The two rows can land on the SAME item across two affix slots.
             var item = TierFiveEquippable();
             Assert.IsNotNull(item, "fixture: content has an equippable the first character can wear at tier 5");
 
-            var character = FreshCharacterWearing(item, new[] { "fiery", "emberguard" });
+            var character = FreshCharacterWearing(item, new[] { "attuned", "veiled" });
             var effects = ContentDatabase.CharacterEffects(character);
 
             Assert.AreEqual(31, effects.All.Single(e => e.Kind == EffectKind.ElementalDamageOnHitPercent).Magnitude);
-            Assert.AreEqual(24, effects.All.Single(e => e.Kind == EffectKind.ResistanceFlat).Magnitude);
+            Assert.AreEqual(12, effects.All.Single(e => e.Kind == EffectKind.ResistanceFlat).Magnitude);
         }
 
         [Test]
@@ -119,7 +117,7 @@ namespace PrincesPalace.PlayModeTests
             var item = TierFiveEquippable();
             Assert.IsNotNull(item, "fixture: content has an equippable the first character can wear at tier 5");
 
-            var character = FreshCharacterWearing(item, "fiery", tier: 0);
+            var character = FreshCharacterWearing(item, "attuned", tier: 0);
             var effects = ContentDatabase.CharacterEffects(character);
 
             var onHit = effects.All.Single(e => e.Kind == EffectKind.ElementalDamageOnHitPercent);
@@ -132,9 +130,7 @@ namespace PrincesPalace.PlayModeTests
             var item = TierFiveEquippable();
             Assert.IsNotNull(item, "fixture: content has an equippable the first character can wear at tier 5");
 
-            // "emberguard" now, not "fiery" -- Fire's resistance half moved
-            // to its own split-off id; see this file's own header above.
-            var character = FreshCharacterWearing(item, "emberguard");
+            var character = FreshCharacterWearing(item, "veiled");
             var built = FightEncounterAdapter.Build(
                 new List<string> { character.definitionId },
                 ContentDatabase.Enemies.Take(1).Select(e => e.id).ToList(),
@@ -144,8 +140,8 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(built, "fixture: a real fight must build");
             var state = built.Party[0];
 
-            Assert.AreEqual(24, state.TypedResistance.Fire,
-                "the elemental family's typed-resistance half must reach CombatantState.TypedResistance " +
+            Assert.AreEqual(12, state.TypedResistance.Fire,
+                "veiled's magical resistance must reach CombatantState.TypedResistance " +
                 "the same seam a relic's ResistanceFlat already does");
         }
 

@@ -36,6 +36,12 @@ namespace PrincesPalace.Domain.Combat
         public bool HasAgainst;
         public bool AgainstMagical;
 
+        // "wearer": the element is the wearing character's own attackType,
+        // not yet known where the effect is authored. ContentDatabase.
+        // CharacterEffects rewrites it into a plain Against before combat
+        // reads it.
+        public bool AgainstWearer;
+
         // The skills.json id a skill-scoped talent kind upgrades (EffectCatalog
         // SkillScoped), or empty. Read through EffectSet.BestFor.
         public string SkillId;
@@ -43,7 +49,7 @@ namespace PrincesPalace.Domain.Combat
         public DamageType? Against => HasAgainst ? (DamageType?)AgainstType : null;
 
         public Effect(EffectKind kind, int magnitude, int threshold = 0,
-            DamageType? against = null, bool againstMagical = false)
+            DamageType? against = null, bool againstMagical = false, bool againstWearer = false)
         {
             Kind = kind;
             Magnitude = magnitude;
@@ -51,6 +57,7 @@ namespace PrincesPalace.Domain.Combat
             AgainstType = against ?? default;
             HasAgainst = against.HasValue;
             AgainstMagical = againstMagical;
+            AgainstWearer = againstWearer;
             SkillId = "";
         }
 

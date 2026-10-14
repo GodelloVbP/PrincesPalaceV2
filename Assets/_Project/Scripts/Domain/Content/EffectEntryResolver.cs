@@ -66,15 +66,21 @@ namespace PrincesPalace.Domain.Content
             // number protecting (or hitting) nothing.
             DamageType? against = null;
             bool againstMagical = false;
+            bool againstWearer = false;
             string named = (raw.damageType ?? "").Trim();
 
             if (info.Target != EffectTarget.None)
             {
                 bool acceptsMagical = info.Target == EffectTarget.ElementOrMagical;
+                bool acceptsWearer = info.Target == EffectTarget.ElementOrWearer;
 
                 if (acceptsMagical && string.Equals(named, "magical", StringComparison.OrdinalIgnoreCase))
                 {
                     againstMagical = true;
+                }
+                else if (acceptsWearer && string.Equals(named, "wearer", StringComparison.OrdinalIgnoreCase))
+                {
+                    againstWearer = true;
                 }
                 else if (Enum.TryParse<DamageType>(named, ignoreCase: true, out var parsed))
                 {
@@ -83,7 +89,7 @@ namespace PrincesPalace.Domain.Content
                 else
                 {
                     error = $"{where}: '{kind}' names damageType '{raw.damageType}', which isn't " +
-                            (acceptsMagical ? "a damage type or 'magical'." : "a damage type.");
+                            (acceptsMagical ? "a damage type or 'magical'." : acceptsWearer ? "a damage type or 'wearer'." : "a damage type.");
                     return false;
                 }
             }
@@ -94,7 +100,7 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
-            effect = new Effect(kind, raw.magnitude, raw.threshold, against, againstMagical);
+            effect = new Effect(kind, raw.magnitude, raw.threshold, against, againstMagical, againstWearer);
             error = null;
             return true;
         }
@@ -106,6 +112,7 @@ namespace PrincesPalace.Domain.Content
                 case EffectHolder.Affix: return "modifier";
                 case EffectHolder.Track: return "reward track";
                 case EffectHolder.Talent: return "talent";
+                case EffectHolder.Trait: return "trait";
                 default: return "relic";
             }
         }

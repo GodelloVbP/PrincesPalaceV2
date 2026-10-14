@@ -45,19 +45,21 @@ MonoBehaviour:
     IconPath: 
     MinSpent: 0
     Effects:
-    - Kind: 113
+    - Kind: 112
       Magnitude: 0
       Threshold: 0
       AgainstType: 0
       HasAgainst: 0
       AgainstMagical: 0
+      AgainstWearer: 0
       SkillId: 
-    - Kind: 114
+    - Kind: 113
       Magnitude: 4
       Threshold: 0
       AgainstType: 0
       HasAgainst: 0
       AgainstMagical: 0
+      AgainstWearer: 0
       SkillId: second_wind
     GrantsSkillId: second_wind
     AppliesToSkillId: second_wind

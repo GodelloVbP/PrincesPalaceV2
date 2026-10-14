@@ -45,12 +45,12 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void AffixKinds_HaveAPool_AndOtherKindsDoNot()
+        public void AffixAndTraitKinds_HaveAPool_AndOtherKindsDoNot()
         {
             foreach (var info in EffectCatalog.All)
             {
-                bool affix = info.Allows(EffectHolder.Affix);
-                Assert.AreEqual(affix, info.Pool != AffixPool.None, $"{info.Kind}: an affix kind needs a pool, nothing else has one");
+                bool rolls = info.Allows(EffectHolder.Affix) || info.Allows(EffectHolder.Trait);
+                Assert.AreEqual(rolls, info.Pool != AffixPool.None, $"{info.Kind}: an affix or trait kind needs a pool, nothing else has one");
             }
         }
     }

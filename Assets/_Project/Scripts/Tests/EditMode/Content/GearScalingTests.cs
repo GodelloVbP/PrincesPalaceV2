@@ -47,13 +47,13 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void ANonArmourSlotWeighsNothing()
+        public void AWeaponSlotWeighsNothing_AndTheNecklaceWeighsWhatGlovesDo()
         {
-            // A necklace is not part of a material set and a weapon scales
-            // through weapons.json. Zero makes a set that names one by mistake
-            // grant nothing, which the resolver already refuses, rather than
-            // inventing a value nobody authored.
-            Assert.AreEqual(0.0, GearScaling.SlotWeight(EquipmentSlot.Necklace), 0.0001);
+            // A weapon scales through weapons.json. Zero makes a set that
+            // names one by mistake grant nothing, which the resolver already
+            // refuses, rather than inventing a value nobody authored. The
+            // amulet set's one piece is the necklace slot's only budget.
+            Assert.AreEqual(0.85, GearScaling.SlotWeight(EquipmentSlot.Necklace), 0.0001);
             Assert.AreEqual(0.0, GearScaling.SlotWeight(EquipmentSlot.Weapon1), 0.0001);
         }
 

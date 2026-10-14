@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: quickcast
     DisplayName: Quickcast
-    Description: A plain swing buys a cheaper follow-up cast. Runic's old bundle split four ways -- see Runic, Manaflow and Wardrune's own descriptions for the rest of the family.
-    SortOrder: 22
+    Description: The next word comes easier.
+    SortOrder: 11
     Effects:
     - Kind: 24
       Magnitude: 13
@@ -24,4 +24,8 @@ MonoBehaviour:
       AgainstType: 0
       HasAgainst: 0
       AgainstMagical: 0
+      AgainstWearer: 0
       SkillId: 
+    Trait: 0
+    Pool: 1
+    Requires: 

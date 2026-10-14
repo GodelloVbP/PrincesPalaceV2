@@ -195,10 +195,39 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void FortunateFavorBonusFlat_IsASignedFlatFavorNumber()
+        public void ElementalDamageOnHit_AgainstTheWearersElement_ReadsAsAttackType()
         {
-            var effect = new Effect(EffectKind.FortunateFavorBonusFlat, 5);
-            Assert.AreEqual($"{Keyword("+5")} Favor", ModifierEffectText.Describe(effect));
+            var effect = new Effect(EffectKind.ElementalDamageOnHitPercent, 10, againstWearer: true);
+            Assert.AreEqual($"{Keyword("+10%")} attack-type dmg on hit", ModifierEffectText.Describe(effect));
+        }
+
+        // Trait rules are generated from the effect's number and FightTuning,
+        // so these pin the literal sentence a card prints.
+        [Test]
+        public void TraitText_IsGeneratedFromTheEffect()
+        {
+            Assert.AreEqual($"every 4th spell each fight deals {Keyword("+50%")} damage",
+                ModifierEffectText.Describe(new Effect(EffectKind.ChargingCrystal, 50)));
+            Assert.AreEqual($"every 3rd attack each fight deals {Keyword("+40%")} damage",
+                ModifierEffectText.Describe(new Effect(EffectKind.LongCount, 40)));
+            Assert.AreEqual($"after a spell, gain a {Keyword("20")}-point ward for 1 turn",
+                ModifierEffectText.Describe(new Effect(EffectKind.MagicalShield, 20)));
+            Assert.AreEqual($"below {Keyword("30%")} HP every enemy is Feared for 1 turn",
+                ModifierEffectText.Describe(new Effect(EffectKind.WorldEndersCrown, 0, threshold: 30)));
+            Assert.AreEqual("each attack strikes the same target a second time",
+                ModifierEffectText.Describe(new Effect(EffectKind.DualWield, 0)));
+        }
+
+        [Test]
+        public void EveryTraitKind_HasGeneratedText()
+        {
+            foreach (var info in EffectCatalog.All)
+            {
+                if (!info.Allows(EffectHolder.Trait)) continue;
+
+                var effect = new Effect(info.Kind, info.UsesMagnitude ? 10 : 0, info.UsesThreshold ? 30 : 0);
+                Assert.IsNotEmpty(ModifierEffectText.Describe(effect), $"{info.Kind} prints no rules text");
+            }
         }
 
         [Test]

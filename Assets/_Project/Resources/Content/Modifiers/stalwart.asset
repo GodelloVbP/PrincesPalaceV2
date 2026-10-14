@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: stalwart
     DisplayName: Stalwart
-    Description: Armour plating a percentage curve cannot express. FlatPhysicalDamageReduction's base (2) is small on purpose at Ordinary/tier-0 -- it is a FLAT subtraction, so it matters far more against the many small hits of a swarm than against one boss-sized blow, which is the intended shape (a Stalwart wearer shrugs off chip damage, not a haymaker). Bulwark is this affix's split-off sibling -- the guard that gives less ground under pressure, split into its own roll so the two can no longer only ever be found together.
-    SortOrder: 16
+    Description: Blows land a little softer here.
+    SortOrder: 6
     Effects:
     - Kind: 19
       Magnitude: 2
@@ -24,4 +24,8 @@ MonoBehaviour:
       AgainstType: 0
       HasAgainst: 0
       AgainstMagical: 0
+      AgainstWearer: 0
       SkillId: 
+    Trait: 0
+    Pool: 2
+    Requires: 

@@ -15,13 +15,8 @@ namespace PrincesPalace.PlayModeTests
     // RootChancePercent rider reaches a real fight and actually roots a real
     // enemy -- not just a number sitting unread on EffectSet.
     //
-    // POST-AFFIX-SPLIT: Nature's family used to be one bundled "sylvan" id
-    // (ElementalDamageOnHitPercent + ResistanceFlat + RootChancePercent,
-    // all three at once). A designer pass split it into three single-effect
-    // ids -- "sylvan" (damage), "thornhide" (resistance), "entangling" (this
-    // file's root proc) -- so this file's own equip helper now reaches for
-    // "entangling" specifically, the id that actually carries
-    // RootChancePercent today.
+    // This file's equip helper reaches for "entangling", the id that carries
+    // RootChancePercent.
     //
     // Mirrors FrostyModifierReachesCombatTests' own real-content pattern:
     // equip a REAL item with a REAL id at a known tier, never a
@@ -61,8 +56,6 @@ namespace PrincesPalace.PlayModeTests
         private static ItemDefinition TierZeroEquippable() =>
             ContentDatabase.Equippables.FirstOrDefault(i => i != null);
 
-        // "entangling" -- the split-off id that carries Nature's root proc;
-        // see this file's own header for why it is no longer "sylvan" itself.
         private static Character FreshCharacterWearing(ItemDefinition item, int tier = 0)
         {
             var definition = ContentDatabase.Characters.FirstOrDefault();
@@ -73,9 +66,7 @@ namespace PrincesPalace.PlayModeTests
             return character;
         }
 
-        // All three of Nature's split affixes at once -- for the one test
-        // below that proves they can still coexist on one character, the way
-        // one bundled "sylvan" roll used to grant all three at once.
+        // Three affixes at once, for the coexistence test below.
         private static Character FreshCharacterWearingWholeNatureFamily(ItemDefinition item)
         {
             var definition = ContentDatabase.Characters.FirstOrDefault();
@@ -83,7 +74,7 @@ namespace PrincesPalace.PlayModeTests
 
             var character = new Character(definition.id);
             character.equipment.Set(item.equipSlot, item.id,
-                modifierIds: new List<string> { "sylvan", "thornhide", "entangling" });
+                modifierIds: new List<string> { "attuned", "veiled", "entangling" });
             return character;
         }
 
@@ -140,14 +131,11 @@ namespace PrincesPalace.PlayModeTests
                 "the real, scaled entangling root chance must reach the combatant the fight actually runs on");
         }
 
-        // The Nature family's damage-on-hit ("sylvan"), resistance
-        // ("thornhide") and root proc ("entangling") are three SEPARATE
-        // affixes post-split -- a single item can still carry all three at
-        // once (three affix slots, three ids), which is what this test
-        // proves. It is no longer one guarantee a single "sylvan" roll makes
-        // on its own; see FreshCharacterWearingWholeNatureFamily's own header.
+        // A damage rider ("attuned"), a resistance ("veiled") and the root
+        // proc ("entangling") are three separate affixes; one item can carry
+        // all three at once.
         [Test]
-        public void SylvanThornhideAndEntangling_CanAllBeEquippedTogether_AndAllThreeStillApply()
+        public void AttunedVeiledAndEntangling_CanAllBeEquippedTogether_AndAllThreeStillApply()
         {
             var item = TierZeroEquippable();
             Assert.IsNotNull(item, "fixture: content has a tier-0 equippable item");
@@ -156,9 +144,9 @@ namespace PrincesPalace.PlayModeTests
             var effects = ContentDatabase.CharacterEffects(character);
 
             Assert.Greater(effects.Magnitude(EffectKind.ElementalDamageOnHitPercent), 0,
-                "sylvan's own damage-on-hit must still apply when equipped alongside its siblings");
-            Assert.IsTrue(effects.All.Any(e => e.Kind == EffectKind.ResistanceFlat && e.Against == DamageType.Nature),
-                "thornhide's own Nature resistance must still apply when equipped alongside its siblings");
+                "attuned's own damage-on-hit must still apply when equipped alongside its siblings");
+            Assert.IsTrue(effects.All.Any(e => e.Kind == EffectKind.ResistanceFlat && e.AgainstMagical),
+                "veiled's own magical resistance must still apply when equipped alongside its siblings");
             Assert.Greater(effects.Magnitude(EffectKind.RootChancePercent), 0,
                 "entangling's own root chance must still apply when equipped alongside its siblings");
         }
@@ -172,7 +160,7 @@ namespace PrincesPalace.PlayModeTests
         // one place this file checks the ROOTED TARGET'S OWN NEXT ACTION:
         // the enemy's reply this same round must never resolve as a plain
         // attack (RootedStatusTests proves the gate mechanism itself against
-        // hand-built fixtures; this proves the real "sylvan" content
+        // hand-built fixtures; this proves the real "entangling" content
         // actually drives that exact same StatusEffects.Apply call).
         [Test]
         public void SylvanModifier_OnAHighTierItem_ActuallyRootsTheTarget_InARealFight()

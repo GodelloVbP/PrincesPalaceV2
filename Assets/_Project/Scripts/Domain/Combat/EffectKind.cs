@@ -108,10 +108,6 @@ namespace PrincesPalace.Domain.Combat
         // FightTuning.RunicWardConversionRate, a fixed rate on purpose.
         ManaToWardOnTurnStartPercent,
 
-        // Flat Prince's Favor while worn, read live by ItemOfferRoll.FavorOf;
-        // nothing stored, so unequipping removes it.
-        FortunateFavorBonusFlat,
-
         // A dodge RATING, not a percent: CombatMath.DodgePercentFrom runs it
         // through 100R/(R+100), so no stack reaches a certain dodge. Rolled in
         // DamagePipeline.AfterDefences, the one funnel every swing and cast

@@ -80,7 +80,7 @@ namespace PrincesPalace.PlayModeTests
         {
             // Quality is derived from the roll, not from the tier.
             var plain = ItemInstance.Of("brigandine_boots", 4);
-            var uncommon = ItemInstance.Of("brigandine_boots", 4, new[] { "fiery" });
+            var uncommon = ItemInstance.Of("brigandine_boots", 4, new[] { "attuned" });
 
             Assert.AreEqual(RarityColors.For(Quality.Common), RarityColors.For(plain));
             Assert.AreEqual(RarityColors.For(Quality.Uncommon), RarityColors.For(uncommon));

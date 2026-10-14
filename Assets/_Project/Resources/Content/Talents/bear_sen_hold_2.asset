@@ -46,19 +46,21 @@ MonoBehaviour:
     IconPath: 
     MinSpent: 0
     Effects:
-    - Kind: 136
+    - Kind: 135
       Magnitude: 3
       Threshold: 0
       AgainstType: 0
       HasAgainst: 0
       AgainstMagical: 0
+      AgainstWearer: 0
       SkillId: hold_the_line
-    - Kind: 139
+    - Kind: 138
       Magnitude: 5
       Threshold: 0
       AgainstType: 0
       HasAgainst: 0
       AgainstMagical: 0
+      AgainstWearer: 0
       SkillId: 
     GrantsSkillId: 
     AppliesToSkillId: hold_the_line

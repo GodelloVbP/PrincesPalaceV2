@@ -52,13 +52,15 @@ MonoBehaviour:
       AgainstType: 0
       HasAgainst: 0
       AgainstMagical: 0
+      AgainstWearer: 0
       SkillId: 
-    - Kind: 115
+    - Kind: 114
       Magnitude: 8
       Threshold: 2
       AgainstType: 0
       HasAgainst: 0
       AgainstMagical: 0
+      AgainstWearer: 0
       SkillId: 
     GrantsSkillId: 
     AppliesToSkillId: 

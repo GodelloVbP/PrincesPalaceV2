@@ -136,7 +136,7 @@ namespace PrincesPalace
                 if (relic == null) continue;
 
                 var reached = fieldedIds.Where(relic.ReachesCharacter).ToList();
-                var already = AlreadyGetMechanic(relic.Mechanic, reached, held);
+                var already = AlreadyGetMechanic(relic.Mechanic, reached, held, fielded);
                 if (reached.Count > 0 && already.Count == reached.Count) continue;
 
                 addsNothingFor[option.Id] = already;
@@ -294,11 +294,23 @@ namespace PrincesPalace
             return new PageMember(character?.definitionId, worn);
         }
 
+        // Members who already get this mechanic from a held relic or from a
+        // trait on a worn copy.
         private static List<string> AlreadyGetMechanic(EffectKind mechanic, IEnumerable<string> reached,
-            IReadOnlyList<ResolvedRelic> held)
+            IReadOnlyList<ResolvedRelic> held, IReadOnlyList<Character> fielded)
         {
             if (mechanic == EffectKind.None) return new List<string>();
-            return reached.Where(id => held.Any(h => h.Mechanic == mechanic && h.ReachesCharacter(id))).ToList();
+            return reached.Where(id => held.Any(h => h.Mechanic == mechanic && h.ReachesCharacter(id))
+                                       || WearsTrait(fielded, id, mechanic)).ToList();
+        }
+
+        private static bool WearsTrait(IReadOnlyList<Character> fielded, string characterId, EffectKind mechanic)
+        {
+            var character = fielded?.FirstOrDefault(c => c != null && c.definitionId == characterId);
+            if (character?.equipment == null) return false;
+
+            return character.equipment.EquippedEntries().Any(e => ContentDatabase.TraitRowsOf(e.Instance)
+                .Any(t => t.Data.Effects.Length > 0 && t.Data.Effects[0].Kind == mechanic));
         }
 
         private static void Hone(SaveData save, string characterId, EquipmentSlot slot)
@@ -355,6 +367,8 @@ namespace PrincesPalace
                 new Dictionary<EquipmentSlot, IReadOnlyList<string>>();
             private IReadOnlyList<string> _weaponAffixes;
             private IReadOnlyList<string> _armourAffixes;
+            private IReadOnlyList<string> _weaponTraits;
+            private IReadOnlyList<string> _armourTraits;
 
             public ContentGearCatalog(IEnumerable<Character> members)
             {
@@ -387,23 +401,86 @@ namespace PrincesPalace
 
             public IReadOnlyList<string> AffixPool(EquipmentSlot slot)
             {
-                if (_weaponAffixes == null)
-                {
-                    var weapon = new List<string>();
-                    var armour = new List<string>();
-                    foreach (var modifier in ContentDatabase.Modifiers)
-                    {
-                        if (modifier == null || string.IsNullOrEmpty(modifier.id)) continue;
-                        var effects = modifier.Data.Effects ?? Array.Empty<Effect>();
-                        if (effects.Any(e => ModifierTable.IsOffensiveModifier(e.Kind))) weapon.Add(modifier.id);
-                        else armour.Add(modifier.id);
-                    }
+                BuildPools();
+                return EquipmentSlots.IsWeaponSlot(slot) ? _weaponAffixes : _armourAffixes;
+            }
 
-                    _weaponAffixes = weapon;
-                    _armourAffixes = armour;
+            public IReadOnlyList<string> TraitsFor(string memberId, EquipmentSlot slot)
+            {
+                BuildPools();
+                var pool = EquipmentSlots.IsWeaponSlot(slot) ? _weaponTraits : _armourTraits;
+                if (!_members.TryGetValue(memberId ?? "", out var character)) return pool;
+
+                var kit = KitEffectsOf(character);
+                var gotten = KindsAlreadyGotten(character, slot);
+                var usable = new List<string>();
+                foreach (string id in pool)
+                {
+                    var data = ContentDatabase.GetModifier(id)?.Data;
+                    if (data == null || data.Effects.Length == 0) continue;
+                    if (!TraitRequirements.AllMet(data.Requires, kit)) continue;
+                    if (gotten.Contains(data.Effects[0].Kind)) continue;
+                    usable.Add(id);
                 }
 
-                return EquipmentSlots.IsWeaponSlot(slot) ? _weaponAffixes : _armourAffixes;
+                return usable;
+            }
+
+            // The skill effects the member's kit holds right now.
+            private static List<SkillEffect> KitEffectsOf(Character character) =>
+                ContentDatabase.AvailableSkillsFor(character).Select(s => s.Data.Effect).ToList();
+
+            // Mechanics the member already gets: run relics that reach them,
+            // and traits on their other worn copies (the copy this card
+            // would replace does not count).
+            private static HashSet<EffectKind> KindsAlreadyGotten(Character character, EquipmentSlot replacing)
+            {
+                var kinds = new HashSet<EffectKind>();
+                var run = SaveSlotManager.CurrentSave?.activeRun;
+                foreach (string relicId in run?.relicIds ?? new List<string>())
+                {
+                    var relic = ContentDatabase.GetRelic(relicId)?.Data;
+                    if (relic != null && relic.Mechanic != EffectKind.None && relic.ReachesCharacter(character.definitionId))
+                    {
+                        kinds.Add(relic.Mechanic);
+                    }
+                }
+
+                foreach (var entry in character.equipment?.EquippedEntries() ?? Enumerable.Empty<EquipmentSlotEntry>())
+                {
+                    if (entry.slot == replacing) continue;
+                    foreach (var trait in ContentDatabase.TraitRowsOf(entry.Instance))
+                    {
+                        if (trait.Data.Effects.Length > 0) kinds.Add(trait.Data.Effects[0].Kind);
+                    }
+                }
+
+                return kinds;
+            }
+
+            // Affix rows and trait rows, each split by the pool modifiers.json
+            // names for it.
+            private void BuildPools()
+            {
+                if (_weaponAffixes != null) return;
+
+                var weaponAffixes = new List<string>();
+                var armourAffixes = new List<string>();
+                var weaponTraits = new List<string>();
+                var armourTraits = new List<string>();
+                foreach (var modifier in ContentDatabase.Modifiers)
+                {
+                    if (modifier == null || string.IsNullOrEmpty(modifier.id)) continue;
+
+                    bool weapon = modifier.Data.Pool == Domain.Combat.AffixPool.Weapon;
+                    (modifier.Data.Trait ? (weapon ? weaponTraits : armourTraits) : (weapon ? weaponAffixes : armourAffixes))
+                        .Add(modifier.id);
+                }
+
+                _weaponAffixes = weaponAffixes;
+                _armourAffixes = armourAffixes;
+                _weaponTraits = weaponTraits;
+                _armourTraits = armourTraits;
             }
         }
     }

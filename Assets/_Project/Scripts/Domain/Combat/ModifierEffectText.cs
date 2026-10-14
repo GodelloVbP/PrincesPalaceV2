@@ -141,9 +141,6 @@ namespace PrincesPalace.Domain.Combat
                 case EffectKind.ManaToWardOnTurnStartPercent:
                     return $"{Keyword($"{RatePercent(FightTuning.RunicWardConversionRate)}%")} of unspent mana as shield each turn";
 
-                case EffectKind.FortunateFavorBonusFlat:
-                    return $"{Keyword($"+{effect.Magnitude}")} Favor";
-
                 case EffectKind.DodgeRating:
                     // Magnitude is a RATING, not a direct percent -- see
                     // EffectKind.DodgeRating's own header. The
@@ -163,6 +160,63 @@ namespace PrincesPalace.Domain.Combat
                 case EffectKind.RootChancePercent:
                     return $"{Keyword($"{effect.Magnitude}%")} on hit: Root ({FightTuning.RootOnHitTurns} turns)";
 
+
+                // ---- traits: rules generated from the effect's own numbers
+                // (docs/PLAN_ITEMS.md 2.1), so a tuned magnitude or a
+                // FightTuning constant cannot leave a hand-typed sentence
+                // behind. Wording follows the relic of the same kind.
+                case EffectKind.DualWield:
+                    return "each attack strikes the same target a second time";
+
+                case EffectKind.SwordInABox:
+                    return "each spell that lands is followed by a free basic attack";
+
+                case EffectKind.FirstRune:
+                    return "each single-target damaging spell repeats once, free";
+
+                case EffectKind.LuckyDeck:
+                    return $"each attack landed rolls: heal {Keyword($"{FightTuning.LuckyDeckHealHealthPercent}%")} HP and " +
+                           $"{FightTuning.LuckyDeckHealManaPercent}% mana, splash {FightTuning.LuckyDeckSplashPercent}% to " +
+                           $"other enemies, or slow {FightTuning.LuckyDeckSlowPercent}% for {FightTuning.LuckyDeckSlowTurns} turn";
+
+                case EffectKind.IceFingernail:
+                    return $"each attack slows the target {Keyword($"{FightTuning.IceFingernailPercentPerStack}%")}, " +
+                           $"up to {FightTuning.IceFingernailPercentPerStack * FightTuning.IceFingernailMaxStacks}% " +
+                           $"({FightTuning.IceFingernailStackTurns} turns a stack)";
+
+                case EffectKind.MagicMarker:
+                    return $"spells Mark the target; attacking it consumes the Mark and restores {Keyword($"{effect.Magnitude}%")} of missing mana";
+
+                case EffectKind.ChargingCrystal:
+                    return $"every {Ordinal(FightTuning.ChargingCrystalEvery)} spell each fight deals {Keyword($"+{effect.Magnitude}%")} damage";
+
+                case EffectKind.LongCount:
+                    return $"every {Ordinal(FightTuning.LongCountEvery)} attack each fight deals {Keyword($"+{effect.Magnitude}%")} damage";
+
+                case EffectKind.MagicalShield:
+                    return $"after a spell, gain a {Keyword($"{effect.Magnitude}")}-point ward for {FightTuning.DefaultWardTurns} turn";
+
+                case EffectKind.TinFoilPipe:
+                    return $"casting a spell gives {Keyword($"+{effect.Magnitude}%")} speed for {FightTuning.PipeTurns} turn";
+
+                case EffectKind.BallerinasSlippers:
+                    return $"each attack landed gives {Keyword($"+{effect.Magnitude}%")} speed, up to +{FightTuning.SlippersCapPercent}%";
+
+                case EffectKind.BerserkersVest:
+                    return $"getting hit cuts all cooldowns by {Keyword($"{effect.Magnitude}")}, once per turn";
+
+                case EffectKind.SparringBuckler:
+                    return $"a position change gives a {Keyword($"{effect.Magnitude}")}-point ward, once per turn";
+
+                case EffectKind.EssenceSiphon:
+                    return $"an enemy's death heals {Keyword($"{effect.Magnitude}%")} of max HP";
+
+                case EffectKind.WorldEndersCrown:
+                    return $"below {Keyword($"{effect.Threshold}%")} HP every enemy is Feared for {FightTuning.WorldEndersCrownFearTurns} turn";
+
+                case EffectKind.DancersAnklet:
+                    return "after you act, move one place up the turn order";
+
                 // None, and any future member this formatter has not caught up
                 // with yet: an empty fragment rather than a thrown exception,
                 // the same graceful-degradation posture the rest of the
@@ -171,6 +225,19 @@ namespace PrincesPalace.Domain.Combat
                 // "DisplayName -- ".
                 default:
                     return "";
+            }
+        }
+
+        private static string Ordinal(int n)
+        {
+            int tens = n % 100;
+            if (tens >= 11 && tens <= 13) return n + "th";
+            switch (n % 10)
+            {
+                case 1: return n + "st";
+                case 2: return n + "nd";
+                case 3: return n + "rd";
+                default: return n + "th";
             }
         }
 
@@ -202,6 +269,13 @@ namespace PrincesPalace.Domain.Combat
             if (effect.AgainstMagical)
             {
                 return "magic";
+            }
+
+            // Not yet resolved to the wearer's element: an item listing has
+            // no wearer in scope.
+            if (effect.AgainstWearer)
+            {
+                return "attack-type";
             }
 
             return effect.Against.HasValue ? effect.Against.Value.ToString() : "";

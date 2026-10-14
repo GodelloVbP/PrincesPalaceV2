@@ -16,10 +16,8 @@ namespace PrincesPalace.PlayModeTests
     // chills a real target -- not just a number sitting unread on
     // EffectSet.
     //
-    // Ice's family is three single-effect ids -- "frosty" (damage),
-    // "permafrost" (resistance), "frostbite" (this file's chill proc) --
-    // so this file's equip helper reaches for "frostbite" specifically, the
-    // id that carries ChilledOnHitChancePercent.
+    // This file's equip helper reaches for "frostbite", the id that carries
+    // ChilledOnHitChancePercent.
     //
     // Mirrors SwiftModifierReachesCombatTests/ItemModifierScalingReachesCombatTests'
     // own real-content pattern: equip a REAL item with a REAL id at a known
@@ -56,8 +54,6 @@ namespace PrincesPalace.PlayModeTests
         private static ItemDefinition TierZeroEquippable() =>
             ContentDatabase.Equippables.FirstOrDefault(i => i != null);
 
-        // "frostbite" -- the split-off id that carries Ice's chill proc; see
-        // this file's own header for why it is no longer "frosty" itself.
         private static Character FreshCharacterWearing(ItemDefinition item, int tier = 0)
         {
             var definition = ContentDatabase.Characters.FirstOrDefault();
@@ -68,8 +64,7 @@ namespace PrincesPalace.PlayModeTests
             return character;
         }
 
-        // All three of Ice's split affixes at once -- for the one test below
-        // that proves they can still coexist on one character.
+        // Three affixes at once, for the coexistence test below.
         private static Character FreshCharacterWearingWholeIceFamily(ItemDefinition item)
         {
             var definition = ContentDatabase.Characters.FirstOrDefault();
@@ -77,7 +72,7 @@ namespace PrincesPalace.PlayModeTests
 
             var character = new Character(definition.id);
             character.equipment.Set(item.equipSlot, item.id,
-                modifierIds: new List<string> { "frosty", "permafrost", "frostbite" });
+                modifierIds: new List<string> { "attuned", "veiled", "frostbite" });
             return character;
         }
 
@@ -134,14 +129,11 @@ namespace PrincesPalace.PlayModeTests
                 "the real, scaled frostbite chill chance must reach the combatant the fight actually runs on");
         }
 
-        // The Ice family's damage-on-hit ("frosty"), resistance
-        // ("permafrost") and chill proc ("frostbite") are three SEPARATE
-        // affixes post-split -- a single item can still carry all three at
-        // once (three affix slots, three ids), which is what this test
-        // proves. It is no longer one guarantee a single "frosty" roll makes
-        // on its own; see FreshCharacterWearingWholeIceFamily's own header.
+        // A damage rider ("attuned"), a resistance ("veiled") and the chill
+        // proc ("frostbite") are three separate affixes; one item can carry
+        // all three at once.
         [Test]
-        public void FrostyPermafrostAndFrostbite_CanAllBeEquippedTogether_AndAllThreeStillApply()
+        public void AttunedVeiledAndFrostbite_CanAllBeEquippedTogether_AndAllThreeStillApply()
         {
             var item = TierZeroEquippable();
             Assert.IsNotNull(item, "fixture: content has a tier-0 equippable item");
@@ -150,9 +142,9 @@ namespace PrincesPalace.PlayModeTests
             var effects = ContentDatabase.CharacterEffects(character);
 
             Assert.Greater(effects.Magnitude(EffectKind.ElementalDamageOnHitPercent), 0,
-                "frosty's own damage-on-hit must still apply when equipped alongside its siblings");
-            Assert.IsTrue(effects.All.Any(e => e.Kind == EffectKind.ResistanceFlat && e.Against == DamageType.Ice),
-                "permafrost's own Ice resistance must still apply when equipped alongside its siblings");
+                "attuned's own damage-on-hit must still apply when equipped alongside its siblings");
+            Assert.IsTrue(effects.All.Any(e => e.Kind == EffectKind.ResistanceFlat && e.AgainstMagical),
+                "veiled's own magical resistance must still apply when equipped alongside its siblings");
             Assert.Greater(effects.Magnitude(EffectKind.ChilledOnHitChancePercent), 0,
                 "frostbite's own chill chance must still apply when equipped alongside its siblings");
         }

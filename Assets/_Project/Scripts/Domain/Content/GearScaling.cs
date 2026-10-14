@@ -162,11 +162,15 @@ namespace PrincesPalace.Domain.Content
                 case EquipmentSlot.Shoes: return 0.90;
                 case EquipmentSlot.Gloves: return 0.85;
 
-                // Not armour slots. A necklace is not part of a material set
-                // and a weapon comes from weapons.json, which has its own
-                // scaling; both return zero so a set that names one by mistake
-                // grants nothing and trips the resolver's "grants nothing"
-                // check rather than silently inventing a value.
+                // The amulet set's one piece. Outside the five armour weights,
+                // so a complete armour set still sums to 5.0; a necklace is
+                // worth what gloves are.
+                case EquipmentSlot.Necklace: return 0.85;
+
+                // A weapon comes from weapons.json, which has its own scaling;
+                // zero, so a set that names one by mistake grants nothing and
+                // trips the resolver's "grants nothing" check rather than
+                // silently inventing a value.
                 default: return 0.0;
             }
         }

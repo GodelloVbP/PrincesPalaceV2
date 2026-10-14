@@ -87,6 +87,101 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(first, Describe(SettleBoss(save)[0]));
         }
 
+        // Owner decision Q6: the top quality of any slot carries a trait. The
+        // seventh gear page without a Legendary makes its best card one, so
+        // priming the pity counter forces a Legendary on every seed.
+        // An empty Weapon1 always takes the weapon card; armed members draw
+        // across every slot.
+        private static void ArmEveryone(SaveData save)
+        {
+            var weapon = ContentDatabase.Offerable.First(i => i.equipSlot == EquipmentSlot.Weapon1);
+            foreach (var member in save.ActiveSquad()) member.equipment.Set(EquipmentSlot.Weapon1, weapon.id, tier: 0);
+        }
+
+        private static IEnumerable<PendingCard> LegendaryCards(ulong seed, out SaveData save)
+        {
+            RunManager.ResetForTests();
+            RunManager.StartRun(seed);
+            save = SaveSlotManager.CurrentSave;
+            ArmEveryone(save);
+            RunManager.Run.legendaryPity = GearPage.LegendaryPityPages - 1;
+            return SettleBoss(save)[0].Cards.Where(c => c.Rolled == Quality.Legendary).ToList();
+        }
+
+        [Test]
+        public void ALegendaryCard_CarriesOneUsableNonDuplicateTraitFromItsSlotsPool()
+        {
+            int weapon = 0, armour = 0;
+            for (ulong seed = 1; seed <= 60; seed++)
+            {
+                foreach (var card in LegendaryCards(seed, out var save))
+                {
+                    var traits = ContentDatabase.TraitRowsOf(card.Copy);
+                    Assert.AreEqual(1, traits.Count, $"seed {seed}: {card.Copy}");
+                    Assert.AreEqual(Quality.Legendary, ContentDatabase.QualityOf(card.Copy), $"seed {seed}");
+                    Assert.AreEqual(2, card.Copy.ModifierIds.Count - 1, $"seed {seed}: two affixes beside the trait");
+
+                    var trait = traits[0].Data;
+                    bool isWeapon = EquipmentSlots.IsWeaponSlot(card.Slot);
+                    Assert.AreEqual(isWeapon ? Domain.Combat.AffixPool.Weapon : Domain.Combat.AffixPool.Armour, trait.Pool,
+                        $"seed {seed}: {trait.Id} on {card.Slot}");
+                    if (isWeapon) weapon++; else armour++;
+
+                    var owner = save.roster.First(c => c.definitionId == card.RecipientId);
+                    var kit = ContentDatabase.AvailableSkillsFor(owner).Select(k => k.Data.Effect).ToList();
+                    Assert.IsTrue(TraitRequirements.AllMet(trait.Requires, kit), $"seed {seed}: {trait.Id} is unusable by {owner.definitionId}");
+
+                    // Not a mechanic the owner already gets from a relic or
+                    // from another worn copy.
+                    var kind = trait.Effects[0].Kind;
+                    foreach (var entry in owner.equipment.EquippedEntries().Where(e => e.slot != card.Slot))
+                    {
+                        Assert.IsFalse(ContentDatabase.TraitRowsOf(entry.Instance).Any(t => t.Data.Effects[0].Kind == kind),
+                            $"seed {seed}: {kind} duplicates a worn copy on {owner.definitionId}");
+                    }
+                }
+            }
+
+            Assert.Greater(weapon, 0, "the sweep must reach a weapon Legendary");
+            Assert.Greater(armour, 0, "the sweep must reach an armour Legendary");
+        }
+
+        [Test]
+        public void ALegendaryPage_IsPinnedOnAFixedSeed()
+        {
+            LegendaryCards(4242UL, out var save);
+            RunManager.Run.legendaryPity = GearPage.LegendaryPityPages - 1;
+            RunManager.Run.lastPageBestCommon = false;
+
+            Assert.AreEqual(
+                "sheep:Weapon2:staff t2 [frostbite,entangling]:Rare | bear:Head:runeplate_runehelm t2 [swift,runic]:Rare | " +
+                "owl:Necklace:amulet_pendant t2 [wardrune,bulwark,trait_tinfoil_pipe]:Legendary | " +
+                "sheep:Head:vellum_hood t2 [stalwart,bulwark,trait_tinfoil_pipe]:Legendary | " +
+                "bear:Gloves:brigandine_gloves t2 [manaflow]:Uncommon",
+                Describe(SettleBoss(save)[0]));
+        }
+
+        [Test]
+        public void ATraitTheOwnerAlreadyGetsFromARelic_IsNotOffered()
+        {
+            for (ulong seed = 1; seed <= 12; seed++)
+            {
+                RunManager.ResetForTests();
+                RunManager.StartRun(seed);
+                var save = SaveSlotManager.CurrentSave;
+                // Every weapon trait held as a relic by the whole party would
+                // leave none to draw; the one relic below removes exactly one.
+                RunManager.Run.relicIds.Add("charging_crystal");
+                RunManager.Run.legendaryPity = GearPage.LegendaryPityPages - 1;
+
+                foreach (var card in SettleBoss(save)[0].Cards)
+                {
+                    Assert.IsFalse(ContentDatabase.TraitRowsOf(card.Copy).Any(t => t.id == "trait_charging_crystal"),
+                        $"seed {seed}: {card.Copy} offers a trait its owner already has from the relic");
+                }
+            }
+        }
+
         [Test]
         public void Take_EquipsTheCardOnItsRecipient_AndBagsWhatItDisplaced()
         {

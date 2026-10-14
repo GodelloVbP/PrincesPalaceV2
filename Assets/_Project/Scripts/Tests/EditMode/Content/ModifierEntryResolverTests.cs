@@ -340,5 +340,134 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsFalse(ok);
             StringAssert.Contains("Duplicate modifier id", errors[0]);
         }
+
+        // ---- traits ----
+
+        private static RawModifierEntry Trait(string id, string pool, string kind, int magnitude = 0, params string[] requires)
+        {
+            return new RawModifierEntry
+            {
+                id = id, displayName = "Trait", trait = true, pool = pool, requires = requires,
+                effects = new[] { Effect(kind, magnitude) },
+            };
+        }
+
+        [Test]
+        public void ATraitRow_ResolvesWithItsPoolAndRequirements()
+        {
+            var entry = Trait("t", "weapon", "ChargingCrystal", 50, "Spell");
+
+            bool ok = ModifierEntryResolver.TryResolveAll(new List<RawModifierEntry> { entry }, out var resolved, out var errors);
+
+            Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
+            Assert.IsTrue(resolved[0].Trait);
+            Assert.AreEqual(AffixPool.Weapon, resolved[0].Pool);
+            CollectionAssert.AreEqual(new[] { TraitRequirement.Spell }, resolved[0].Requires);
+            Assert.AreEqual(EffectKind.ChargingCrystal, resolved[0].Effects[0].Kind);
+        }
+
+        [Test]
+        public void ATraitNamingTheWrongPool_IsRefused()
+        {
+            bool ok = ModifierEntryResolver.TryResolveAll(
+                new List<RawModifierEntry> { Trait("t", "armour", "ChargingCrystal", 50) }, out _, out var errors);
+
+            Assert.IsFalse(ok);
+            StringAssert.Contains("disagrees with ChargingCrystal", errors[0]);
+        }
+
+        [Test]
+        public void ATraitWithNoPool_IsRefused()
+        {
+            bool ok = ModifierEntryResolver.TryResolveAll(
+                new List<RawModifierEntry> { Trait("t", "", "DualWield") }, out _, out var errors);
+
+            Assert.IsFalse(ok);
+            StringAssert.Contains("names its pool", errors[0]);
+        }
+
+        [Test]
+        public void ARelicOnlyKind_IsNotATrait()
+        {
+            bool ok = ModifierEntryResolver.TryResolveAll(
+                new List<RawModifierEntry> { Trait("t", "weapon", "Bloodlust") }, out _, out var errors);
+
+            Assert.IsFalse(ok);
+            StringAssert.Contains("isn't an effect a trait can grant", errors[0]);
+        }
+
+        [Test]
+        public void AnAffixKind_CannotBeMarkedATrait()
+        {
+            bool ok = ModifierEntryResolver.TryResolveAll(
+                new List<RawModifierEntry> { Trait("t", "weapon", "LifestealPercent", 8) }, out _, out var errors);
+
+            Assert.IsFalse(ok);
+        }
+
+        [Test]
+        public void ATraitKind_CannotBeRolledAsAnAffix()
+        {
+            var entry = Modifier("x", Effect("DualWield"));
+
+            bool ok = ModifierEntryResolver.TryResolveAll(new List<RawModifierEntry> { entry }, out _, out var errors);
+
+            Assert.IsFalse(ok);
+            StringAssert.Contains("isn't an effect a modifier can grant", errors[0]);
+        }
+
+        [Test]
+        public void AnUnknownRequirement_IsRefused_AndOnlyATraitMayRequire()
+        {
+            Assert.IsFalse(ModifierEntryResolver.TryResolveAll(
+                new List<RawModifierEntry> { Trait("t", "weapon", "DualWield", 0, "Flying") }, out _, out var errors));
+            StringAssert.Contains("Convergence, Spell or Transform", errors[0]);
+
+            var affix = Modifier("a", Effect("DodgeRating", magnitude: 5));
+            affix.requires = new[] { "Spell" };
+            Assert.IsFalse(ModifierEntryResolver.TryResolveAll(new List<RawModifierEntry> { affix }, out _, out errors));
+            StringAssert.Contains("only a trait may carry requires", errors[0]);
+        }
+
+        [Test]
+        public void AnAffix_TakesItsKindsPool_WhenItNamesNone()
+        {
+            bool ok = ModifierEntryResolver.TryResolveAll(
+                new List<RawModifierEntry> { Modifier("v", Effect("LifestealPercent", magnitude: 8)) }, out var resolved, out _);
+
+            Assert.IsTrue(ok);
+            Assert.AreEqual(AffixPool.Weapon, resolved[0].Pool);
+            Assert.IsFalse(resolved[0].Trait);
+        }
+
+        [Test]
+        public void TheWearerShorthand_IsAcceptedOnTheDamageRiderOnly()
+        {
+            bool ok = ModifierEntryResolver.TryResolveAll(new List<RawModifierEntry>
+                { Modifier("att", Effect("ElementalDamageOnHitPercent", magnitude: 10, damageType: "wearer")) },
+                out var resolved, out var errors);
+
+            Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
+            Assert.IsTrue(resolved[0].Effects[0].AgainstWearer);
+            Assert.IsFalse(resolved[0].Effects[0].Against.HasValue);
+
+            Assert.IsFalse(ModifierEntryResolver.TryResolveAll(new List<RawModifierEntry>
+                { Modifier("bad", Effect("ResistanceFlat", magnitude: 8, damageType: "wearer")) }, out _, out _));
+        }
+
+        [Test]
+        public void RequirementsAreMetAgainstTheKitsSkillEffects()
+        {
+            var damaging = new[] { SkillEffect.HealSelf, SkillEffect.DamageSingle };
+            var transform = new[] { SkillEffect.Transform };
+
+            Assert.IsTrue(TraitRequirements.Met(TraitRequirement.Spell, damaging));
+            Assert.IsFalse(TraitRequirements.Met(TraitRequirement.Spell, transform));
+            Assert.IsTrue(TraitRequirements.Met(TraitRequirement.Transform, transform));
+            Assert.IsTrue(TraitRequirements.Met(TraitRequirement.Convergence, transform));
+            Assert.IsFalse(TraitRequirements.Met(TraitRequirement.Convergence, damaging));
+            Assert.IsTrue(TraitRequirements.AllMet(new TraitRequirement[0], damaging));
+            Assert.IsFalse(TraitRequirements.AllMet(new[] { TraitRequirement.Spell, TraitRequirement.Transform }, damaging));
+        }
     }
 }

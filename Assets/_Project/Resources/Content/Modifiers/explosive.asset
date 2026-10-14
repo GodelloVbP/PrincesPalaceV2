@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: explosive
     DisplayName: Explosive
-    Description: Whatever the wearer finishes off does not go quietly -- the kill splashes onto whoever was standing next to it. The exact mechanism Trample already uses, so a Black Ram wearing this alongside his own talent gets two independent splashes off one kill rather than one doubled splash -- see OnKillSplashPercent's own comment on why that is deliberate, not a bug to fix later. Already single-effect since Phase C; untouched by the affix split.
-    SortOrder: 18
+    Description: What falls takes its neighbours with it.
+    SortOrder: 8
     Effects:
     - Kind: 21
       Magnitude: 15
@@ -24,4 +24,8 @@ MonoBehaviour:
       AgainstType: 0
       HasAgainst: 0
       AgainstMagical: 0
+      AgainstWearer: 0
       SkillId: 
+    Trait: 0
+    Pool: 1
+    Requires: 

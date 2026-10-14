@@ -166,6 +166,9 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `displayName` | string | (none -- required) | The name shown for this modifier ('Rift affix'). |  |
 | `description` | string | `""` | Flavor/rules text shown to the player. |  |
 | `effects` | RawEffect[] (below) | `[]` | The single rule this modifier grants; more than one entry is rejected. |  |
+| `trait` | bool | `false` | True for a trait: a mechanic that rolls once on a Legendary gear copy. Default false (an affix). |  |
+| `pool` | string | `""` | 'weapon' or 'armour': which slots roll this row (weapon slots, or every other slot, the necklace included). Required on a trait and checked against its kind's catalog pool; an affix may omit it and takes its kind's pool. |  |
+| `requires` | string[] | `[]` | What the wearer's kit must hold for the row to be offered: any of Convergence, Spell, Transform. Empty means no requirement. |  |
 
 ## pools.json -- `RawPoolEntry`
 
@@ -191,9 +194,6 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `restoredByManaEffects` | bool | `true` | Whether mana potions, RestorePartyMana and the bot's mana accounting refill this pool. |  |
 | `engineFed` | bool | `false` | The pool is filled by a talent's Fury engine rather than by its own three gains, so a row that opens empty and authors no gain is still valid. Read by validation only. |  |
 
-## relics.json -- `RawRelicEntry`
-
-| Field | Type | Default | Description | Values |
 ## realms.json -- `RawRealmEntry`
 
 | Field | Type | Default | Description | Values |
@@ -212,6 +212,9 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `bossPool` | string[] | `[]` | Enemy ids the boss is drawn from. Empty means every boss. |  |
 | `restBeforeBoss` | bool | `false` | A Rest room on the spine node before the boss. |  |
 
+## relics.json -- `RawRelicEntry`
+
+| Field | Type | Default | Description | Values |
 |---|---|---|---|---|
 | `id` | string | (none -- required) | Stable identifier; written into save data via unlock/achievement references. |  |
 | `displayName` | string | (none -- required) | The name shown for this relic when offered. |  |
@@ -431,10 +434,10 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 
 | Field | Type | Default | Description | Values |
 |---|---|---|---|---|
-| `type` | string | `""` | Which Domain.Combat.EffectKind this grants, matched case-insensitively; the holder must be allowed it (EffectCatalog). | None, AttackPercent, DefensePercent, MaxHealthPercent, MaxManaPercent, SpeedPercent, ResistanceFlat, AttackFlat, DefenseFlat, MaxHealthFlat, MaxManaFlat, SpeedFlat, ArmorPenetrationFlat, WeaknessDamageBonusPercent, LifestealPercent, CritChanceFlat, CritDamageFlat, ElementalDamageOnHitPercent, ElementalDamagePercent, FlatPhysicalDamageReduction, BreakShieldDepletionResistPercent, OnKillSplashPercent, PushBackOnHitChancePercent, FlatManaRegenBonus, NextSkillManaDiscountPercent, ManaToWardOnTurnStartPercent, FortunateFavorBonusFlat, DodgeRating, ChilledOnHitChancePercent, RootChancePercent, DualWield, MagicalShield, Bloodlust, ChargingCrystal, BallerinasSlippers, TinFoilPipe, ToothedNecklace, BountyHunterContract, SwordInABox, LuckyDeck, DrownedLantern, FirstRune, SaltLedger, LongCount, MagicMarker, JarOfBearUrine, WorldEndersCrown, CursedIdol, AmassingStar, RampagingBullsHorn, IceFingernail, LoadedDice, MonkeyKingsScepter, SparringSaber, SparringBuckler, EssenceSiphon, DisgruntledLackey, InconspicuousKey, DancersAnklet, BerserkersVest, PhoenixEgg, Kinship, TransformDurationBonus, TollOfTheFlock, WoolOnHitTaken, WoolPerTurnBelowHealth, WoolWhenWardedAllyHit, WoolPerStatusedEnemy, IgnoreDefensePercent, ShredDefenseOnHit, ProvokedDamageReductionPercent, ProvokeHitsEveryEnemy, WoolPerProvokedEnemy, ExecuteDamageBonusPercent, ExtraAttackOnKill, TransformExtendOnKill, TransformHoldsBelowHealth, DefenseBonusPercentBelowHealth, DamageCapPercentBelowHealth, CheatDeathOncePerFight, HeadbuttCancelsIntent, TransformPushesEveryEnemy, TransformPermanentBelowHealth, WardReductionPercent, WardIsFreeAction, WardAlsoAppliesRegen, WardHealsWhenSpent, WardDamageBonusPerAlly, WardDamageBonusSelf, WardSelfBonusPersistsTurns, WardSpreadsToAllies, WardSpreadsToWholeParty, GiftManaPercent, GiftAttackBonusPercent, GiftAppliesImmediateTurn, ShatterDamagePercentOfAttack, ShatterSelfWardMultiplier, ShatterAppliesVulnerable, WardsNeverExpire, FuryEngineEinherjar, SlamCritRestoresFury, SlamCritChanceAtFury, SlamIgnoresDefenseAtFullFury, FuryOnKill, FirstIdleTurnFree, CritFuryBonusPercent, MomentumTier, CritChanceBelowTargetHealth, KillFillsMomentum, CritChanceWhileTransformed, FuryOnKillWhileTransformed, BattleTranceTier, TwinRampage, FuryEngineJuggernaut, SkillCooldownTurns, HealthCurveRegen, DamagePerMissingHealth, SkillLifestealPercent, SkillDamageBonusBelowOwnHealth, UnyieldingTier, DelayedDamagePercent, HealReducesDelayedDamage, ShortfallPaidInHealthPermille, BloodPaidDamagePercent, CheatDeathFillsPrimary, FuryEngineSentinel, IronRetortPercent, PlantedShieldBreakShards, ShieldBashShortWait, ShieldwallCoversParty, ThornsPercent, ReflectMagicPercent, SilenceCasterOnSpellHit, ReflectGrantsFury, SlowsAttacker, DisarmsOnBreak, SkillStatusTurns, SkillCleansesDebuffs, SkillSplashPercent, PrimaryGainWhenBuffedAllyHit, TargetPreferencePercent, PrimaryGainPerProvokedEnemy |
+| `type` | string | `""` | Which Domain.Combat.EffectKind this grants, matched case-insensitively; the holder must be allowed it (EffectCatalog). | None, AttackPercent, DefensePercent, MaxHealthPercent, MaxManaPercent, SpeedPercent, ResistanceFlat, AttackFlat, DefenseFlat, MaxHealthFlat, MaxManaFlat, SpeedFlat, ArmorPenetrationFlat, WeaknessDamageBonusPercent, LifestealPercent, CritChanceFlat, CritDamageFlat, ElementalDamageOnHitPercent, ElementalDamagePercent, FlatPhysicalDamageReduction, BreakShieldDepletionResistPercent, OnKillSplashPercent, PushBackOnHitChancePercent, FlatManaRegenBonus, NextSkillManaDiscountPercent, ManaToWardOnTurnStartPercent, DodgeRating, ChilledOnHitChancePercent, RootChancePercent, DualWield, MagicalShield, Bloodlust, ChargingCrystal, BallerinasSlippers, TinFoilPipe, ToothedNecklace, BountyHunterContract, SwordInABox, LuckyDeck, DrownedLantern, FirstRune, SaltLedger, LongCount, MagicMarker, JarOfBearUrine, WorldEndersCrown, CursedIdol, AmassingStar, RampagingBullsHorn, IceFingernail, LoadedDice, MonkeyKingsScepter, SparringSaber, SparringBuckler, EssenceSiphon, DisgruntledLackey, InconspicuousKey, DancersAnklet, BerserkersVest, PhoenixEgg, Kinship, TransformDurationBonus, TollOfTheFlock, WoolOnHitTaken, WoolPerTurnBelowHealth, WoolWhenWardedAllyHit, WoolPerStatusedEnemy, IgnoreDefensePercent, ShredDefenseOnHit, ProvokedDamageReductionPercent, ProvokeHitsEveryEnemy, WoolPerProvokedEnemy, ExecuteDamageBonusPercent, ExtraAttackOnKill, TransformExtendOnKill, TransformHoldsBelowHealth, DefenseBonusPercentBelowHealth, DamageCapPercentBelowHealth, CheatDeathOncePerFight, HeadbuttCancelsIntent, TransformPushesEveryEnemy, TransformPermanentBelowHealth, WardReductionPercent, WardIsFreeAction, WardAlsoAppliesRegen, WardHealsWhenSpent, WardDamageBonusPerAlly, WardDamageBonusSelf, WardSelfBonusPersistsTurns, WardSpreadsToAllies, WardSpreadsToWholeParty, GiftManaPercent, GiftAttackBonusPercent, GiftAppliesImmediateTurn, ShatterDamagePercentOfAttack, ShatterSelfWardMultiplier, ShatterAppliesVulnerable, WardsNeverExpire, FuryEngineEinherjar, SlamCritRestoresFury, SlamCritChanceAtFury, SlamIgnoresDefenseAtFullFury, FuryOnKill, FirstIdleTurnFree, CritFuryBonusPercent, MomentumTier, CritChanceBelowTargetHealth, KillFillsMomentum, CritChanceWhileTransformed, FuryOnKillWhileTransformed, BattleTranceTier, TwinRampage, FuryEngineJuggernaut, SkillCooldownTurns, HealthCurveRegen, DamagePerMissingHealth, SkillLifestealPercent, SkillDamageBonusBelowOwnHealth, UnyieldingTier, DelayedDamagePercent, HealReducesDelayedDamage, ShortfallPaidInHealthPermille, BloodPaidDamagePercent, CheatDeathFillsPrimary, FuryEngineSentinel, IronRetortPercent, PlantedShieldBreakShards, ShieldBashShortWait, ShieldwallCoversParty, ThornsPercent, ReflectMagicPercent, SilenceCasterOnSpellHit, ReflectGrantsFury, SlowsAttacker, DisarmsOnBreak, SkillStatusTurns, SkillCleansesDebuffs, SkillSplashPercent, PrimaryGainWhenBuffedAllyHit, TargetPreferencePercent, PrimaryGainPerProvokedEnemy |
 | `magnitude` | int | `0` | How much: percent, points or rating as the kind says. An affix's is the UNSCALED base (the fight reads base x TierMultiplier x RiftMultiplier). Omitted for a flag kind; may be negative only on a relic stat. |  |
 | `threshold` | int | `0` | Percent of max health for a health-gated kind (WorldEndersCrown); omitted otherwise. |  |
-| `damageType` | string | `""` | A DamageType name the kind targets, or 'magical' for every non-Physical type where the kind accepts it; required by ResistanceFlat and ElementalDamageOnHitPercent only. | Physical, Fire, Ice, Nature, Poison, Arcane, Earth, Water, Wind, Lightning, Void |
+| `damageType` | string | `""` | A DamageType name the kind targets, 'magical' for every non-Physical type where the kind accepts it (ResistanceFlat), or 'wearer' for the wearing character's own attackType, Physical if none (ElementalDamageOnHitPercent); required by those two kinds only. | Physical, Fire, Ice, Nature, Poison, Arcane, Earth, Water, Wind, Lightning, Void |
 
 ### `RawElementChoice`
 
@@ -594,9 +597,6 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `shake` | float | `0` | A floor on how hard this tier's blow kicks the stage, 0..1, on top of the skill's own shake; 0 means no extra floor. |  |
 | `hitStopSeconds` | float | `0` | A floor on this tier's hit-stop, in seconds, clamped to HitStop.MaxSeconds; 0 means no extra floor. |  |
 
-### `RawSetPiece`
-
-| Field | Type | Default | Description | Values |
 ### `RawRealmWeight`
 
 | Field | Type | Default | Description | Values |
@@ -604,6 +604,9 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `kind` | string | `""` | The room type or chip kind this weight is for. |  |
 | `weight` | int | `0` | Relative weight, 0 or more. |  |
 
+### `RawSetPiece`
+
+| Field | Type | Default | Description | Values |
 |---|---|---|---|---|
 | `id` | string | (none -- required) | Stable identifier, unique only within its own set; the generated item id is '<set>_<piece>_p<tier>'. |  |
 | `displayName` | string | (none -- required) | The piece's own name, e.g. a Helmet for steel where leather has a Coif. |  |

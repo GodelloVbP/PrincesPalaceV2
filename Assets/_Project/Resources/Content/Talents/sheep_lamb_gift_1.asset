@@ -46,12 +46,13 @@ MonoBehaviour:
     IconPath: 
     MinSpent: 0
     Effects:
-    - Kind: 92
+    - Kind: 91
       Magnitude: 25
       Threshold: 0
       AgainstType: 0
       HasAgainst: 0
       AgainstMagical: 0
+      AgainstWearer: 0
       SkillId: 
     GrantsSkillId: gift_mana
     AppliesToSkillId: 

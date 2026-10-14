@@ -95,8 +95,86 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
-            resolvedModifier = new ResolvedModifier(raw.id, raw.displayName, raw.description ?? "", sortOrder, effects);
+            if (!TryResolveTraitFields(raw, label, effects[0], out var pool, out var requires, out error))
+            {
+                return false;
+            }
+
+            resolvedModifier = new ResolvedModifier(raw.id, raw.displayName, raw.description ?? "", sortOrder, effects,
+                raw.trait, pool, requires);
             error = null;
+            return true;
+        }
+
+        // `pool` and `requires`, against the one effect's catalog row. A trait
+        // must name the pool its kind declares (one fact, two homes, so a
+        // mismatch is refused); an affix takes the kind's pool when it names
+        // none. `trait` and the holder agree: a trait row's kind must allow
+        // the Trait holder, an affix's the Affix holder.
+        private static bool TryResolveTraitFields(RawModifierEntry raw, string label, Effect effect,
+            out AffixPool pool, out List<TraitRequirement> requires, out string error)
+        {
+            pool = AffixPool.None;
+            requires = new List<TraitRequirement>();
+            error = null;
+
+            var info = EffectCatalog.Of(effect.Kind);
+            string named = (raw.pool ?? "").Trim();
+            if (named.Length > 0)
+            {
+                if (string.Equals(named, "weapon", StringComparison.OrdinalIgnoreCase)) pool = AffixPool.Weapon;
+                else if (string.Equals(named, "armour", StringComparison.OrdinalIgnoreCase)) pool = AffixPool.Armour;
+                else
+                {
+                    error = $"{label}: pool '{raw.pool}' must be 'weapon' or 'armour'.";
+                    return false;
+                }
+
+                if (pool != info.Pool)
+                {
+                    error = $"{label}: pool '{raw.pool}' disagrees with {effect.Kind}, which rolls on the {info.Pool} pool.";
+                    return false;
+                }
+            }
+            else if (raw.trait)
+            {
+                error = $"{label}: a trait names its pool ('weapon' or 'armour').";
+                return false;
+            }
+            else
+            {
+                pool = info.Pool;
+            }
+
+            if (raw.trait && !info.Allows(EffectHolder.Trait))
+            {
+                error = $"{label}: {effect.Kind} is not a kind a trait can hold.";
+                return false;
+            }
+
+            if (!raw.trait && !info.Allows(EffectHolder.Affix))
+            {
+                error = $"{label}: {effect.Kind} is a trait kind, so the row must set \"trait\": true.";
+                return false;
+            }
+
+            foreach (string name in raw.requires ?? Array.Empty<string>())
+            {
+                if (!TraitRequirements.TryParse(name, out var requirement))
+                {
+                    error = $"{label}: requires '{name}' is not Convergence, Spell or Transform.";
+                    return false;
+                }
+
+                if (!requires.Contains(requirement)) requires.Add(requirement);
+            }
+
+            if (!raw.trait && requires.Count > 0)
+            {
+                error = $"{label}: only a trait may carry requires.";
+                return false;
+            }
+
             return true;
         }
 
@@ -113,7 +191,7 @@ namespace PrincesPalace.Domain.Content
 
             for (int i = 0; i < raw.effects.Length; i++)
             {
-                if (!EffectEntryResolver.TryResolve(raw.effects[i], EffectHolder.Affix,
+                if (!EffectEntryResolver.TryResolve(raw.effects[i], raw.trait ? EffectHolder.Trait : EffectHolder.Affix,
                         $"{label}: effect #{i + 1}", out var effect, out error))
                 {
                     return false;

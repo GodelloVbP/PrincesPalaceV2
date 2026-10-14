@@ -27,6 +27,7 @@ MonoBehaviour:
       AgainstType: 0
       HasAgainst: 0
       AgainstMagical: 0
+      AgainstWearer: 0
       SkillId: 
     RequiresConvergenceAbility: 0
     Bearer: 

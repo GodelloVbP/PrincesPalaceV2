@@ -18,7 +18,7 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Percent of max health for a health-gated kind (WorldEndersCrown); omitted otherwise.")]
         public int threshold;
 
-        [ContentDoc("A DamageType name the kind targets, or 'magical' for every non-Physical type where the kind accepts it; required by ResistanceFlat and ElementalDamageOnHitPercent only.")]
+        [ContentDoc("A DamageType name the kind targets, 'magical' for every non-Physical type where the kind accepts it (ResistanceFlat), or 'wearer' for the wearing character's own attackType, Physical if none (ElementalDamageOnHitPercent); required by those two kinds only.")]
         public string damageType = "";
     }
 }

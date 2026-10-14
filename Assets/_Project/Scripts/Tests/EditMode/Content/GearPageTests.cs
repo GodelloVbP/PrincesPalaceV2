@@ -17,6 +17,9 @@ namespace PrincesPalace.Domain.Tests
         {
             public Func<string, string, int, EquipmentSlot, bool> FitsRule = (_, _, _, _) => true;
 
+            // Trait ids the member may be offered; the default is the whole pool.
+            public Func<string, EquipmentSlot, IReadOnlyList<string>> TraitRule;
+
             private static readonly string[] Weapons = { "sword", "axe", "mace", "staff" };
 
             private static readonly Dictionary<EquipmentSlot, string[]> Armour = new Dictionary<EquipmentSlot, string[]>
@@ -41,6 +44,13 @@ namespace PrincesPalace.Domain.Tests
                 EquipmentSlots.IsWeaponSlot(slot)
                     ? new[] { "w_fire", "w_bleed", "w_crit", "w_haste" }
                     : new[] { "a_ward", "a_thorns", "a_vigor", "a_resist" };
+
+            public IReadOnlyList<string> TraitsFor(string memberId, EquipmentSlot slot) =>
+                TraitRule != null
+                    ? TraitRule(memberId, slot)
+                    : EquipmentSlots.IsWeaponSlot(slot)
+                        ? new[] { "w_t_dual", "w_t_rune", "w_t_deck" }
+                        : new[] { "a_t_shield", "a_t_pipe" };
         }
 
         private static readonly ResolvedRewardSource NormalGear = new ResolvedRewardSource
@@ -320,13 +330,14 @@ namespace PrincesPalace.Domain.Tests
         // ---- step 8: affixes ----
 
         [Test]
-        public void AffixCount_FollowsQuality_LegendaryFallsBackToRarePlusOne()
+        public void AffixCount_FollowsQuality_LegendaryIsTwoPlusATrait()
         {
             Assert.AreEqual(0, GearPage.AffixCount(Quality.Common));
             Assert.AreEqual(1, GearPage.AffixCount(Quality.Uncommon));
             Assert.AreEqual(2, GearPage.AffixCount(Quality.Rare));
-            Assert.AreEqual(3, GearPage.AffixCount(Quality.Legendary));
-            Assert.AreEqual(Quality.Rare, ItemQuality.Of(3, 0), "until traits land, the copy reads Rare");
+            Assert.AreEqual(2, GearPage.AffixCount(Quality.Legendary));
+            Assert.AreEqual(Quality.Legendary, ItemQuality.Of(2, 1));
+            Assert.AreEqual(Quality.Rare, ItemQuality.Of(3, 0), "no trait left: a third affix, read as Rare");
         }
 
         [Test]
@@ -337,11 +348,107 @@ namespace PrincesPalace.Domain.Tests
                 foreach (var card in RollWith(BossGear, r => r.Chips = 3, seed).Cards)
                 {
                     string prefix = EquipmentSlots.IsWeaponSlot(card.Slot) ? "w_" : "a_";
-                    Assert.AreEqual(GearPage.AffixCount(card.Rolled), card.Copy.ModifierIds.Count, $"seed {seed}");
+                    int traits = card.Rolled == Quality.Legendary ? 1 : 0;
+                    Assert.AreEqual(GearPage.AffixCount(card.Rolled) + traits, card.Copy.ModifierIds.Count, $"seed {seed}");
                     CollectionAssert.AllItemsAreUnique(card.Copy.ModifierIds);
                     Assert.IsTrue(card.Copy.ModifierIds.All(m => m.StartsWith(prefix)), $"seed {seed} {card.Slot}");
                 }
             }
+        }
+
+        // ---- step 8: the Legendary trait ----
+
+        private static bool IsTrait(string id) => id.Contains("_t_");
+
+        // Owner decision Q6: the top quality of ANY slot carries a trait.
+        [Test]
+        public void EveryLegendary_CarriesTwoAffixesAndOneTraitFromItsPool()
+        {
+            int legendaries = 0;
+            for (ulong seed = 1; seed <= 200; seed++)
+            {
+                foreach (var card in RollWith(BossGear, r => r.Chips = 3, seed).Cards)
+                {
+                    if (card.Rolled != Quality.Legendary) continue;
+                    legendaries++;
+
+                    string prefix = EquipmentSlots.IsWeaponSlot(card.Slot) ? "w_" : "a_";
+                    var traits = card.Copy.ModifierIds.Where(IsTrait).ToList();
+                    Assert.AreEqual(1, traits.Count, $"seed {seed} {card.Slot}");
+                    Assert.IsTrue(traits[0].StartsWith(prefix), $"seed {seed} {card.Slot}: {traits[0]}");
+                    Assert.AreEqual(2, card.Copy.ModifierIds.Count(m => !IsTrait(m)), $"seed {seed}: two affixes beside the trait");
+                }
+            }
+
+            Assert.Greater(legendaries, 10, "the sweep must reach Legendary cards to mean anything");
+        }
+
+        [Test]
+        public void ATraitTheOwnerCannotUseOrAlreadyGets_IsNeverDrawn()
+        {
+            var catalog = new FakeCatalog
+            {
+                TraitRule = (member, slot) => EquipmentSlots.IsWeaponSlot(slot)
+                    ? new[] { "w_t_rune" }
+                    : Array.Empty<string>(),
+            };
+
+            int weaponLegendaries = 0;
+            for (ulong seed = 1; seed <= 200; seed++)
+            {
+                var request = Request(BossGear, Member("a"), Member("b"), Member("c"));
+                request.Chips = 3;
+                foreach (var card in GearPage.Roll(request, catalog, Seeded(seed)).Cards)
+                {
+                    if (card.Rolled != Quality.Legendary) continue;
+
+                    var traits = card.Copy.ModifierIds.Where(IsTrait).ToList();
+                    if (EquipmentSlots.IsWeaponSlot(card.Slot))
+                    {
+                        weaponLegendaries++;
+                        if (traits.Count > 0)
+                        {
+                            CollectionAssert.AreEqual(new[] { "w_t_rune" }, traits, $"seed {seed}");
+                        }
+                        else
+                        {
+                            // The page already gave this owner the only trait.
+                            Assert.AreEqual(3, card.Copy.ModifierIds.Count, $"seed {seed}");
+                        }
+                    }
+                    else
+                    {
+                        Assert.IsEmpty(traits, $"seed {seed}: no trait offered, so none drawn");
+                        Assert.AreEqual(3, card.Copy.ModifierIds.Count, $"seed {seed}: Rare with a third affix");
+                        Assert.AreEqual(Quality.Rare, ItemQuality.Of(card.Copy.ModifierIds.Count, 0));
+                    }
+                }
+            }
+
+            Assert.Greater(weaponLegendaries, 0);
+        }
+
+        [Test]
+        public void TwoLegendariesForOneOwnerOnAPage_NeverShareATrait()
+        {
+            var catalog = new FakeCatalog { TraitRule = (_, slot) => new[] { "w_t_dual", "w_t_rune" } };
+            int pairs = 0;
+            for (ulong seed = 1; seed <= 300; seed++)
+            {
+                var request = Request(BossGear, Member("solo"));
+                request.Chips = 2;
+                var legendaryTraits = GearPage.Roll(request, catalog, Seeded(seed)).Cards
+                    .Where(c => c.Rolled == Quality.Legendary)
+                    .Select(c => c.Copy.ModifierIds.FirstOrDefault(IsTrait))
+                    .Where(t => t != null)
+                    .ToList();
+                if (legendaryTraits.Count < 2) continue;
+
+                pairs++;
+                CollectionAssert.AllItemsAreUnique(legendaryTraits, $"seed {seed}");
+            }
+
+            Assert.Greater(pairs, 0);
         }
 
         // ---- the whole page, pinned ----
@@ -361,7 +468,7 @@ namespace PrincesPalace.Domain.Tests
             CollectionAssert.AreEqual(new[]
             {
                 "shawn:Weapon2:sword t2 [w_haste]:Uncommon",
-                "odette:Weapon2:axe t2 [w_haste,w_fire,w_bleed]:Legendary",
+                "odette:Weapon2:axe t2 [w_haste,w_fire,w_t_rune]:Legendary",
                 "bjorn:Shoes:slippers t2 [a_ward,a_thorns]:Rare",
             }, cards, string.Join(" | ", cards));
         }

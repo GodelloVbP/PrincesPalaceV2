@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: juggernaut
     DisplayName: Juggernaut
-    Description: 'Enough weight behind the swing to stagger whatever it lands on. Elemental family: Physical, the stagger-proc half -- Hardened carries the on-hit damage and Ironclad carries the resistance; this used to ride along with both on one bundled Hardened roll, now it is its own affix.'
-    SortOrder: 14
+    Description: Hits like a closing door.
+    SortOrder: 4
     Effects:
     - Kind: 22
       Magnitude: 8
@@ -24,4 +24,8 @@ MonoBehaviour:
       AgainstType: 0
       HasAgainst: 0
       AgainstMagical: 0
+      AgainstWearer: 0
       SkillId: 
+    Trait: 0
+    Pool: 1
+    Requires: 

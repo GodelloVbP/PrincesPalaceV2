@@ -859,7 +859,7 @@ namespace PrincesPalace
             int honing = ContentDatabase.HoningOf(character, slot);
             var copy = character.equipment.GetInstance(slot);
             SetCompareHead(RarityColors.Wrap(copy, honing), KindLine(copy),
-                ItemDescription.CardSummary(copy, honing, character));
+                ItemDescription.CardSummary(copy, honing, character, slot));
             PaintCurrentStatRows(character);
         }
 

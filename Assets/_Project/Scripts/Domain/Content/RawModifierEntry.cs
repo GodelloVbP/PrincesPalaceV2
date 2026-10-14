@@ -27,6 +27,15 @@ namespace PrincesPalace.Domain.Content
         // message rather than a silently impossible second entry.
         [ContentDoc("The single rule this modifier grants; more than one entry is rejected.")]
         public RawEffect[] effects = Array.Empty<RawEffect>();
+
+        [ContentDoc("True for a trait: a mechanic that rolls once on a Legendary gear copy. Default false (an affix).")]
+        public bool trait;
+
+        [ContentDoc("'weapon' or 'armour': which slots roll this row (weapon slots, or every other slot, the necklace included). Required on a trait and checked against its kind's catalog pool; an affix may omit it and takes its kind's pool.")]
+        public string pool = "";
+
+        [ContentDoc("What the wearer's kit must hold for the row to be offered: any of Convergence, Spell, Transform. Empty means no requirement.")]
+        public string[] requires = Array.Empty<string>();
     }
 
     // JsonUtility cannot deserialize a bare top-level array.

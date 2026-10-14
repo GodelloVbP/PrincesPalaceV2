@@ -710,6 +710,48 @@
           "iconSheet": "Assets/_Project/Art/Items/wool_booties_sheet"
         }
       ]
+    },
+    {
+      "id": "amulet",
+      "displayName": "Amulet",
+      "description": "A single pendant on a cord. It guards nothing in particular, and so does not care who wears it.",
+      "tierAdjectives": [
+        "Bent",
+        "Plain",
+        "Burnished",
+        "Engraved",
+        "Blessed",
+        "Gilded",
+        "Jewelled",
+        "Warded",
+        "Starlit",
+        "Regal",
+        "Hallowed",
+        "Radiant",
+        "Eternal"
+      ],
+      "maxTier": 10,
+      "cost": 60,
+      "sortOrder": 11,
+      "styleWeights": [
+        "constitution 50",
+        "wisdom 50"
+      ],
+      "statProfile": [
+        "maxHealth 40",
+        "physicalDefense 20",
+        "magicalDefense 20",
+        "speed 20"
+      ],
+      "pieces": [
+        {
+          "id": "pendant",
+          "displayName": "Pendant",
+          "slot": "Necklace",
+          "iconSheet": "Assets/_Project/Art/Items/amulet_pendant_sheet",
+          "iconLevels": 1
+        }
+      ]
     }
   ]
 }

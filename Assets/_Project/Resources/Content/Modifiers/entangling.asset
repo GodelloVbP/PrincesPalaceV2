@@ -15,13 +15,17 @@ MonoBehaviour:
   data:
     Id: entangling
     DisplayName: Entangling
-    Description: 'A lucky strike tangles the target in root and vine. Elemental family: Nature, the root-proc half -- Sylvan carries the on-hit damage and Thornhide carries the resistance; this used to ride along with both on one bundled Sylvan roll, now it is its own affix.'
-    SortOrder: 7
+    Description: Roots listen to this blade.
+    SortOrder: 3
     Effects:
-    - Kind: 29
+    - Kind: 28
       Magnitude: 10
       Threshold: 0
       AgainstType: 0
       HasAgainst: 0
       AgainstMagical: 0
+      AgainstWearer: 0
       SkillId: 
+    Trait: 0
+    Pool: 1
+    Requires: 

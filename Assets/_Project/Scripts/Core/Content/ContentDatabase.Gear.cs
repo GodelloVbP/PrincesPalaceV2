@@ -78,10 +78,65 @@ namespace PrincesPalace.Content
             }
         }
 
-        // How good `copy` is: derived, never stored (plan 1.4). Every
-        // modifier counts as an affix until modifiers.json carries the
-        // `trait` flag (plan 2.4).
-        public static Quality QualityOf(ItemInstance copy) =>
-            copy == null ? Quality.Common : ItemQuality.Of(copy.ModifierIds.Count, 0);
+        // How good `copy` is: derived, never stored (plan 1.4): its affixes and
+        // its trait, told apart by modifiers.json `trait`.
+        public static Quality QualityOf(ItemInstance copy)
+        {
+            if (copy == null) return Quality.Common;
+
+            int traits = TraitRowsOf(copy).Count;
+            return ItemQuality.Of(copy.ModifierIds.Count - traits, traits);
+        }
+
+        // The copy's trait rows (a Legendary has one), in rolled order.
+        public static List<ModifierDefinition> TraitRowsOf(ItemInstance copy)
+        {
+            var traits = new List<ModifierDefinition>();
+            if (copy == null) return traits;
+
+            foreach (string id in copy.ModifierIds)
+            {
+                var modifier = GetModifier(id);
+                if (modifier != null && modifier.Data.Trait) traits.Add(modifier);
+            }
+
+            return traits;
+        }
+
+        // Worn slots whose trait does nothing because the wearer already gets
+        // the mechanic from a relic in `relicIds` or from an earlier slot
+        // (TraitStacking). Only live pieces count: an inert piece grants
+        // nothing, so it cannot shadow a trait either.
+        public static HashSet<EquipmentSlot> InactiveTraitSlots(Character character, IReadOnlyList<string> relicIds)
+        {
+            var inactive = new HashSet<EquipmentSlot>();
+            if (character == null) return inactive;
+
+            var slots = new List<EquipmentSlot>();
+            var kinds = new List<PrincesPalace.Domain.Combat.EffectKind>();
+            foreach (var (entry, _) in ActiveLoadout(character).LiveEntries.OrderBy(e => System.Array.IndexOf(EquipmentSlots.All, e.Entry.slot)))
+            {
+                foreach (var trait in TraitRowsOf(entry.Instance))
+                {
+                    slots.Add(entry.slot);
+                    kinds.Add(trait.Data.Effects.Length == 0 ? PrincesPalace.Domain.Combat.EffectKind.None : trait.Data.Effects[0].Kind);
+                }
+            }
+
+            var relicKinds = new List<PrincesPalace.Domain.Combat.EffectKind>();
+            foreach (string id in relicIds ?? new List<string>())
+            {
+                var relic = GetRelic(id)?.Data;
+                if (relic != null && relic.ReachesCharacter(character.definitionId)) relicKinds.Add(relic.Mechanic);
+            }
+
+            var flags = TraitStacking.Inactive(kinds, relicKinds);
+            for (int i = 0; i < flags.Length; i++)
+            {
+                if (flags[i]) inactive.Add(slots[i]);
+            }
+
+            return inactive;
+        }
     }
 }

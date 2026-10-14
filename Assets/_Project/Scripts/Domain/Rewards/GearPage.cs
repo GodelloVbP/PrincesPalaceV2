@@ -61,6 +61,12 @@ namespace PrincesPalace.Domain.Rewards
         // Affix ids the slot draws from: the weapon pool for a weapon slot,
         // the armour pool otherwise (the necklace included).
         IReadOnlyList<string> AffixPool(EquipmentSlot slot);
+
+        // Trait ids this member could be offered on `slot`, in content order:
+        // the slot's trait pool, minus rows the member's kit cannot use
+        // (`requires`) and minus mechanics they already get from a relic or
+        // from a worn copy other than the one this card would replace.
+        IReadOnlyList<string> TraitsFor(string memberId, EquipmentSlot slot);
     }
 
     public sealed class GearPageRequest
@@ -99,8 +105,8 @@ namespace PrincesPalace.Domain.Rewards
 
         // The quality the ladder and floors landed on. The copy's own
         // quality (ItemQuality.Of) is what the face shows; the two differ
-        // only for a Legendary roll before traits exist, which falls back
-        // to Rare with a third affix.
+        // only for a Legendary roll with no trait left to draw, which falls
+        // back to Rare with a third affix.
         public Quality Rolled;
 
         // No base for the slot fits the owner's loadout: shown "inert until".
@@ -132,7 +138,8 @@ namespace PrincesPalace.Domain.Rewards
     // DRAW ORDER, which a seeded page depends on: one slot draw per card
     // whose owner already wears a Weapon1 and is not the weapon card; then
     // per card in order: tier (LootLadder.MaxRungs draws), base (one draw),
-    // quality (rungs above the floor); then per card its affixes.
+    // quality (rungs above the floor); then per card its affixes and, for a
+    // Legendary, one trait draw (none when no trait is offered).
     public static class GearPage
     {
         // The seventh gear page in a row without a Legendary shown makes its
@@ -233,18 +240,35 @@ namespace PrincesPalace.Domain.Rewards
                 anyLegendary = true;
             }
 
-            // Step 8: affixes. Traits land in I2c; until then a Legendary
-            // takes a third affix instead (the plan's "none left" rule).
+            // Step 8: affixes, then a Legendary's trait. No trait left for the
+            // owner: the card is Rare with a third affix.
+            var traitsOnPage = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
             for (int i = 0; i < owners.Count; i++)
             {
                 if (bases[i] == null) continue;
 
-                var affixes = ModifierTable.PickModifiers(catalog.AffixPool(slots[i]), AffixCount(qualities[i]), nextIndex);
+                var picked = ModifierTable.PickModifiers(catalog.AffixPool(slots[i]), AffixCount(qualities[i]), nextIndex);
+                if (qualities[i] == Quality.Legendary)
+                {
+                    string trait = DrawTrait(owners[i].Id, slots[i], catalog, traitsOnPage, nextIndex);
+                    if (trait != null)
+                    {
+                        picked.Add(trait);
+                    }
+                    else
+                    {
+                        // Distinct from the two already picked.
+                        var rest = new List<string>(catalog.AffixPool(slots[i]));
+                        rest.RemoveAll(picked.Contains);
+                        picked.AddRange(ModifierTable.PickModifiers(rest, 1, nextIndex));
+                    }
+                }
+
                 roll.Cards.Add(new GearCard
                 {
                     OwnerId = owners[i].Id,
                     Slot = slots[i],
-                    Copy = ItemInstance.Of(bases[i], tiers[i], affixes),
+                    Copy = ItemInstance.Of(bases[i], tiers[i], picked),
                     Rolled = qualities[i],
                     Inert = inert[i],
                     GuaranteedWeapon = i == weaponCard,
@@ -359,23 +383,30 @@ namespace PrincesPalace.Domain.Rewards
         }
 
         // Step 4: uniform over the slot's bases that fit the owner at this
-        // tier, distinct across the page. None fit: uniform over the rest,
-        // shown inert. Always one draw.
+        // tier, preferring ones the page has not used. None fit: uniform over
+        // the rest, shown inert. Always one draw.
         private static string PickBase(string ownerId, EquipmentSlot slot, int tier, IGearCatalog catalog,
             HashSet<string> used, Func<int, int> nextIndex, out bool inert)
         {
             var all = catalog.BasesFor(slot);
             var unused = new List<string>();
             var fitting = new List<string>();
+            var fittingAny = new List<string>();
             foreach (var id in all)
             {
+                bool fits = catalog.Fits(ownerId, id, tier, slot);
+                if (fits) fittingAny.Add(id);
                 if (used.Contains(id)) continue;
                 unused.Add(id);
-                if (catalog.Fits(ownerId, id, tier, slot)) fitting.Add(id);
+                if (fits) fitting.Add(id);
             }
 
-            inert = fitting.Count == 0;
-            var pool = fitting.Count > 0 ? fitting : unused.Count > 0 ? unused : new List<string>(all);
+            // Distinct bases are a preference; usable beats distinct. With
+            // few bases a page repeats a usable one before it shows an inert
+            // card.
+            var chosen = fitting.Count > 0 ? fitting : fittingAny;
+            inert = chosen.Count == 0;
+            var pool = chosen.Count > 0 ? chosen : unused.Count > 0 ? unused : new List<string>(all);
             if (pool.Count == 0)
             {
                 inert = false;
@@ -406,17 +437,45 @@ namespace PrincesPalace.Domain.Rewards
             return floor;
         }
 
-        // Step 8 counts. Legendary is 2 + a trait; with no trait drawn
-        // (always, until I2c) it is a third affix.
+        // Step 8 counts. Legendary is 2 affixes plus a trait (DrawTrait); the
+        // caller adds the third affix when no trait is left.
         public static int AffixCount(Quality quality)
         {
             switch (quality)
             {
                 case Quality.Uncommon: return 1;
                 case Quality.Rare: return 2;
-                case Quality.Legendary: return 3;
+                case Quality.Legendary: return 2;
                 default: return 0;
             }
+        }
+
+        // One uniform draw over the owner's usable traits that this page has
+        // not already given the same owner. No candidates: no draw, null.
+        private static string DrawTrait(string ownerId, EquipmentSlot slot, IGearCatalog catalog,
+            Dictionary<string, HashSet<string>> onPage, Func<int, int> nextIndex)
+        {
+            if (!onPage.TryGetValue(ownerId, out var given))
+            {
+                given = new HashSet<string>(StringComparer.Ordinal);
+                onPage[ownerId] = given;
+            }
+
+            var candidates = new List<string>();
+            var offered = catalog.TraitsFor(ownerId, slot);
+            if (offered != null)
+            {
+                foreach (var id in offered)
+                {
+                    if (!given.Contains(id)) candidates.Add(id);
+                }
+            }
+
+            if (candidates.Count == 0) return null;
+
+            string trait = candidates[Clamp(nextIndex(candidates.Count), candidates.Count)];
+            given.Add(trait);
+            return trait;
         }
 
         private static int LowestWeaponTier(PageMember owner)

@@ -48,12 +48,13 @@ MonoBehaviour:
     IconPath: 
     MinSpent: 20
     Effects:
-    - Kind: 82
+    - Kind: 81
       Magnitude: 0
       Threshold: 25
       AgainstType: 0
       HasAgainst: 0
       AgainstMagical: 0
+      AgainstWearer: 0
       SkillId: 
     GrantsSkillId: 
     AppliesToSkillId: 

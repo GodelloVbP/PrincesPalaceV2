@@ -46,12 +46,13 @@ MonoBehaviour:
     IconPath: 
     MinSpent: 0
     Effects:
-    - Kind: 117
+    - Kind: 116
       Magnitude: 40
       Threshold: 0
       AgainstType: 0
       HasAgainst: 0
       AgainstMagical: 0
+      AgainstWearer: 0
       SkillId: gorge
     GrantsSkillId: 
     AppliesToSkillId: gorge

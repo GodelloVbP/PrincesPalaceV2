@@ -48,12 +48,13 @@ MonoBehaviour:
     IconPath: 
     MinSpent: 9
     Effects:
-    - Kind: 127
+    - Kind: 126
       Magnitude: 0
       Threshold: 0
       AgainstType: 0
       HasAgainst: 0
       AgainstMagical: 0
+      AgainstWearer: 0
       SkillId: 
     GrantsSkillId: plant_the_shield
     AppliesToSkillId: 

@@ -26,14 +26,33 @@ namespace PrincesPalace.Domain.Content
         // what serializes, and every consumer reads it as the interface.
         public Effect[] Effects = Array.Empty<Effect>();
 
+        // A trait: rolled once on a Legendary copy of its pool's slots,
+        // wearer-scoped, a mechanic rather than a number (docs/PLAN_ITEMS.md
+        // 1.3). False for an affix.
+        public bool Trait;
+
+        // Which slots roll it: the weapon slots or every other. An affix row
+        // may leave it None, in which case its kind's catalog pool applies
+        // (ModifierTable.PoolOf).
+        public AffixPool Pool;
+
+        // What the wearer's kit must hold for it to do anything.
+        public TraitRequirement[] Requires = Array.Empty<TraitRequirement>();
+
         // For the serializer only.
         public ResolvedModifier()
         {
         }
 
         public ResolvedModifier(string id, string displayName, string description, int sortOrder,
-            IReadOnlyList<Effect> effects)
+            IReadOnlyList<Effect> effects, bool trait = false, AffixPool pool = AffixPool.None,
+            IReadOnlyList<TraitRequirement> requires = null)
         {
+            Trait = trait;
+            Pool = pool;
+            Requires = requires == null || requires.Count == 0
+                ? Array.Empty<TraitRequirement>()
+                : new List<TraitRequirement>(requires).ToArray();
             Id = id ?? "";
             DisplayName = displayName ?? "";
             Description = description ?? "";

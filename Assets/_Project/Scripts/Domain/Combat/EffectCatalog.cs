@@ -33,6 +33,10 @@ namespace PrincesPalace.Domain.Combat
 
         // An unlocked talent node (ContentDatabase.TalentEffects).
         Talent = 8,
+
+        // A trait on a Legendary gear copy (modifiers.json `trait`): wearer-
+        // scoped, any slot.
+        Trait = 16,
     }
 
     // Exactly one holder per set entry; EffectHolders is the allowed-mask.
@@ -42,9 +46,10 @@ namespace PrincesPalace.Domain.Combat
         Affix,
         Track,
         Talent,
+        Trait,
     }
 
-    // Which item an affix of this kind may roll onto (ModifierTable).
+    // Which item an affix or trait of this kind may roll onto (ModifierTable).
     public enum AffixPool
     {
         None,
@@ -61,6 +66,10 @@ namespace PrincesPalace.Domain.Combat
     {
         None,
         Element,
+
+        // An element, or "wearer": the element of the wearer's own
+        // attackType, Physical if none (CharacterEffects resolves it).
+        ElementOrWearer,
 
         // An element, or "magical" for every non-Physical type.
         ElementOrMagical,
@@ -143,6 +152,7 @@ namespace PrincesPalace.Domain.Combat
                 case EffectHolder.Affix: return EffectHolders.Affix;
                 case EffectHolder.Track: return EffectHolders.Track;
                 case EffectHolder.Talent: return EffectHolders.Talent;
+                case EffectHolder.Trait: return EffectHolders.Trait;
                 default: return EffectHolders.None;
             }
         }
@@ -194,10 +204,16 @@ namespace PrincesPalace.Domain.Combat
                     usesMagnitude: true, usesThreshold: false, target, EffectStat.None, percent: false));
             }
 
-            void Mechanic(EffectKind kind, bool usesMagnitude, bool usesThreshold = false)
+            // A mechanic is a relic's; `traitPool` also makes it a gear trait
+            // that rolls on that pool. A second holder of the same mechanic
+            // adds nothing (Flag), whichever holders they are.
+            void Mechanic(EffectKind kind, bool usesMagnitude, bool usesThreshold = false,
+                AffixPool traitPool = AffixPool.None)
             {
-                rows.Add(kind, new EffectInfo(kind, EffectStacking.Flag, RelicOnly, tierScaled: false,
-                    AffixPool.None, usesMagnitude, usesThreshold, EffectTarget.None, EffectStat.None, percent: false));
+                rows.Add(kind, new EffectInfo(kind, EffectStacking.Flag,
+                    traitPool == AffixPool.None ? RelicOnly : EffectHolders.Relic | EffectHolders.Trait,
+                    tierScaled: false, traitPool, usesMagnitude, usesThreshold, EffectTarget.None,
+                    EffectStat.None, percent: false));
             }
 
             // A talent-only kind: the strongest owned node wins, because a
@@ -233,7 +249,7 @@ namespace PrincesPalace.Domain.Combat
 
             // Every entry fires on its own, per element.
             Rider(EffectKind.ElementalDamageOnHitPercent, AffixPool.Weapon, EffectStacking.Summed, AffixOrTrack,
-                EffectTarget.Element);
+                EffectTarget.ElementOrWearer);
             Rider(EffectKind.ElementalDamagePercent, AffixPool.Weapon, EffectStacking.Summed, AffixOrTrack,
                 EffectTarget.Element);
 
@@ -243,7 +259,6 @@ namespace PrincesPalace.Domain.Combat
             Rider(EffectKind.PushBackOnHitChancePercent, AffixPool.Weapon);
             Rider(EffectKind.FlatManaRegenBonus, AffixPool.Armour);
             Rider(EffectKind.NextSkillManaDiscountPercent, AffixPool.Weapon);
-            Rider(EffectKind.FortunateFavorBonusFlat, AffixPool.Armour);
             Rider(EffectKind.DodgeRating, AffixPool.Armour);
             Rider(EffectKind.ChilledOnHitChancePercent, AffixPool.Weapon);
             Rider(EffectKind.RootChancePercent, AffixPool.Weapon);
@@ -254,39 +269,39 @@ namespace PrincesPalace.Domain.Combat
                 AffixPool.Armour, usesMagnitude: false, usesThreshold: false, EffectTarget.None,
                 EffectStat.None, percent: false));
 
-            Mechanic(EffectKind.DualWield, usesMagnitude: false);
-            Mechanic(EffectKind.MagicalShield, usesMagnitude: true);
+            Mechanic(EffectKind.DualWield, usesMagnitude: false, traitPool: AffixPool.Weapon);
+            Mechanic(EffectKind.MagicalShield, usesMagnitude: true, traitPool: AffixPool.Armour);
             Mechanic(EffectKind.Bloodlust, usesMagnitude: false);
-            Mechanic(EffectKind.ChargingCrystal, usesMagnitude: true);
-            Mechanic(EffectKind.BallerinasSlippers, usesMagnitude: true);
-            Mechanic(EffectKind.TinFoilPipe, usesMagnitude: true);
+            Mechanic(EffectKind.ChargingCrystal, usesMagnitude: true, traitPool: AffixPool.Weapon);
+            Mechanic(EffectKind.BallerinasSlippers, usesMagnitude: true, traitPool: AffixPool.Armour);
+            Mechanic(EffectKind.TinFoilPipe, usesMagnitude: true, traitPool: AffixPool.Armour);
             Mechanic(EffectKind.ToothedNecklace, usesMagnitude: true);
             Mechanic(EffectKind.BountyHunterContract, usesMagnitude: true);
-            Mechanic(EffectKind.SwordInABox, usesMagnitude: false);
-            Mechanic(EffectKind.LuckyDeck, usesMagnitude: false);
+            Mechanic(EffectKind.SwordInABox, usesMagnitude: false, traitPool: AffixPool.Weapon);
+            Mechanic(EffectKind.LuckyDeck, usesMagnitude: false, traitPool: AffixPool.Weapon);
             Mechanic(EffectKind.DrownedLantern, usesMagnitude: true);
-            Mechanic(EffectKind.FirstRune, usesMagnitude: false);
+            Mechanic(EffectKind.FirstRune, usesMagnitude: false, traitPool: AffixPool.Weapon);
             Mechanic(EffectKind.SaltLedger, usesMagnitude: true);
-            Mechanic(EffectKind.LongCount, usesMagnitude: true);
-            Mechanic(EffectKind.MagicMarker, usesMagnitude: true);
+            Mechanic(EffectKind.LongCount, usesMagnitude: true, traitPool: AffixPool.Weapon);
+            Mechanic(EffectKind.MagicMarker, usesMagnitude: true, traitPool: AffixPool.Weapon);
             Mechanic(EffectKind.JarOfBearUrine, usesMagnitude: false);
-            Mechanic(EffectKind.WorldEndersCrown, usesMagnitude: false, usesThreshold: true);
+            Mechanic(EffectKind.WorldEndersCrown, usesMagnitude: false, usesThreshold: true, traitPool: AffixPool.Armour);
             Mechanic(EffectKind.CursedIdol, usesMagnitude: true);
             Mechanic(EffectKind.AmassingStar, usesMagnitude: true);
             Mechanic(EffectKind.RampagingBullsHorn, usesMagnitude: true);
             // The slow is re-read when a stack falls off on the TARGET's own
             // tick, where no holder is in reach, so its size stays
             // FightTuning.IceFingernailPercentPerStack.
-            Mechanic(EffectKind.IceFingernail, usesMagnitude: false);
+            Mechanic(EffectKind.IceFingernail, usesMagnitude: false, traitPool: AffixPool.Weapon);
             Mechanic(EffectKind.LoadedDice, usesMagnitude: false);
             Mechanic(EffectKind.MonkeyKingsScepter, usesMagnitude: false);
             Mechanic(EffectKind.SparringSaber, usesMagnitude: true);
-            Mechanic(EffectKind.SparringBuckler, usesMagnitude: true);
-            Mechanic(EffectKind.EssenceSiphon, usesMagnitude: true);
+            Mechanic(EffectKind.SparringBuckler, usesMagnitude: true, traitPool: AffixPool.Armour);
+            Mechanic(EffectKind.EssenceSiphon, usesMagnitude: true, traitPool: AffixPool.Armour);
             Mechanic(EffectKind.DisgruntledLackey, usesMagnitude: false);
             Mechanic(EffectKind.InconspicuousKey, usesMagnitude: false);
-            Mechanic(EffectKind.DancersAnklet, usesMagnitude: false);
-            Mechanic(EffectKind.BerserkersVest, usesMagnitude: true);
+            Mechanic(EffectKind.DancersAnklet, usesMagnitude: false, traitPool: AffixPool.Armour);
+            Mechanic(EffectKind.BerserkersVest, usesMagnitude: true, traitPool: AffixPool.Armour);
             Mechanic(EffectKind.PhoenixEgg, usesMagnitude: true);
             Mechanic(EffectKind.Kinship, usesMagnitude: false);
             // Wrath's talent and the Bellwether's Bell add.

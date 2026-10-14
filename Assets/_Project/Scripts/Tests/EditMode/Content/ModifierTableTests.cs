@@ -120,7 +120,6 @@ namespace PrincesPalace.Domain.Tests
                 EffectKind.MaxManaFlat,
                 EffectKind.FlatManaRegenBonus,
                 EffectKind.ManaToWardOnTurnStartPercent,
-                EffectKind.FortunateFavorBonusFlat,
                 EffectKind.DodgeRating,
             };
 
@@ -153,7 +152,6 @@ namespace PrincesPalace.Domain.Tests
                 EffectKind.MaxManaFlat,
                 EffectKind.FlatManaRegenBonus,
                 EffectKind.ManaToWardOnTurnStartPercent,
-                EffectKind.FortunateFavorBonusFlat,
                 EffectKind.DodgeRating,
             };
 

@@ -16,7 +16,7 @@ namespace PrincesPalace.PlayModeTests
     // comment) reaches a real fight and actually causes misses, not just a
     // number sitting unread on EffectSet.
     //
-    // Mirrors ItemModifierScalingReachesCombatTests/FortunateFavorTests'
+    // Mirrors ItemModifierScalingReachesCombatTests'
     // own real-content pattern: equip a REAL item with the REAL "swift" id
     // at a known tier, never a hand-built Effect fixture.
     public class SwiftModifierReachesCombatTests

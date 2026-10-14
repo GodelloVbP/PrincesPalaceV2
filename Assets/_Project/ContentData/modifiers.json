@@ -1,204 +1,394 @@
 {
-  "_readme": "Item modifiers ('Rift affixes') — see the item-modifier system plan for the full design. PHASE C: real, droppable content, replacing Phase A2's five test-fixture-only placeholders (see git history for what each was exercising). Magnitudes here are the UNSCALED base — the actual number a fight reads is base x TierMultiplier(itemTier) x RiftMultiplier(riftTier), applied once at ContentDatabase.ModifierEffects (see Domain/Content/ModifierMagnitude.cs). ONE EFFECT PER MODIFIER, ALWAYS — ModifierEntryResolver rejects any entry authoring more than one. Phase C originally bundled 2-4 effects per family under one rollable id (a single Fiery roll granted both the burn AND the fire resistance); a later designer pass split every bundle into single-effect affixes so a roll always grants exactly one rule — see each split-off entry's own description for which original family it came from. None of the magnitudes below are final balance — they are deliberately round starting numbers for a designer to retune once real drops are played; see each entry's own description for the design call behind its shape. Field-by-field documentation, defaults and valid enum values: docs/CONTENT_SCHEMA.md.",
+  "_readme": "Item modifiers: 14 affixes (rolled 1 on Uncommon, 2 on Rare and Legendary) and 16 traits (one on a Legendary copy, any slot). `pool` says which slots roll a row (weapon slots, or every other slot, the necklace included); `trait` marks a trait; `requires` lists what the wearer's kit must hold (Convergence, Spell, Transform). ONE EFFECT PER ROW. An affix magnitude is the UNSCALED base (the fight reads base x TierMultiplier, ModifierMagnitude); a trait is a mechanic and is not tier-scaled. `description` is flavour only: the rules text on a card is generated from the effect (ModifierEffectText). Field-by-field documentation and valid enum values: docs/CONTENT_SCHEMA.md.",
   "modifiers": [
     {
-      "id": "fiery",
-      "displayName": "Fiery",
-      "description": "Burns on every landed hit. Elemental family: Fire, the damage half -- Emberguard is Fire's separate resistance affix; a Fiery item does not also resist fire the way the original bundled Fiery/Frosty/etc. modifiers used to.",
+      "id": "attuned",
+      "displayName": "Attuned",
+      "description": "Edge taken from whatever the wielder already is.",
+      "pool": "weapon",
       "effects": [
-        { "type": "ElementalDamageOnHitPercent", "magnitude": 10, "damageType": "Fire" }
+        {
+          "type": "ElementalDamageOnHitPercent",
+          "magnitude": 10,
+          "damageType": "wearer"
+        }
       ]
     },
     {
-      "id": "emberguard",
-      "displayName": "Emberguard",
-      "description": "Fire glances off the wearer rather than catching. Elemental family: Fire, the resistance half -- Fiery is Fire's separate on-hit-burn affix. Split off Fiery's old bundle so a roll grants one or the other, never both from a single slot.",
+      "id": "veiled",
+      "displayName": "Veiled",
+      "description": "A hem that sheds sorcery the way wax sheds water.",
+      "pool": "armour",
       "effects": [
-        { "type": "ResistanceFlat", "magnitude": 8, "damageType": "Fire" }
-      ]
-    },
-    {
-      "id": "frosty",
-      "displayName": "Frosty",
-      "description": "Every hit carries a bite of frost. Elemental family: Ice, the damage half -- Permafrost is Ice's resistance affix and Frostbite is Ice's chill-proc affix, both split off this modifier's old three-effect bundle.",
-      "effects": [
-        { "type": "ElementalDamageOnHitPercent", "magnitude": 10, "damageType": "Ice" }
-      ]
-    },
-    {
-      "id": "permafrost",
-      "displayName": "Permafrost",
-      "description": "Frost does not bite the wearer back. Elemental family: Ice, the resistance half -- Frosty is Ice's separate on-hit-frost affix and Frostbite carries the old bundle's chill proc. Split off so each rule rolls on its own.",
-      "effects": [
-        { "type": "ResistanceFlat", "magnitude": 8, "damageType": "Ice" }
+        {
+          "type": "ResistanceFlat",
+          "magnitude": 4,
+          "damageType": "magical"
+        }
       ]
     },
     {
       "id": "frostbite",
       "displayName": "Frostbite",
-      "description": "A lucky strike leaves the target chilled to the bone. Elemental family: Ice, the chill-proc half -- Frosty carries the on-hit damage and Permafrost carries the resistance; this used to ride along with both on one bundled Frosty roll, now it is its own affix.",
+      "description": "A cold that stays after the blow.",
+      "pool": "weapon",
       "effects": [
-        { "type": "ChilledOnHitChancePercent", "magnitude": 10 }
-      ]
-    },
-    {
-      "id": "sylvan",
-      "displayName": "Sylvan",
-      "description": "Thorns answer every blow. Elemental family: Nature, the damage half -- Thornhide is Nature's resistance affix and Entangling is Nature's root-proc affix, both split off this modifier's old three-effect bundle.",
-      "effects": [
-        { "type": "ElementalDamageOnHitPercent", "magnitude": 10, "damageType": "Nature" }
-      ]
-    },
-    {
-      "id": "thornhide",
-      "displayName": "Thornhide",
-      "description": "The wearer's own hide grows thicker against green and growing things. Elemental family: Nature, the resistance half -- Sylvan is Nature's separate on-hit-thorn affix and Entangling carries the old bundle's root proc.",
-      "effects": [
-        { "type": "ResistanceFlat", "magnitude": 8, "damageType": "Nature" }
+        {
+          "type": "ChilledOnHitChancePercent",
+          "magnitude": 10
+        }
       ]
     },
     {
       "id": "entangling",
       "displayName": "Entangling",
-      "description": "A lucky strike tangles the target in root and vine. Elemental family: Nature, the root-proc half -- Sylvan carries the on-hit damage and Thornhide carries the resistance; this used to ride along with both on one bundled Sylvan roll, now it is its own affix.",
+      "description": "Roots listen to this blade.",
+      "pool": "weapon",
       "effects": [
-        { "type": "RootChancePercent", "magnitude": 10 }
-      ]
-    },
-    {
-      "id": "venomous",
-      "displayName": "Venomous",
-      "description": "Every strike leaves a sting behind. Elemental family: Poison, the damage half -- Antivenom is Poison's separate resistance affix, split off this modifier's old two-effect bundle.",
-      "effects": [
-        { "type": "ElementalDamageOnHitPercent", "magnitude": 10, "damageType": "Poison" }
-      ]
-    },
-    {
-      "id": "antivenom",
-      "displayName": "Antivenom",
-      "description": "The wearer has long since built up a tolerance. Elemental family: Poison, the resistance half -- Venomous is Poison's separate on-hit-sting affix. Split off Venomous's old bundle so a roll grants one or the other, never both.",
-      "effects": [
-        { "type": "ResistanceFlat", "magnitude": 8, "damageType": "Poison" }
-      ]
-    },
-    {
-      "id": "astral",
-      "displayName": "Astral",
-      "description": "A sliver of the Rift rides every hit home. Elemental family: Arcane, the damage half -- Moonveil is Arcane's separate resistance affix, split off this modifier's old two-effect bundle.",
-      "effects": [
-        { "type": "ElementalDamageOnHitPercent", "magnitude": 10, "damageType": "Arcane" }
-      ]
-    },
-    {
-      "id": "moonveil",
-      "displayName": "Moonveil",
-      "description": "A veil of the same Rift-sliver turns arcane harm aside. Elemental family: Arcane, the resistance half -- Astral is Arcane's separate on-hit affix. Split off Astral's old bundle so a roll grants one or the other, never both.",
-      "effects": [
-        { "type": "ResistanceFlat", "magnitude": 8, "damageType": "Arcane" }
-      ]
-    },
-    {
-      "id": "hardened",
-      "displayName": "Hardened",
-      "description": "A brute, physical edge on every hit. Elemental family: Physical, the damage half -- Ironclad is Physical's resistance affix and Juggernaut is Physical's stagger-proc affix, both split off this modifier's old three-effect bundle (one of three families -- alongside Ice's Frostbite and Nature's Entangling -- that carries a third, proc effect beyond its damage and resistance halves; see Ironclad and Juggernaut's own descriptions).",
-      "effects": [
-        { "type": "ElementalDamageOnHitPercent", "magnitude": 10, "damageType": "Physical" }
-      ]
-    },
-    {
-      "id": "ironclad",
-      "displayName": "Ironclad",
-      "description": "Plating enough to turn aside a plain blow. Elemental family: Physical, the resistance half -- Hardened carries the on-hit damage and Juggernaut carries the old bundle's stagger proc; this used to ride along with both on one bundled Hardened roll, now it is its own affix.",
-      "effects": [
-        { "type": "ResistanceFlat", "magnitude": 8, "damageType": "Physical" }
+        {
+          "type": "RootChancePercent",
+          "magnitude": 10
+        }
       ]
     },
     {
       "id": "juggernaut",
       "displayName": "Juggernaut",
-      "description": "Enough weight behind the swing to stagger whatever it lands on. Elemental family: Physical, the stagger-proc half -- Hardened carries the on-hit damage and Ironclad carries the resistance; this used to ride along with both on one bundled Hardened roll, now it is its own affix.",
+      "description": "Hits like a closing door.",
+      "pool": "weapon",
       "effects": [
-        { "type": "PushBackOnHitChancePercent", "magnitude": 8 }
+        {
+          "type": "PushBackOnHitChancePercent",
+          "magnitude": 8
+        }
       ]
     },
     {
       "id": "vampiric",
       "displayName": "Vampiric",
-      "description": "Every hit landed feeds the wearer a little of what it took. Base 8% at Ordinary tier 0 -- deliberately modest; Vampiric compounds with the healer role rather than replacing it, and the tier/rift curve is where a build actually gets scary. Already single-effect since Phase C; untouched by the affix split.",
+      "description": "It drinks, and does not apologise.",
+      "pool": "weapon",
       "effects": [
-        { "type": "LifestealPercent", "magnitude": 8 }
+        {
+          "type": "LifestealPercent",
+          "magnitude": 8
+        }
       ]
     },
     {
       "id": "stalwart",
       "displayName": "Stalwart",
-      "description": "Armour plating a percentage curve cannot express. FlatPhysicalDamageReduction's base (2) is small on purpose at Ordinary/tier-0 -- it is a FLAT subtraction, so it matters far more against the many small hits of a swarm than against one boss-sized blow, which is the intended shape (a Stalwart wearer shrugs off chip damage, not a haymaker). Bulwark is this affix's split-off sibling -- the guard that gives less ground under pressure, split into its own roll so the two can no longer only ever be found together.",
+      "description": "Blows land a little softer here.",
+      "pool": "armour",
       "effects": [
-        { "type": "FlatPhysicalDamageReduction", "magnitude": 2 }
+        {
+          "type": "FlatPhysicalDamageReduction",
+          "magnitude": 2
+        }
       ]
     },
     {
       "id": "bulwark",
       "displayName": "Bulwark",
-      "description": "A guard that gives less ground under pressure. BreakShieldDepletionResistPercent (15) is forward-looking infrastructure -- no player combatant carries a BreakShield today, only some bosses/elites do, so this is inert on the wearer until a future fight puts one on the player's own side. Split off Stalwart's old bundle so a roll grants the flat mitigation or the shield-resist, never both.",
+      "description": "The shield-bar holds its breath for you.",
+      "pool": "armour",
       "effects": [
-        { "type": "BreakShieldDepletionResistPercent", "magnitude": 15 }
+        {
+          "type": "BreakShieldDepletionResistPercent",
+          "magnitude": 15
+        }
       ]
     },
     {
       "id": "explosive",
       "displayName": "Explosive",
-      "description": "Whatever the wearer finishes off does not go quietly -- the kill splashes onto whoever was standing next to it. The exact mechanism Trample already uses, so a Black Ram wearing this alongside his own talent gets two independent splashes off one kill rather than one doubled splash -- see OnKillSplashPercent's own comment on why that is deliberate, not a bug to fix later. Already single-effect since Phase C; untouched by the affix split.",
+      "description": "What falls takes its neighbours with it.",
+      "pool": "weapon",
       "effects": [
-        { "type": "OnKillSplashPercent", "magnitude": 15 }
-      ]
-    },
-    {
-      "id": "fortunate",
-      "displayName": "Fortunate",
-      "description": "The Prince favours whoever is wearing this, right now -- a flat, passive bonus to Prince's Favor for as long as it stays equipped, nothing stored and nothing that outlives taking it off. Base 2 at Ordinary/tier-0 sits alongside Shawn's own authored favour of 4: a meaningful nudge toward better drops, not a second currency to bank.",
-      "effects": [
-        { "type": "FortunateFavorBonusFlat", "magnitude": 2 }
+        {
+          "type": "OnKillSplashPercent",
+          "magnitude": 15
+        }
       ]
     },
     {
       "id": "runic",
       "displayName": "Runic",
-      "description": "A deeper well of mana. Manaflow is this family's regen affix, Quickcast its mana-discount tempo affix, and Wardrune its mana-to-ward affix -- all four used to roll together as one bundled Runic modifier; split so each rolls on its own like every other affix.",
+      "description": "Quiet script that deepens the well.",
+      "pool": "armour",
       "effects": [
-        { "type": "MaxManaFlat", "magnitude": 5 }
+        {
+          "type": "MaxManaFlat",
+          "magnitude": 5
+        }
       ]
     },
     {
       "id": "manaflow",
       "displayName": "Manaflow",
-      "description": "A faster trickle of mana each turn. Runic's old bundle split four ways -- see Runic, Quickcast and Wardrune's own descriptions for the rest of the family.",
+      "description": "The well fills itself, slowly.",
+      "pool": "armour",
       "effects": [
-        { "type": "FlatManaRegenBonus", "magnitude": 1 }
+        {
+          "type": "FlatManaRegenBonus",
+          "magnitude": 1
+        }
       ]
     },
     {
       "id": "quickcast",
       "displayName": "Quickcast",
-      "description": "A plain swing buys a cheaper follow-up cast. Runic's old bundle split four ways -- see Runic, Manaflow and Wardrune's own descriptions for the rest of the family.",
+      "description": "The next word comes easier.",
+      "pool": "weapon",
       "effects": [
-        { "type": "NextSkillManaDiscountPercent", "magnitude": 13 }
+        {
+          "type": "NextSkillManaDiscountPercent",
+          "magnitude": 13
+        }
       ]
     },
     {
       "id": "wardrune",
       "displayName": "Wardrune",
-      "description": "Unspent mana becomes a ward at the top of the wearer's own turn. Deliberately the WEAK affix of the old Runic family (see FightTuning.RunicWardConversionRate's own comment) -- a safety net for mana a caster was going to leave on the table anyway, not a build-around tank strategy. Runic's old bundle split four ways -- see Runic, Manaflow and Quickcast's own descriptions for the rest of the family.",
+      "description": "Spare mana turns into a shell at dawn of each turn.",
+      "pool": "armour",
       "effects": [
-        { "type": "ManaToWardOnTurnStartPercent", "magnitude": 0 }
+        {
+          "type": "ManaToWardOnTurnStartPercent",
+          "magnitude": 0
+        }
       ]
     },
     {
       "id": "swift",
       "displayName": "Swift",
-      "description": "Phase D1's dodge family. A step too quick for a swing or a cast to reliably land -- Magnitude is a dodge RATING, not a direct percent, run through CombatMath.DodgePercentFrom's curve (100 * R / (R + 100), the same R/(R+100) shape as armour mitigation -- '100 dodge = 50% chance to dodge') before DamagePipeline.RollDodge rolls against it (see ModifierEffectType.DodgeRating for the full mechanics: zero damage, and every on-hit rider skipped with it). RENAMED from DodgeChancePercent, and the curve inserted, 2026-08-26: at a direct-percent reading, a maxed Swift item (base 12 x up to ~18.6x combined tier/rift scaling, ~223 raw) would have exceeded 100 outright -- a guaranteed, unavoidable dodge, which is exactly what the curve now prevents (that same ~223 rating instead reads as ~69%, per DamagePipeline's own hand-computed table). Base 6 at Ordinary/tier-0 curves to ~5.7%, close enough to the old flat 12% that it was left as-is rather than retuned. Already single-effect since Phase C; untouched by the affix split.",
+      "description": "Light on the feet, light on the hits.",
+      "pool": "armour",
       "effects": [
-        { "type": "DodgeRating", "magnitude": 6 }
+        {
+          "type": "DodgeRating",
+          "magnitude": 6
+        }
+      ]
+    },
+    {
+      "id": "trait_dual_wield",
+      "displayName": "Dual Wield",
+      "description": "Two strikes where one would do.",
+      "trait": true,
+      "pool": "weapon",
+      "effects": [
+        {
+          "type": "DualWield"
+        }
+      ]
+    },
+    {
+      "id": "trait_sword_in_a_box",
+      "displayName": "Sword in a Box",
+      "description": "Something sharp was left inside.",
+      "trait": true,
+      "pool": "weapon",
+      "requires": [
+        "Spell"
+      ],
+      "effects": [
+        {
+          "type": "SwordInABox"
+        }
+      ]
+    },
+    {
+      "id": "trait_first_rune",
+      "displayName": "The First Rune",
+      "description": "The word that was said before this one.",
+      "trait": true,
+      "pool": "weapon",
+      "requires": [
+        "Spell"
+      ],
+      "effects": [
+        {
+          "type": "FirstRune"
+        }
+      ]
+    },
+    {
+      "id": "trait_lucky_deck",
+      "displayName": "Lucky Deck",
+      "description": "Every swing turns a card.",
+      "trait": true,
+      "pool": "weapon",
+      "effects": [
+        {
+          "type": "LuckyDeck"
+        }
+      ]
+    },
+    {
+      "id": "trait_ice_fingernail",
+      "displayName": "Ice Fingernail",
+      "description": "A sliver of winter under the nail.",
+      "trait": true,
+      "pool": "weapon",
+      "effects": [
+        {
+          "type": "IceFingernail"
+        }
+      ]
+    },
+    {
+      "id": "trait_magic_marker",
+      "displayName": "Magic Marker",
+      "description": "Draws the target a bullseye.",
+      "trait": true,
+      "pool": "weapon",
+      "requires": [
+        "Spell"
+      ],
+      "effects": [
+        {
+          "type": "MagicMarker",
+          "magnitude": 20
+        }
+      ]
+    },
+    {
+      "id": "trait_charging_crystal",
+      "displayName": "Charging Crystal",
+      "description": "It hums louder every cast.",
+      "trait": true,
+      "pool": "weapon",
+      "requires": [
+        "Spell"
+      ],
+      "effects": [
+        {
+          "type": "ChargingCrystal",
+          "magnitude": 50
+        }
+      ]
+    },
+    {
+      "id": "trait_long_count",
+      "displayName": "The Long Count",
+      "description": "Counts in threes and never loses place.",
+      "trait": true,
+      "pool": "weapon",
+      "effects": [
+        {
+          "type": "LongCount",
+          "magnitude": 40
+        }
+      ]
+    },
+    {
+      "id": "trait_magical_shield",
+      "displayName": "Magical Shield",
+      "description": "A spell leaves a shell behind.",
+      "trait": true,
+      "pool": "armour",
+      "requires": [
+        "Spell"
+      ],
+      "effects": [
+        {
+          "type": "MagicalShield",
+          "magnitude": 20
+        }
+      ]
+    },
+    {
+      "id": "trait_tinfoil_pipe",
+      "displayName": "Tin-Foil Pipe of Magic",
+      "description": "Smoke that makes the room run faster.",
+      "trait": true,
+      "pool": "armour",
+      "requires": [
+        "Spell"
+      ],
+      "effects": [
+        {
+          "type": "TinFoilPipe",
+          "magnitude": 20
+        }
+      ]
+    },
+    {
+      "id": "trait_ballerinas_slippers",
+      "displayName": "Ballerina's Slippers",
+      "description": "The longer the dance, the lighter the step.",
+      "trait": true,
+      "pool": "armour",
+      "effects": [
+        {
+          "type": "BallerinasSlippers",
+          "magnitude": 10
+        }
+      ]
+    },
+    {
+      "id": "trait_berserkers_vest",
+      "displayName": "Berserker's Vest",
+      "description": "Pain winds the clock.",
+      "trait": true,
+      "pool": "armour",
+      "effects": [
+        {
+          "type": "BerserkersVest",
+          "magnitude": 1
+        }
+      ]
+    },
+    {
+      "id": "trait_sparring_buckler",
+      "displayName": "Sparring Buckler",
+      "description": "Rewards the one who keeps moving.",
+      "trait": true,
+      "pool": "armour",
+      "effects": [
+        {
+          "type": "SparringBuckler",
+          "magnitude": 10
+        }
+      ]
+    },
+    {
+      "id": "trait_essence_siphon",
+      "displayName": "Essence Siphon",
+      "description": "What leaves them, you keep.",
+      "trait": true,
+      "pool": "armour",
+      "effects": [
+        {
+          "type": "EssenceSiphon",
+          "magnitude": 3
+        }
+      ]
+    },
+    {
+      "id": "trait_world_enders_crown",
+      "displayName": "World Ender's Crown",
+      "description": "Worn low, it frightens the sky.",
+      "trait": true,
+      "pool": "armour",
+      "effects": [
+        {
+          "type": "WorldEndersCrown",
+          "threshold": 30
+        }
+      ]
+    },
+    {
+      "id": "trait_dancers_anklet",
+      "displayName": "Dancer's Anklet",
+      "description": "Always a step ahead of the beat.",
+      "trait": true,
+      "pool": "armour",
+      "effects": [
+        {
+          "type": "DancersAnklet"
+        }
       ]
     }
   ]

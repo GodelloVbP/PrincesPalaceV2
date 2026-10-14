@@ -21,12 +21,13 @@ MonoBehaviour:
     Rarity: 2
     UnlockedBy: 
     Effects:
-    - Kind: 51
+    - Kind: 50
       Magnitude: 0
       Threshold: 0
       AgainstType: 0
       HasAgainst: 0
       AgainstMagical: 0
+      AgainstWearer: 0
       SkillId: 
     RequiresConvergenceAbility: 0
     Bearer: 

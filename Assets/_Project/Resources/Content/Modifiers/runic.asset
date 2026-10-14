@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: runic
     DisplayName: Runic
-    Description: A deeper well of mana. Manaflow is this family's regen affix, Quickcast its mana-discount tempo affix, and Wardrune its mana-to-ward affix -- all four used to roll together as one bundled Runic modifier; split so each rolls on its own like every other affix.
-    SortOrder: 20
+    Description: Quiet script that deepens the well.
+    SortOrder: 9
     Effects:
     - Kind: 10
       Magnitude: 5
@@ -24,4 +24,8 @@ MonoBehaviour:
       AgainstType: 0
       HasAgainst: 0
       AgainstMagical: 0
+      AgainstWearer: 0
       SkillId: 
+    Trait: 0
+    Pool: 2
+    Requires: 

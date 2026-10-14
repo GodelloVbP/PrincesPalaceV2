@@ -1148,6 +1148,8 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString CompareKindBook = UiString.Define("character.compare.book", "Spell book");
         public static readonly UiString CompareEmptySlot =
             UiString.Define("character.compare.empty_slot", "Nothing worn here.");
+        public static readonly UiString TraitInactive =
+            UiString.Define("character.compare.trait_inactive", " (inactive)");
         public static readonly UiString CompareEmptyBookSlot =
             UiString.Define("character.compare.empty_book_slot", "No book in this slot.");
         public static readonly UiString CompareNoChange =

@@ -10,8 +10,7 @@ namespace PrincesPalace.Domain.Tests
 {
     // docs/PLAN_ITEMS.md 2.1's stacking table, pinned (section 6): two copies
     // of an affix give the best one, an affix and any other holder add, and a
-    // mechanic held twice is still held once. Traits are not built yet, so
-    // the mechanic case holds the kind through two relic entries.
+    // mechanic held twice is still held once, whoever the holders are.
     public class EffectStackingTests
     {
         private static EffectSet TwoLifestealAffixesAndVampireDentures() =>
@@ -61,6 +60,41 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.IsTrue(effects.Has(EffectKind.ChargingCrystal));
             Assert.AreEqual(50, effects.Magnitude(EffectKind.ChargingCrystal), "a second holder adds nothing");
+        }
+
+        // Section 6: one member with the same trait kind on two worn copies
+        // plus the relic. Combat reads the mechanic once; the dossier marks
+        // the surplus copies inactive (relic first, then slot order).
+        [Test]
+        public void ATraitOnTwoWornCopiesPlusTheRelic_IsHeldOnce_AndBothCopiesAreInactive()
+        {
+            var effects = EffectSet.Of(EffectHolder.Trait, new[]
+                {
+                    new Effect(EffectKind.ChargingCrystal, 50),
+                    new Effect(EffectKind.ChargingCrystal, 50),
+                })
+                .WithRelics(new[] { TestRelics.Of(EffectKind.ChargingCrystal) }, "sheep");
+
+            Assert.IsTrue(effects.Has(EffectKind.ChargingCrystal));
+            Assert.AreEqual(50, effects.Magnitude(EffectKind.ChargingCrystal), "three holders, one effect");
+
+            var worn = new[] { EffectKind.ChargingCrystal, EffectKind.None, EffectKind.ChargingCrystal };
+            CollectionAssert.AreEqual(new[] { true, false, true },
+                TraitStacking.Inactive(worn, new[] { EffectKind.ChargingCrystal }));
+        }
+
+        [Test]
+        public void TheSameTraitOnTwoWornCopies_WithoutARelic_MakesOnlyTheLaterOneInactive()
+        {
+            var worn = new[] { EffectKind.LongCount, EffectKind.DualWield, EffectKind.LongCount };
+            CollectionAssert.AreEqual(new[] { false, false, true }, TraitStacking.Inactive(worn, null));
+        }
+
+        [Test]
+        public void ATraitAndARelicOfDifferentKinds_AreBothActive()
+        {
+            var worn = new[] { EffectKind.EssenceSiphon };
+            CollectionAssert.AreEqual(new[] { false }, TraitStacking.Inactive(worn, new[] { EffectKind.DualWield }));
         }
 
         [Test]

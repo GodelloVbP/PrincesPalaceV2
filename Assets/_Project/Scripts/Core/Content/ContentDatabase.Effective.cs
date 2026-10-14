@@ -372,13 +372,12 @@ namespace PrincesPalace.Content
         }
 
         // Every effect this CHARACTER holds -- their live worn items' rolled
-        // affixes (EffectHolder.Affix), then the elemental terms their reward
-        // track has paid (EffectHolder.Track) -- flattened into the shape
-        // combat reads. The run's relics are not the character's, so the
-        // adapter adds them (EffectSet.WithRelics). The gear-side mirror of
-        // TalentEffects just above, same "resolved once per fight, unknown ids
-        // skipped" reasoning. Its other production caller, ItemOfferRoll,
-        // asks only Magnitude(FortunateFavorBonusFlat).
+        // affixes (EffectHolder.Affix) and traits (EffectHolder.Trait), then
+        // the elemental terms their reward track has paid (EffectHolder.Track)
+        // -- flattened into the shape combat reads. The run's relics are not
+        // the character's, so the adapter adds them (EffectSet.WithRelics).
+        // The gear-side mirror of TalentEffects just above, same "resolved
+        // once per fight, unknown ids skipped" reasoning.
         //
         // Empty for a character whose worn pieces rolled no affixes and who has
         // no track term; ItemOfferRoll populates modifierIds on drops, and
@@ -400,12 +399,23 @@ namespace PrincesPalace.Content
                 return EffectSet.Empty;
             }
 
+            // "wearer" on a rider resolves here, where the wearer is known:
+            // their own attackType, Physical if none.
+            var own = GetCharacter(character.definitionId)?.Data.AttackType;
+
             var affixes = new List<Effect>();
+            var traits = new List<Effect>();
             foreach (var (entry, item) in ActiveLoadout(character).LiveEntries)
             {
                 foreach (var scaled in ScaledModifierEffectsForItem(Effective(entry.Instance).Value.Tier, entry.modifierIds))
                 {
-                    affixes.Add(scaled.Effect);
+                    var effect = scaled.Effect;
+                    if (effect.AgainstWearer)
+                    {
+                        effect = new Effect(effect.Kind, effect.Magnitude, effect.Threshold, own ?? DamageType.Physical);
+                    }
+
+                    (scaled.Modifier.Data.Trait ? traits : affixes).Add(effect);
                 }
             }
 
@@ -434,7 +444,6 @@ namespace PrincesPalace.Content
             // A character we cannot identify falls through to the packet hook,
             // which is the inert direction: an unknown attackType must not
             // accidentally match and double a line's value.
-            var own = GetCharacter(character.definitionId)?.Data.AttackType;
             var track = RewardTracks.For(character);
 
             // PHASE 4: SpellDamagePercent is expanded RIGHT HERE, into the
@@ -481,7 +490,7 @@ namespace PrincesPalace.Content
                     n, against: type));
             }
 
-            return EffectSet.Of(EffectHolder.Affix, affixes).With(EffectHolder.Track, trackTerms);
+            return EffectSet.Of(EffectHolder.Affix, affixes).With(EffectHolder.Trait, traits).With(EffectHolder.Track, trackTerms);
         }
 
         // ONE ITEM INSTANCE's rolled modifiers, scaled -- the shared seam
@@ -527,7 +536,7 @@ namespace PrincesPalace.Content
                     int scaledMagnitude = EffectCatalog.Of(raw.Kind).TierScaled
                         ? Rounding.AwayFromZero((float)(raw.Magnitude * scale))
                         : raw.Magnitude;
-                    yield return (modifier, new Effect(raw.Kind, scaledMagnitude, raw.Threshold, raw.Against, raw.AgainstMagical));
+                    yield return (modifier, new Effect(raw.Kind, scaledMagnitude, raw.Threshold, raw.Against, raw.AgainstMagical, raw.AgainstWearer));
                 }
             }
         }

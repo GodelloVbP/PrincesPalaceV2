@@ -67,6 +67,7 @@ namespace PrincesPalace.Domain.Content
             // lines verbatim in its failure message.
             ("Assets/_Project/Scripts/Domain/Combat/DamageInstance.cs", null, false),
             ("Assets/_Project/Scripts/Domain/Combat/Effect.cs", null, false),
+            ("Assets/_Project/Scripts/Domain/Combat/EffectCatalog.cs", null, false), // AffixPool (ResolvedModifier.Pool)
             ("Assets/_Project/Scripts/Domain/Combat/EffectKind.cs", null, false),
             ("Assets/_Project/Scripts/Domain/Combat/Reach.cs", null, false),
             ("Assets/_Project/Scripts/Domain/Combat/ScalingAxis.cs", null, false),
@@ -74,10 +75,10 @@ namespace PrincesPalace.Domain.Content
             ("Assets/_Project/Scripts/Domain/Combat/SkillEffect.cs", null, false),
             ("Assets/_Project/Scripts/Domain/Combat/StatusEffect.cs", null, false),
             ("Assets/_Project/Scripts/Domain/Combat/Transformation.cs", null, false),
-            ("Assets/_Project/Scripts/Domain/Equipment/EquipmentSlot.cs", null, false),
             ("Assets/_Project/Scripts/Domain/Dungeon/PrizeKind.cs", null, false),
             ("Assets/_Project/Scripts/Domain/Dungeon/RealmProfile.cs", null, false),
             ("Assets/_Project/Scripts/Domain/Dungeon/RoomType.cs", null, false),
+            ("Assets/_Project/Scripts/Domain/Equipment/EquipmentSlot.cs", null, false),
             ("Assets/_Project/Scripts/Domain/Events/EventEffect.cs", null, false),
             ("Assets/_Project/Scripts/Domain/Events/EventRequirement.cs", null, false),
             ("Assets/_Project/Scripts/Domain/Progression/RewardTrack.cs", null, false),

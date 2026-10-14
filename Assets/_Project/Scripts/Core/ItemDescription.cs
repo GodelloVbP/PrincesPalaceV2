@@ -5,6 +5,7 @@ using PrincesPalace.Content;
 using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Equipment;
 using PrincesPalace.Domain.Stats;
+using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace
 {
@@ -32,12 +33,19 @@ namespace PrincesPalace
         // a worn copy, and for one that is not worn the honing of the slot it
         // would take (ContentDatabase.HoningFor). The rolled affixes are the
         // copy's own.
-        public static string CardSummary(ItemInstance copy, int honing = 0, Character viewer = null)
+        // `wornIn` names the slot the copy is worn in by `viewer`, which lets
+        // the card mark its trait "inactive" when the wearer already gets that
+        // mechanic from a relic or an earlier slot (TraitStacking).
+        public static string CardSummary(ItemInstance copy, int honing = 0, Character viewer = null,
+            EquipmentSlot? wornIn = null)
         {
             var gear = ContentDatabase.Effective(copy, honing);
             if (!gear.HasValue) return "";
+            bool inactive = wornIn.HasValue && viewer != null &&
+                ContentDatabase.InactiveTraitSlots(viewer, SaveSlotManager.CurrentSave?.activeRun?.relicIds)
+                    .Contains(wornIn.Value);
             return ItemStatLines.Card(gear.Value.StatBonus, gear.Value.AbilityScoreBonus, ScalingDescription(gear.Value),
-                WeaponDamageLine(copy, honing, viewer), ModifierLines(gear.Value, copy.ModifierIds, viewer));
+                WeaponDamageLine(copy, honing, viewer), ModifierLines(gear.Value, copy.ModifierIds, viewer, inactive));
         }
 
         // "Fiery -- <Keyword>+20%</Keyword> Fire dmg on hit", one line per
@@ -46,11 +54,14 @@ namespace PrincesPalace
         // the case ModifierComparisonLines itself degrades to when there is
         // nothing currently equipped to diff against.
         private static IReadOnlyList<string> ModifierLines(GearStats gear,
-            IReadOnlyList<string> modifierIds, Character viewer)
+            IReadOnlyList<string> modifierIds, Character viewer, bool traitInactive = false)
         {
             return ModifierAffixLines.LinePairs(ResolvedModifierEffects(gear, modifierIds),
                     PrimaryPoolOf(viewer))
-                ?.Select(pair => pair.Line).ToList();
+                ?.Select(pair => traitInactive && ContentDatabase.GetModifier(pair.Id)?.Data.Trait == true
+                    ? pair.Line + UiStrings.TraitInactive.Format()
+                    : pair.Line)
+                .ToList();
         }
 
         // THE POOL THE VIEWER ACTUALLY HOLDS, for the one affix family whose

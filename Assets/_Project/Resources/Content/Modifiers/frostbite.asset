@@ -15,13 +15,17 @@ MonoBehaviour:
   data:
     Id: frostbite
     DisplayName: Frostbite
-    Description: 'A lucky strike leaves the target chilled to the bone. Elemental family: Ice, the chill-proc half -- Frosty carries the on-hit damage and Permafrost carries the resistance; this used to ride along with both on one bundled Frosty roll, now it is its own affix.'
-    SortOrder: 4
+    Description: A cold that stays after the blow.
+    SortOrder: 2
     Effects:
-    - Kind: 28
+    - Kind: 27
       Magnitude: 10
       Threshold: 0
       AgainstType: 0
       HasAgainst: 0
       AgainstMagical: 0
+      AgainstWearer: 0
       SkillId: 
+    Trait: 0
+    Pool: 1
+    Requires: 
