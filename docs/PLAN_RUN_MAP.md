@@ -99,8 +99,8 @@ route), not in the picture, so it needs explicit sign-off against that line
   - gold, scaled by strength;
   - a consumable, by count. This is a new payout path:
     `VictoryRewards.RollConsumableDrops` has no live caller today.
-  - `Item` (shown as "Gear"), `Book` and `Relic` are enum values at weight 0
-    until item phase I3. What each pays, and how a chip meets the item offer
+  - `Item` (shown as "Gear"), `Book` and `Relic`: Gear and Relic open a page,
+    Book pays a book (item phase I3). What each pays, and how a chip meets the item offer
     and spell drop, lives in `PLAN_ITEMS.md` §1.1 and §1.2.
 - **Strength multipliers:** one literal table per kind, set on the P0 EV sheet,
   steep (each pip worth more than the last).
@@ -192,8 +192,7 @@ designed. So the generator takes its shape from a **`RealmProfile`**:
   prize-kind weights, anchor prize-kind weights, boss pool, and
   `restBeforeBoss`.
 - **`anchorPrizeWeights`** is a `{kind, weight}` list like `prizeWeights`. The
-  default is all weight 0: an anchor pays exp and gold only until item phase
-  I3 sets it (`PLAN_ITEMS.md` §1.1).
+  default is Gear 70, Relic 30 (item phase I3; `PLAN_ITEMS.md` §1.1); a fight's `prizeWeights` default is Gold 40, Consumable 30, Gear 20, Book 10, Relic 0.
 - **Designed realms** author their own profile and display name as content: `ContentData/realms.json`, one row per floor (P8). A floor with no row is the default profile, named "The Descent".
 - **The generator reads no content.** The profile is resolved once when the
   realm opens (`StartRun`, `AdvanceLeg`), from the default table or (after

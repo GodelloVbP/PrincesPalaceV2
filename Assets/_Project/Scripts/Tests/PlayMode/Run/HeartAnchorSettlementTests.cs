@@ -146,12 +146,15 @@ namespace PrincesPalace.PlayModeTests
             int chipGold = RealmPrizes.ChipOf(run, goldNode).Amount;
             Assert.Greater(chipGold, 0, "fixture: the gold chip pays something");
             int goldBefore = run.gold;
+            var chips = new Domain.Rewards.PageChips();
 
             var notices = (List<string>)typeof(RunOrchestrator).GetMethod("PayHeartAnchors",
                     System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)
-                .Invoke(null, new object[] { session, run });
+                .Invoke(null, new object[] { session, run, chips });
 
             CollectionAssert.AreEquivalent(new[] { goldNode.Id, gearNode.Id }, run.slainAnchorIds);
+            CollectionAssert.AreEqual(new[] { Domain.Rewards.EncounterClass.Elite }, chips.Gear, "the dead Gear chip is collected");
+            CollectionAssert.IsEmpty(chips.Relic);
             Assert.AreEqual(goldBefore + chipGold, run.gold, "the gold chip is credited; the Gear chip adds no gold");
             Assert.AreEqual(1, notices.Count, "one line, for the gold chip");
         }
@@ -168,6 +171,10 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.AreEqual(goldBefore + session.Payout.Value.Gold + chipGold, RunManager.Run.gold,
                 "the fight's gold plus the dead gold-chip anchor's chip, and nothing for the queued anchor");
+            CollectionAssert.AreEqual(
+                new[] { Domain.Rewards.EncounterClass.Boss, Domain.Rewards.EncounterClass.Elite },
+                session.SettledChips.Gear, "the boss's gear chip, then the dead anchor's");
+            CollectionAssert.AreEqual(new[] { Domain.Rewards.EncounterClass.Boss }, session.SettledChips.Relic);
             Assert.GreaterOrEqual(session.Payout.Value.Experience, rawExp,
                 "the payout covers the boss and both dead anchors (elite pay only raises it)");
         }

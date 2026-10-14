@@ -679,34 +679,26 @@ namespace PrincesPalace.PlayModeTests
         // ---- the roll ---------------------------------------------------------
 
         [Test]
-        public void VictoryDropsFoldIntoUnassignedSpellBooksOnAWin()
+        public void TheBookDrawIsUniformOverThePoolWithNoChanceGate()
         {
-            // A high-probability boss fight with only one candidate is
-            // deterministic enough to assert on directly, rather than
-            // fighting a real encounter through FightBootstrap -- what is
-            // under test is the fold into unassignedSpellBooks, not combat.
-            var rng = new SeededRandom(1);
-            string dropped = null;
-            for (int i = 0; i < 2000 && dropped == null; i++)
-            {
-                dropped = VictoryRewards.RollSpellDrop(
-                    new List<string> { SkillId }, isEliteFight: false, isBossFight: true, rng);
-            }
+            var ids = new List<string> { "a", "b", "c" };
 
-            Assert.AreEqual(SkillId, dropped, "a boss fight rolls often enough at 0.35 that 2000 draws should land one");
+            Assert.IsNull(VictoryRewards.DrawSpell(new List<string>(), new SeededRandom(1)), "an empty pool draws nothing");
+            for (ulong seed = 1; seed <= 20; seed++)
+            {
+                Assert.IsNotNull(VictoryRewards.DrawSpell(ids, new SeededRandom(seed)), "every draw lands a book");
+            }
         }
 
         [Test]
-        public void TheSpellDropRollIsDeterministicByPosition()
+        public void TheBookDrawIsDeterministicByPosition()
         {
             var a = RngStreams.Open(4242UL, RngStreams.SpellDrop, 5, 3);
             var b = RngStreams.Open(4242UL, RngStreams.SpellDrop, 5, 3);
 
             var ids = new List<string> { "a", "b", "c" };
-            var first = VictoryRewards.RollSpellDrop(ids, false, true, a);
-            var second = VictoryRewards.RollSpellDrop(ids, false, true, b);
 
-            Assert.AreEqual(first, second);
+            Assert.AreEqual(VictoryRewards.DrawSpell(ids, a), VictoryRewards.DrawSpell(ids, b));
         }
 
         // ---- Reconcile ----------------------------------------------------------

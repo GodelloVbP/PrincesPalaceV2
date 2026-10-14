@@ -152,9 +152,10 @@ namespace PrincesPalace.Domain.Dungeon
             int anchors = 1 + floor / 3;
             if (anchors > MaxDefaultAnchors) anchors = MaxDefaultAnchors;
 
-            // Prize weights are the P0 EV sheet's sizing assumption (gold 0.5,
-            // consumable 0.5; Gear, Book and Relic wait on item phase I3).
-            // The waypoint weights are P1's and no sheet has set them yet.
+            // Prize weights are item phase I3's starting mix, set by hand and
+            // left to I5's bot batches: a plain fight pays gold, a consumable,
+            // Gear (a page) or a Book, never a Relic; an anchor pays Gear or
+            // Relic. The waypoint weights are P1's and no sheet has set them yet.
             return new RealmProfile
             {
                 pocketCount = pockets,
@@ -173,19 +174,19 @@ namespace PrincesPalace.Domain.Dungeon
                 },
                 prizeWeights = new List<PrizeWeight>
                 {
-                    new PrizeWeight(PrizeKind.Gold, 50),
-                    new PrizeWeight(PrizeKind.Consumable, 50),
-                    new PrizeWeight(PrizeKind.Item, 0),
-                    new PrizeWeight(PrizeKind.Book, 0),
+                    new PrizeWeight(PrizeKind.Gold, 40),
+                    new PrizeWeight(PrizeKind.Consumable, 30),
+                    new PrizeWeight(PrizeKind.Item, 20),
+                    new PrizeWeight(PrizeKind.Book, 10),
                     new PrizeWeight(PrizeKind.Relic, 0),
                 },
                 anchorPrizeWeights = new List<PrizeWeight>
                 {
                     new PrizeWeight(PrizeKind.Gold, 0),
                     new PrizeWeight(PrizeKind.Consumable, 0),
-                    new PrizeWeight(PrizeKind.Item, 0),
+                    new PrizeWeight(PrizeKind.Item, 70),
                     new PrizeWeight(PrizeKind.Book, 0),
-                    new PrizeWeight(PrizeKind.Relic, 0),
+                    new PrizeWeight(PrizeKind.Relic, 30),
                 },
                 restBeforeBoss = restBeforeBoss,
             };

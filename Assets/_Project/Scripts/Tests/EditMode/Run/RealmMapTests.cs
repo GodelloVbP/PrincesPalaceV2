@@ -47,17 +47,26 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void DefaultProfile_ItemBookRelicChipsAreWeightZero_ForFightsAndAnchors()
+        public void DefaultProfile_PrizeWeights_AreItemPhaseI3sMix()
         {
             var profile = RealmProfiles.Default(30);
 
-            foreach (var kind in new[] { PrizeKind.Item, PrizeKind.Book, PrizeKind.Relic })
-            {
-                Assert.AreEqual(0, profile.prizeWeights.Single(w => w.kind == kind).weight, kind + " fights");
-                Assert.AreEqual(0, profile.anchorPrizeWeights.Single(w => w.kind == kind).weight, kind + " anchors");
-            }
-
-            Assert.IsTrue(profile.anchorPrizeWeights.All(w => w.weight == 0), "anchors pay exp and gold only");
+            CollectionAssert.AreEqual(
+                new[]
+                {
+                    new PrizeWeight(PrizeKind.Gold, 40), new PrizeWeight(PrizeKind.Consumable, 30),
+                    new PrizeWeight(PrizeKind.Item, 20), new PrizeWeight(PrizeKind.Book, 10),
+                    new PrizeWeight(PrizeKind.Relic, 0),
+                },
+                profile.prizeWeights, "a plain fight never pays a relic");
+            CollectionAssert.AreEqual(
+                new[]
+                {
+                    new PrizeWeight(PrizeKind.Gold, 0), new PrizeWeight(PrizeKind.Consumable, 0),
+                    new PrizeWeight(PrizeKind.Item, 70), new PrizeWeight(PrizeKind.Book, 0),
+                    new PrizeWeight(PrizeKind.Relic, 30),
+                },
+                profile.anchorPrizeWeights, "an anchor pays Gear or Relic");
         }
 
         [Test]
@@ -179,7 +188,7 @@ namespace PrincesPalace.Domain.Tests
         // id:offset:role:type:prize>next. A spine Event at offset 1, a pocket of an anchor then a shop,
         // then Fight, Event, Fight, Fight, Event, Fight and the heart.
         private const string Seed42FloorOne =
-            "0:0:0:0:0>1|1:1:1:6:0>2,4|2:2:3:2:0>3|3:2:3:7:0>4|4:2:1:1:2>5|5:3:1:6:0>6|6:4:1:1:2>7|7:5:1:1:2>8|8:6:1:6:0>9|9:7:1:1:1>10|10:8:4:5:0>";
+            "0:0:0:0:0>1|1:1:1:6:0>2,4|2:2:3:2:3>3|3:2:3:7:0>4|4:2:1:1:2>5|5:3:1:6:0>6|6:4:1:1:2>7|7:5:1:1:2>8|8:6:1:6:0>9|9:7:1:1:1>10|10:8:4:5:0>";
 
         // ---- the fuzz ----------------------------------------------------
 
@@ -305,6 +314,7 @@ namespace PrincesPalace.Domain.Tests
         {
             var profile = RealmProfiles.Default(5);
             profile.prizeWeights = new List<PrizeWeight>();
+            profile.anchorPrizeWeights = new List<PrizeWeight>();
 
             var map = RealmMapGenerator.GenerateFor(5, 0, profile);
 
@@ -312,7 +322,7 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void EveryFightGetsAChip_AndAnchorsGetNoneUnderTheDefault()
+        public void EveryFightGetsAChipButARelic_AndAnchorsGetGearOrARelicUnderTheDefault()
         {
             for (ulong seed = 0; seed < 100; seed++)
             {
@@ -320,10 +330,14 @@ namespace PrincesPalace.Domain.Tests
 
                 foreach (var fight in map.Nodes.Where(n => n.Type == RoomType.Fight))
                 {
-                    Assert.That(fight.Prize, Is.EqualTo(PrizeKind.Gold).Or.EqualTo(PrizeKind.Consumable));
+                    Assert.That(fight.Prize, Is.EqualTo(PrizeKind.Gold).Or.EqualTo(PrizeKind.Consumable)
+                        .Or.EqualTo(PrizeKind.Item).Or.EqualTo(PrizeKind.Book));
                 }
 
-                foreach (var anchor in map.Nodes.Where(n => n.IsAnchor)) Assert.AreEqual(PrizeKind.None, anchor.Prize);
+                foreach (var anchor in map.Nodes.Where(n => n.IsAnchor))
+                {
+                    Assert.That(anchor.Prize, Is.EqualTo(PrizeKind.Item).Or.EqualTo(PrizeKind.Relic));
+                }
             }
         }
 

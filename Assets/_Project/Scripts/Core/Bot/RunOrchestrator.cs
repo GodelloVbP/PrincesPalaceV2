@@ -608,9 +608,14 @@ namespace PrincesPalace
             {
                 // THE CHIP before PayOut, so its gold and potions ride the
                 // write RewardApplier.Apply makes inside it.
+                // Gear and Relic chips are collected, not paid: the pages they
+                // open are rolled by SettleRewardPages from session.SettledChips.
                 var room = RunManager.CurrentNode;
-                notices.AddRange(RealmPrizes.Pay(SaveSlotManager.CurrentSave, run, room));
-                notices.AddRange(PayHeartAnchors(session, run));
+                var chips = new PageChips { Strength = room == null ? 0 : RealmOpening.StrengthOf(run, room.Id) };
+                if (session != null && session.IsBossFight) chips.AddBoss();
+                notices.AddRange(RealmPrizes.Pay(SaveSlotManager.CurrentSave, run, room, chips));
+                notices.AddRange(PayHeartAnchors(session, run, chips));
+                if (session != null) session.SettledChips = chips;
                 reward = PayOut(session, run, payout.Value, participants: null);
 
                 // An anchor beaten on the map no longer waits at the heart.
@@ -638,7 +643,7 @@ namespace PrincesPalace
         // boss's pages merge, and it is slain. Their exp and gold are already
         // in the session's payout (per-enemy elite pay). Those that died with
         // the boss are not in FallenAnchorNodeIds and pay nothing.
-        private static List<string> PayHeartAnchors(FightSession session, RunSnapshot run)
+        private static List<string> PayHeartAnchors(FightSession session, RunSnapshot run, PageChips chips)
         {
             var notices = new List<string>();
             var map = RunManager.Map;
@@ -652,7 +657,7 @@ namespace PrincesPalace
             run.slainAnchorIds ??= new List<int>();
             foreach (var anchor in HeartAnchors.SettlementOrder(fallen))
             {
-                notices.AddRange(RealmPrizes.Pay(SaveSlotManager.CurrentSave, run, map.Node(anchor.NodeId)));
+                notices.AddRange(RealmPrizes.Pay(SaveSlotManager.CurrentSave, run, map.Node(anchor.NodeId), chips));
                 if (!run.slainAnchorIds.Contains(anchor.NodeId)) run.slainAnchorIds.Add(anchor.NodeId);
             }
 
@@ -702,8 +707,7 @@ namespace PrincesPalace
             return lines;
         }
 
-        // WHAT A WON, PAID FIGHT GIVES: gold banked, one spell-drop roll, and
-        // the experience applied, which persists (RewardApplier.Apply) -- so
+        // WHAT A WON, PAID FIGHT GIVES: gold banked and the experience applied, which persists (RewardApplier.Apply) -- so
         // this is also the write for anything the settlement already moved in
         // memory. Extracted unchanged from SettleFight so a paying event fight
         // pays by the same lines. `participants` narrows who the experience
@@ -716,26 +720,6 @@ namespace PrincesPalace
             // owners with two different lifetimes: the run's gold is spent
             // inside the run and lost with it, while a level survives.
             RunManager.BankPayout(payout.Gold);
-
-            // ONE ROLL, THIS FIGHT (docs/PLAN_SHOP.md §1e). Keyed to
-            // (step, node) so quitting mid-reward and returning does not
-            // reroll it -- the same property Treasure and the shop
-            // streams have, for the same reason. Folded into
-            // run.unassignedSpellBooks BEFORE RewardApplier.Apply below,
-            // so the one SaveCurrent() that call already makes is the
-            // save this rides too, rather than a second write.
-            var bookIds = ContentDatabase.Skills
-                .Where(s => s != null && s.Data.BookTier > 0)
-                .Select(s => s.id)
-                .ToList();
-            var spellRng = RngStreams.Open(run.runSeed, RngStreams.SpellDrop, run.step, run.currentNodeId);
-            string droppedSpell = VictoryRewards.RollSpellDrop(bookIds,
-                session != null && session.IsEliteFight, session != null && session.IsBossFight, spellRng);
-            if (droppedSpell != null)
-            {
-                run.unassignedSpellBooks ??= new List<string>();
-                run.unassignedSpellBooks.Add(droppedSpell);
-            }
 
             var reward = RewardApplier.Apply(payout, FieldedIds(session), participants);
 
@@ -782,12 +766,15 @@ namespace PrincesPalace
                 .ToList();
         }
 
-        // A won fight's reward pages (docs/PLAN_ITEMS.md 1.2), rolled once and
-        // queued on the run: one gear page for the fight's class, plus a relic
-        // page for an anchor or a boss. The screen and the bot both settle
-        // through here, so the same position shows the same pages. Until the
-        // chip model (I3) every fight pays exactly one chip of its own class.
-        // Saves, since the pity counters moved.
+        // A won fight's reward pages (docs/PLAN_ITEMS.md 1.1, 1.2), rolled once
+        // and queued on the run: one gear page for all its Gear chips, one
+        // relic page for all its Relic chips, in that order, none for a fight
+        // that paid no such chip. The chips are the ones SettleFight collected
+        // (session.SettledChips: the room's own chip, a boss's automatic pair,
+        // the chips of anchors that died at the heart), so the chip the map
+        // card showed is what pays. The screen and the bot both settle through
+        // here, so the same position shows the same pages. Saves, since the
+        // pity counters moved.
         public static IReadOnlyList<PendingPage> SettleRewardPages(
             SaveData save, FightSession session, int step, int nodeId)
         {
@@ -796,21 +783,16 @@ namespace PrincesPalace
             var queued = RewardPages.Pages(save?.activeRun);
             if (queued.Count > 0 && queued[0].Step == step && queued[0].NodeId == nodeId) return queued;
 
-            ChipsFor(session?.EncounterClass ?? EncounterClass.Normal, out var gearChips, out var relicChips);
-            int strength = RealmOpening.StrengthOf(save?.activeRun, nodeId);
+            var chips = session?.SettledChips;
+            if (chips == null || chips.IsEmpty)
+            {
+                if (save?.activeRun != null) save.activeRun.pendingPages = new List<PendingPage>();
+                return new List<PendingPage>();
+            }
 
-            var pages = RewardPages.Settle(save, step, nodeId, strength, gearChips, relicChips, FieldedIds(session));
+            var pages = RewardPages.Settle(save, step, nodeId, chips.Strength, chips.Gear, chips.Relic, FieldedIds(session));
             SaveSlotManager.SaveCurrent();
             return pages;
-        }
-
-        // The chips a won fight of this class pays: a gear chip of its class,
-        // and for an anchor or a boss a relic chip too. Pays nothing else
-        // until I3 prices chips by node.
-        public static void ChipsFor(EncounterClass cls, out List<EncounterClass> gearChips, out List<EncounterClass> relicChips)
-        {
-            gearChips = new List<EncounterClass> { cls };
-            relicChips = cls == EncounterClass.Normal ? new List<EncounterClass>() : new List<EncounterClass> { cls };
         }
 
         // Who an outcome-form Reckoning tallies: the fielded party, named as

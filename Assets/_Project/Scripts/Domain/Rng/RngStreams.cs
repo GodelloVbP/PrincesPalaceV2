@@ -44,10 +44,10 @@ namespace PrincesPalace.Domain.Rng
         public const uint ShopBooks = 6;
         public const uint ShopRelics = 7;
 
-        // A won fight's spell-book drop roll (docs/PLAN_SHOP.md §1e), keyed
-        // to (run.step, run.currentNodeId) -- quitting mid-reward and
-        // returning must not reroll it, same reason Treasure and the shop
-        // streams are keyed to position rather than drawn fresh.
+        // A Book chip's draw (RealmPrizes.PayBook, docs/PLAN_ITEMS.md 1.1),
+        // keyed to (leg step, node id) -- quitting mid-reward and returning
+        // must not redraw it, same reason Treasure and the shop streams are
+        // keyed to position rather than drawn fresh.
         public const uint SpellDrop = 8;
 
         // Which event an Event room opens (EventRoll.Pick), keyed to

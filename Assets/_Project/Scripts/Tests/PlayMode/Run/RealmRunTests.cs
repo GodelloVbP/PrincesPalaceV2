@@ -287,7 +287,7 @@ namespace PrincesPalace.PlayModeTests
                     int gold = run.gold, earned = run.goldEarned;
                     int potions = save.stockpiledItems.Sum(e => e.count);
 
-                    var notices = RealmPrizes.Pay(save, run, node);
+                    var notices = RealmPrizes.Pay(save, run, node, new Domain.Rewards.PageChips());
 
                     if (chip.Kind == PrizeKind.Gold)
                     {
@@ -295,6 +295,11 @@ namespace PrincesPalace.PlayModeTests
                         Assert.AreEqual(earned + chip.Amount, run.goldEarned, "chip gold is earned gold");
                         Assert.AreEqual(1, notices.Count);
                         paidGold++;
+                    }
+                    else if (chip.Kind != PrizeKind.Consumable)
+                    {
+                        // Gear, Book and Relic pay no gold or potions here.
+                        Assert.AreEqual(gold, run.gold, "a " + chip.Kind + " chip pays no gold");
                     }
                     else
                     {

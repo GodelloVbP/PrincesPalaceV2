@@ -1,7 +1,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using PrincesPalace.Content;
+using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Dungeon;
+using PrincesPalace.Domain.Rewards;
 using PrincesPalace.Domain.Rng;
 using PrincesPalace.Domain.UiKit;
 
@@ -11,10 +13,11 @@ namespace PrincesPalace
     // Prizes; docs/PLAN_ITEMS.md section 1.1): what the map card shows and what
     // settlement pays, from one function so the two cannot disagree.
     //
-    // Gold and consumables are paid here. Gear, Book and Relic go to the item
-    // pipeline, which pays nothing until item phase I3; a Book or Relic chip
-    // whose pool is empty pays gold instead, read live on the card and again at
-    // settlement.
+    // Gold, consumables and books are paid here. A Gear or Relic chip is
+    // recorded on the PageChips the caller passes, and RunOrchestrator.
+    // SettleRewardPages rolls its page from them (one gear page, one relic
+    // page, whatever the chip count). A Book or Relic chip whose pool is empty
+    // pays gold instead, read live on the card and again at settlement.
     public static class RealmPrizes
     {
         public static MapNodeChip ChipOf(RunSnapshot run, RealmNode node)
@@ -34,10 +37,18 @@ namespace PrincesPalace
             }
         }
 
+        // The class a node's chips are paid as: an anchor is an elite, the
+        // heart a boss, anything else a plain fight.
+        public static EncounterClass ClassOf(RealmNode node) =>
+            node == null ? EncounterClass.Normal
+            : node.Type == RoomType.Boss ? EncounterClass.Boss
+            : node.IsAnchor ? EncounterClass.Elite
+            : EncounterClass.Normal;
+
         // Pays the chip of the node the party just won. Does not persist:
         // SettleFight folds every write into one. Returns the lines the
-        // Reckoning shows for it.
-        public static List<string> Pay(SaveData save, RunSnapshot run, RealmNode node)
+        // Reckoning shows for it. A Gear or Relic chip is added to `chips`.
+        public static List<string> Pay(SaveData save, RunSnapshot run, RealmNode node, PageChips chips)
         {
             var notices = new List<string>();
             var chip = ChipOf(run, node);
@@ -52,21 +63,35 @@ namespace PrincesPalace
                     notices.AddRange(PayConsumables(save, run, node, chip.Amount));
                     break;
 
-                case PrizeKind.Item:
                 case PrizeKind.Book:
+                    notices.AddRange(PayBook(run, node));
+                    break;
+
+                case PrizeKind.Item:
+                    chips?.Gear.Add(ClassOf(node));
+                    break;
+
                 case PrizeKind.Relic:
-                    HandToItemPipeline(chip.Kind);
+                    chips?.AddRelic(ClassOf(node));
                     break;
             }
 
             return notices;
         }
 
-        // Item phase I3 builds the pages these chips open (PLAN_ITEMS.md 1.2).
-        // Until then a Gear, Book or Relic chip pays nothing, and no profile
-        // weights them above zero.
-        private static void HandToItemPipeline(PrizeKind kind)
+        // One book from the spell pool into unassignedSpellBooks, no
+        // recipient. Drawn on the SpellDrop stream keyed to the node, so a
+        // reload mid-settlement pays the same one.
+        private static IEnumerable<string> PayBook(RunSnapshot run, RealmNode node)
         {
+            var pool = BookPool(run);
+            var rng = RngStreams.Open(run.runSeed, RngStreams.SpellDrop, run.legStartStep + node.Offset, node.Id);
+            string id = VictoryRewards.DrawSpell(pool, rng);
+            if (id == null) yield break;
+
+            run.unassignedSpellBooks ??= new List<string>();
+            run.unassignedSpellBooks.Add(id);
+            yield return UiStrings.PrizePaidItem.Format(ContentDatabase.GetSkill(id)?.Data.DisplayName ?? id);
         }
 
         // Each potion drawn from the authored consumables on the Prize
@@ -98,7 +123,7 @@ namespace PrincesPalace
 
         // The spell-drop pool (bookTier > 0) less books already waiting
         // unassigned and books every squad member has learned.
-        private static bool BookPoolHasAny(RunSnapshot run)
+        private static List<string> BookPool(RunSnapshot run)
         {
             var squad = SaveSlotManager.CurrentSave?.ActiveSquad()?
                 .Where(c => c != null).Select(c => c.definitionId).ToList() ?? new List<string>();
@@ -107,8 +132,12 @@ namespace PrincesPalace
 
             return ContentDatabase.Skills
                 .Where(s => s != null && s.Data.BookTier > 0 && !waiting.Contains(s.id))
-                .Any(s => squad.Count == 0
-                          || squad.Any(id => !learned.Any(e => e.characterId == id && e.skillId == s.id)));
+                .Where(s => squad.Count == 0
+                            || squad.Any(id => !learned.Any(e => e.characterId == id && e.skillId == s.id)))
+                .Select(s => s.id)
+                .ToList();
         }
+
+        private static bool BookPoolHasAny(RunSnapshot run) => BookPool(run).Count > 0;
     }
 }

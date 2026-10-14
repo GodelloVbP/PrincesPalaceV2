@@ -800,7 +800,7 @@ schema break.
 seed; a run that trips the same invariant twice produces two rows.
 
 - `invariant`: short PascalCase name (`HpOutOfRange`, `FightNotOver`,
-  `NoLegalAction`, `PayoutMismatch`, `StuckAfterWin`, `EmptyOffer`,
+  `NoLegalAction`, `PayoutMismatch`, `StuckAfterWin`,
   `OfferPickNotStockpiled`, `RewardsDecreased`, `Exception`). Names are
   chosen by the runner; `bot_report.py` does not special-case them, it just
   renders whatever string is here — so a new invariant needs no report

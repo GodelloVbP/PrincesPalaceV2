@@ -229,6 +229,11 @@ namespace PrincesPalace.Domain.Dungeon
             // sibling may roll Rest.
             bool restUsed = profile.restBeforeBoss;
             bool cacheUsed = false;
+
+            // Anchor chips draw from their own stream, forked from the type
+            // stream's start, so turning anchor weights on moves no room type
+            // or fight chip of a realm.
+            var anchorPrizeRng = SeededRandom.FromState(rng.State ^ 0x9E3779B97F4A7C15UL);
             var typed = new Dictionary<int, RealmNode>();
 
             // Id order is topological, so every predecessor is typed first and
@@ -269,7 +274,7 @@ namespace PrincesPalace.Domain.Dungeon
                 }
                 else if (node.IsAnchor)
                 {
-                    node.Prize = PickPrize(profile.anchorPrizeWeights, PrizeKind.None, rng);
+                    node.Prize = PickPrize(profile.anchorPrizeWeights, PrizeKind.None, anchorPrizeRng);
                 }
             }
         }

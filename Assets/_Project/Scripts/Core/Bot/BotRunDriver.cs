@@ -824,7 +824,7 @@ namespace PrincesPalace
 
                 bool alive = PlayTheFight(seed, save, node, fightPolicy, runPolicy, roomTrace, result);
 
-                // A won fight can drop a book (VictoryRewards.RollSpellDrop,
+                // A won fight can pay a Book chip (RealmPrizes.Pay, inside
                 // RunOrchestrator.SettleFight) -- resolved here whether or
                 // not the party survives the room, same reason a dead run's
                 // empty pool below is simply a no-op rather than a case to
@@ -1892,23 +1892,23 @@ namespace PrincesPalace
                 return;
             }
 
-            var gear = pages.FirstOrDefault(p => p.Kind == RewardPageKind.Gear);
-            if (gear == null || gear.Cards.Count == 0)
-            {
-                result.Hits.Add(new InvariantHit("EmptyOffer",
-                    $"the fight at step {roomTrace.Step} node {node.Id} was won and offered nothing"));
-                return;
-            }
+            // A room pays a page only for a Gear or Relic chip (1.1); a fight
+            // with neither has nothing to take.
+            if (pages.Count == 0) return;
 
-            roomTrace.OfferItemIds.AddRange(gear.Cards.Select(c => c.Copy.ItemId));
+            var gear = pages.FirstOrDefault(p => p.Kind == RewardPageKind.Gear);
             roomTrace.Favor = ItemOfferRoll.CurrentSquadFavor();
             roomTrace.EncounterClass = session.EncounterClass.ToString();
-            roomTrace.Offers.AddRange(gear.Cards.Select(c => new OfferEntry
+            if (gear != null)
             {
-                ItemId = c.Copy.ItemId,
-                Tier = c.Copy.Tier,
-                ModifierCount = c.Copy.ModifierIds?.Count ?? 0,
-            }));
+                roomTrace.OfferItemIds.AddRange(gear.Cards.Select(c => c.Copy.ItemId));
+                roomTrace.Offers.AddRange(gear.Cards.Select(c => new OfferEntry
+                {
+                    ItemId = c.Copy.ItemId,
+                    Tier = c.Copy.Tier,
+                    ModifierCount = c.Copy.ModifierIds?.Count ?? 0,
+                }));
+            }
 
             var offerRng = StreamFor(seed, OfferStream, roomTrace.Step, node.Id);
             foreach (var page in pages)
@@ -1937,7 +1937,7 @@ namespace PrincesPalace
             // one legitimate exception spelled out rather than assumed: the
             // equip pass may swap a displaced copy back in, which puts the
             // taken one in the bag.
-            var firstTaken = gear.Cards.FirstOrDefault(c => c.Outcome == CardOutcome.Taken);
+            var firstTaken = gear?.Cards.FirstOrDefault(c => c.Outcome == CardOutcome.Taken);
             if (firstTaken == null) return;
 
             string takenId = firstTaken.Copy.ItemId;

@@ -334,6 +334,12 @@ namespace PrincesPalace.Domain.Combat.Session
         // How many map anchors were marked: on the field or queued at the start.
         public int AnchorCount => _anchors.Count;
 
+        // The gear and relic chips this fight's settlement handed the item
+        // pipeline; null until SettleFight has paid it (and for a fight that
+        // paid nothing). RunOrchestrator.SettleRewardPages rolls the pages
+        // from it, so the map chip the player saw is what the page pays.
+        public PageChips SettledChips { get; set; }
+
         // The anchors that died in this fight, in the order they were marked.
         // Those still standing or queued when the leader fell are not here:
         // they died with it (DismissedEnemies) and pay nothing.

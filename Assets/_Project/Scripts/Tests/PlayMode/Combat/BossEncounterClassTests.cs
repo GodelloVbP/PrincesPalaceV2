@@ -42,24 +42,6 @@ namespace PrincesPalace.PlayModeTests
                 "Boss must win even if IsEliteFight also happens to be true");
         }
 
-        // The chips a fight of each class pays: pinned as literals, because the
-        // pages a settlement rolls are keyed to the highest class among them.
-        [Test]
-        public void AFightPaysAGearChipOfItsClassAndAnchorsAndBossesARelicChipToo()
-        {
-            RunOrchestrator.ChipsFor(EncounterClass.Boss, out var bossGear, out var bossRelic);
-            CollectionAssert.AreEqual(new[] { EncounterClass.Boss }, bossGear);
-            CollectionAssert.AreEqual(new[] { EncounterClass.Boss }, bossRelic);
-
-            RunOrchestrator.ChipsFor(EncounterClass.Elite, out var eliteGear, out var eliteRelic);
-            CollectionAssert.AreEqual(new[] { EncounterClass.Elite }, eliteGear);
-            CollectionAssert.AreEqual(new[] { EncounterClass.Elite }, eliteRelic);
-
-            RunOrchestrator.ChipsFor(EncounterClass.Normal, out var normalGear, out var normalRelic);
-            CollectionAssert.AreEqual(new[] { EncounterClass.Normal }, normalGear);
-            CollectionAssert.IsEmpty(normalRelic);
-        }
-
         // BotRunDriver's own trace, end to end through a real run: every
         // realm ends on its heart, a Boss room at offset RealmMap.SpineLength,
         // regardless of seed, so any run surviving 8 steps hits one. A
