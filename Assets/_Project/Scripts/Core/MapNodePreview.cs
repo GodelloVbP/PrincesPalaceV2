@@ -13,7 +13,7 @@ namespace PrincesPalace
     // strength and its chip. A shop's stock is rolled on arrival
     // (RunOrchestrator.ArriveAt) and stays out of the facts, which MapNodeCard
     // words as "learn it when you step in". An event's TITLE is the same roll
-    // arrival makes (RunOrchestrator.RollEvent), so the card names it. Nothing here
+    // arrival makes (RunOrchestrator.DecideEvent), so the card names it. Nothing here
     // draws from a stream the real room will not open again.
     public static class MapNodePreview
     {

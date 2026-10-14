@@ -379,6 +379,10 @@ namespace PrincesPalace
         // 4). Run-scoped by construction: StartRun replaces the snapshot.
         public List<string> eventsSeen = new List<string>();
 
+        // The event each Event room was promised, decided the first time the room
+        // is previewed or entered (RunOrchestrator.DecideEvent). Old saves have none.
+        public List<NodeEventEntry> nodeEvents = new List<NodeEventEntry>();
+
         // The last choice's outcome, stored rather than held in memory so a
         // Map scene reload repaints the same result line the player was
         // reading. The effects are the APPLIED ones and the effects line is
@@ -462,5 +466,13 @@ namespace PrincesPalace
         public string characterId;
         public string skillId;
         public int slot;
+    }
+
+    [Serializable]
+    public class NodeEventEntry
+    {
+        public int step;
+        public int nodeId;
+        public string eventId;
     }
 }

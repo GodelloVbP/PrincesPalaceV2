@@ -197,6 +197,49 @@ namespace PrincesPalace.PlayModeTests
             Assert.GreaterOrEqual(found, 1, "no seed produced an event room to compare");
         }
 
+        // What the map shows is what you get: B's card is decided on first sight
+        // and survives A's arrival marking its own event seen, B's promised
+        // event turning seen (its roll would now differ), and a reload.
+        [UnityTest]
+        public IEnumerator AnEventRoomKeepsItsPromisedEventAcrossAnotherArrivalAndAReload()
+        {
+            ulong seed = 0;
+            for (ulong s = 1; s <= 4000 && seed == 0; s++)
+            {
+                if (RealmPaths.FirstRealm(s).Nodes.Count(n => n.Type == RoomType.Event) >= 2) seed = s;
+            }
+            Assert.AreNotEqual(0UL, seed, "no seed under 4000 has two event rooms");
+
+            yield return OpenTheMap(seed);
+            var run = RunManager.Run;
+            var rooms = RunManager.Map.Nodes.Where(n => n.Type == RoomType.Event).Take(2).ToArray();
+            var a = rooms[0];
+            var b = rooms[1];
+
+            string promised = MapNodePreview.For(run, b).EventTitle;
+            Assert.IsNotEmpty(promised);
+            string promisedId = run.nodeEvents.Single(e => e.nodeId == b.Id).eventId;
+
+            // Enter A: its event is marked seen. Then B's own event turns seen
+            // too, so a fresh roll could no longer return it.
+            run.currentNodeId = a.Id;
+            run.step = run.legStartStep + a.Offset;
+            Assert.IsTrue(RunOrchestrator.EnsureEvent());
+            run.eventId = "";
+            if (!run.eventsSeen.Contains(promisedId)) run.eventsSeen.Add(promisedId);
+            Assert.AreEqual(promised, MapNodePreview.For(run, b).EventTitle, "the card changed after another arrival");
+
+            SaveSlotManager.Forget();
+            RunManager.ResetForTests();
+            run = RunManager.Run;
+            Assert.AreEqual(promisedId, run.nodeEvents.Single(e => e.nodeId == b.Id).eventId, "the promise did not survive a reload");
+
+            run.currentNodeId = b.Id;
+            run.step = run.legStartStep + b.Offset;
+            Assert.IsTrue(RunOrchestrator.EnsureEvent());
+            Assert.AreEqual(promisedId, run.eventId, "arrival opened a different event than the card promised");
+        }
+
         // ---- the card ------------------------------------------------------------
 
         [UnityTest]

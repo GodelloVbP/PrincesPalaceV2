@@ -163,17 +163,35 @@ namespace PrincesPalace
             if (EventIsOpenOn(run)) return true;
 
             run.eventsSeen ??= new List<string>();
-            string picked = RollEvent(save, run, run.step, run.currentNodeId);
+            string picked = DecideEvent(save, run, run.step, run.currentNodeId);
 
             return !string.IsNullOrEmpty(picked) && OpenEventHere(run, picked);
         }
 
-        // THE ONE EVENT ROLL: arrival opens what this returns, and the map's
-        // detail card (MapNodePreview) names the same pick for a room the party
-        // has not entered. Pure over (seed, step, node, the run's seen list and
-        // the event requirements), so the card is exact while none of those
-        // move between looking and arriving.
-        internal static string RollEvent(SaveData save, RunSnapshot run, int step, int nodeId)
+        // THE ONE EVENT DECISION: the map's card and arrival both read it. The
+        // first call for a (step, node) rolls and stores the pick on the run;
+        // every later call returns the stored id, even if the seen list or the
+        // event requirements have moved since, so the card's promise holds.
+        // A save with no stored id for the room rolls as it always did.
+        internal static string DecideEvent(SaveData save, RunSnapshot run, int step, int nodeId)
+        {
+            run.nodeEvents ??= new List<NodeEventEntry>();
+            foreach (var entry in run.nodeEvents)
+            {
+                if (entry != null && entry.step == step && entry.nodeId == nodeId && !string.IsNullOrEmpty(entry.eventId)) return entry.eventId;
+            }
+
+            string picked = RollEvent(save, run, step, nodeId);
+            if (string.IsNullOrEmpty(picked)) return picked;
+
+            run.nodeEvents.Add(new NodeEventEntry { step = step, nodeId = nodeId, eventId = picked });
+            SaveSlotManager.SaveCurrent();
+            return picked;
+        }
+
+        // The roll itself: pure over (seed, step, node, the run's seen list and
+        // the event requirements). Only DecideEvent calls it.
+        private static string RollEvent(SaveData save, RunSnapshot run, int step, int nodeId)
         {
             var pool = ContentDatabase.Events
                 .Where(e => e != null && e.Data != null)
@@ -191,7 +209,7 @@ namespace PrincesPalace
             var save = SaveSlotManager.CurrentSave;
             if (run == null || node == null || save == null) return "";
 
-            return FindEvent(RollEvent(save, run, run.legStartStep + node.Offset, node.Id))?.StartPage?.Title ?? "";
+            return FindEvent(DecideEvent(save, run, run.legStartStep + node.Offset, node.Id))?.StartPage?.Title ?? "";
         }
 
         // The cache event's id (events.json). It sits on floor 999 so the
