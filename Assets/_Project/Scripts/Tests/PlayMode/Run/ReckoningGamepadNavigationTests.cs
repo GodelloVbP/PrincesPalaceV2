@@ -110,10 +110,6 @@ namespace PrincesPalace.PlayModeTests
             Resources.FindObjectsOfTypeAll<Image>()
                 .FirstOrDefault(im => im.name == $"ReckoningOffer{index}Halo" && im.gameObject.scene.IsValid());
 
-        private static TMPro.TMP_Text TooltipText =>
-            Resources.FindObjectsOfTypeAll<TMPro.TMP_Text>()
-                .FirstOrDefault(t => t.name == "ReckoningOfferTooltipText" && t.gameObject.scene.IsValid());
-
         private IEnumerator DriveFrame()
         {
             yield return null;
@@ -260,55 +256,21 @@ namespace PrincesPalace.PlayModeTests
                 "the tabs are there to be read; Up is how a pad asks for them");
         }
 
-        // ---- the tooltip, focus-driven (job 1) ----------------------------------
+        // ---- no per-party box on a page card -----------------------------------
 
+        // The card face names its one recipient and that recipient's change
+        // (RewardCardFace). A squad-wide box beside it said "no change" for the
+        // very member the face promised +3 DMG, and covered the next card.
         [UnityTest]
-        public IEnumerator SelectingAnOffer_ShowsItsComparison()
+        public IEnumerator SelectingOrHoveringAnOffer_OpensNoComparisonBox()
         {
             yield return ShowTheChoice();
 
-            // The entry is already selected by Show(), so this is the
-            // selection path with no pointer involved anywhere.
-            Assert.IsTrue(Tooltip.activeSelf,
-                "the selected card's comparison should be up without a cursor ever touching it");
-            Assert.IsNotEmpty(TooltipText.text, "and it should have the squad comparison in it");
-        }
-
-        [UnityTest]
-        public IEnumerator HoveringAnotherOfferWhileOneIsSelected_DoesNotSwapIt()
-        {
-            yield return ShowTheChoice();
-
-            string before = TooltipText.text;
-            Assert.IsNotEmpty(before, "precondition: the selected card's box is up");
-
-            var hover = Control("ReckoningOffer1").GetComponent<HoverIndex>();
-            Assert.IsNotNull(hover, "ReckoningOffer1 carries no HoverIndex");
-            hover.OnPointerEnter(null);
-            yield return null;
-
-            Assert.AreEqual(before, TooltipText.text,
-                "focus outranks hover -- the box stays on the card the stick is standing on");
-        }
-
-        [UnityTest]
-        public IEnumerator MovingTheSelectionOffAnOffer_MovesTheComparisonWithIt()
-        {
-            yield return ShowTheChoice();
-
-            // The BOX'S POSITION, not its text: two items can produce the
-            // same comparison lines (two tier-mates against an empty slot
-            // read alike), whereas the box is placed beside whichever card
-            // it belongs to, so where it sits is the claim worth asserting.
-            var box = (RectTransform)Tooltip.transform;
-            Vector2 before = box.anchoredPosition;
+            Assert.IsFalse(Tooltip.activeSelf, "the selected card's face is its whole detail");
 
             yield return Press(1f, 0f);
 
-            AssertSelected("ReckoningOffer1", "precondition: Right reached the second card");
-            Assert.IsTrue(Tooltip.activeSelf, "the box belongs to the selection, so it follows it");
-            Assert.AreNotEqual(before.x, box.anchoredPosition.x,
-                "and it is placed beside the card it moved to, not left behind on the last one");
+            Assert.IsFalse(Tooltip.activeSelf, "moving the selection must not open one either");
         }
 
         // ---- where the stick is standing, and what the halo means now -----------
@@ -348,28 +310,6 @@ namespace PrincesPalace.PlayModeTests
                 "the marker should have followed the Move");
             Assert.AreEqual(beforeMove, Halo(0).color.a, 0.001f,
                 "the card the selection left never carried a focus brightening to lose");
-        }
-
-        [UnityTest]
-        public IEnumerator AContextPushedOverTheReckoning_ForceClosesTheTooltip()
-        {
-            yield return ShowTheChoice();
-
-            Assert.IsTrue(Tooltip.activeSelf, "precondition: the box is up");
-
-            // Pushed directly: nothing in the fight puts a context over the
-            // Reckoning today (it is itself the thing that goes over the
-            // fight), so this is the only honest way to prove the rule fires
-            // rather than waiting for the first screen that needs it.
-            var modal = new Domain.UiKit.NavContext(entry: null, selectables: null, cancel: null);
-            NavigationInputModule.Contexts.Push(modal);
-            yield return null;
-
-            Assert.IsFalse(Tooltip.activeSelf,
-                "a context going up over the screen force-closes its tooltip, off the stack's own Changed " +
-                "event rather than a poll");
-
-            NavigationInputModule.Contexts.Remove(modal);
         }
     }
 }

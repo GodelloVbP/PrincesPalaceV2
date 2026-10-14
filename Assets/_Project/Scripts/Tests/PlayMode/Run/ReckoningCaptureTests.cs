@@ -98,20 +98,6 @@ namespace PrincesPalace.PlayModeTests
             CanvasCapture.RenderToFile(canvas, path);
             Assert.IsTrue(File.Exists(path));
             Debug.Log($"[ReckoningCapture] wrote {path}");
-
-            // And again with the middle card hovered, which is the state the
-            // comparison box exists for. Driven through the component rather
-            // than by faking a pointer, because the capture has no real cursor.
-            var hovers = _reckoning.GetComponentsInChildren<HoverIndex>(includeInactive: true)
-                .OrderBy(h => h.Index).ToList();
-            Assert.IsNotEmpty(hovers, "no HoverIndex was attached to any offer card");
-            hovers[0].OnPointerEnter(null);
-            yield return new WaitForSecondsRealtime(0.4f);
-
-            string hovered = Path.Combine(OutputDir, "Reckoning_hover.png");
-            CanvasCapture.RenderToFile(canvas, hovered);
-            Assert.IsTrue(File.Exists(hovered));
-            Debug.Log($"[ReckoningCapture] wrote {hovered}");
         }
 
         // A boss and two anchors settled together: the gear page with five

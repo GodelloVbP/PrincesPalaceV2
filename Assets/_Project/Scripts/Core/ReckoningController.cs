@@ -60,6 +60,8 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text ledgerLabel;
         [SerializeField] internal Button leaveButton;
 
+        // Baked by ReckoningScreen but never shown: a page card's face is its
+        // whole detail. Dropping the node is a screen-tree change.
         [SerializeField] internal GameObject offerTooltip;
         [SerializeField] internal TMP_Text offerTooltipText;
         [SerializeField] internal Image[] offerHalos;
@@ -227,10 +229,8 @@ namespace PrincesPalace
         // the reward screen has no business knowing what comes after a fight.
         public System.Action Dismissed;
 
-        // WHO OWNS THE COMPARISON BOX -- the pointer or the selection
-        // (Core/TooltipFocusRouter, docs/GAMEPAD_NAVIGATION_PLAN.md section
-        // 7). OnOfferHover below stays the one show/hide implementation; this
-        // decides which input is allowed to reach it.
+        // WHO OWNS THE GAINED-CHIP TOOLTIP -- the pointer or the selection
+        // (Core/TooltipFocusRouter, docs/GAMEPAD_NAVIGATION_PLAN.md section 7).
         private readonly TooltipFocusRouter _tooltips = new TooltipFocusRouter();
 
         // Pushed in Show() once Wire()/Paint() have settled which cards are
@@ -277,32 +277,6 @@ namespace PrincesPalace
             {
                 int index = i;
                 offerButtons[i].onClick.AddListener(() => Take(index));
-
-                // The comparison hover. Attached here rather than baked,
-                // because HoverIndex carries a delegate and an index and a
-                // scene serialises neither usefully -- same reason the fight
-                // attaches it to its intent badges.
-                //
-                // AND IT REPORTS TO THE ROUTER, not to OnOfferHover directly:
-                // the selection path (SelectIndex, added by Register) is the
-                // second caller of that same handler, and which of the two
-                // owns the box is TooltipFocus' decision rather than a race
-                // between two components (job 1).
-                var node = offerButtons[i].gameObject;
-                _tooltips.Register(offerButtons[i], entered => OnOfferHover(index, entered));
-
-                var hover = node.GetComponent<HoverIndex>() ?? node.AddComponent<HoverIndex>();
-                hover.Index = index;
-                hover.Changed = (_, entered) => _tooltips.Pointer(node, entered);
-
-                // No SelectIndex subscription brightens the card's own
-                // rarity halo any more (Core/FocusMarker.cs owns the one
-                // pad-focus indicator project-wide), so the halo goes back
-                // to saying exactly one thing, which is the item's rarity.
-                //
-                // The SelectIndex component itself stays: _tooltips.Register
-                // just above put it there and rides its Changed delegate for
-                // the focus-follows tooltip, untouched by this.
             }
         }
 
@@ -499,105 +473,6 @@ namespace PrincesPalace
 
             NavigationInputModule.Contexts?.Remove(_navContext);
             _navContext = null;
-        }
-
-        // What this card would do to every member of the squad, for a gear
-        // card.
-        //
-        // Rebuilt on each hover rather than cached: it runs the real
-        // clone-and-resolve Compare, and the squad's gear can change between
-        // one Reckoning and the next. A relic card says everything on its face,
-        // and a spent card has nothing left to compare.
-        private void OnOfferHover(int index, bool entered)
-        {
-            if (offerTooltip == null) return;
-
-            var card = _page != null && index >= 0 && index < _page.Cards.Count ? _page.Cards[index] : null;
-            if (!entered || card == null || !card.IsGear || card.Outcome != CardOutcome.Open || _page.ChoicesLeft == 0)
-            {
-                offerTooltip.SetShown(false);
-                return;
-            }
-
-            var save = SaveSlotManager.CurrentSave;
-            if (ContentDatabase.DefinitionOf(card.Copy) == null || save == null)
-            {
-                offerTooltip.SetShown(false);
-                return;
-            }
-
-            // Read straight off the card's copy: its affixes were rolled with
-            // the page, well before Take() ever equips it.
-            string body = ItemDescription.SquadComparisonBody(save.ActiveSquad(), card.Copy);
-            if (string.IsNullOrEmpty(body))
-            {
-                offerTooltip.SetShown(false);
-                return;
-            }
-
-            if (offerTooltipText != null) offerTooltipText.SetContent(body);
-            var offerTooltipRect = offerTooltip == null ? null : offerTooltip.transform as RectTransform;
-            TooltipFit.ToBody(offerTooltipRect, offerTooltipText,
-                ReckoningScreen.TooltipWidth, ReckoningScreen.TooltipPad,
-                ReckoningScreen.TooltipMinHeight, ReckoningScreen.TooltipHeight);
-            PlaceTooltipBeside(index);
-            offerTooltip.SetShown(true);
-        }
-
-        // The box follows the card it describes.
-        //
-        // The arithmetic is TooltipPlacement's, shared with the dossier's pack,
-        // so "beside, flipped if there is no room, clamped inside" is one rule
-        // with one set of tests rather than two hand-written copies.
-        // SHRUNK TO WHAT IS IN IT, and the height is returned so the placement
-        // below clamps against the real box rather than the emitted one.
-        //
-        // The tree is emitted at ReckoningScreen.TooltipHeight because that is
-        // the tallest body a full squad can produce and the containment audit
-        // has to solve the case that can fail. A squad of one produces three
-        // lines, and leaving the box at its emitted height put 200px of empty
-        // violet over the item next door.
-        //
-        // S1's review: the actual fitting arithmetic moved to TooltipFit.ToBody
-        // (Core/TooltipFit.cs), shared with FightController.Hud's identical
-        // status-tooltip version. One behaviour note from the extraction: the
-        // old fallback height for a null offerTooltipText was TooltipHeight
-        // (the max); the shared helper's fallback is always its minHeight
-        // parameter instead, to keep one signature for both callers. Dead
-        // either way in practice -- offerTooltipText is a wired SerializeField,
-        // never actually null at runtime.
-
-        // Reads the height off the rect rather than taking it as an argument:
-        // TooltipFit.ToBody has already written it, and threading it back
-        // through the call was a second copy of a number the object holds.
-        private void PlaceTooltipBeside(int index)
-        {
-            var self = offerTooltip == null ? null : offerTooltip.transform as RectTransform;
-            if (self == null) return;
-
-            // The card's own rect, so this reads the row as LAID OUT rather
-            // than as emitted: LayOutOfferRow has already re-centred and
-            // re-widened it for the number of cards actually showing, and
-            // recomputing the position here from OfferRowLayout would be a
-            // second answer to a question already answered.
-            var card = offerRects != null && index < offerRects.Length ? offerRects[index] : null;
-            if (card == null) return;
-
-            // Inset by the same 8px margin the dossier uses, off the painted
-            // interior rather than the panel: the frame's ornament is 9.8% in
-            // horizontally and deeper at top than bottom, and a tooltip resting
-            // on the border is exactly what ContentTop/ContentBottom exist to
-            // prevent.
-            const float Margin = 8f;
-            var at = TooltipPlacement.Beside(
-                card.anchoredPosition.x, card.anchoredPosition.y, card.sizeDelta.x, card.sizeDelta.y,
-                ReckoningScreen.TooltipWidth, self.sizeDelta.y,
-                interiorLeft: -ReckoningScreen.ContentHalfWidth + Margin,
-                interiorRight: ReckoningScreen.ContentHalfWidth - Margin,
-                interiorBottom: ReckoningScreen.ContentBottom + Margin,
-                interiorTop: ReckoningScreen.ContentTop - Margin);
-
-            self.anchoredPosition = new Vector2(at.X, at.Y);
         }
 
         // A paid fight with no relic receipts to show: the full form.

@@ -107,7 +107,7 @@ namespace PrincesPalace.Domain.UiKit
     // What the caller must now do to its own single show/hide path: tell the
     // outgoing node it was left, then tell the incoming node it was entered
     // -- in that order, and both through the SAME entry point the pointer
-    // handlers already call (ShowPreviewFor/OnPackHover/OnOfferHover with
+    // handlers already call (ShowPreviewFor/OnPackHover with
     // entered: true/false).
     //
     // Both halves are needed rather than just the incoming one, because a

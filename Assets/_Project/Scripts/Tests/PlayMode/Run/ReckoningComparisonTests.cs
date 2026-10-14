@@ -79,7 +79,7 @@ namespace PrincesPalace.PlayModeTests
         // ITEM-MODIFIER PLAN PHASE E: an offer's rolled modifiers must show
         // on the hover BEFORE the player takes it -- a page card's copy
         // carries its affixes from the moment the page is rolled, well before
-        // Take() equips anything, and ReckoningController.OnOfferHover reads
+        // Take() equips anything, and a squad comparison would read
         // straight off the card rather than off anything claimed. This
         // pins that at the model layer, the same "screen half is a
         // screenshot question" posture this whole file takes.
@@ -89,10 +89,10 @@ namespace PrincesPalace.PlayModeTests
             var item = EasiestItem();
             Assert.IsNotNull(item, "content has no equippable items at all");
 
-            string body = ItemDescription.SquadComparisonBody(SaveSlotManager.CurrentSave.ActiveSquad(), ItemInstance.Of(item.id, 0, new[] { "fiery" }));
+            string body = ItemDescription.SquadComparisonBody(SaveSlotManager.CurrentSave.ActiveSquad(), ItemInstance.Of(item.id, 0, new[] { "attuned" }));
 
             StringAssert.Contains("AFFIXES", body, "an unclaimed offer's rolled modifiers must already show on the hover");
-            StringAssert.Contains("Fiery", body);
+            StringAssert.Contains("Attuned", body);
         }
 
         [Test]
@@ -133,21 +133,21 @@ namespace PrincesPalace.PlayModeTests
             var item = EasiestItem();
             Assert.IsNotNull(item, "content has no equippable items at all");
 
-            var wearsFrosty = new Character(definition.id);
-            wearsFrosty.equipment.Set(item.equipSlot, item.id,
-                modifierIds: new System.Collections.Generic.List<string> { "frosty" });
+            var wearsFrostbite = new Character(definition.id);
+            wearsFrostbite.equipment.Set(item.equipSlot, item.id,
+                modifierIds: new System.Collections.Generic.List<string> { "frostbite" });
 
             var wearsNothing = new Character(definition.id);
 
-            var squad = new System.Collections.Generic.List<Character> { wearsFrosty, wearsNothing };
+            var squad = new System.Collections.Generic.List<Character> { wearsFrostbite, wearsNothing };
 
-            string body = ItemDescription.SquadComparisonBody(squad, ItemInstance.Of(item.id, 0, new[] { "fiery" }));
+            string body = ItemDescription.SquadComparisonBody(squad, ItemInstance.Of(item.id, 0, new[] { "attuned" }));
 
-            StringAssert.Contains($"<color={ItemStatLines.GainHex}>Fiery", body,
+            StringAssert.Contains($"<color={ItemStatLines.GainHex}>Attuned", body,
                 "the candidate's own affix is a gain for the member with nothing worn there yet, and for the " +
                 "member losing a different affix, so it must show as a gain somewhere in the body");
-            StringAssert.Contains($"<color={ItemStatLines.LossHex}>Losing: Frosty</color>", body,
-                "the member who currently wears Frosty must see it named as a loss");
+            StringAssert.Contains($"<color={ItemStatLines.LossHex}>Losing: Frostbite</color>", body,
+                "the member who currently wears Frostbite must see it named as a loss");
         }
 
         // The distinction the box exists to make. Collapsing these two was the

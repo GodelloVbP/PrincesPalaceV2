@@ -15,7 +15,7 @@ namespace PrincesPalace
     // WHY A ROUTER AND NOT A SECOND HANDLER PER SCREEN. Both screens that
     // show a tooltip already have one entry point per surface that the
     // pointer drives -- CharacterDossierController.OnSlotHover/
-    // OnAttributeHover/OnPackHover and ReckoningController.OnOfferHover, each
+    // OnAttributeHover/OnPackHover and the Reckoning's chip strip, each
     // taking (index, entered). Selection could have called those directly,
     // and that is precisely the mistake: two callers with no arbiter means
     // the mouse's "entered: false" can hide a box the stick is holding open,
