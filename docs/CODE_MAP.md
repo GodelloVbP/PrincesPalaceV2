@@ -22,6 +22,7 @@ prefix: `Tests/{EditMode,PlayMode}/<area>/<Prefix>*Tests.cs`.
 | Talents | `TalentScreen.cs` | `Core/TalentController.cs` (+`.Motion`) | `ConstellationLayout.cs` | `Talents()` scene | `Talent` |
 | Run Map | `MapScreen.cs` | `Core/MapController.cs` (+`.Walk`, `.Event`, `.Heart`) | `MapLayout.cs` (pixels, camera, trails), `MapGraph.cs` (a realm placed: node slot = id, footprints, heart slots), `MapWalk.cs`, `MapNodeCard.cs` (room words), `Core/MapNodePreview.cs` (decided facts) | `Map()` scene | `Map` |
 | Shop (in Map) | `ShopScreen.cs` | `Core/ShopController.cs` | `ItemComparisonPanel.cs` | `WireShop` | `Shop` |
+| Hone (shop paid, Rest free; in Map) | `HoneScreen.cs` | `Core/HoneController.cs` | `Core/Bot/RunOrchestrator.Hone.cs` (`BuyHone`, `HonePriceFor`, `RestHeal`, `RestHone`; writes through `RewardPages.Hone`) | `WireHone` | `Hone` |
 | Event room (in Map) | `EventScreen.cs` | `Core/EventController.cs` | `DialogueStageLayout.cs` | `WireEvent` | `Event` |
 | Fight | `FightScreen.cs` | `Core/FightController.cs` (+6 parts, below) | `FightSubmenuLayout.cs`, `FightHudPalette.cs`, `FightRoundPresentation.cs`, `PcPlateArt.cs` | `Fight()` scene | `Fight` |
 | Reckoning (rewards, in Fight) | `ReckoningScreen.cs` | `Core/ReckoningController.cs` | `OfferRowLayout.cs` (`MaxCards`: a page shows k + 2 cards) | `WireReckoning` | `Reckoning` |
@@ -105,7 +106,7 @@ screenshots all read it.
 
 - `Core/FightController` → `.Hud`, `.Input`, `.MenuSource`, `.Rounds`, `.SpellVfx`, `.StageVisuals`
 - `Domain/Combat/Session/FightSession` → `.Beats`, `.Cooldowns`, `.Enemies`, `.Items`, `.Kinship`, `.Ledger`, `.Outcome`, `.Potency`, `.RelicMechanics`, `.Relics`, `.Riders`, `.Rounds`, `.Schedule`, `.Skills`, `.SpeedBuffs`, `.Talents`
-- `Core/Bot/RunOrchestrator` → `Core/Bot/RunOrchestrator.{Event,Shelf,Shop}.cs`, `Core/RunOrchestrator.Spells.cs`
+- `Core/Bot/RunOrchestrator` → `Core/Bot/RunOrchestrator.{Event,Hone,Shelf,Shop}.cs`, `Core/RunOrchestrator.Spells.cs`
 - `Core/Content/ContentDatabase` → `.Effective`, `.Validation`
 - `Domain/Content/EventEntryResolver` → `.Dialogue`, `.Fights`, `.Shelves`
 - `Core/CharacterDossierController` → `.Loadout`, `.Sections`, `.Skills`
