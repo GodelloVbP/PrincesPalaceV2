@@ -143,7 +143,7 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
 
             Assert.IsTrue(Named("DefeatGoldBanked").activeSelf);
-            Assert.AreEqual("135 gold banked", TextOf("DefeatGoldBanked"));
+            Assert.AreEqual("135 GOLD, BANKED", TextOf("DefeatGoldBanked"));
 
             _defeat.Show(Settlement("shawn"));
             yield return null;

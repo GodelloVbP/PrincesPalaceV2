@@ -84,34 +84,35 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.GoldLostLabel = goldLost;
             inside.Add(goldLost);
 
-            // The cache's gold, paid to the wallet whatever the ending; shown
-            // only when there is some (DefeatController).
-            var goldBanked = Ui.Label("DefeatGoldBanked", UiStrings.DefeatGoldBanked, new UiVec(600f, 30f), 18,
-                    "#F2DB9E", Place.At(ColumnX, 148f))
-                .AsDecor()
-                .Styled(TypographyRole.TacticalData);
-            screen.GoldBankedLabel = goldBanked;
-            inside.Add(goldBanked);
-
             inside.Add(Ui.Label("DefeatKeptHeading", UiStrings.DefeatKept, new UiVec(600f, 34f), 20,
-                "#B8A8D9", Place.At(ColumnX, 110f)).AsDecor().Styled(TypographyRole.FunctionalHeading));
+                "#B8A8D9", Place.At(ColumnX, 130f)).AsDecor().Styled(TypographyRole.FunctionalHeading));
 
             var embers = Ui.Label("DefeatEmbers", UiStrings.DefeatEmbers, new UiVec(600f, 48f), 26,
-                    "#F2DB9E", Place.At(ColumnX, 52f))
+                    "#F2DB9E", Place.At(ColumnX, 72f))
                 .AsDecor()
                 .Styled(TypographyRole.TacticalData);
             screen.EmbersLabel = embers;
             inside.Add(embers);
 
+            // The cache's gold, paid to the wallet whatever the ending, so it
+            // sits under KEPT with the other things that survive. Shown only
+            // when there is some (DefeatController).
+            var goldBanked = Ui.Label("DefeatGoldBanked", UiStrings.DefeatGoldBanked, new UiVec(600f, 36f), 18,
+                    "#F2DB9E", Place.At(ColumnX, 20f))
+                .AsDecor()
+                .Styled(TypographyRole.TacticalData);
+            screen.GoldBankedLabel = goldBanked;
+            inside.Add(goldBanked);
+
             var exp = Ui.Label("DefeatExp", UiStrings.DefeatExp, new UiVec(600f, 36f), 18,
-                    "#B8A8D9", Place.At(ColumnX, -6f))
+                    "#B8A8D9", Place.At(ColumnX, -26f))
                 .AsDecor()
                 .Styled(TypographyRole.TacticalData);
             screen.ExpLabel = exp;
             inside.Add(exp);
 
             var depth = Ui.Label("DefeatDepth", UiStrings.DefeatDepth, new UiVec(600f, 36f), 18,
-                    "#9C8FC4", Place.At(ColumnX, -56f))
+                    "#9C8FC4", Place.At(ColumnX, -76f))
                 .AsDecor()
                 .Styled(TypographyRole.TacticalData);
             screen.DepthLabel = depth;

@@ -778,7 +778,7 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString DefeatGoldLost =
             UiString.Define("defeat.gold_lost", "{0} GOLD, UNBANKED", "99999 GOLD, UNBANKED");
         public static readonly UiString DefeatGoldBanked =
-            UiString.Define("defeat.gold_banked", "{0} gold banked", "999999 gold banked");
+            UiString.Define("defeat.gold_banked", "{0} GOLD, BANKED", "999999 GOLD, BANKED");
         public static readonly UiString DefeatEmbers =
             UiString.Define("defeat.embers", "+{0} EMBERS", "+99 EMBERS");
         public static readonly UiString DefeatEmbersNone =
