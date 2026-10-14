@@ -237,7 +237,7 @@ namespace PrincesPalace
             if (save == null) return;
 
             int plus = item.Kind == (int)ItemKind.Consumable ? 0 : _plus;
-            InventoryOps.Add(save.stockpiledItems, item.Id, qty, plus);
+            InventoryOps.Add(save.stockpiledItems, item.Id, qty, plus, tier: item.Tier);
 
             Wrote();
             ToastGranted(qty, item.Name, plus);
@@ -255,10 +255,14 @@ namespace PrincesPalace
             var pieces = ContentDatabase.Items.Where(i => i != null && i.setId == row.SetId).ToList();
             if (pieces.Count == 0) return;
 
+            // Every tier of every piece, as the set's rows always granted.
             foreach (var piece in pieces)
             {
                 int plus = piece.kind == ItemKind.Consumable ? 0 : _plus;
-                InventoryOps.Add(save.stockpiledItems, piece.id, qty, plus);
+                for (int tier = 0; tier <= piece.curve.maxTier; tier++)
+                {
+                    InventoryOps.Add(save.stockpiledItems, piece.id, qty, plus, tier: tier);
+                }
             }
 
             Wrote();
@@ -842,10 +846,12 @@ namespace PrincesPalace
                 : category == DebugCategory.Equipment ? ItemKind.Equipment
                 : ItemKind.Consumable;
 
+            // Gear is one row per tier of its art ladder, consumables one row.
             return ContentDatabase.Items
                 .Where(i => i != null && i.kind == kind)
-                .Select(i => new DebugItem(i.id, DisplayName(i), (int)i.kind, i.tier, category,
-                    subKey: kind == ItemKind.Equipment ? (int)i.equipSlot : DebugMenuCatalog.SubFilterAll));
+                .SelectMany(i => Enumerable.Range(0, i.IsEquippable ? i.curve.maxTier + 1 : 1)
+                    .Select(tier => new DebugItem(i.id, DisplayName(i, tier), (int)i.kind, tier, category,
+                        subKey: kind == ItemKind.Equipment ? (int)i.equipSlot : DebugMenuCatalog.SubFilterAll)));
         }
 
         // One row per setId, not per piece. Kind -1: GrantSet reads each
@@ -854,7 +860,7 @@ namespace PrincesPalace
             ContentDatabase.Items
                 .Where(i => i != null && i.IsSetPiece)
                 .GroupBy(i => i.setId)
-                .Select(set => new DebugItem(set.Key, set.Key, -1, set.Min(i => i.tier), DebugCategory.Sets,
+                .Select(set => new DebugItem(set.Key, set.Key, -1, 0, DebugCategory.Sets,
                     setId: set.Key));
 
         // Every skill with a book tier -- the set SaveData.Reconcile lets
@@ -876,7 +882,7 @@ namespace PrincesPalace
                     string.IsNullOrEmpty(r.Data.DisplayName) ? r.Data.Id : r.Data.DisplayName,
                     -1, 0, DebugCategory.Relics));
 
-        private static string DisplayName(ItemDefinition item) =>
-            string.IsNullOrEmpty(item.displayName) ? item.id : item.displayName;
+        private static string DisplayName(ItemDefinition item, int tier) =>
+            ContentDatabase.NameOf(ItemInstance.Of(item.id, tier));
     }
 }

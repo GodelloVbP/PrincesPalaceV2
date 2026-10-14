@@ -86,9 +86,9 @@ namespace PrincesPalace.PlayModeTests
             var item = AnyEquippable();
             Assert.IsNotNull(item, "fixture: content has at least one equippable item");
 
-            int expectedDamage = FieryExpectedDamage(item.tier, RiftTier.RiftForged);
+            int expectedDamage = FieryExpectedDamage(4, RiftTier.RiftForged);
 
-            string card = ItemDescription.CardSummary(ItemInstance.Of(item.id, item.tier), plus: 0, viewer: null,
+            string card = ItemDescription.CardSummary(ItemInstance.Of(item.id, 4), plus: 0, viewer: null,
                 riftTier: RiftTier.RiftForged,
                 modifierIds: new System.Collections.Generic.List<string> { "fiery" });
 
@@ -102,9 +102,9 @@ namespace PrincesPalace.PlayModeTests
             var item = AnyEquippable();
             Assert.IsNotNull(item, "fixture: content has at least one equippable item");
 
-            int expectedResistPercent = EmberguardExpectedResistPercent(item.tier, RiftTier.RiftForged);
+            int expectedResistPercent = EmberguardExpectedResistPercent(4, RiftTier.RiftForged);
 
-            string card = ItemDescription.CardSummary(ItemInstance.Of(item.id, item.tier), plus: 0, viewer: null,
+            string card = ItemDescription.CardSummary(ItemInstance.Of(item.id, 4), plus: 0, viewer: null,
                 riftTier: RiftTier.RiftForged,
                 modifierIds: new System.Collections.Generic.List<string> { "emberguard" });
 
@@ -122,10 +122,10 @@ namespace PrincesPalace.PlayModeTests
             var item = AnyEquippable();
             Assert.IsNotNull(item, "fixture: content has at least one equippable item");
 
-            int expectedDamage = FieryExpectedDamage(item.tier, RiftTier.RiftForged);
-            int expectedResistPercent = EmberguardExpectedResistPercent(item.tier, RiftTier.RiftForged);
+            int expectedDamage = FieryExpectedDamage(4, RiftTier.RiftForged);
+            int expectedResistPercent = EmberguardExpectedResistPercent(4, RiftTier.RiftForged);
 
-            string card = ItemDescription.CardSummary(ItemInstance.Of(item.id, item.tier), plus: 0, viewer: null,
+            string card = ItemDescription.CardSummary(ItemInstance.Of(item.id, 4), plus: 0, viewer: null,
                 riftTier: RiftTier.RiftForged,
                 modifierIds: new System.Collections.Generic.List<string> { "fiery", "emberguard" });
 
@@ -141,7 +141,7 @@ namespace PrincesPalace.PlayModeTests
             var item = AnyEquippable();
             Assert.IsNotNull(item, "fixture: content has at least one equippable item");
 
-            string card = ItemDescription.CardSummary(ItemInstance.Of(item.id, item.tier));
+            string card = ItemDescription.CardSummary(ItemInstance.Of(item.id, 4));
 
             StringAssert.DoesNotContain("AFFIXES", card);
         }
@@ -177,7 +177,7 @@ namespace PrincesPalace.PlayModeTests
             // exactly what this test needs: one item definition, two rolls.
             var character = FreshCharacterWearing(item, RiftTier.Ordinary, new List<string> { "frosty" });
 
-            string body = ItemDescription.ComparisonBody(character, ItemInstance.Of(item.id, item.tier), candidatePlus: 0,
+            string body = ItemDescription.ComparisonBody(character, ItemInstance.Of(item.id, 4), candidatePlus: 0,
                 riftTier: RiftTier.Ordinary, modifierIds: new List<string> { "fiery" });
 
             StringAssert.Contains($"<color={ItemStatLines.GainHex}>Fiery", body,
@@ -194,7 +194,7 @@ namespace PrincesPalace.PlayModeTests
 
             var character = FreshCharacterWearing(item, RiftTier.Ordinary, new List<string> { "fiery" });
 
-            string body = ItemDescription.ComparisonBody(character, ItemInstance.Of(item.id, item.tier), candidatePlus: 0,
+            string body = ItemDescription.ComparisonBody(character, ItemInstance.Of(item.id, 4), candidatePlus: 0,
                 riftTier: RiftTier.Ordinary, modifierIds: new List<string> { "fiery" });
 
             StringAssert.Contains("Fiery --", body, "the shared affix still lists");
@@ -217,7 +217,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(definition, "fixture: content has at least one character");
             var character = new Character(definition.id);
 
-            string body = ItemDescription.ComparisonBody(character, ItemInstance.Of(item.id, item.tier), candidatePlus: 0,
+            string body = ItemDescription.ComparisonBody(character, ItemInstance.Of(item.id, 4), candidatePlus: 0,
                 riftTier: RiftTier.Ordinary, modifierIds: new List<string> { "fiery" });
 
             StringAssert.Contains("AFFIXES", body);

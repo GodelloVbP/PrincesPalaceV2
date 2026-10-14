@@ -686,7 +686,7 @@ namespace PrincesPalace
                 RunEncounter.ScaleCarriedHealth(character, maxBefore);
                 foreach (var piece in broken)
                 {
-                    lines.Add(FakeWear.BreakLine(ContentDatabase.GetItem(piece.ItemId)?.displayName ?? piece.ItemId));
+                    lines.Add(FakeWear.BreakLine(ContentDatabase.NameOf(piece)));
                 }
             }
 

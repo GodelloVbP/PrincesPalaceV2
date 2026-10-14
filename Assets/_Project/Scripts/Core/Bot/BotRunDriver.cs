@@ -1409,7 +1409,7 @@ namespace PrincesPalace
                 // and paying that for a NO OFFER placeholder or a card
                 // already bought buys nothing.
                 float score = entry.kind == ShopEntryKind.Gear && !entry.noOffer && !entry.sold
-                    ? ScoreCached(save, entry.contentId, entry.plus, weights, scoreCache)
+                    ? ScoreCached(save, entry.contentId, entry.plus, entry.tier, weights, scoreCache)
                     : 0f;
 
                 cards.Add(new ShopCardView(entry.section, entry.index, entry.kind, entry.contentId,
@@ -1436,18 +1436,18 @@ namespace PrincesPalace
             return new ShopView(cards, rerollPrices, rerollsUsed, bag, run.gold);
         }
 
-        // itemId+plus is the whole of what GearEvaluator.ScoreOffer reads
+        // itemId+tier+plus is the whole of what GearEvaluator.ScoreOffer reads
         // besides `save` (worn gear, constant across a visit) and `weights`
         // (the archetype, constant for the run) -- see the cache's own note
         // at its one call site in VisitShop.
         private static float ScoreCached(
-            SaveData save, string itemId, int plus, GearWeights weights,
+            SaveData save, string itemId, int plus, int tier, GearWeights weights,
             Dictionary<(string, int), float> cache)
         {
-            var key = (itemId, plus);
+            var key = ($"{itemId}@{tier}", plus);
             if (cache.TryGetValue(key, out float cached)) return cached;
 
-            float score = GearEvaluator.ScoreOffer(save, itemId, plus, weights);
+            float score = GearEvaluator.ScoreOffer(save, itemId, plus, weights, tier);
             cache[key] = score;
             return score;
         }
@@ -1469,15 +1469,15 @@ namespace PrincesPalace
                 var definition = ContentDatabase.GetItem(entry.itemId);
                 bool consumable = definition != null && definition.kind == ItemKind.Consumable;
 
-                // DUPLICATE MEANS "an earlier row already holds this id",
+                // DUPLICATE MEANS "an earlier row already holds this id and tier",
                 // which is the only duplicate a bag can show: two stacks of
                 // the same item exist precisely because their plus, affixes
                 // or rift tier differ, so the ids match and the copies do not.
-                bool duplicate = !seenIds.Add(entry.itemId);
+                bool duplicate = !seenIds.Add($"{entry.itemId}@{entry.tier}");
 
                 float score = consumable
                     ? 0f
-                    : ScoreCached(save, entry.itemId, entry.plus, weights, scoreCache);
+                    : ScoreCached(save, entry.itemId, entry.plus, entry.tier, weights, scoreCache);
 
                 rows.Add(new ShopBagRow(i, entry.itemId, entry.count,
                     RunOrchestrator.SellPriceOf(entry), score, duplicate, consumable));

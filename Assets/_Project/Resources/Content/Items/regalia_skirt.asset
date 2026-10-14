@@ -1,0 +1,117 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e3489eecf28b4d74aae851d312f450c0, type: 3}
+  m_Name: regalia_skirt
+  m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ItemDefinition
+  id: regalia_skirt
+  displayName: Regalia Ceremonial Skirt
+  description: Bells to call with and cords to bind with. Nothing here is for hitting anyone yourself.
+  kind: 2
+  effect: 0
+  amount: 20
+  equipSlot: 3
+  startingStock: 0
+  iconPath: Assets/_Project/Art/Items/regalia_skirt_sheet/level_1.png
+  cost: 65
+  sortOrder: 180200
+  setId: regalia
+  weaponFamilyId: 
+  curve:
+    maxTier: 10
+    statsAtZero:
+      maxHealth: 6
+      speed: 0
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 1
+      magicalDefense: 3
+      critChance: 0
+      critDamage: 0
+    statsAtMax:
+      maxHealth: 59
+      speed: 2
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 6
+      magicalDefense: 29
+      critChance: 0
+      critDamage: 0
+    scoresAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    scoresAtMax:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 2
+      intelligence: 0
+      charisma: 2
+    requiresAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 1
+      intelligence: 0
+      charisma: 2
+    requiresAtMax:
+      strength: 0
+      dexterity: 0
+      constitution: 2
+      wisdom: 12
+      intelligence: 0
+      charisma: 14
+    attackAtZero: 0
+    attackAtMax: 0
+    scalingAtZero:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    scalingAtMax:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    spellScaling:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    baseName: Regalia Ceremonial Skirt
+    tierAdjectives:
+    - Borrowed
+    - Painted
+    - Beaded
+    - Gilded
+    - Ceremonial
+    - Anointed
+    - Consecrated
+    - Hierarch's
+    - Choirmaster's
+    - Undeniable
+    - Godcaller
+    - Divine
+    - Apotheotic
+    fallbackAdjective: 
+    iconSheet: Assets/_Project/Art/Items/regalia_skirt_sheet
+    iconLevels: 10
+    iconPath: 

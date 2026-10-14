@@ -120,7 +120,7 @@ namespace PrincesPalace.Domain.Rewards
             {
                 var pool = candidates
                     .Where(c => Math.Abs(c.Tier - target) <= spread)
-                    .Where(c => chosen.All(already => already.ItemId != c.ItemId))
+                    .Where(c => chosen.All(already => already.ItemId != c.ItemId || already.Tier != c.Tier))
                     .ToList();
 
                 if (pool.Count == 0)

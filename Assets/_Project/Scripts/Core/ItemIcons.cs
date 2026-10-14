@@ -1,6 +1,8 @@
 using UnityEngine;
 using UnityEngine.UI;
 
+using PrincesPalace.Content;
+
 namespace PrincesPalace
 {
     // Item art, looked up by id.
@@ -17,6 +19,18 @@ namespace PrincesPalace
     // class everywhere else.
     public static class ItemIcons
     {
+        // The key a copy's art is stored under. Gear art depends on the tier
+        // (several frames per base), so the tables hold gear under its icon
+        // path and a caller with a copy asks here; anything without a curve
+        // keeps its content id.
+        public static string KeyOf(ItemInstance copy)
+        {
+            if (copy == null) return null;
+
+            string path = ContentDatabase.Effective(copy)?.IconPath;
+            return string.IsNullOrEmpty(path) ? copy.ItemId : path;
+        }
+
         public static Sprite Find(IconEntry[] icons, string itemId)
         {
             if (string.IsNullOrEmpty(itemId) || icons == null)

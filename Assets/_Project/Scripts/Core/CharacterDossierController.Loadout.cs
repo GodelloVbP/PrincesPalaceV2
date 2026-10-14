@@ -185,9 +185,10 @@ namespace PrincesPalace
                 // ACTIVATE the icon object, not just its Image: the node is
                 // declared inactive so an empty slot draws nothing, and
                 // ItemIcons.Apply only sets `enabled`.
-                bool hasArt = Has(slotIcons, i) && ItemIcons.Apply(slotIcons[i], icons, item?.id);
+                var worn = character.equipment?.GetInstance(slot);
+                bool hasArt = Has(slotIcons, i) && ItemIcons.Apply(slotIcons[i], icons, ItemIcons.KeyOf(worn));
                 if (Has(slotIcons, i)) slotIcons[i].gameObject.SetShown(hasArt);
-                ShowNameInCell(slotNames, i, item != null && !hasArt, item?.displayName);
+                ShowNameInCell(slotNames, i, item != null && !hasArt, ContentDatabase.NameOf(worn));
 
                 if (Has(slotRarityTicks, i))
                 {

@@ -33,7 +33,6 @@ namespace PrincesPalace.Domain.Content
     {
         private const int DefaultMaxTier = 10;
         private const int DefaultCost = 0;
-        private const int DefaultCostPerTier = 0;
         private const int DefaultAttackAtZero = 3;
         private const int DefaultAttackAtMax = 18;
 
@@ -124,7 +123,6 @@ namespace PrincesPalace.Domain.Content
             }
 
             int cost = raw.cost >= 0 ? raw.cost : DefaultCost;
-            int costPerTier = raw.costPerTier >= 0 ? raw.costPerTier : DefaultCostPerTier;
             int familyOrder = raw.sortOrder >= 0 ? raw.sortOrder : index;
             int iconLevels = raw.iconLevels > 0 ? raw.iconLevels : ItemSetEntryResolver.DefaultIconLevels;
 
@@ -210,12 +208,7 @@ namespace PrincesPalace.Domain.Content
                 iconPath = raw.iconPath ?? "",
             };
 
-            for (int tier = 0; tier <= maxTier; tier++)
-            {
-                resolved.Add(BuildWeapon(raw, slot, tier, curve,
-                    cost + costPerTier * tier,
-                    familyOrder * 10000 + tier));
-            }
+            resolved.Add(BuildWeapon(raw, slot, curve, cost, familyOrder * 10000));
         }
 
         // One authored primary/secondary curve: a stat, and the grade it holds
@@ -259,27 +252,23 @@ namespace PrincesPalace.Domain.Content
             return true;
         }
 
-        // Per-tier assets read the family's curve at their tier, so a copy
-        // read through GearCurve.At and the asset generated for that tier
-        // cannot disagree. The plus is not in the name: honing belongs to the
-        // slot, and the UI appends it via ItemNaming.WithPlus.
+        // The family's one asset. A copy's own name, adjective and honing
+        // included, is read through ContentDatabase.Effective and
+        // ItemNaming.WithPlus.
         private static ResolvedWeapon BuildWeapon(RawWeaponEntry family, EquipmentSlot slot,
-            int tier, GearCurve curve, int cost, int sortOrder)
+            GearCurve curve, int cost, int sortOrder)
         {
-            var at = curve.At(tier);
             string familyId = family.id.Trim();
 
             return new ResolvedWeapon(
-                $"{familyId}_p{tier}",
-                at.DisplayName,
+                familyId,
+                curve.baseName,
                 family.description ?? "",
                 slot,
                 familyId,
-                tier,
                 cost,
                 sortOrder,
-                at.IconPath,
-                familyId,
+                curve.At(0).IconPath,
                 curve);
         }
 

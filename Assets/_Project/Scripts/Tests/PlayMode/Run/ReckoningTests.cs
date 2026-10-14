@@ -231,7 +231,9 @@ namespace PrincesPalace.PlayModeTests
             var candidates = ItemOfferRoll.Candidates();
             Assert.IsNotEmpty(candidates, "fixture: content has equippable items");
 
-            return candidates.Take(3).Select(c => c.WithPlus(2)).ToList();
+            // Three different bases: the second press is checked by id.
+            return candidates.GroupBy(c => c.ItemId).Select(g => g.First()).Take(3)
+                .Select(c => c.WithPlus(2)).ToList();
         }
 
         // Whether `itemId` at `plus` ended up ANYWHERE this save can hold it --
@@ -295,7 +297,7 @@ namespace PrincesPalace.PlayModeTests
             var candidates = ItemOfferRoll.Candidates();
             Assert.IsNotEmpty(candidates, "fixture: content has equippable items");
 
-            return candidates.Take(3)
+            return candidates.GroupBy(c => c.ItemId).Select(g => g.First()).Take(3)
                 .Select(c => c.WithPlus(2)
                     .WithModifiers(Domain.Content.RiftTier.Convergent, pool.Take(System.Math.Min(3, pool.Count)).ToList()))
                 .ToList();

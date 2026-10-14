@@ -41,7 +41,7 @@ namespace PrincesPalace.PlayModeTests
         }
 
         private static ItemDefinition TierZeroEquippable() =>
-            ContentDatabase.Items.FirstOrDefault(i => i != null && i.IsEquippable && i.tier == 0);
+            ContentDatabase.Equippables.FirstOrDefault(i => i != null);
 
         private static Character FreshCharacter()
         {
@@ -152,19 +152,16 @@ namespace PrincesPalace.PlayModeTests
             var tierZero = TierZeroEquippable();
             Assert.IsNotNull(tierZero, "fixture: content has a tier-0 equippable item");
 
-            var higherTier = ContentDatabase.Items
-                .Where(i => i != null && i.IsEquippable && i.tier > 0)
-                .OrderBy(i => i.tier)
-                .FirstOrDefault();
-            Assert.IsNotNull(higherTier, "fixture: content has an equippable item above tier 0");
+            const int higherTierNumber = 5;
 
             var lowTierCharacter = FreshCharacter();
             lowTierCharacter.equipment.Set(tierZero.equipSlot, tierZero.id,
                 modifierIds: new List<string> { "fortunate" }, riftTier: (int)RiftTier.Ordinary);
 
             var highTierCharacter = FreshCharacter();
-            highTierCharacter.equipment.Set(higherTier.equipSlot, higherTier.id,
-                modifierIds: new List<string> { "fortunate" }, riftTier: (int)RiftTier.Ordinary);
+            highTierCharacter.equipment.Set(tierZero.equipSlot, tierZero.id,
+                modifierIds: new List<string> { "fortunate" }, riftTier: (int)RiftTier.Ordinary,
+                tier: higherTierNumber);
 
             int lowTierBonus = ContentDatabase.CharacterEffects(lowTierCharacter)
                 .Magnitude(EffectKind.FortunateFavorBonusFlat);

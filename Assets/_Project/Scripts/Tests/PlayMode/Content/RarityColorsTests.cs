@@ -71,14 +71,13 @@ namespace PrincesPalace.PlayModeTests
         {
             // Used where the name sits inside a longer line, so tinting the
             // whole label would colour the sentence too.
-            var item = ContentDatabase.Items.First(i => i.IsEquippable && i.tier == 0);
-            var copy = ItemInstance.Of(item.id, item.tier);
+            var copy = ItemInstance.Of("brigandine_boots", 0);
 
             string wrapped = RarityColors.Wrap(copy);
 
             StringAssert.StartsWith("<color=" + RarityBands.HexColorForTier(0) + ">", wrapped);
             StringAssert.EndsWith("</color>", wrapped);
-            StringAssert.Contains(item.displayName, wrapped);
+            StringAssert.Contains("Patched Brigandine Boots", wrapped);
         }
 
         [Test]
@@ -86,10 +85,9 @@ namespace PrincesPalace.PlayModeTests
         {
             // The plus is an instance fact; the colour is the item's tier. They
             // are separate axes and the name is where they meet.
-            var item = ContentDatabase.Items.First(i => i.IsEquippable && i.tier == 4);
-            var copy = ItemInstance.Of(item.id, item.tier);
+            var copy = ItemInstance.Of("brigandine_boots", 4);
 
-            Assert.AreEqual(item.displayName, RarityColors.NameOf(copy, 0), "a plain copy carries no suffix");
+            Assert.AreEqual("Tempered Brigandine Boots", RarityColors.NameOf(copy, 0), "a plain copy carries no suffix");
             StringAssert.Contains("+5", RarityColors.NameOf(copy, 5));
             Assert.AreEqual(RarityColors.For(copy), RarityColors.For(Rarity.Rare),
                 "tier 4 is Rare whatever the plus");

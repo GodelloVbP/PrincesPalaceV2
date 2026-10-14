@@ -214,10 +214,10 @@ namespace PrincesPalace.Domain.Equipment
         // The positional form of Put, for callers holding an ordinary copy:
         // it writes a plain provenance.
         public string Set(EquipmentSlot slot, string itemId, int plus = 0,
-            List<string> modifierIds = null, int riftTier = 0)
+            List<string> modifierIds = null, int riftTier = 0, int tier = 0)
         {
             string previous = Get(slot);
-            Put(slot, string.IsNullOrEmpty(itemId) ? null : new ItemInstance(itemId, plus, modifierIds, riftTier));
+            Put(slot, string.IsNullOrEmpty(itemId) ? null : new ItemInstance(itemId, plus, modifierIds, riftTier, null, tier));
             return previous;
         }
 

@@ -13,7 +13,7 @@ namespace PrincesPalace.PlayModeTests
     // Effective sees no change, and pin a real base past the art ladder.
     public class GearStatSeamTests
     {
-        private const int MinimumGeneratedGear = 600;
+        private const int MinimumGeneratedBases = 50;
 
         [Test]
         public void EveryGeneratedPiece_ReadsTheSameThroughItsBaseAndTierId()
@@ -21,27 +21,23 @@ namespace PrincesPalace.PlayModeTests
             var generated = ContentDatabase.Equippables
                 .Where(d => d.IsSetPiece || !string.IsNullOrEmpty(d.weaponFamilyId))
                 .ToList();
-            Assert.GreaterOrEqual(generated.Count, MinimumGeneratedGear, "vacuity guard: the seam must be checked against real content");
+            Assert.GreaterOrEqual(generated.Count, MinimumGeneratedBases, "vacuity guard: the seam must be checked against real content");
 
             foreach (var definition in generated)
             {
-                var viaBase = ContentDatabase.Effective(ItemInstance.Of(definition.baseId, definition.tier), 4);
-                var viaTierId = ContentDatabase.Effective(ItemInstance.Of(definition.id, 0), 4);
-                Assert.IsTrue(viaBase.HasValue, $"{definition.id}: base '{definition.baseId}' does not resolve");
-                Assert.IsTrue(viaTierId.HasValue, definition.id);
-
-                foreach (var at in new[] { viaBase.Value, viaTierId.Value })
+                for (int tier = 0; tier <= ItemInstance.TierCap; tier++)
                 {
-                    string label = $"{definition.id} (tier {at.Tier})";
-                    Assert.AreEqual(definition.tier, at.Tier, label);
-                    Assert.AreEqual(definition.displayName, at.DisplayName, label);
-                    Assert.AreEqual(definition.iconPath, at.IconPath, label);
+                    var at = ContentDatabase.Effective(ItemInstance.Of(definition.id, tier), 4);
+                    Assert.IsTrue(at.HasValue, $"{definition.id} at tier {tier} does not resolve");
+
+                    string label = $"{definition.id} (tier {tier})";
+                    Assert.AreEqual(tier, at.Value.Tier, label);
+                    Assert.IsFalse(string.IsNullOrEmpty(at.Value.DisplayName), label);
+                    Assert.AreEqual(4, at.Value.Honing, label);
                 }
 
-                Assert.AreEqual(viaBase.Value.StatBonus, viaTierId.Value.StatBonus, definition.id);
-                Assert.AreEqual(viaBase.Value.WeaponPower, viaTierId.Value.WeaponPower, definition.id);
-                Assert.AreEqual(viaBase.Value.Requirements, viaTierId.Value.Requirements, definition.id);
-                Assert.AreEqual(viaBase.Value.Scaling, viaTierId.Value.Scaling, definition.id);
+                Assert.AreEqual(definition.iconPath, ContentDatabase.Effective(ItemInstance.Of(definition.id, 0)).Value.IconPath,
+                    $"{definition.id}: the asset wears its tier-0 art");
             }
         }
 
@@ -121,7 +117,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(ScalingGrade.A, staff10.SpellScaling.intelligence);
         }
 
-        // Literals read off brigandine_boots_p0/_p10 and floored on the
+        // Literals read off the brigandine boots at tiers 0 and 10 and floored on the
         // 1.25 curve by hand (CLAUDE.md gotcha 5).
         [Test]
         public void ARealBase_PastTheArtLadder_KeepsClimbing()
@@ -132,10 +128,10 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(36, boots.StatBonus.physicalDefense);
             Assert.AreEqual(3, boots.StatBonus.speed);
             Assert.AreEqual(21, boots.Requirements.dexterity);
-            Assert.AreEqual("Ghoststep Brigandine Boots", boots.DisplayName, "the last adjective covers tiers past the list");
+            Assert.AreEqual("Absolute Brigandine Boots", boots.DisplayName, "tier 12 has its own adjective");
         }
 
-        // sword_p0 10 Attack, sword_p10 202, on the 1.35 weapon curve.
+        // The sword's tier 0 is 10 Attack and tier 10 is 202, on the 1.35 weapon curve.
         [Test]
         public void AWeaponBase_AtTheCap_HonedInItsSlot()
         {
@@ -143,7 +139,7 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.AreEqual(368, sword.AttackBonus);
             Assert.AreEqual(589, sword.WeaponPower, "368 x 1.6 = 588.8");
-            Assert.AreEqual("Sovereign Sword", sword.DisplayName);
+            Assert.AreEqual("Godforged Sword", sword.DisplayName);
         }
 
         [Test]
@@ -157,13 +153,13 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [Test]
-        public void EveryBase_Resolves_AndHasOneSlot()
+        public void EveryBase_Resolves_AndHasNoTierSuffix()
         {
-            foreach (var group in ContentDatabase.Equippables.GroupBy(d => d.baseId))
+            foreach (var definition in ContentDatabase.Equippables)
             {
-                Assert.IsFalse(string.IsNullOrEmpty(group.Key), $"{group.First().id} has no baseId");
-                Assert.AreSame(group.OrderBy(d => d.tier).First(), ContentDatabase.GetBase(group.Key), group.Key);
-                Assert.AreEqual(1, group.Select(d => d.equipSlot).Distinct().Count(), group.Key);
+                Assert.AreSame(definition, ContentDatabase.GetItem(definition.id), definition.id);
+                Assert.IsFalse(System.Text.RegularExpressions.Regex.IsMatch(definition.id, "_p[0-9]+$"),
+                    $"{definition.id} still carries a tier suffix");
             }
         }
 

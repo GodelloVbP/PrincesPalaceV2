@@ -54,13 +54,7 @@ namespace PrincesPalace.Content
         [Tooltip("Generated weapons only: which family this came from (e.g. 'sword'). Empty for a hand-authored weapon or a non-weapon. Kept so every generated weapon's family can be identified without parsing its id — see ContentDatabase.Offerable.")]
         public string weaponFamilyId;
 
-        [Tooltip("Generated items only: which rung of the ladder this per-tier asset is. The tier a copy carries is ItemInstance.Tier; what it grants is read through ContentDatabase.Effective.")]
-        public int tier;
-
-        [Tooltip("The base this definition belongs to: '<set>_<piece>' or '<family>' for generated gear, the id itself for a hand-authored item. The id a copy carries once content holds one asset per base (docs/PLAN_ITEMS.md 2.3).")]
-        public string baseId;
-
-        [Tooltip("Equippables: what the base is worth at every tier. ContentDatabase.Effective reads this with a copy's tier and its slot's honing.")]
+        [Tooltip("Equippables: what the base is worth at every tier. The tier a copy carries is ItemInstance.Tier; ContentDatabase.Effective reads this with it and the slot's honing.")]
         public GearCurve curve;
 
         // Whether this came out of itemsets.json rather than items.json.

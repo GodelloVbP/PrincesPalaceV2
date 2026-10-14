@@ -772,7 +772,6 @@ public static class ContentBuilder
             // lives in Domain and both sides use it directly, same as
             // DamageType on EnemyDefinition.
             asset.equipSlot = item.Slot;
-            asset.baseId = item.Id;
             if (asset.IsEquippable)
             {
                 asset.curve = GearCurve.Flat(item.DisplayName, item.StatBonus,
@@ -840,9 +839,7 @@ public static class ContentBuilder
             asset.kind = ItemKind.Weapon;
             asset.equipSlot = weapon.Slot;
             asset.cost = weapon.Cost;
-            asset.tier = weapon.Tier;
             asset.weaponFamilyId = weapon.FamilyId;
-            asset.baseId = weapon.BaseId;
             asset.curve = weapon.Curve;
             asset.iconPath = weapon.IconPath;
             asset.sortOrder = WeaponSortOffset + weapon.SortOrder;
@@ -921,9 +918,7 @@ public static class ContentBuilder
             asset.equipSlot = piece.Slot;
             asset.cost = piece.Cost;
             asset.setId = piece.SetId;
-            asset.baseId = piece.BaseId;
             asset.curve = piece.Curve;
-            asset.tier = piece.Tier;
             asset.iconPath = piece.IconPath;
             asset.sortOrder = SetSortOffset + piece.SortOrder;
             CreateContentAsset(asset, assetPath);

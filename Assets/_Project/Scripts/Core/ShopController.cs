@@ -645,7 +645,8 @@ namespace PrincesPalace
                     continue;
                 }
 
-                if (icons != null && i < icons.Length) ItemIcons.Apply(icons[i], art, entry.contentId);
+                if (icons != null && i < icons.Length)
+                    ItemIcons.Apply(icons[i], art, ItemIcons.KeyOf(entry.Instance()));
 
                 var (name, meta) = DescribeCard(entry);
                 if (names != null && i < names.Length) names[i].SetContent(name);
@@ -723,8 +724,7 @@ namespace PrincesPalace
                 }
                 case ShopEntryKind.Gear:
                 {
-                    var item = ContentDatabase.GetItem(entry.contentId);
-                    string name = item?.displayName ?? entry.contentId;
+                    string name = ContentDatabase.NameOf(entry.GearInstance());
                     // VISIBLE AFFIXES: the card names its
                     // modifiers, not just how many there are. What each one
                     // DOES, in numbers, is more than this line can hold --
@@ -734,7 +734,7 @@ namespace PrincesPalace
                     string affixNames = entry.modifiers != null && entry.modifiers.Count > 0
                         ? string.Join(", ", entry.modifiers.Select(AffixDisplayName))
                         : UiStrings.ShopGearMetaNoAffix.Format();
-                    string meta = UiStrings.ShopGearMeta.Format(item?.tier ?? 0, entry.plus, affixNames);
+                    string meta = UiStrings.ShopGearMeta.Format(entry.tier, entry.plus, affixNames);
                     return (name, meta);
                 }
                 case ShopEntryKind.Relic:
@@ -833,7 +833,7 @@ namespace PrincesPalace
                 return;
             }
 
-            if (detailTitle != null) detailTitle.SetContent(item.displayName ?? entry.contentId);
+            if (detailTitle != null) detailTitle.SetContent(ContentDatabase.NameOf(entry.GearInstance()));
 
             var riftTier = (RiftTier)entry.riftTier;
             detailBody.SetContent(ItemDescription.ComparisonBody(character, entry.GearInstance(), entry.plus,
@@ -887,10 +887,10 @@ namespace PrincesPalace
                 var item = ContentDatabase.GetItem(entry.itemId);
 
                 if (packNames != null && i < packNames.Length)
-                    packNames[i].SetContent(item?.displayName ?? entry.itemId);
+                    packNames[i].SetContent(ContentDatabase.NameOf(entry.Instance));
 
                 if (packMetas != null && i < packMetas.Length)
-                    packMetas[i].Set(UiStrings.ShopGearMeta, item?.tier ?? 0, entry.plus,
+                    packMetas[i].Set(UiStrings.ShopGearMeta, entry.tier, entry.plus,
                         entry.modifierIds?.Count ?? 0);
 
                 int sellPrice = RunOrchestrator.SellPriceOf(entry);

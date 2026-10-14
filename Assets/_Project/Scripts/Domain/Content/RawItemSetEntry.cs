@@ -41,19 +41,15 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("One adjective per tier, lowest first; the last covers every tier past the list's end.")]
         public string[] tierAdjectives = Array.Empty<string>();
 
-        // The highest tier this set goes to. Every piece is generated at
-        // tier 0 through tier this, inclusive, so 10 means eleven items per
-        // piece. RAISING it later is safe — the existing tiers keep their
-        // exact values, because a piece's numbers are anchored at both ends
-        // rather than accumulated per step.
-        [ContentDoc("The highest tier this set goes to; every piece is generated at tier 0..maxTier.")]
+        // The tier the art ladder and the authored numbers' top end sit at.
+        // Copies go past it to ItemInstance.TierCap on the same curve shape.
+        // RAISING it later is safe: a piece's numbers are anchored at both
+        // ends rather than accumulated per step.
+        [ContentDoc("The tier the art ladder tops out at, and where the AtMax numbers sit; copies climb past it on the same curve.")]
         public int maxTier = -1;
 
-        // Gold for the tier-0 piece, and how much each further tier adds.
-        [ContentDoc("Gold cost of the tier-0 piece.")]
+        [ContentDoc("Gold cost of the piece.")]
         public int cost = -1;
-        [ContentDoc("Gold added per tier above 0.")]
-        public int costPerTier = -1;
 
         [ContentDoc("Sort position among item sets.")]
         public int sortOrder = -1;

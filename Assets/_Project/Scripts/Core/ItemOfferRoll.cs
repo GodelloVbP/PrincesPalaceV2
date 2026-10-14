@@ -23,10 +23,9 @@ namespace PrincesPalace
     public static class ItemOfferRoll
     {
         // The ceiling the tier roll clamps against, taken from content rather
-        // than declared. A content pass that adds a tier 11 set should widen
-        // the roll without anyone remembering to update a constant here.
+        // than declared: the highest art tier any offerable base authors.
         public static int MaxTier =>
-            ContentDatabase.Items.Count == 0 ? 0 : ContentDatabase.Items.Max(i => i.tier);
+            ContentDatabase.Offerable.Count == 0 ? 0 : ContentDatabase.Offerable.Max(i => i.curve.maxTier);
 
         // WHAT THE GAME OFFERS AS A REWARD, and that is not the same set as
         // "everything wearable".
@@ -51,10 +50,20 @@ namespace PrincesPalace
         // first place.
         public static IReadOnlyList<ItemOffer> Candidates()
         {
-            return ContentDatabase.Offerable
-                .Where(i => i != null && !string.IsNullOrEmpty(i.id))
-                .Select(i => new ItemOffer(i.id, i.tier))
-                .ToList();
+            var candidates = new List<ItemOffer>();
+            foreach (var item in ContentDatabase.Offerable)
+            {
+                if (item == null || string.IsNullOrEmpty(item.id)) continue;
+
+                // A base offers one candidate per tier of its art ladder, base
+                // by base and tier ascending.
+                for (int tier = 0; tier <= item.curve.maxTier; tier++)
+                {
+                    candidates.Add(new ItemOffer(item.id, tier));
+                }
+            }
+
+            return candidates;
         }
 
         // Every modifier id in the pool that reads as OFFENSIVE (weaponPool

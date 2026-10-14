@@ -26,15 +26,13 @@ namespace PrincesPalace.Domain.Content
     //   * adding a stat is one enum member and one string in the JSON, with
     //     no schema change anywhere.
     //
-    // Only TIER is generated. The player-facing PLUS multiplies a finished
-    // piece at runtime (see ItemUpgrade) rather than generating an asset per
-    // combination — eleven tiers is 165 armour assets, eleven tiers times
-    // eleven pluses would be 1,815.
+    // One asset per piece: the curve is the whole ladder, and the tier a copy
+    // wears lives on the copy (ItemInstance.Tier). Honing multiplies the
+    // finished numbers at runtime (see ItemUpgrade).
     public static class ItemSetEntryResolver
     {
         private const int DefaultMaxTier = 10;
         private const int DefaultCost = 40;
-        private const int DefaultCostPerTier = 25;
 
         // Armour with no authored ladder keeps the bare piece name — "Leather
         // Coif" rather than a made-up word. Unlike a weapon, where the
@@ -155,7 +153,6 @@ namespace PrincesPalace.Domain.Content
             }
 
             int cost = raw.cost >= 0 ? raw.cost : DefaultCost;
-            int costPerTier = raw.costPerTier >= 0 ? raw.costPerTier : DefaultCostPerTier;
             int setOrder = raw.sortOrder >= 0 ? raw.sortOrder : index;
 
             // The style's weights, in hundredths. Empty is legal and means
@@ -311,39 +308,30 @@ namespace PrincesPalace.Domain.Content
                     iconPath = "",
                 };
 
-                for (int tier = 0; tier <= maxTier; tier++)
-                {
-                    resolved.Add(BuildPiece(raw, piece, slot, tier, curve,
-                        cost + costPerTier * tier,
-                        setOrder * 10000 + p * 100 + tier));
-                }
+                resolved.Add(BuildPiece(raw, piece, slot, curve, cost, setOrder * 10000 + p * 100));
             }
         }
 
-        // Per-tier assets read the base's curve at their tier, so a copy read
-        // through GearCurve.At and the asset generated for that tier cannot
-        // disagree. NO PLUS is baked into the name: honing belongs to the
-        // slot, and the UI appends it at display time (ItemNaming.WithPlus).
+        // The piece's one asset. Its name is the base name ("Leather Coif");
+        // a copy's own name, adjective and honing included, is read through
+        // ContentDatabase.Effective and ItemNaming.WithPlus.
         private static ResolvedSetPiece BuildPiece(RawItemSetEntry set, RawSetPiece piece, EquipmentSlot slot,
-            int tier, GearCurve curve, int cost, int sortOrder)
+            GearCurve curve, int cost, int sortOrder)
         {
-            var at = curve.At(tier);
             string setId = set.id.Trim();
             string pieceId = piece.id.Trim();
 
             return new ResolvedSetPiece(
-                $"{setId}_{pieceId}_p{tier}",
-                at.DisplayName,
+                $"{setId}_{pieceId}",
+                curve.baseName,
                 set.description ?? "",
                 slot,
                 setId,
                 set.displayName.Trim(),
                 pieceId,
-                tier,
                 cost,
                 sortOrder,
-                at.IconPath,
-                $"{setId}_{pieceId}",
+                curve.At(0).IconPath,
                 curve);
         }
 

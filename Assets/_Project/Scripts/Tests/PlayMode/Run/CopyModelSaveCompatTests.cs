@@ -15,10 +15,9 @@ namespace PrincesPalace.PlayModeTests
     // `riftTier` on bag, slot and shop entries, no `tier`, no `slotHoning` --
     // through the real Migrate/Reconcile path.
     //
-    // It holds before and after content collapses to bases: while "_pN"
-    // assets exist the ids survive and read their own tier through
-    // ContentDatabase.Effective; once they are gone, Reconcile prunes them.
-    // Either way nothing throws and nothing dangling survives.
+    // Content holds one asset per base, so the old "_pN" ids no longer
+    // resolve and Reconcile prunes them. Nothing throws and nothing dangling
+    // survives.
     public class CopyModelSaveCompatTests
     {
         private const string OldBootsId = "brigandine_boots_p3";
@@ -72,12 +71,13 @@ namespace PrincesPalace.PlayModeTests
                 Assert.IsTrue(ContentDatabase.Effective(slot.Instance).HasValue, slot.itemId);
             }
 
-            // Per-tier assets still exist, so the old id survives and reads
-            // its own tier. When content collapses to bases this flips: the
-            // id no longer resolves and Weapon1 is empty
-            // (docs/handoffs/item_redesign/I2A_REMAINING.md).
-            var sword = ContentDatabase.Effective(wearer.equipment.GetInstance(EquipmentSlot.Weapon1)).Value;
-            Assert.AreEqual(5, sword.Tier);
+            // The fixture guard: the old ids really are gone from content.
+            Assert.IsNull(ContentDatabase.GetItem("brigandine_boots_p3"));
+            Assert.IsNull(ContentDatabase.GetItem(OldSwordId));
+
+            // The pruned sword leaves Weapon1 empty.
+            Assert.IsTrue(wearer.equipment.IsEmpty(EquipmentSlot.Weapon1));
+            Assert.IsEmpty(loaded.activeRun.inventory);
         }
     }
 }

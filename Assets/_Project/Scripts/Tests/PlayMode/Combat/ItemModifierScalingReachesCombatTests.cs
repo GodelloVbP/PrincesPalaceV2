@@ -28,7 +28,7 @@ namespace PrincesPalace.PlayModeTests
         // in ModifierMagnitudeTests), so the only multiplier left in play is
         // RiftMultiplier -- keeps the arithmetic in this file to one axis.
         private static ItemDefinition TierZeroEquippable() =>
-            ContentDatabase.Items.FirstOrDefault(i => i != null && i.IsEquippable && i.tier == 0);
+            ContentDatabase.Equippables.FirstOrDefault(i => i != null);
 
         private static Character FreshCharacterWearing(ItemDefinition item, string modifierId, RiftTier riftTier)
         {

@@ -769,10 +769,7 @@ public static class ScreenRegistry
         // skill today) is filtered out here the same way, and ItemIcons.Apply
         // hides its slot at paint time -- not a special case for books, the
         // same graceful path a gear card with no art already takes.
-        shop.itemArt = ContentDatabase.Items
-            .Where(i => i != null && !string.IsNullOrEmpty(i.iconPath))
-            .Select(i => new IconEntry(i.id, SceneBuilder.LoadSpriteByKey(i.iconPath)))
-            .ToArray();
+        shop.itemArt = ItemIconTable();
 
         shop.relicArt = ContentDatabase.Relics
             .Where(r => r != null && !string.IsNullOrEmpty(r.iconPath))
@@ -1220,10 +1217,25 @@ public static class ScreenRegistry
 
     // The same lookup-table shape as RelicIconTable.
     private static IconEntry[] ItemIconTable() =>
-        ContentDatabase.Items
-            .Where(i => i != null && !string.IsNullOrEmpty(i.iconPath))
-            .Select(i => new IconEntry(i.id, SceneBuilder.LoadSpriteByKey(i.iconPath)))
+        ItemArt()
+            .Select(a => new IconEntry(a.Key, SceneBuilder.LoadSpriteByKey(a.Path)))
             .ToArray();
+
+    // Every item's art as (key, editor path). Each item is under its id, for
+    // a caller that holds only an id; gear is also under each icon path of
+    // its curve, which is how a copy is found (ItemIcons.KeyOf).
+    private static List<(string Key, string Path)> ItemArt()
+    {
+        var art = new List<(string Key, string Path)>();
+        foreach (var item in ContentDatabase.Items)
+        {
+            if (item == null) continue;
+            if (!string.IsNullOrEmpty(item.iconPath)) art.Add((item.id, item.iconPath));
+            foreach (string path in ContentDatabase.IconPathsOf(item)) art.Add((path, path));
+        }
+
+        return art;
+    }
 
     // The Main menu pane, inside the system menu.
     //
@@ -1394,9 +1406,8 @@ public static class ScreenRegistry
         // concat-then-select shape WireGlossary already uses. A skill's
         // iconPath carries the glyph baked into the book art, so the book
         // slots and the pack's books read off the same table as the gear.
-        var withArt = ContentDatabase.Items
-            .Where(i => i != null && !string.IsNullOrWhiteSpace(i.iconPath))
-            .Select(i => (i.id, i.iconPath))
+        var withArt = ItemArt()
+            .Select(a => (a.Key, a.Path))
             .Concat(ContentDatabase.Skills
                 .Where(i => i != null && !string.IsNullOrWhiteSpace(i.iconPath))
                 .Select(i => (i.id, i.iconPath)))
@@ -1433,13 +1444,7 @@ public static class ScreenRegistry
         // Resolved here rather than at runtime because Resources loading and
         // AssetDatabase are different worlds and only the builder has the
         // second one.
-        var offerArt = ContentDatabase.Items
-            .Where(i => i != null && !string.IsNullOrEmpty(i.iconPath))
-            .ToList();
-
-        controller.icons = offerArt
-            .Select(i => new IconEntry(i.id, SceneBuilder.LoadSpriteByKey(i.iconPath)))
-            .ToArray();
+        controller.icons = ItemIconTable();
 
         controller.relicArt = RelicIconTable();
 
@@ -1472,9 +1477,8 @@ public static class ScreenRegistry
         controller.menu = menu;
         controller.detailLockedByLabel = result.Tmp(glossary.DetailLockedBy);
 
-        var withArt = ContentDatabase.Items
-            .Where(i => i != null && !string.IsNullOrEmpty(i.iconPath))
-            .Select(i => (i.id, i.iconPath))
+        var withArt = ItemArt()
+            .Select(a => (a.Key, a.Path))
             .Concat(ContentDatabase.Relics
                 .Where(r => r != null && !string.IsNullOrEmpty(r.iconPath))
                 .Select(r => (r.id, r.iconPath)))

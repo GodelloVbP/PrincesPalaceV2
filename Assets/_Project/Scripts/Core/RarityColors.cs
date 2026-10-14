@@ -63,13 +63,7 @@ namespace PrincesPalace
         // plus appended.
         public static string NameOf(ItemInstance copy, int plus = 0)
         {
-            var gear = ContentDatabase.Effective(copy);
-            if (!gear.HasValue)
-            {
-                return ContentDatabase.DefinitionOf(copy)?.displayName is string raw ? ItemNaming.WithPlus(raw, plus) : "";
-            }
-
-            return ItemNaming.WithPlus(gear.Value.DisplayName, plus);
+            return copy == null ? "" : ItemNaming.WithPlus(ContentDatabase.NameOf(copy), plus);
         }
 
         // The same name, wrapped in a uGUI rich-text colour tag — for names

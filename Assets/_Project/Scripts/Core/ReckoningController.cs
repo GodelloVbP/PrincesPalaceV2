@@ -833,7 +833,7 @@ namespace PrincesPalace
                 offerMetas[i].Set(UiStrings.ReckoningOfferMeta,
                     item == null ? "?" : RarityBands.For(offer.Tier).ToString(), offer.Tier);
 
-                ItemIcons.Apply(offerIcons[i], icons, item?.id);
+                ItemIcons.Apply(offerIcons[i], icons, ItemIcons.KeyOf(offer.Instance));
 
                 // The burst wears the item's RARITY COLOUR, from the same table
                 // the name above it and the character overlay's cell edges read.

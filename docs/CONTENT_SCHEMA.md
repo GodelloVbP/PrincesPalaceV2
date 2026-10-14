@@ -144,9 +144,8 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `displayName` | string | (none -- required) | What the material is called in item names, e.g. 'Leather' gives 'Hardened Leather Coif'. |  |
 | `description` | string | `""` | Flavor text shown to the player. |  |
 | `tierAdjectives` | string[] | `[]` | One adjective per tier, lowest first; the last covers every tier past the list's end. |  |
-| `maxTier` | int | `-1` | The highest tier this set goes to; every piece is generated at tier 0..maxTier. |  |
-| `cost` | int | `-1` | Gold cost of the tier-0 piece. |  |
-| `costPerTier` | int | `-1` | Gold added per tier above 0. |  |
+| `maxTier` | int | `-1` | The tier the art ladder tops out at, and where the AtMax numbers sit; copies climb past it on the same curve. |  |
+| `cost` | int | `-1` | Gold cost of the piece. |  |
 | `sortOrder` | int | `-1` | Sort position among item sets. |  |
 | `styleWeights` | string[] | `[]` | '<ability score> <hundredths>' lines: this material's per-score share of the ability-score half of the budget, e.g. 'strength 40' is a weight of 0.40. |  |
 | `statProfile` | string[] | `[]` | '<combat stat> <percent>' lines spending the combat-stat half of the budget; the five lines must sum to exactly 100. |  |
@@ -338,9 +337,8 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `id` | string | (none -- required) | Stable identifier; generated item ids are built from it and item ids live in save files. |  |
 | `displayName` | string | (none -- required) | The noun in every generated name for this family, e.g. 'Sword' gives 'Keen Sword'. |  |
 | `description` | string | `""` | Flavor text shown to the player. |  |
-| `maxTier` | int | `-1` | The highest tier this family goes to; every tier 0..maxTier generates one weapon. |  |
-| `cost` | int | `-1` | Gold cost of the tier-0 weapon. |  |
-| `costPerTier` | int | `-1` | Gold added per tier above 0. |  |
+| `maxTier` | int | `-1` | The tier the art ladder tops out at, and where the AtMax numbers sit; copies climb past it on the same curve. |  |
+| `cost` | int | `-1` | Gold cost of the weapon. |  |
 | `sortOrder` | int | `-1` | Sort position among weapon families. |  |
 | `slot` | string | `"Weapon"` | Which hand slot this family is worn in; 'Weapon' is the alias for Weapon1. |  |
 | `attackAtZero` | int | `-1` | Attack at tier 0, interpolated up to attackAtMax. |  |

@@ -272,7 +272,7 @@ namespace PrincesPalace.PlayModeTests
             var sellable = Content.ContentDatabase.Offerable.First();
             InventoryOps.Add(save.stockpiledItems, sellable.id, 3, plus: 1);
 
-            int expected = ShopPricing.SellPrice(ShopPricing.GearPrice(sellable.tier, 1, 0));
+            int expected = ShopPricing.SellPrice(ShopPricing.GearPrice(0, 1, 0));
             int goldBefore = RunManager.Run.gold;
 
             var result = RunOrchestrator.Sell(0, 2);
@@ -299,7 +299,7 @@ namespace PrincesPalace.PlayModeTests
             var sellable = Content.ContentDatabase.Offerable.First();
             InventoryOps.Add(save.stockpiledItems, sellable.id, 1, plus: 1);
 
-            int expected = ShopPricing.SellPrice(ShopPricing.GearPrice(sellable.tier, 1, 0));
+            int expected = ShopPricing.SellPrice(ShopPricing.GearPrice(0, 1, 0));
             Assert.Greater(expected, 0, "fixture: the item has to be worth something to sell");
 
             int heldBefore = RunManager.Run.gold;
@@ -625,13 +625,16 @@ namespace PrincesPalace.PlayModeTests
         {
             foreach (var item in Content.ContentDatabase.Offerable)
             {
-                for (int plus = 0; plus <= 5; plus++)
+                for (int tier = 0; tier <= item.curve.maxTier; tier++)
                 {
-                    for (int rift = 0; rift <= 3; rift++)
+                    for (int plus = 0; plus <= 5; plus++)
                     {
-                        int buy = ShopPricing.GearPrice(item.tier, plus, rift);
-                        Assert.Less(ShopPricing.SellPrice(buy), buy,
-                            $"{item.id} at tier {item.tier}, +{plus}, rift {rift} sold for at least its price.");
+                        for (int rift = 0; rift <= 3; rift++)
+                        {
+                            int buy = ShopPricing.GearPrice(tier, plus, rift);
+                            Assert.Less(ShopPricing.SellPrice(buy), buy,
+                                $"{item.id} at tier {tier}, +{plus}, rift {rift} sold for at least its price.");
+                        }
                     }
                 }
             }

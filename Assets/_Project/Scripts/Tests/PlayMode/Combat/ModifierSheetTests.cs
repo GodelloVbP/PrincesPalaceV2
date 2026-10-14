@@ -56,7 +56,7 @@ namespace PrincesPalace.PlayModeTests
         }
 
         private static ItemDefinition TierZeroItemInSlot(EquipmentSlot slot) =>
-            ContentDatabase.Items.FirstOrDefault(i => i != null && i.IsEquippable && i.tier == 0 && i.equipSlot == slot);
+            ContentDatabase.Equippables.FirstOrDefault(i => i != null && i.equipSlot == slot);
 
         private static Character FreshCharacterWearing(ItemDefinition item, RiftTier riftTier, List<string> modifierIds)
         {

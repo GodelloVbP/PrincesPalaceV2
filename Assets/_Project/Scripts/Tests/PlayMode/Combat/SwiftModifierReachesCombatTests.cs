@@ -42,7 +42,7 @@ namespace PrincesPalace.PlayModeTests
         }
 
         private static ItemDefinition TierZeroEquippable() =>
-            ContentDatabase.Items.FirstOrDefault(i => i != null && i.IsEquippable && i.tier == 0);
+            ContentDatabase.Equippables.FirstOrDefault(i => i != null);
 
         private static Character FreshCharacterWearing(ItemDefinition item, RiftTier riftTier)
         {
@@ -151,9 +151,8 @@ namespace PrincesPalace.PlayModeTests
         [Test]
         public void SwiftModifier_OnAHighTierItem_MeaningfullyReducesRealDamageTaken_InARealFight()
         {
-            var item = ContentDatabase.Items
-                .Where(i => i != null && i.IsEquippable)
-                .OrderByDescending(i => i.tier)
+            var item = ContentDatabase.Equippables
+                .OrderByDescending(i => i.curve.maxTier)
                 .FirstOrDefault();
             Assert.IsNotNull(item, "fixture: content has at least one equippable item");
 
@@ -161,7 +160,7 @@ namespace PrincesPalace.PlayModeTests
             {
                 var definition = ContentDatabase.Characters.FirstOrDefault();
                 var character = new Character(definition.id);
-                character.equipment.Set(item.equipSlot, item.id, modifierIds: modifierIds, riftTier: (int)RiftTier.Convergent);
+                character.equipment.Set(item.equipSlot, item.id, modifierIds: modifierIds, riftTier: (int)RiftTier.Convergent, tier: item.curve.maxTier);
                 Assert.IsTrue(ContentDatabase.ActiveLoadout(character).IsLive(item.equipSlot),
                     "fixture check: the item must be LIVE or ModifierEffects reads nothing");
 

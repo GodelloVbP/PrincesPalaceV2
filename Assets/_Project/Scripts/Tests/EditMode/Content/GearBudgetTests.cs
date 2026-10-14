@@ -40,8 +40,8 @@ namespace PrincesPalace.Domain.Tests
             var bulwarkTorso = ResolveTorso("bulwark", "maxHealth 30", "physicalDefense 40", "magicalDefense 30");
             var steelTorso = ResolveTorso("steel", "maxHealth 35", "physicalDefense 55", "magicalDefense 10");
 
-            var bulwarkT5 = bulwarkTorso.First(p => p.Tier == 5).At.StatBonus;
-            var steelT5 = steelTorso.First(p => p.Tier == 5).At.StatBonus;
+            var bulwarkT5 = bulwarkTorso.First().Curve.At(5).StatBonus;
+            var steelT5 = steelTorso.First().Curve.At(5).StatBonus;
 
             Assert.AreEqual(34, bulwarkT5.maxHealth);
             Assert.AreEqual(9, bulwarkT5.physicalDefense);
@@ -70,7 +70,6 @@ namespace PrincesPalace.Domain.Tests
                 displayName = id,
                 maxTier = 10,
                 cost = 50,
-                costPerTier = 30,
                 statProfile = profile,
                 styleWeights = new[] { "constitution 100" },
                 pieces = new[]
@@ -272,7 +271,6 @@ namespace PrincesPalace.Domain.Tests
                 displayName = id,
                 maxTier = 10,
                 cost = 50,
-                costPerTier = 30,
                 statProfile = profile,
                 styleWeights = new[] { "constitution 100" },
                 pieces = new[]
@@ -289,13 +287,14 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(ok, string.Join("; ", errors));
 
             int hp = 0, pdef = 0, mdef = 0, spd = 0, mpr = 0;
-            foreach (var piece in resolved.Where(p => p.Tier == tier))
+            foreach (var piece in resolved)
             {
-                hp += piece.At.StatBonus.maxHealth;
-                pdef += piece.At.StatBonus.physicalDefense;
-                mdef += piece.At.StatBonus.magicalDefense;
-                spd += piece.At.StatBonus.speed;
-                mpr += piece.At.StatBonus.manaRegen;
+                var at = piece.Curve.At(tier);
+                hp += at.StatBonus.maxHealth;
+                pdef += at.StatBonus.physicalDefense;
+                mdef += at.StatBonus.magicalDefense;
+                spd += at.StatBonus.speed;
+                mpr += at.StatBonus.manaRegen;
             }
 
             return (hp, pdef, mdef, spd, mpr);

@@ -452,7 +452,7 @@ namespace PrincesPalace.PlayModeTests
         {
             var set = new RawItemSetEntry
             {
-                id = "wistest", displayName = "wistest", maxTier = 10, cost = 50, costPerTier = 30,
+                id = "wistest", displayName = "wistest", maxTier = 10, cost = 50,
                 statProfile = new[] { "maxHealth 100" },
                 styleWeights = new[] { $"wisdom {wisdomWeight}", "constitution 30" },
                 pieces = new[]
@@ -467,7 +467,7 @@ namespace PrincesPalace.PlayModeTests
 
             bool ok = ItemSetEntryResolver.TryResolveAll(new[] { set }, out var resolved, out var errors);
             Assert.IsTrue(ok, string.Join("; ", errors));
-            return resolved.Where(p => p.Tier == tier).Sum(p => p.At.AbilityScoreBonus.wisdom);
+            return resolved.Sum(p => p.Curve.At(tier).AbilityScoreBonus.wisdom);
         }
 
         [Test]

@@ -69,27 +69,20 @@ namespace PrincesPalace.PlayModeTests
         // is exactly what the first capture of this screen produced.
         private static List<ItemOffer> Offers()
         {
-            var withArt = Content.ContentDatabase.Items
-                .Where(i => i != null && i.IsEquippable && !string.IsNullOrWhiteSpace(i.iconPath))
+            var picks = Content.ContentDatabase.Equippables
+                .Where(i => i != null && !string.IsNullOrWhiteSpace(i.iconPath))
+                .Take(3)
                 .ToList();
 
-            var picks = new List<ItemDefinition>();
-            foreach (int wanted in new[] { 0, 6, 10 })
-            {
-                var hit = withArt.OrderBy(i => System.Math.Abs(i.tier - wanted))
-                    .FirstOrDefault(i => !picks.Contains(i));
-                if (hit != null) picks.Add(hit);
-            }
-
             Assert.AreEqual(3, picks.Count, "need three equippable items WITH art to photograph");
-            Debug.Log("[ReckoningCapture] tiers: " + string.Join(", ", picks.Select(i => i.tier)));
 
-            // A plus on the last one, so the "+N" suffix is in the shot too.
+            // Three tiers across the art ladder, and a plus on the last two,
+            // so the "+N" suffix is in the shot too.
             return new List<ItemOffer>
             {
-                new ItemOffer(picks[0].id, picks[0].tier, 0),
-                new ItemOffer(picks[1].id, picks[1].tier, 1),
-                new ItemOffer(picks[2].id, picks[2].tier, 3),
+                new ItemOffer(picks[0].id, 0, 0),
+                new ItemOffer(picks[1].id, 6, 1),
+                new ItemOffer(picks[2].id, 10, 3),
             };
         }
 

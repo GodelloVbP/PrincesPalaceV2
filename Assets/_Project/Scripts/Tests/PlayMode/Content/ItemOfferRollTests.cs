@@ -48,7 +48,7 @@ namespace PrincesPalace.PlayModeTests
         [Test]
         public void OnlyOfferableItemsAreOffered()
         {
-            var byId = ItemOfferRoll.Candidates().ToDictionary(c => c.ItemId);
+            var candidateIds = new HashSet<string>(ItemOfferRoll.Candidates().Select(c => c.ItemId));
             var offerable = new HashSet<string>(Content.ContentDatabase.Offerable.Select(i => i.id));
 
             foreach (var item in Content.ContentDatabase.Items)
@@ -56,7 +56,7 @@ namespace PrincesPalace.PlayModeTests
                 if (item == null || string.IsNullOrEmpty(item.id)) continue;
 
                 bool expected = offerable.Contains(item.id);
-                Assert.AreEqual(expected, byId.ContainsKey(item.id),
+                Assert.AreEqual(expected, candidateIds.Contains(item.id),
                     $"{item.id} is {(expected ? "offerable but not offered" : "offered but not offerable")}");
             }
         }
@@ -84,7 +84,7 @@ namespace PrincesPalace.PlayModeTests
         {
             // A content pass that adds a tier 11 set should widen the roll
             // without anyone remembering to edit a number here.
-            Assert.AreEqual(Content.ContentDatabase.Items.Max(i => i.tier), ItemOfferRoll.MaxTier);
+            Assert.AreEqual(Content.ContentDatabase.Offerable.Max(i => i.curve.maxTier), ItemOfferRoll.MaxTier);
         }
 
         [Test]
@@ -98,13 +98,15 @@ namespace PrincesPalace.PlayModeTests
         [Test]
         public void TheSameItemIsNeverOfferedTwiceInOneRoll()
         {
-            // Three of the same sword is one choice wearing three hats.
+            // Three of the same sword is one choice wearing three hats. The
+            // draw is without replacement by (base, tier): the same base at
+            // another tier is another copy, as the per-tier assets were.
             for (int depth = 0; depth < 40; depth += 7)
             {
                 var offers = ItemOfferRoll.Roll(EncounterClass.Elite, depth, 0, First);
-                var ids = offers.Select(o => o.ItemId).ToList();
+                var copies = offers.Select(o => $"{o.ItemId}@{o.Tier}").ToList();
 
-                CollectionAssert.AllItemsAreUnique(ids, $"at depth {depth}");
+                CollectionAssert.AllItemsAreUnique(copies, $"at depth {depth}");
             }
         }
 
@@ -277,12 +279,12 @@ namespace PrincesPalace.PlayModeTests
             CollectionAssert.AreEqual(first, OfferIds(12345UL, 23, 5, 0),
                 "the same (seed, step, node, pick) must show the same offers");
             CollectionAssert.AreEqual(
-                new[] { "court_gloves_p2@2+3", "regalia_gloves_p2@2+3", "runeplate_runeplate_p2@2+3" }, first);
+                new[] { "court_gloves@2+3", "regalia_gloves@2+3", "runeplate_runeplate@2+3" }, first);
             CollectionAssert.AreEqual(
-                new[] { "wool_leggings_p4@4+3", "brigandine_brigandine_p4@4+5", "brigandine_gloves_p2@2+3" },
+                new[] { "wool_leggings@4+3", "brigandine_brigandine@4+5", "brigandine_gloves@2+3" },
                 OfferIds(12345UL, 23, 5, 1));
             CollectionAssert.AreEqual(
-                new[] { "harness_warskirt_p3@3+3", "wool_mittens_p4@4+4", "bulwark_vambraces_p4@4+3" },
+                new[] { "harness_warskirt@3+3", "wool_mittens@4+4", "bulwark_vambraces@4+3" },
                 OfferIds(12345UL, 23, 6, 0));
         }
 

@@ -34,15 +34,13 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Flavor text shown to the player.")]
         public string description = "";
 
-        // The highest tier this family goes to. Every tier from 0 through
-        // this, inclusive, generates one weapon.
-        [ContentDoc("The highest tier this family goes to; every tier 0..maxTier generates one weapon.")]
+        // The tier the art ladder and the authored numbers' top end sit at.
+        // Copies go past it to ItemInstance.TierCap on the same curve shape.
+        [ContentDoc("The tier the art ladder tops out at, and where the AtMax numbers sit; copies climb past it on the same curve.")]
         public int maxTier = -1;
 
-        [ContentDoc("Gold cost of the tier-0 weapon.")]
+        [ContentDoc("Gold cost of the weapon.")]
         public int cost = -1;
-        [ContentDoc("Gold added per tier above 0.")]
-        public int costPerTier = -1;
         [ContentDoc("Sort position among weapon families.")]
         public int sortOrder = -1;
 

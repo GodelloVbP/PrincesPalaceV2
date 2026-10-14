@@ -1,5 +1,5 @@
 {
-  "_readme": "Weapon families. Each entry here is a GENERATOR over ONE axis: tier. One authored 'Sword' at maxTier 10 becomes 11 real weapons, tier 0 through tier 10. Edit this file, then run Prince's Palace > Build Default Content. TIER IS NOT PLUS. Tier is which sword this is (its attack, its grade, its adjective, its rarity band) and is baked here. Plus is how honed one particular copy is, it rides on the InventoryEntry at runtime, and it scales the FLAT attack only — never the grade, because letting two axes move the same number is how a scaling system stops being readable. See Domain/Stats/ItemUpgrade.cs. GRADE IS ANCHORED AT BOTH ENDS and interpolated, exactly like a set piece's stats: 'C at tier 0, S at tier 10' is two words rather than eleven letters that drift, retuning is editing the two you have an opinion about, and raising maxTier stretches the curve instead of running out of ladder. A grade may not go DOWN as tier rises — a better sword must never scale worse, and that is rejected rather than generated. Names come out as '<tier adjective> <family>': 'Keen Sword', with any plus appended at display time. Ten is the neutral ability score; every point above multiplies damage and every point below divides it — see ScalingProfile and Domain/Stats/ScalingGrade.cs for what each grade is worth per point. ITEM-MODIFIER PLAN PHASE B: the old per-family modifier axis (sturdy/nimble/hallowed/arcane/verdant/heavy/quick/cunning) is gone — a base weapon now carries one default scaling identity (Sword->STR, Staff->INT, Dagger->DEX), and rolled Rift modifiers are what differentiate one drop from another now (modifiers.json), not the weapon family itself. Field-by-field documentation, defaults and valid enum values: docs/CONTENT_SCHEMA.md.",
+  "_readme": "Weapon families. Each entry here is ONE base weapon with a curve over tier. One authored 'Sword' becomes the single item 'sword'; a copy carries its tier (0 to 12) and its attack, grade, name and art are read off the curve at that tier. Edit this file, then run Prince's Palace > Build Default Content. TIER IS NOT HONING. Tier is which sword a copy is (its attack, its grade, its adjective, its rarity band); maxTier is where the art ladder and the AtMax numbers end, and tierAdjectives names every tier up to 12. Honing belongs to the slot (Domain/Equipment/SlotHoning.cs) and scales the FLAT attack only — never the grade, because letting two axes move the same number is how a scaling system stops being readable. See Domain/Stats/ItemUpgrade.cs. GRADE IS ANCHORED AT BOTH ENDS and interpolated, exactly like a set piece's stats: 'C at tier 0, S at tier 10' is two words rather than eleven letters that drift, retuning is editing the two you have an opinion about, and raising maxTier stretches the curve instead of running out of ladder. A grade may not go DOWN as tier rises — a better sword must never scale worse, and that is rejected rather than generated. Names come out as '<tier adjective> <family>': 'Keen Sword', with any honing appended at display time. Ten is the neutral ability score; every point above multiplies damage and every point below divides it — see ScalingProfile and Domain/Stats/ScalingGrade.cs for what each grade is worth per point. ITEM-MODIFIER PLAN PHASE B: the old per-family modifier axis (sturdy/nimble/hallowed/arcane/verdant/heavy/quick/cunning) is gone — a base weapon now carries one default scaling identity (Sword->STR, Staff->INT, Dagger->DEX), and rolled Rift modifiers are what differentiate one drop from another now (modifiers.json), not the weapon family itself. Field-by-field documentation, defaults and valid enum values: docs/CONTENT_SCHEMA.md.",
   "families": [
     {
       "id": "sword",
@@ -11,7 +11,7 @@
       "attackAtMax": 202,
       "sortOrder": 0,
       "iconSheet": "Assets/_Project/Art/Items/longswords",
-      "tierAdjectives": [ "Worn", "Plain", "Fine", "Keen", "Tempered", "Masterwork", "Runed", "Ancient", "Radiant", "Mythic", "Sovereign" ],
+      "tierAdjectives": [ "Worn", "Plain", "Fine", "Keen", "Tempered", "Masterwork", "Runed", "Ancient", "Radiant", "Mythic", "Sovereign", "Celestial", "Godforged" ],
       "primary": "strength",
       "primaryAtZero": "C",
       "primaryAtMax": "S"
@@ -27,7 +27,7 @@
       "attackAtMax": 181,
       "sortOrder": 1,
       "iconSheet": "Assets/_Project/Art/Items/staff_sheet",
-      "tierAdjectives": [ "Crooked", "Carved", "Bound", "Budding", "Amber", "Gilded", "Sapphire", "Argent", "Reliquary", "Starbound", "Worldroot" ],
+      "tierAdjectives": [ "Crooked", "Carved", "Bound", "Budding", "Amber", "Gilded", "Sapphire", "Argent", "Reliquary", "Starbound", "Worldroot", "Worldspine", "Genesis" ],
       "primary": "intelligence",
       "primaryAtZero": "C",
       "primaryAtMax": "S",
@@ -44,7 +44,7 @@
       "attackAtMax": 161,
       "sortOrder": 2,
       "iconSheet": "Assets/_Project/Art/Items/daggers",
-      "tierAdjectives": [ "Chipped", "Bronze", "Iron", "Honed", "Wicked", "Serpentine", "Whispering", "Nightglass", "Vesper", "Kingsbane", "Silent" ],
+      "tierAdjectives": [ "Chipped", "Bronze", "Iron", "Honed", "Wicked", "Serpentine", "Whispering", "Nightglass", "Vesper", "Kingsbane", "Silent", "Voidkissed", "Last" ],
       "primary": "dexterity",
       "primaryAtZero": "B",
       "primaryAtMax": "S"

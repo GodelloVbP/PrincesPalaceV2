@@ -59,7 +59,7 @@ namespace PrincesPalace.PlayModeTests
         {
             var pair = ContentDatabase.Equippables
                 .Where(i => i != null && !string.IsNullOrWhiteSpace(i.iconPath))
-                .OrderBy(i => i.tier)
+                .OrderBy(i => i.sortOrder)
                 .Take(2)
                 .ToList();
             Assert.AreEqual(2, pair.Count, "the catalogue has fewer than two equippable items with art");

@@ -375,12 +375,15 @@ namespace PrincesPalace.Content
                         continue;
                     }
 
-                    var candidateScores = candidate.curve.At(candidate.tier).AbilityScoreBonus;
-                    foreach (AbilityScore score in System.Enum.GetValues(typeof(AbilityScore)))
+                    for (int tier = 0; tier <= candidate.curve.maxTier; tier++)
                     {
-                        if (candidateScores[score] > best[score])
+                        var candidateScores = candidate.curve.At(tier).AbilityScoreBonus;
+                        foreach (AbilityScore score in System.Enum.GetValues(typeof(AbilityScore)))
                         {
-                            best = best.With(score, candidateScores[score]);
+                            if (candidateScores[score] > best[score])
+                            {
+                                best = best.With(score, candidateScores[score]);
+                            }
                         }
                     }
                 }
@@ -413,51 +416,57 @@ namespace PrincesPalace.Content
                 // already rejects this at authoring time; asserting it here
                 // too is what makes it hold for an asset created any other
                 // way (the [CreateAssetMenu] hazard in CLAUDE.md).
-                // The numbers a worn copy grants come from the curve, read
-                // at the asset's own tier.
-                var gear = item.IsEquippable ? item.curve.At(item.tier) : (GearStats?)null;
-                var gearScores = gear?.AbilityScoreBonus ?? AbilityScoreBlock.Zero;
-                var gearRequirements = gear?.Requirements ?? AbilityScoreBlock.Zero;
-                if (item.IsEquippable
-                    && gear.Value.StatBonus.Equals(StatBlock.Zero)
-                    && gearScores.Equals(AbilityScoreBlock.Zero))
-                {
-                    errors.Add($"Item '{item.id}' is equippable but grants no stats at all.");
-                }
-
                 if (item.kind == ItemKind.Weapon && !EquipmentSlots.IsWeaponSlot(item.equipSlot))
                 {
                     errors.Add($"Weapon '{item.id}' is assigned to the {item.equipSlot} slot — a Weapon can only go in a hand.");
                 }
 
-                foreach (AbilityScore score in System.Enum.GetValues(typeof(AbilityScore)))
+                if (!item.IsEquippable)
                 {
-                    // Same non-negative-bonus rule as talents, above.
-                    if (gearScores[score] < 0)
+                    continue;
+                }
+
+                // The numbers a worn copy grants come from the curve; every
+                // tier of the authored art ladder is held to the rules.
+                for (int tier = 0; tier <= item.curve.maxTier; tier++)
+                {
+                    var gear = item.curve.At(tier);
+                    string label = $"Item '{item.id}' at tier {tier}";
+
+                    if (gear.StatBonus.Equals(StatBlock.Zero) && gear.AbilityScoreBonus.Equals(AbilityScoreBlock.Zero))
                     {
-                        errors.Add($"Item '{item.id}' has a negative {score} bonus ({gearScores[score]}) — ability-score bonuses must never be negative, or RequirementResolver's fixpoint is no longer guaranteed to converge on the same set regardless of order.");
+                        errors.Add($"{label} is equippable but grants no stats at all.");
                     }
 
-                    int required = gearRequirements[score];
-                    if (required <= 0)
+                    foreach (AbilityScore score in System.Enum.GetValues(typeof(AbilityScore)))
                     {
-                        continue;
-                    }
-
-                    int ceiling = MaxAbilityScore + talentBonusSum[score];
-                    foreach (var slot in EquipmentSlots.All)
-                    {
-                        if (slot == item.equipSlot)
+                        // Same non-negative-bonus rule as talents, above.
+                        if (gear.AbilityScoreBonus[score] < 0)
                         {
-                            continue; // an item never satisfies its own requirement, and cannot share its own slot with anything else either
+                            errors.Add($"{label} has a negative {score} bonus ({gear.AbilityScoreBonus[score]}) — ability-score bonuses must never be negative, or RequirementResolver's fixpoint is no longer guaranteed to converge on the same set regardless of order.");
                         }
 
-                        ceiling += bestBonusPerSlot[slot][score];
-                    }
+                        int required = gear.Requirements[score];
+                        if (required <= 0)
+                        {
+                            continue;
+                        }
 
-                    if (required > ceiling)
-                    {
-                        errors.Add($"Item '{item.id}' requires {required} {score}, but the most any character could ever reach — best base score, every OTHER slot's single best item, and every talent — is {ceiling}. This requirement can never be met.");
+                        int ceiling = MaxAbilityScore + talentBonusSum[score];
+                        foreach (var slot in EquipmentSlots.All)
+                        {
+                            if (slot == item.equipSlot)
+                            {
+                                continue; // an item never satisfies its own requirement, and cannot share its own slot with anything else either
+                            }
+
+                            ceiling += bestBonusPerSlot[slot][score];
+                        }
+
+                        if (required > ceiling)
+                        {
+                            errors.Add($"{label} requires {required} {score}, but the most any character could ever reach — best base score, every OTHER slot's single best item, and every talent — is {ceiling}. This requirement can never be met.");
+                        }
                     }
                 }
             }

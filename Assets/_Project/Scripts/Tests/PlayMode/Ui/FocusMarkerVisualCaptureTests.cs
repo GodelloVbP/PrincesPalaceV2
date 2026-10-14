@@ -173,7 +173,7 @@ namespace PrincesPalace.PlayModeTests
             // column has something to describe.
             var pair = ContentDatabase.Equippables
                 .Where(i => i != null && !string.IsNullOrWhiteSpace(i.iconPath))
-                .OrderByDescending(i => i.tier)
+                .OrderByDescending(i => i.sortOrder)
                 .Take(2)
                 .ToList();
             Assert.AreEqual(2, pair.Count, "the catalogue has fewer than two equippable items with art");
@@ -244,11 +244,10 @@ namespace PrincesPalace.PlayModeTests
             // The highest tiers with art, so every card has a real icon and a
             // real rarity halo -- which is the thing the arrow must no longer
             // be confused with.
-            var offers = ContentDatabase.Items
-                .Where(i => i != null && i.IsEquippable && !string.IsNullOrWhiteSpace(i.iconPath))
-                .OrderByDescending(i => i.tier)
+            var offers = ContentDatabase.Equippables
+                .Where(i => i != null && !string.IsNullOrWhiteSpace(i.iconPath))
                 .Take(3)
-                .Select(i => new ItemOffer(i.id, i.tier, 0))
+                .Select(i => new ItemOffer(i.id, i.curve.maxTier, 0))
                 .ToList();
             Assert.AreEqual(3, offers.Count, "need three equippable items with art to offer");
 

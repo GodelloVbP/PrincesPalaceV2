@@ -172,7 +172,7 @@ namespace PrincesPalace
                 .Where(i => i != null)
                 .Select(i => new GlossaryEntry(
                     i.id, i.displayName,
-                    $"{i.kind}  ·  Tier {i.tier}",
+                    i.IsEquippable ? $"{i.kind}  ·  Tiers 0-{ItemInstance.TierCap}" : $"{i.kind}",
                     i.description,
                     iconId: i.id))
                 .ToList();

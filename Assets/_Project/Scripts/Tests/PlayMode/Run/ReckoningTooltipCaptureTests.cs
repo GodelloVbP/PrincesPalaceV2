@@ -63,15 +63,14 @@ namespace PrincesPalace.PlayModeTests
 
         private static List<ItemOffer> Offers()
         {
-            var picks = ContentDatabase.Items
-                .Where(i => i != null && i.IsEquippable && !string.IsNullOrWhiteSpace(i.iconPath))
-                .OrderByDescending(i => i.tier)
+            var picks = ContentDatabase.Equippables
+                .Where(i => i != null && !string.IsNullOrWhiteSpace(i.iconPath))
                 .Take(3)
                 .ToList();
 
             Assert.AreEqual(3, picks.Count, "need three equippable items with art to offer");
 
-            return picks.Select(i => new ItemOffer(i.id, i.tier, 0)).ToList();
+            return picks.Select(i => new ItemOffer(i.id, i.curve.maxTier, 0)).ToList();
         }
 
         private static GameObject Node(string name) =>

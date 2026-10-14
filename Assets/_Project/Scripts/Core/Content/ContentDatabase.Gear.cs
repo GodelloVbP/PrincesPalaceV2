@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using PrincesPalace.Domain.Content;
 
@@ -8,45 +9,55 @@ namespace PrincesPalace.Content
     // from fields on the definition it names.
     public static partial class ContentDatabase
     {
-        // The definition a base id names. Content still holds one asset per
-        // tier, every one carrying the same curve, so this answers with the
-        // first (tier 0) asset of the base; once content holds one asset per
-        // base it is the only one.
-        public static ItemDefinition GetBase(string baseId)
-        {
-            EnsureLoaded();
-            if (string.IsNullOrEmpty(baseId)) return null;
-            return _items.FirstOrDefault(i => i.baseId == baseId);
-        }
-
-        // The definition a copy names, whether its id is a base id or a
-        // per-tier id. Null for an id content does not know.
+        // The definition a copy names. Null for an id content does not know.
         public static ItemDefinition DefinitionOf(ItemInstance copy) =>
-            copy == null ? null : (GetItem(copy.ItemId) ?? GetBase(copy.ItemId));
+            copy == null ? null : GetItem(copy.ItemId);
 
         // What `copy` grants while worn in a slot honed to `honing`. Null for
         // an id content does not know, and for anything that is not gear.
         //
-        // The copy's id may be a base id ("brigandine_boots", the copy model)
-        // or a per-tier id ("brigandine_boots_p3", what every bag and slot
-        // holds until content collapses to bases). A per-tier id reads its
-        // own asset's tier and ignores copy.Tier, so a caller moved onto this
-        // accessor gets today's numbers before any copy carries a tier. That
-        // branch goes when the per-tier assets do.
         public static GearStats? Effective(ItemInstance copy, int honing = 0)
         {
-            if (copy == null) return null;
-
-            var perTier = GetItem(copy.ItemId);
-            if (perTier != null && perTier.id != perTier.baseId)
-            {
-                return perTier.IsEquippable ? perTier.curve.At(perTier.tier).WithHoning(honing) : (GearStats?)null;
-            }
-
-            var definition = perTier ?? GetBase(copy.ItemId);
+            var definition = DefinitionOf(copy);
             if (definition == null || !definition.IsEquippable) return null;
 
             return definition.curve.At(copy.Tier).WithHoning(honing);
+        }
+
+        // What a copy is called: the tier adjective and base name for gear,
+        // the authored name for anything else, the id for content that is
+        // gone. No honing suffix (ItemNaming.WithPlus adds that).
+        public static string NameOf(ItemInstance copy)
+        {
+            if (copy == null) return "";
+
+            var gear = Effective(copy);
+            if (gear.HasValue && !string.IsNullOrEmpty(gear.Value.DisplayName)) return gear.Value.DisplayName;
+
+            var definition = DefinitionOf(copy);
+            return definition == null || string.IsNullOrEmpty(definition.displayName) ? copy.ItemId : definition.displayName;
+        }
+
+        // Every icon key one item can show. A consumable has its one path;
+        // gear has one per tier on its curve (an art frame, repeated past the
+        // art ladder), so a screen's icon table holds all of them and a copy
+        // is looked up by ItemIcons.KeyOf.
+        public static IEnumerable<string> IconPathsOf(ItemDefinition definition)
+        {
+            if (definition == null) yield break;
+
+            if (!definition.IsEquippable)
+            {
+                if (!string.IsNullOrEmpty(definition.iconPath)) yield return definition.iconPath;
+                yield break;
+            }
+
+            var seen = new HashSet<string>();
+            for (int tier = 0; tier <= ItemInstance.TierCap; tier++)
+            {
+                string path = definition.curve.At(tier).IconPath;
+                if (!string.IsNullOrEmpty(path) && seen.Add(path)) yield return path;
+            }
         }
 
         // How good `copy` is: derived, never stored (plan 1.4). Every

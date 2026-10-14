@@ -23,7 +23,7 @@ namespace PrincesPalace.PlayModeTests
     // Expected values are literals (CLAUDE.md gotcha 5).
     public class FakeItemRunTests
     {
-        private const string Torso = "leather_torso_p0";
+        private const string Torso = "leather_torso";
         private const string TorsoName = "Ragged Leather Torso";
         private const string Potion = "health_potion";
 
@@ -102,7 +102,7 @@ namespace PrincesPalace.PlayModeTests
             var save = SaveData.CreateNew();
             InventoryOps.Add(save.stockpiledItems, Potion, 2);
             InventoryOps.Add(save.stockpiledItems, Torso, 1, plus: 3);
-            save.roster.First(c => c.definitionId == "sheep").equipment.Set(EquipmentSlot.Head, "leather_coif_p0", plus: 1);
+            save.roster.First(c => c.definitionId == "sheep").equipment.Set(EquipmentSlot.Head, "leather_coif", plus: 1);
 
             // A version-7 file: no `provenance` anywhere, version 7.
             string json = JsonUtility.ToJson(save);
@@ -124,7 +124,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsFalse(loaded.stockpiledItems.Any(e => e.provenance.HasLot || e.provenance.fake));
 
             var head = loaded.roster.First(c => c.definitionId == "sheep").equipment.GetInstance(EquipmentSlot.Head);
-            Assert.AreEqual("leather_coif_p0", head.ItemId);
+            Assert.AreEqual("leather_coif", head.ItemId);
             Assert.AreEqual(1, head.Plus);
             Assert.IsFalse(head.HasLot);
         }

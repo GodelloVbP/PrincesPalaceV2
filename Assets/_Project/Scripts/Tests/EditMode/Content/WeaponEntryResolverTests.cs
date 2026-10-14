@@ -7,8 +7,8 @@ using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.Tests
 {
-    // The weapon generator: one authored family becomes one weapon per plus
-    // level.
+    // The weapon generator: one authored family becomes one base weapon whose
+    // curve answers for every tier.
     //
     // Item-modifier plan Phase B collapsed the old modifier axis (sturdy/
     // nimble/hallowed/arcane/verdant/heavy/quick/cunning) out of this
@@ -31,8 +31,7 @@ namespace PrincesPalace.Domain.Tests
                 attackAtZero = 3,
                 attackAtMax = 16,
                 cost = 0,
-                costPerTier = 0,
-                tierAdjectives = new[] { "Worn", "Plain", "Fine", "Keen", "Tempered", "Masterwork", "Runed", "Ancient", "Radiant", "Mythic", "Sovereign" },
+                tierAdjectives = new[] { "Worn", "Plain", "Fine", "Keen", "Tempered", "Masterwork", "Runed", "Ancient", "Radiant", "Mythic", "Sovereign", "Celestial", "Godforged" },
                 primary = "strength", primaryAtZero = "C", primaryAtMax = "S",
                 secondary = "dexterity", secondaryAtZero = "E", secondaryAtMax = "C",
             };
@@ -51,16 +50,15 @@ namespace PrincesPalace.Domain.Tests
             return errors;
         }
 
-        // One tier axis now, not two.
+        // The tier is on the copy, so a family is one asset.
         [Test]
-        public void OneFamily_BecomesOneWeaponPerPlusLevel()
+        public void OneFamily_BecomesOneBaseWeapon()
         {
             var weapons = Resolve(Sword());
 
-            Assert.AreEqual(11, weapons.Count, "Eleven plus levels, one weapon each — no more modifier axis");
-            CollectionAssert.AllItemsAreUnique(weapons.Select(w => w.Id).ToList());
-            CollectionAssert.Contains(weapons.Select(w => w.Id).ToList(), "sword_p0");
-            CollectionAssert.Contains(weapons.Select(w => w.Id).ToList(), "sword_p10");
+            Assert.AreEqual(1, weapons.Count);
+            Assert.AreEqual("sword", weapons[0].Id);
+            Assert.AreEqual("Sword", weapons[0].DisplayName, "the asset carries the base name; a copy's name comes from the curve");
         }
 
         // "<tier adjective> <family> +<plus>" — no modifier segment any more.
@@ -68,10 +66,22 @@ namespace PrincesPalace.Domain.Tests
         [TestCase(1, "Plain Sword")]
         [TestCase(4, "Tempered Sword")]
         [TestCase(10, "Sovereign Sword")]
-        public void TheName_CarriesTheTierAndThePlus(int plus, string expected)
+        [TestCase(11, "Celestial Sword")]
+        [TestCase(12, "Godforged Sword")]
+        public void TheName_CarriesTheTier(int tier, string expected)
         {
-            var weapon = Resolve(Sword()).Single(w => w.Tier == plus);
-            Assert.AreEqual(expected, weapon.DisplayName);
+            Assert.AreEqual(expected, Resolve(Sword()).Single().Curve.At(tier).DisplayName);
+        }
+
+        // The ladder of adjectives is authored up to the copy cap; a list that
+        // stops earlier repeats its last word.
+        [Test]
+        public void TheNameAtTiersPastTheAuthoredList_RepeatsTheLastAdjective()
+        {
+            var family = Sword();
+            family.tierAdjectives = new[] { "Worn", "Plain" };
+
+            Assert.AreEqual("Plain Sword", Resolve(family).Single().Curve.At(12).DisplayName);
         }
 
         // C at the bottom, S at the top, on the same GEOMETRIC ladder every
@@ -90,25 +100,36 @@ namespace PrincesPalace.Domain.Tests
         [TestCase(8, ScalingGrade.B, ScalingGrade.D)]
         [TestCase(9, ScalingGrade.A, ScalingGrade.D)]
         [TestCase(10, ScalingGrade.S, ScalingGrade.C)]
-        public void GradesClimbWithPlus_BetweenTheTwoAuthoredEnds(int plus, ScalingGrade primary, ScalingGrade secondary)
+        public void GradesClimbWithTier_BetweenTheTwoAuthoredEnds(int tier, ScalingGrade primary, ScalingGrade secondary)
         {
-            var weapon = Resolve(Sword()).Single(w => w.Tier == plus);
+            var weapon = Resolve(Sword()).Single().Curve.At(tier);
 
-            Assert.AreEqual(primary, weapon.At.Scaling.strength, $"primary at +{plus}");
-            Assert.AreEqual(secondary, weapon.At.Scaling.dexterity, $"secondary at +{plus}");
+            Assert.AreEqual(primary, weapon.Scaling.strength, $"primary at tier {tier}");
+            Assert.AreEqual(secondary, weapon.Scaling.dexterity, $"secondary at tier {tier}");
+        }
+
+        // Grades are a letter ladder with S at the end: tiers past the art
+        // ladder hold the top grade while the numbers keep climbing.
+        [Test]
+        public void GradesStopAtTheirAuthoredTop_PastTheArtLadder()
+        {
+            var weapon = Resolve(Sword()).Single().Curve.At(12);
+
+            Assert.AreEqual(ScalingGrade.S, weapon.Scaling.strength);
+            Assert.AreEqual(ScalingGrade.C, weapon.Scaling.dexterity);
         }
 
         [Test]
         public void BothEndsOfTheGradeCurve_AreExactlyWhatWasAuthored()
         {
-            var weapons = Resolve(Sword());
-            var bottom = weapons.Single(w => w.Tier == 0);
-            var top = weapons.Single(w => w.Tier == 10);
+            var curve = Resolve(Sword()).Single().Curve;
+            var bottom = curve.At(0);
+            var top = curve.At(10);
 
-            Assert.AreEqual(ScalingGrade.C, bottom.At.Scaling.strength);
-            Assert.AreEqual(ScalingGrade.S, top.At.Scaling.strength);
-            Assert.AreEqual(ScalingGrade.E, bottom.At.Scaling.dexterity);
-            Assert.AreEqual(ScalingGrade.C, top.At.Scaling.dexterity);
+            Assert.AreEqual(ScalingGrade.C, bottom.Scaling.strength);
+            Assert.AreEqual(ScalingGrade.S, top.Scaling.strength);
+            Assert.AreEqual(ScalingGrade.E, bottom.Scaling.dexterity);
+            Assert.AreEqual(ScalingGrade.C, top.Scaling.dexterity);
         }
 
         // Raising maxTier should stretch the curve, not run out of ladder
@@ -116,11 +137,11 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void RaisingMaxPlus_StretchesTheCurveRatherThanCappingItEarly()
         {
-            var weapons = Resolve(Sword(maxTier: 20));
+            var curve = Resolve(Sword(maxTier: 20)).Single().Curve;
 
-            Assert.AreEqual(ScalingGrade.C, weapons.Single(w => w.Tier == 0).At.Scaling.strength);
-            Assert.AreEqual(ScalingGrade.S, weapons.Single(w => w.Tier == 20).At.Scaling.strength);
-            Assert.AreEqual(ScalingGrade.C, weapons.Single(w => w.Tier == 5).At.Scaling.strength,
+            Assert.AreEqual(ScalingGrade.C, curve.At(0).Scaling.strength);
+            Assert.AreEqual(ScalingGrade.S, curve.At(20).Scaling.strength);
+            Assert.AreEqual(ScalingGrade.C, curve.At(5).Scaling.strength,
                 "A +5 weapon on a 20-step curve should still be near the bottom of it");
         }
 
@@ -130,24 +151,24 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void AMatchingBuild_HitsHarderThanAMismatchedOne()
         {
-            var top = Resolve(Sword()).Single(w => w.Tier == 10);
+            var top = Resolve(Sword()).Single().Curve.At(10);
 
             var brawler = new AbilityScoreBlock(20, 10, 10, 10, 10, 10);
             var duellist = new AbilityScoreBlock(10, 20, 10, 10, 10, 10);
 
             // Primary strength S (0.10/pt) + secondary dexterity C (0.03/pt).
-            Assert.AreEqual(2.00f, top.At.Scaling.MultiplierFor(brawler), 0.0001f);
-            Assert.AreEqual(1.30f, top.At.Scaling.MultiplierFor(duellist), 0.0001f);
+            Assert.AreEqual(2.00f, top.Scaling.MultiplierFor(brawler), 0.0001f);
+            Assert.AreEqual(1.30f, top.Scaling.MultiplierFor(duellist), 0.0001f);
         }
 
         [Test]
         public void FlatAttack_WalksBetweenTheAuthoredEnds()
         {
-            var weapons = Resolve(Sword());
+            var curve = Resolve(Sword()).Single().Curve;
 
-            Assert.AreEqual(3, weapons.Single(w => w.Tier == 0).At.AttackBonus);
-            Assert.AreEqual(16, weapons.Single(w => w.Tier == 10).At.AttackBonus);
-            Assert.Greater(weapons.Single(w => w.Tier == 5).At.AttackBonus, 3);
+            Assert.AreEqual(3, curve.At(0).AttackBonus);
+            Assert.AreEqual(16, curve.At(10).AttackBonus);
+            Assert.Greater(curve.At(5).AttackBonus, 3);
         }
 
         // ---- balance redesign Phase 3 (D3): the real weapons.json
@@ -187,8 +208,8 @@ namespace PrincesPalace.Domain.Tests
         [TestCase(10, 202)]
         public void SwordEndpoints_10To202_InterpolateAtWeaponGrowth(int tier, int expected)
         {
-            var weapon = Resolve(OneStatFamily("sword", "Sword", 10, 202)).Single(w => w.Tier == tier);
-            Assert.AreEqual(expected, weapon.At.AttackBonus);
+            var weapon = Resolve(OneStatFamily("sword", "Sword", 10, 202)).Single().Curve.At(tier);
+            Assert.AreEqual(expected, weapon.AttackBonus);
         }
 
         [TestCase(0, 9)]
@@ -198,8 +219,8 @@ namespace PrincesPalace.Domain.Tests
         [TestCase(10, 181)]
         public void StaffEndpoints_9To181_InterpolateAtWeaponGrowth(int tier, int expected)
         {
-            var weapon = Resolve(OneStatFamily("staff", "Staff", 9, 181)).Single(w => w.Tier == tier);
-            Assert.AreEqual(expected, weapon.At.AttackBonus);
+            var weapon = Resolve(OneStatFamily("staff", "Staff", 9, 181)).Single().Curve.At(tier);
+            Assert.AreEqual(expected, weapon.AttackBonus);
         }
 
         [TestCase(0, 8)]
@@ -209,18 +230,20 @@ namespace PrincesPalace.Domain.Tests
         [TestCase(10, 161)]
         public void DaggerEndpoints_8To161_InterpolateAtWeaponGrowth(int tier, int expected)
         {
-            var weapon = Resolve(OneStatFamily("dagger", "Dagger", 8, 161)).Single(w => w.Tier == tier);
-            Assert.AreEqual(expected, weapon.At.AttackBonus);
+            var weapon = Resolve(OneStatFamily("dagger", "Dagger", 8, 161)).Single().Curve.At(tier);
+            Assert.AreEqual(expected, weapon.AttackBonus);
         }
 
         [Test]
         public void EveryGeneratedWeapon_IsHoldableAndIsNotStoreStock()
         {
-            foreach (var weapon in Resolve(Sword()))
+            var weapon = Resolve(Sword()).Single();
+
+            Assert.AreEqual(EquipmentSlot.Weapon1, weapon.Slot);
+            Assert.AreEqual(0, weapon.Cost, $"{weapon.Id} is loot, not Store stock");
+            for (int tier = 0; tier <= ItemInstance.TierCap; tier++)
             {
-                Assert.AreEqual(EquipmentSlot.Weapon1, weapon.Slot);
-                Assert.Greater(weapon.At.AttackBonus, 0, $"{weapon.Id} grants no Attack at all");
-                Assert.AreEqual(0, weapon.Cost, $"{weapon.Id} is loot, not Store stock");
+                Assert.Greater(weapon.Curve.At(tier).AttackBonus, 0, $"{weapon.Id} at tier {tier} grants no Attack at all");
             }
         }
 
@@ -232,10 +255,10 @@ namespace PrincesPalace.Domain.Tests
             var family = Sword();
             family.tierAdjectives = new[] { "Worn", "Fine" };
 
-            var weapons = Resolve(family);
+            var curve = Resolve(family).Single().Curve;
 
-            Assert.AreEqual("Worn Sword", weapons.Single(w => w.Tier == 0).DisplayName);
-            Assert.AreEqual("Fine Sword", weapons.Single(w => w.Tier == 9).DisplayName);
+            Assert.AreEqual("Worn Sword", curve.At(0).DisplayName);
+            Assert.AreEqual("Fine Sword", curve.At(9).DisplayName);
         }
 
         [Test]
@@ -244,7 +267,7 @@ namespace PrincesPalace.Domain.Tests
             var family = Sword();
             family.tierAdjectives = null;
 
-            Assert.AreEqual("Plain Sword", Resolve(family).Single(w => w.Tier == 2).DisplayName);
+            Assert.AreEqual("Plain Sword", Resolve(family).Single().Curve.At(2).DisplayName);
         }
 
         // A generated name carries the TIER (as its adjective) and nothing
@@ -253,26 +276,24 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheGeneratedName_NeverCarriesAPlus()
         {
-            foreach (var weapon in Resolve(Sword()))
+            var weapon = Resolve(Sword()).Single();
+            for (int tier = 0; tier <= ItemInstance.TierCap; tier++)
             {
-                StringAssert.DoesNotContain("+", weapon.DisplayName,
-                    $"'{weapon.DisplayName}' bakes a plus into a definition — plus belongs to the instance");
+                string name = weapon.Curve.At(tier).DisplayName;
+                StringAssert.DoesNotContain("+", name, $"'{name}' bakes honing into a name — honing belongs to the slot");
             }
         }
 
         // ---- id scheme -----------------------------------------------------
 
         [Test]
-        public void GeneratedId_IsFamilyIdUnderscorePTier_WithNoModifierSegment()
+        public void GeneratedId_IsTheFamilyId_WithNoTierSuffix()
         {
-            foreach (var weapon in Resolve(Sword()))
-            {
-                Assert.AreEqual($"sword_p{weapon.Tier}", weapon.Id);
-            }
+            Assert.AreEqual("sword", Resolve(Sword()).Single().Id);
         }
 
         [Test]
-        public void ThreeFamilies_GenerateExactlyElevenEach_ThirtyThreeTotal()
+        public void ThreeFamilies_GenerateOneBaseEach()
         {
             var sword = OneStatFamily("sword", "Sword", 10, 202);
             var staff = OneStatFamily("staff", "Staff", 9, 181);
@@ -280,10 +301,7 @@ namespace PrincesPalace.Domain.Tests
 
             var weapons = Resolve(sword, staff, dagger);
 
-            Assert.AreEqual(33, weapons.Count, "Three families x eleven tiers each, no modifier axis");
-            Assert.AreEqual(11, weapons.Count(w => w.FamilyId == "sword"));
-            Assert.AreEqual(11, weapons.Count(w => w.FamilyId == "staff"));
-            Assert.AreEqual(11, weapons.Count(w => w.FamilyId == "dagger"));
+            CollectionAssert.AreEqual(new[] { "sword", "staff", "dagger" }, weapons.Select(w => w.Id).ToList());
         }
 
         // ---- what gets refused ------------------------------------------
@@ -343,10 +361,10 @@ namespace PrincesPalace.Domain.Tests
             var family = Sword();
             family.secondary = "";
 
-            var weapon = Resolve(family).Single(w => w.Tier == 10);
+            var weapon = Resolve(family).Single().Curve.At(10);
 
-            Assert.AreEqual(ScalingGrade.S, weapon.At.Scaling.strength);
-            Assert.AreEqual(ScalingGrade.None, weapon.At.Scaling.dexterity);
+            Assert.AreEqual(ScalingGrade.S, weapon.Scaling.strength);
+            Assert.AreEqual(ScalingGrade.None, weapon.Scaling.dexterity);
         }
 
         [Test]
@@ -355,10 +373,10 @@ namespace PrincesPalace.Domain.Tests
             var family = Sword();
             family.alsoScalesWith = new[] { "constitution D" };
 
-            var weapons = Resolve(family);
+            var curve = Resolve(family).Single().Curve;
 
-            Assert.AreEqual(ScalingGrade.D, weapons.Single(w => w.Tier == 0).At.Scaling.constitution);
-            Assert.AreEqual(ScalingGrade.D, weapons.Single(w => w.Tier == 10).At.Scaling.constitution,
+            Assert.AreEqual(ScalingGrade.D, curve.At(0).Scaling.constitution);
+            Assert.AreEqual(ScalingGrade.D, curve.At(10).Scaling.constitution,
                 "A flat extra does not move with plus — that is what makes it flat");
         }
 
@@ -370,17 +388,17 @@ namespace PrincesPalace.Domain.Tests
             var family = Sword();
             family.spellScalesWith = new[] { "intelligence A" };
 
-            var weapons = Resolve(family);
+            var curve = Resolve(family).Single().Curve;
 
-            Assert.AreEqual(ScalingGrade.A, weapons.Single(w => w.Tier == 0).At.SpellScaling.intelligence);
-            Assert.AreEqual(ScalingGrade.A, weapons.Single(w => w.Tier == 10).At.SpellScaling.intelligence,
+            Assert.AreEqual(ScalingGrade.A, curve.At(0).SpellScaling.intelligence);
+            Assert.AreEqual(ScalingGrade.A, curve.At(10).SpellScaling.intelligence,
                 "Spell scaling is authored flat, same as alsoScalesWith — it does not move with tier");
 
             // The primary/secondary Attack axis is untouched by spellScaling
             // being present — the two are genuinely separate fields, not one
             // profile relabelled.
-            Assert.AreEqual(ScalingGrade.None, weapons.Single(w => w.Tier == 0).At.SpellScaling.strength);
-            Assert.AreNotEqual(ScalingGrade.None, weapons.Single(w => w.Tier == 0).At.Scaling.strength,
+            Assert.AreEqual(ScalingGrade.None, curve.At(0).SpellScaling.strength);
+            Assert.AreNotEqual(ScalingGrade.None, curve.At(0).Scaling.strength,
                 "The Attack axis (primary=strength) should still resolve normally alongside spellScaling");
         }
 
@@ -388,7 +406,7 @@ namespace PrincesPalace.Domain.Tests
         public void AWeaponWithNoSpellScalesWith_HasANeutralSpellScalingProfile()
         {
             var weapon = Resolve(Sword()).First();
-            Assert.IsTrue(weapon.At.SpellScaling.IsNeutral);
+            Assert.IsTrue(weapon.Curve.At(0).SpellScaling.IsNeutral);
         }
 
         // A legendary (high-tier) blade demands a higher score than its
@@ -401,24 +419,24 @@ namespace PrincesPalace.Domain.Tests
             family.requiresAtZero = new[] { "strength 5" };
             family.requiresAtMax = new[] { "strength 15" };
 
-            var weapons = Resolve(family);
+            var curve = Resolve(family).Single().Curve;
 
-            Assert.AreEqual(5, weapons.Single(w => w.Tier == 0).At.Requirements.strength);
-            Assert.AreEqual(15, weapons.Single(w => w.Tier == 10).At.Requirements.strength);
+            Assert.AreEqual(5, curve.At(0).Requirements.strength);
+            Assert.AreEqual(15, curve.At(10).Requirements.strength);
             // Halfway along the LADDER is not halfway up the CURVE: the tier
             // scale is geometric, so tier 5 has spent under a quarter of its
             // travel and a 5->15 requirement sits at 7. Requirements gating
             // late rather than evenly is the intended consequence — a mid-tier
             // weapon stays wearable by a mid-tier character, and the demanding
             // ones are the last two floors.
-            Assert.AreEqual(7, weapons.Single(w => w.Tier == 5).At.Requirements.strength);
+            Assert.AreEqual(7, curve.At(5).Requirements.strength);
         }
 
         [Test]
         public void AWeaponWithNoRequires_HasAZeroRequirement()
         {
             var weapon = Resolve(Sword()).First();
-            Assert.AreEqual(AbilityScoreBlock.Zero, weapon.At.Requirements);
+            Assert.AreEqual(AbilityScoreBlock.Zero, weapon.Curve.At(0).Requirements);
         }
 
         // Only one of requiresAtZero/requiresAtMax authored: the empty side

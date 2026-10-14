@@ -253,8 +253,8 @@ namespace PrincesPalace.PlayModeTests
                 // Two items for one slot, both with art: one worn, one packed.
                 var art = ContentDatabase.Equippables.Where(i => i != null && !string.IsNullOrWhiteSpace(i.iconPath)).ToList();
                 var slotWithTwo = art.GroupBy(i => i.equipSlot).First(g => g.Count() >= 2);
-                var worn = slotWithTwo.OrderBy(i => i.tier).First();
-                var better = slotWithTwo.OrderByDescending(i => i.tier).First(i => i.id != worn.id);
+                var worn = slotWithTwo.OrderBy(i => i.sortOrder).First();
+                var better = slotWithTwo.OrderByDescending(i => i.sortOrder).First(i => i.id != worn.id);
                 var other = art.First(i => i.equipSlot != worn.equipSlot);
 
                 foreach (var slot in EquipmentSlots.All) EquipMove.TryUnequip(character.equipment, save.stockpiledItems, slot);
@@ -479,8 +479,8 @@ namespace PrincesPalace.PlayModeTests
 
                 var art = ContentDatabase.Equippables.Where(i => i != null && !string.IsNullOrWhiteSpace(i.iconPath)).ToList();
                 var slotWithTwo = art.GroupBy(i => i.equipSlot).First(g => g.Count() >= 2);
-                var worn = slotWithTwo.OrderBy(i => i.tier).First();
-                var spare = slotWithTwo.OrderByDescending(i => i.tier).First(i => i.id != worn.id);
+                var worn = slotWithTwo.OrderBy(i => i.sortOrder).First();
+                var spare = slotWithTwo.OrderByDescending(i => i.sortOrder).First(i => i.id != worn.id);
                 InventoryOps.Add(save.stockpiledItems, worn.id);
                 Assert.IsTrue(EquipmentOps.Equip(MenuContext.Camp, save, bjorn, worn.id, worn.equipSlot, worn.IsEquippable),
                     "fixture: the worn item could not be put on");

@@ -22,7 +22,6 @@ namespace PrincesPalace.Domain.Tests
                 displayName = "Leather",
                 maxTier = maxTier,
                 cost = 30,
-                costPerTier = 20,
                 statProfile = new[] { "speed 100" },
                 styleWeights = new[] { "dexterity 100" },
                 pieces = new[]
@@ -158,17 +157,18 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void EveryPlusLevelOfAPieceWithASheet_GetsItsOwnIconPath()
+        public void EveryTierOfAPieceWithASheet_GetsItsOwnIconPath()
         {
             var set = Minimal();
             set.pieces[0].iconSheet = "Assets/_Project/Art/Items/boots_sheet";
 
-            var boots = Resolve(set).OrderBy(p => p.Tier).ToList();
+            var boots = Resolve(set).Single();
 
-            Assert.AreEqual(11, boots.Count);
-            Assert.AreEqual("Assets/_Project/Art/Items/boots_sheet/level_1.png", boots[0].IconPath);
-            Assert.AreEqual("Assets/_Project/Art/Items/boots_sheet/level_10.png", boots[10].IconPath);
-            CollectionAssert.AllItemsAreNotNull(boots.Select(p => p.IconPath).ToList());
+            Assert.AreEqual("Assets/_Project/Art/Items/boots_sheet/level_1.png", boots.IconPath, "the asset wears the tier-0 frame");
+            Assert.AreEqual("Assets/_Project/Art/Items/boots_sheet/level_1.png", boots.Curve.At(0).IconPath);
+            Assert.AreEqual("Assets/_Project/Art/Items/boots_sheet/level_10.png", boots.Curve.At(10).IconPath);
+            Assert.AreEqual("Assets/_Project/Art/Items/boots_sheet/level_10.png", boots.Curve.At(12).IconPath,
+                "tiers past the art ladder stay on the top frame");
         }
 
         [Test]
@@ -213,14 +213,12 @@ namespace PrincesPalace.Domain.Tests
         // ---- expansion ---------------------------------------------------
 
         [Test]
-        public void OnePiece_BecomesOneItemPerTier_Inclusive()
+        public void OnePiece_BecomesOneBaseItem()
         {
             var resolved = Resolve(Minimal(maxTier: 10));
 
-            Assert.AreEqual(11, resolved.Count, "Tier 0 through 10 is eleven items, not ten");
-            CollectionAssert.AreEquivalent(
-                Enumerable.Range(0, 11).Select(p => $"leather_boots_p{p}").ToList(),
-                resolved.Select(p => p.Id).ToList());
+            Assert.AreEqual(1, resolved.Count, "the tier lives on the copy, so a piece is one asset");
+            Assert.AreEqual("leather_boots", resolved[0].Id);
         }
 
         // A set with no authored ladder keeps the bare piece name rather than
@@ -229,11 +227,12 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void WithNoTierAdjectives_TheNameIsJustThePiece()
         {
-            var byId = Resolve(Minimal()).ToDictionary(p => p.Id);
+            var piece = Resolve(Minimal()).Single();
 
-            Assert.AreEqual("Leather Boots", byId["leather_boots_p0"].DisplayName);
-            Assert.AreEqual("Leather Boots", byId["leather_boots_p7"].DisplayName,
-                "Without a ladder every tier reads the same — the tier is still in the id and the stats");
+            Assert.AreEqual("Leather Boots", piece.DisplayName);
+            Assert.AreEqual("Leather Boots", piece.Curve.At(0).DisplayName);
+            Assert.AreEqual("Leather Boots", piece.Curve.At(7).DisplayName,
+                "Without a ladder every tier reads the same — the tier is still in the copy and the stats");
         }
 
         // The ladder is what makes a tier-7 piece read as a better OBJECT
@@ -245,12 +244,13 @@ namespace PrincesPalace.Domain.Tests
             var set = Minimal();
             set.tierAdjectives = new[] { "Ragged", "Worn", "Supple", "Cured", "Hardened" };
 
-            var byId = Resolve(set).ToDictionary(p => p.Id);
+            var curve = Resolve(set).Single().Curve;
 
-            Assert.AreEqual("Ragged Leather Boots", byId["leather_boots_p0"].DisplayName);
-            Assert.AreEqual("Hardened Leather Boots", byId["leather_boots_p4"].DisplayName);
-            Assert.AreEqual("Hardened Leather Boots", byId["leather_boots_p10"].DisplayName,
+            Assert.AreEqual("Ragged Leather Boots", curve.At(0).DisplayName);
+            Assert.AreEqual("Hardened Leather Boots", curve.At(4).DisplayName);
+            Assert.AreEqual("Hardened Leather Boots", curve.At(10).DisplayName,
                 "The last adjective covers every tier past the end of a short list");
+            Assert.AreEqual("Hardened Leather Boots", curve.At(12).DisplayName);
         }
 
         // Plus lives on the instance, so a definition that named one would be
@@ -261,32 +261,29 @@ namespace PrincesPalace.Domain.Tests
             var set = Minimal();
             set.tierAdjectives = new[] { "Ragged", "Worn", "Supple" };
 
-            foreach (var piece in Resolve(set))
+            var piece = Resolve(set).Single();
+            for (int tier = 0; tier <= ItemInstance.TierCap; tier++)
             {
-                StringAssert.DoesNotContain("+", piece.DisplayName,
-                    $"'{piece.DisplayName}' bakes a plus into a definition");
+                string name = piece.Curve.At(tier).DisplayName;
+                StringAssert.DoesNotContain("+", name, $"'{name}' bakes honing into a name");
             }
         }
 
         [Test]
         public void APieceCarriesItsSetAndSlotThrough()
         {
-            var piece = Resolve(Minimal()).First(p => p.Tier == 4);
+            var piece = Resolve(Minimal()).Single();
 
             Assert.AreEqual(EquipmentSlot.Shoes, piece.Slot);
             Assert.AreEqual("leather", piece.SetId);
             Assert.AreEqual("Leather", piece.SetDisplayName);
             Assert.AreEqual("boots", piece.PieceId);
-            Assert.AreEqual(4, piece.Tier);
         }
 
         [Test]
-        public void CostClimbsWithThePlus()
+        public void TheCostIsTheAuthoredOne()
         {
-            var byTier = Resolve(Minimal()).ToDictionary(p => p.Tier);
-
-            Assert.AreEqual(30, byTier[0].Cost, "The authored base cost");
-            Assert.AreEqual(30 + 20 * 7, byTier[7].Cost);
+            Assert.AreEqual(30, Resolve(Minimal()).Single().Cost);
         }
 
         // statProfile (combat stats) and styleWeights (ability scores) are
@@ -299,11 +296,11 @@ namespace PrincesPalace.Domain.Tests
             set.statProfile = new[] { "physicalDefense 60", "manaRegen 40" };
             set.styleWeights = new[] { "constitution 100" };
 
-            var top = Resolve(set).First(p => p.Tier == 10);
+            var top = Resolve(set).Single().Curve.At(10);
 
-            Assert.AreEqual(3, top.At.AbilityScoreBonus.constitution);
-            Assert.AreEqual(30, top.At.StatBonus.physicalDefense);
-            Assert.AreEqual(3, top.At.StatBonus.manaRegen);
+            Assert.AreEqual(3, top.AbilityScoreBonus.constitution);
+            Assert.AreEqual(30, top.StatBonus.physicalDefense);
+            Assert.AreEqual(3, top.StatBonus.manaRegen);
         }
 
         // ---- Phase 4 (D4): the budget derivation, pinned literals ---------
@@ -322,7 +319,6 @@ namespace PrincesPalace.Domain.Tests
                 displayName = "Bulwark",
                 maxTier = 10,
                 cost = 70,
-                costPerTier = 45,
                 statProfile = new[] { "maxHealth 30", "physicalDefense 40", "magicalDefense 30" },
                 styleWeights = new[] { "constitution 100" },
                 pieces = new[]
@@ -331,19 +327,19 @@ namespace PrincesPalace.Domain.Tests
                 }
             };
 
-            var byTier = Resolve(set).ToDictionary(p => p.Tier);
+            var curve = Resolve(set).Single().Curve;
 
-            Assert.AreEqual(11, byTier[0].At.StatBonus.maxHealth);
-            Assert.AreEqual(3, byTier[0].At.StatBonus.physicalDefense);
-            Assert.AreEqual(2, byTier[0].At.StatBonus.magicalDefense);
+            Assert.AreEqual(11, curve.At(0).StatBonus.maxHealth);
+            Assert.AreEqual(3, curve.At(0).StatBonus.physicalDefense);
+            Assert.AreEqual(2, curve.At(0).StatBonus.magicalDefense);
 
-            Assert.AreEqual(34, byTier[5].At.StatBonus.maxHealth);
-            Assert.AreEqual(9, byTier[5].At.StatBonus.physicalDefense);
-            Assert.AreEqual(6, byTier[5].At.StatBonus.magicalDefense);
+            Assert.AreEqual(34, curve.At(5).StatBonus.maxHealth);
+            Assert.AreEqual(9, curve.At(5).StatBonus.physicalDefense);
+            Assert.AreEqual(6, curve.At(5).StatBonus.magicalDefense);
 
-            Assert.AreEqual(105, byTier[10].At.StatBonus.maxHealth);
-            Assert.AreEqual(28, byTier[10].At.StatBonus.physicalDefense);
-            Assert.AreEqual(21, byTier[10].At.StatBonus.magicalDefense);
+            Assert.AreEqual(105, curve.At(10).StatBonus.maxHealth);
+            Assert.AreEqual(28, curve.At(10).StatBonus.physicalDefense);
+            Assert.AreEqual(21, curve.At(10).StatBonus.magicalDefense);
         }
 
         // A stat with no weight in the profile stays zero at every tier --
@@ -356,10 +352,10 @@ namespace PrincesPalace.Domain.Tests
             var set = Minimal();
             set.statProfile = new[] { "speed 60", "physicalDefense 40" };
 
-            var byTier = Resolve(set).ToDictionary(p => p.Tier);
+            var curve = Resolve(set).Single().Curve;
 
-            Assert.AreEqual(0, byTier[0].At.StatBonus.magicalDefense);
-            Assert.AreEqual(0, byTier[10].At.StatBonus.magicalDefense);
+            Assert.AreEqual(0, curve.At(0).StatBonus.magicalDefense);
+            Assert.AreEqual(0, curve.At(10).StatBonus.magicalDefense);
         }
 
         // ---- rejections --------------------------------------------------
@@ -520,9 +516,9 @@ namespace PrincesPalace.Domain.Tests
 
             var resolved = Resolve(Minimal(), silk);
 
-            Assert.AreEqual(22, resolved.Count);
-            CollectionAssert.Contains(resolved.Select(p => p.Id).ToList(), "silk_boots_p0");
-            CollectionAssert.Contains(resolved.Select(p => p.Id).ToList(), "leather_boots_p0");
+            Assert.AreEqual(2, resolved.Count);
+            CollectionAssert.Contains(resolved.Select(p => p.Id).ToList(), "silk_boots");
+            CollectionAssert.Contains(resolved.Select(p => p.Id).ToList(), "leather_boots");
         }
 
         // A guard against a typo, not a design limit — but an unguarded

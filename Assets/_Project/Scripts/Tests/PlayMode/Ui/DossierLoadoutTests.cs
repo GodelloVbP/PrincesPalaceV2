@@ -244,7 +244,7 @@ namespace PrincesPalace.PlayModeTests
             yield return OpenOnTheMap(Odette);
 
             var longest = ContentDatabase.Equippables
-                .OrderByDescending(i => ItemDescription.CardSummary(ItemInstance.Of(i.id, i.tier), 0).Length)
+                .OrderByDescending(i => ItemDescription.CardSummary(ItemInstance.Of(i.id, 0), 0).Length)
                 .First();
             Pack(longest.id);
 
@@ -667,7 +667,7 @@ namespace PrincesPalace.PlayModeTests
             yield return OpenOnTheMap(Shawn);
             var character = Of(Shawn);
             var item = ContentDatabase.Equippables.FirstOrDefault(i =>
-                ItemDescription.Compare(character, ItemInstance.Of(i.id, i.tier), 0).StatDelta.maxHealth > 0);
+                ItemDescription.Compare(character, ItemInstance.Of(i.id, 0), 0).StatDelta.maxHealth > 0);
             Assert.IsNotNull(item, "fixture: no item in the catalogue raises health");
             Pack(item.id);
 

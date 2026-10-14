@@ -40,9 +40,9 @@ namespace PrincesPalace.PlayModeTests
         // The lowest-requirement equippable there is, which a level 1 character
         // should be able to wear.
         private static ItemDefinition EasiestItem() =>
-            ContentDatabase.Items
-                .Where(i => i != null && i.IsEquippable)
-                .OrderBy(i => i.tier)
+            ContentDatabase.Equippables
+                .Where(i => i != null)
+                .OrderBy(i => i.sortOrder)
                 .FirstOrDefault();
 
         [Test]
@@ -55,10 +55,10 @@ namespace PrincesPalace.PlayModeTests
             var item = EasiestItem();
             Assert.IsNotNull(item, "content has no equippable items at all");
 
-            var comparison = ItemDescription.Compare(hero, ItemInstance.Of(item.id, item.tier));
+            var comparison = ItemDescription.Compare(hero, ItemInstance.Of(item.id, 0));
 
             Assert.IsTrue(comparison.CandidateIsLive,
-                $"a level {hero.level} character cannot equip '{item.displayName}' (tier {item.tier}), the " +
+                $"a level {hero.level} character cannot equip '{item.displayName}' (tier 0), the " +
                 "lowest-requirement equippable in the game - so every offer on the Reckoning would read " +
                 "'cannot equip yet' and the comparison would look broken");
         }
@@ -69,7 +69,7 @@ namespace PrincesPalace.PlayModeTests
             var hero = SaveSlotManager.CurrentSave.ActiveSquad().First();
             var item = EasiestItem();
 
-            string body = ItemDescription.SquadComparisonBody(SaveSlotManager.CurrentSave.ActiveSquad(), ItemInstance.Of(item.id, item.tier), 0);
+            string body = ItemDescription.SquadComparisonBody(SaveSlotManager.CurrentSave.ActiveSquad(), ItemInstance.Of(item.id, 0), 0);
 
             Assert.IsNotEmpty(body, "the squad comparison produced no text at all");
             StringAssert.DoesNotContain("cannot equip yet", body,
@@ -90,7 +90,7 @@ namespace PrincesPalace.PlayModeTests
             var item = EasiestItem();
             Assert.IsNotNull(item, "content has no equippable items at all");
 
-            string body = ItemDescription.SquadComparisonBody(SaveSlotManager.CurrentSave.ActiveSquad(), ItemInstance.Of(item.id, item.tier), candidatePlus: 0,
+            string body = ItemDescription.SquadComparisonBody(SaveSlotManager.CurrentSave.ActiveSquad(), ItemInstance.Of(item.id, 0), candidatePlus: 0,
                 riftTier: RiftTier.RiftForged,
                 modifierIds: new System.Collections.Generic.List<string> { "fiery" });
 
@@ -104,7 +104,7 @@ namespace PrincesPalace.PlayModeTests
             var item = EasiestItem();
             Assert.IsNotNull(item, "content has no equippable items at all");
 
-            string body = ItemDescription.SquadComparisonBody(SaveSlotManager.CurrentSave.ActiveSquad(), ItemInstance.Of(item.id, item.tier));
+            string body = ItemDescription.SquadComparisonBody(SaveSlotManager.CurrentSave.ActiveSquad(), ItemInstance.Of(item.id, 0));
 
             StringAssert.DoesNotContain("AFFIXES", body);
         }
@@ -144,7 +144,7 @@ namespace PrincesPalace.PlayModeTests
 
             var squad = new System.Collections.Generic.List<Character> { wearsFrosty, wearsNothing };
 
-            string body = ItemDescription.SquadComparisonBody(squad, ItemInstance.Of(item.id, item.tier), candidatePlus: 0,
+            string body = ItemDescription.SquadComparisonBody(squad, ItemInstance.Of(item.id, 0), candidatePlus: 0,
                 riftTier: RiftTier.Ordinary,
                 modifierIds: new System.Collections.Generic.List<string> { "fiery" });
 

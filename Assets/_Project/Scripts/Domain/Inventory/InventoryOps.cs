@@ -59,9 +59,9 @@ namespace PrincesPalace
         }
 
         public static void Add(List<InventoryEntry> inventory, string itemId, int count = 1, int plus = 0,
-            List<string> modifierIds = null, int riftTier = 0)
+            List<string> modifierIds = null, int riftTier = 0, int tier = 0)
         {
-            Add(inventory, new ItemInstance(itemId, plus, modifierIds, riftTier), count);
+            Add(inventory, new ItemInstance(itemId, plus, modifierIds, riftTier, null, tier), count);
         }
 
         // How many of this item are held AT ANY PLUS.

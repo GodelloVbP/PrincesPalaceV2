@@ -1,5 +1,5 @@
 {
-  "_readme": "Armour sets. Each entry here is a GENERATOR, not an item: it names a material, the pieces that material comes in, and a BUDGET the whole set spends — ContentBuilder expands that into one real item per TIER. Edit this file, then run Prince's Palace > Build Default Content. TIER IS NOT PLUS. Tier is which coif this is (its art, its stats, its rarity band) and is baked here, one asset each. Plus is how honed one particular copy is, it lives on the InventoryEntry at runtime, and it only ever multiplies what the tier already grants (see Domain/Stats/ItemUpgrade.cs). baseStats and topStats NO LONGER EXIST in the schema — balance redesign Phase 4 (D4) removed per-piece hand-authored numbers entirely, because that is exactly how same-tier sets drifted to unequal budgets: a designer typing 'physicalDefense 14' on one torso and 'physicalDefense 18' on another, with nothing tying the two together. They are kept as fields on RawSetPiece ONLY so a stale JSON file with either key still deserializes into something the resolver can reject LOUDLY, pointing at statProfile, instead of the key silently vanishing. EVERY set instead authors two things, and GearScaling derives every stat and every score from them: styleWeights (lines like 'strength 40' in HUNDREDTHS — what the material is FOR, spent through the ability-score half of the budget) and statProfile (lines like 'physicalDefense 35' in whole percent, the five MUST sum to exactly 100 — what the material PROTECTS WITH, spent through the combat-stat half). Both are set-level and shared by all five slot pieces; a piece's own budget differs only by its slot's weight (torso 1.25 down to gloves 0.85, summing to 5.0), never by a different split. The budget itself is Points(slot, tier) = 10 x SlotWeight x 1.25^tier, split 60% combat stats / 40% ability scores — see GearScaling for the named constants and why several of them differ from the balance-redesign plan's first-draft numbers (the T5 power-band test, not guesswork). Defense is in POINTS, not percent — see DamagePipeline's canonical mitigation equation, which halves damage at 100 points and can never reach immunity. Field-by-field documentation, defaults and valid enum values: docs/CONTENT_SCHEMA.md.",
+  "_readme": "Armour sets. Each entry here is a GENERATOR, not an item: it names a material, the pieces that material comes in, and a BUDGET the whole set spends — ContentBuilder turns each piece into ONE base item (id '<set>_<piece>'); the tier a copy wears lives on the copy. Edit this file, then run Prince's Palace > Build Default Content. TIER IS NOT HONING. Tier (0 to 12, ItemInstance.TierCap) is which coif a copy is: its art, stats, requirements and name are read off the piece's curve at that tier through ContentDatabase.Effective. maxTier is where the art ladder and the authored AtMax numbers end; tiers past it keep climbing on the same curve, and tierAdjectives names every tier up to 12 (the last adjective covers any tier past the list). Honing belongs to the slot (Domain/Equipment/SlotHoning.cs) and only multiplies what the tier already grants (see Domain/Stats/ItemUpgrade.cs). baseStats and topStats NO LONGER EXIST in the schema — balance redesign Phase 4 (D4) removed per-piece hand-authored numbers entirely, because that is exactly how same-tier sets drifted to unequal budgets: a designer typing 'physicalDefense 14' on one torso and 'physicalDefense 18' on another, with nothing tying the two together. They are kept as fields on RawSetPiece ONLY so a stale JSON file with either key still deserializes into something the resolver can reject LOUDLY, pointing at statProfile, instead of the key silently vanishing. EVERY set instead authors two things, and GearScaling derives every stat and every score from them: styleWeights (lines like 'strength 40' in HUNDREDTHS — what the material is FOR, spent through the ability-score half of the budget) and statProfile (lines like 'physicalDefense 35' in whole percent, the five MUST sum to exactly 100 — what the material PROTECTS WITH, spent through the combat-stat half). Both are set-level and shared by all five slot pieces; a piece's own budget differs only by its slot's weight (torso 1.25 down to gloves 0.85, summing to 5.0), never by a different split. The budget itself is Points(slot, tier) = 10 x SlotWeight x 1.25^tier, split 60% combat stats / 40% ability scores — see GearScaling for the named constants and why several of them differ from the balance-redesign plan's first-draft numbers (the T5 power-band test, not guesswork). Defense is in POINTS, not percent — see DamagePipeline's canonical mitigation equation, which halves damage at 100 points and can never reach immunity. Field-by-field documentation, defaults and valid enum values: docs/CONTENT_SCHEMA.md.",
   "sets": [
     {
       "id": "leather",
@@ -16,11 +16,12 @@
         "Wyrmhide",
         "Shadowsewn",
         "Heartleather",
-        "Sovereign"
+        "Sovereign",
+        "Apex",
+        "Primordial"
       ],
       "maxTier": 10,
       "cost": 30,
-      "costPerTier": 20,
       "sortOrder": 0,
       "styleWeights": [
         "dexterity 100",
@@ -79,11 +80,12 @@
         "Adamant",
         "Radiant",
         "Godsteel",
-        "Sovereign"
+        "Sovereign",
+        "Celestial",
+        "Everlasting"
       ],
       "maxTier": 10,
       "cost": 60,
-      "costPerTier": 40,
       "sortOrder": 1,
       "styleWeights": [
         "strength 40",
@@ -142,11 +144,12 @@
         "Starwoven",
         "Astral",
         "Empyrean",
-        "Sovereign"
+        "Sovereign",
+        "Seraphic",
+        "Endless"
       ],
       "maxTier": 10,
       "cost": 55,
-      "costPerTier": 45,
       "sortOrder": 2,
       "styleWeights": [
         "intelligence 100",
@@ -205,11 +208,12 @@
         "Warlord's",
         "Butcher's",
         "Titan's",
-        "Worldrender"
+        "Worldrender",
+        "Cataclysmic",
+        "Apocalyptic"
       ],
       "maxTier": 10,
       "cost": 40,
-      "costPerTier": 30,
       "sortOrder": 3,
       "styleWeights": [
         "strength 100",
@@ -269,11 +273,12 @@
         "Mountain's",
         "Bastion",
         "Unyielding",
-        "Worldroot"
+        "Worldroot",
+        "Unbreaking",
+        "Eternal"
       ],
       "maxTier": 10,
       "cost": 70,
-      "costPerTier": 45,
       "sortOrder": 4,
       "styleWeights": [
         "constitution 100"
@@ -331,11 +336,12 @@
         "Bladedancer's",
         "Phantom",
         "Peerless",
-        "Ghoststep"
+        "Ghoststep",
+        "Vanishing",
+        "Absolute"
       ],
       "maxTier": 10,
       "cost": 50,
-      "costPerTier": 35,
       "sortOrder": 5,
       "styleWeights": [
         "dexterity 60",
@@ -395,11 +401,12 @@
         "Archmagus's",
         "Starbound",
         "Worldbreaker",
-        "Firstword"
+        "Firstword",
+        "Axiomatic",
+        "Final"
       ],
       "maxTier": 10,
       "cost": 75,
-      "costPerTier": 50,
       "sortOrder": 6,
       "styleWeights": [
         "strength 60",
@@ -459,11 +466,12 @@
         "Oracle's",
         "Prophet's",
         "First Draft",
-        "Unwritten"
+        "Unwritten",
+        "Unspoken",
+        "Everwritten"
       ],
       "maxTier": 10,
       "cost": 55,
-      "costPerTier": 45,
       "sortOrder": 7,
       "styleWeights": [
         "intelligence 60",
@@ -523,11 +531,12 @@
         "Hierarch's",
         "Choirmaster's",
         "Undeniable",
-        "Godcaller"
+        "Godcaller",
+        "Divine",
+        "Apotheotic"
       ],
       "maxTier": 10,
       "cost": 65,
-      "costPerTier": 45,
       "sortOrder": 8,
       "styleWeights": [
         "charisma 60",
@@ -588,11 +597,12 @@
         "Princely",
         "Sovereign's",
         "Peerless",
-        "Unquestioned"
+        "Unquestioned",
+        "Imperial",
+        "Undying"
       ],
       "maxTier": 10,
       "cost": 80,
-      "costPerTier": 50,
       "sortOrder": 9,
       "styleWeights": [
         "charisma 100",
@@ -651,11 +661,12 @@
         "Blessed",
         "Golden",
         "First Fleece",
-        "Ram's"
+        "Ram's",
+        "Starspun",
+        "Cosmic"
       ],
       "maxTier": 10,
       "cost": 45,
-      "costPerTier": 35,
       "sortOrder": 10,
       "styleWeights": [
         "wisdom 80",

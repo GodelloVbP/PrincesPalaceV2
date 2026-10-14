@@ -65,8 +65,12 @@ namespace PrincesPalace.Domain.UiKit
         public static PackEntry OfBook(string id, string name, int count) =>
             new PackEntry(PackEntryKind.Book, default, id, name, count);
 
-        // The id the cell's icon is found by: an item's, or the skill's.
-        public string IconId => Kind == PackEntryKind.Book ? BookId : Item.Id;
+        // The key the cell's icon is found by: the skill's id, or the item's
+        // art path (gear art depends on the copy's tier), falling back to
+        // its id.
+        public string IconId => Kind == PackEntryKind.Book
+            ? BookId
+            : string.IsNullOrEmpty(Item.IconPath) ? Item.Id : Item.IconPath;
 
         // What the cell says when it has no art to show (ItemIcons.Apply
         // returned false).

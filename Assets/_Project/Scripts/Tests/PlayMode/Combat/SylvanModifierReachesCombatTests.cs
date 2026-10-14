@@ -59,17 +59,17 @@ namespace PrincesPalace.PlayModeTests
         }
 
         private static ItemDefinition TierZeroEquippable() =>
-            ContentDatabase.Items.FirstOrDefault(i => i != null && i.IsEquippable && i.tier == 0);
+            ContentDatabase.Equippables.FirstOrDefault(i => i != null);
 
         // "entangling" -- the split-off id that carries Nature's root proc;
         // see this file's own header for why it is no longer "sylvan" itself.
-        private static Character FreshCharacterWearing(ItemDefinition item, RiftTier riftTier)
+        private static Character FreshCharacterWearing(ItemDefinition item, RiftTier riftTier, int tier = 0)
         {
             var definition = ContentDatabase.Characters.FirstOrDefault();
             Assert.IsNotNull(definition, "fixture: content has at least one character");
 
             var character = new Character(definition.id);
-            character.equipment.Set(item.equipSlot, item.id, modifierIds: new List<string> { "entangling" }, riftTier: (int)riftTier);
+            character.equipment.Set(item.equipSlot, item.id, modifierIds: new List<string> { "entangling" }, riftTier: (int)riftTier, tier: tier);
             return character;
         }
 
@@ -176,13 +176,12 @@ namespace PrincesPalace.PlayModeTests
         [Test]
         public void SylvanModifier_OnAHighTierItem_ActuallyRootsTheTarget_InARealFight()
         {
-            var item = ContentDatabase.Items
-                .Where(i => i != null && i.IsEquippable)
-                .OrderByDescending(i => i.tier)
+            var item = ContentDatabase.Equippables
+                .OrderByDescending(i => i.curve.maxTier)
                 .FirstOrDefault();
             Assert.IsNotNull(item, "fixture: content has at least one equippable item");
 
-            var character = FreshCharacterWearing(item, RiftTier.Convergent);
+            var character = FreshCharacterWearing(item, RiftTier.Convergent, item.curve.maxTier);
             Assert.IsTrue(ContentDatabase.ActiveLoadout(character).IsLive(item.equipSlot),
                 "fixture check: the item must be LIVE or ModifierEffects reads nothing");
 
@@ -192,7 +191,7 @@ namespace PrincesPalace.PlayModeTests
             // A CONTENT PRECONDITION, stated rather than hoped for (AUDIT #46): an
             // Inconclusive here read as green and quietly retired the end-to-end claim.
             Assert.GreaterOrEqual(scaledChance, 100,
-                $"content's highest equippable item tier ({item.tier}) only scales entangling's root " +
+                $"content's highest equippable item tier ({item.curve.maxTier}) only scales entangling's root " +
                 $"chance to {scaledChance}%, short of the guaranteed-proc threshold this test relies on for a " +
                 "deterministic assertion -- SylvanModifier_ScalesItsRootChanceByTierAndRiftTier already " +
                 "pins the scaling formula itself at a lower tier." +
