@@ -94,10 +94,10 @@ namespace PrincesPalace.Domain.Tests
 
         // A NORMAL ROOM of one rat and one beetle -- the concrete two-enemy
         // draw the 29.25 average is the mean of.
-        [TestCase(Room0, 39, 20)]
-        [TestCase(Room8, 47, 35)]
-        [TestCase(Room40, 104, 360)]
-        [TestCase(Room80, 281, 6511)]
+        [TestCase(Room0, 39, 3)]
+        [TestCase(Room8, 47, 5)]
+        [TestCase(Room40, 104, 54)]
+        [TestCase(Room80, 281, 976)]
         public void ANormalRoomPaysThis(int step, int expectedExp, int expectedGold)
         {
             var payout = VictoryRewards.For(new[] { Rat(), Beetle() }, isElite: false, depthStep: step);
@@ -110,10 +110,10 @@ namespace PrincesPalace.Domain.Tests
         // 60.84, away from zero to 61, then the depth curve -- which is the
         // order VictoryRewards applies them in and the order the room-0 row
         // proves.
-        [TestCase(Room0, 61, 31)]
-        [TestCase(Room8, 74, 55)]
-        [TestCase(Room40, 163, 559)]
-        [TestCase(Room80, 439, 10093)]
+        [TestCase(Room0, 61, 5)]
+        [TestCase(Room8, 74, 8)]
+        [TestCase(Room40, 163, 90)]
+        [TestCase(Room80, 439, 1627)]
         public void AnEliteRoomPaysThis(int step, int expectedExp, int expectedGold)
         {
             var payout = VictoryRewards.For(new[] { Rat(), Beetle() }, isElite: true, depthStep: step);
@@ -124,10 +124,10 @@ namespace PrincesPalace.Domain.Tests
 
         // A BOSS ROOM. forest_warden is the only active boss; isElite is
         // false for a boss room, so nothing multiplies its authored 100.
-        [TestCase(Room0, 100, 60)]
-        [TestCase(Room8, 121, 107)]
-        [TestCase(Room40, 268, 1082)]
-        [TestCase(Room80, 720, 19535)]
+        [TestCase(Room0, 100, 9)]
+        [TestCase(Room8, 121, 16)]
+        [TestCase(Room40, 268, 162)]
+        [TestCase(Room80, 720, 2930)]
         public void ABossRoomPaysThis(int step, int expectedExp, int expectedGold)
         {
             var payout = VictoryRewards.For(new[] { ForestWarden() }, isElite: false, depthStep: step);

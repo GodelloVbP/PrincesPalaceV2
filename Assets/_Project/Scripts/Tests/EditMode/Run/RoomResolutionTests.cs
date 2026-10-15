@@ -71,7 +71,7 @@ namespace PrincesPalace.EditModeTests
                 var outcome = RoomResolution.Resolve(RoomType.Treasure, Rng(seed));
 
                 Assert.That(outcome.Result, Is.EqualTo(RoomResolution.Kind.Treasure));
-                Assert.That(outcome.Gold, Is.InRange(15, 30), $"seed {seed}");
+                Assert.That(outcome.Gold, Is.InRange(2, 5), $"seed {seed}");
             }
         }
 
@@ -88,10 +88,10 @@ namespace PrincesPalace.EditModeTests
                 seen.Add(RoomResolution.Resolve(RoomType.Treasure, Rng(seed)).Gold);
             }
 
-            Assert.That(seen.Contains(15), Is.True, "the minimum roll never came up");
-            Assert.That(seen.Contains(30), Is.True, "the maximum roll never came up - off by one?");
-            Assert.That(seen.Max(), Is.EqualTo(30), "paid above the band");
-            Assert.That(seen.Min(), Is.EqualTo(15), "paid below the band");
+            Assert.That(seen.Contains(2), Is.True, "the minimum roll never came up");
+            Assert.That(seen.Contains(5), Is.True, "the maximum roll never came up - off by one?");
+            Assert.That(seen.Max(), Is.EqualTo(5), "paid above the band");
+            Assert.That(seen.Min(), Is.EqualTo(2), "paid below the band");
         }
 
         // Re-entering the same treasure room after a quit finds the SAME stash
@@ -125,7 +125,7 @@ namespace PrincesPalace.EditModeTests
 
             // Not "always" -- a sixteen-wide band collides often enough that
             // demanding every pair differ would be asserting away the dice.
-            Assert.That(differing, Is.GreaterThan(40));
+            Assert.That(differing, Is.GreaterThan(30));
         }
 
         // A room entered outside a run has no stream. Paying the minimum beats
@@ -136,7 +136,7 @@ namespace PrincesPalace.EditModeTests
         {
             var outcome = RoomResolution.Resolve(RoomType.Treasure, null);
 
-            Assert.That(outcome.Gold, Is.EqualTo(15));
+            Assert.That(outcome.Gold, Is.EqualTo(2));
             Assert.That(outcome.Resolves, Is.True);
         }
 

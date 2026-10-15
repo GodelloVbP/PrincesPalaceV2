@@ -43,7 +43,7 @@ namespace PrincesPalace.Domain.Tests
             var payout = VictoryRewards.For(new[] { Kit(10, 5), Kit(20, 7) }, isElite: false, depthStep: 0);
 
             Assert.AreEqual(30, payout.Experience);
-            Assert.AreEqual(12, payout.Gold);
+            Assert.AreEqual(2, payout.Gold, "12 raw gold after the 150 permille cut");
         }
 
         [Test]
@@ -87,7 +87,7 @@ namespace PrincesPalace.Domain.Tests
             var elite = VictoryRewards.For(roster, isElite: true, depthStep: 0);
 
             Assert.AreEqual(156, elite.Experience, "100 * 1.56, then a depth curve that is flat at step 0");
-            Assert.AreEqual(78, elite.Gold);
+            Assert.AreEqual(12, elite.Gold, "50 x 1.56 = 78, cut to 12");
         }
 
         [Test]
@@ -113,7 +113,7 @@ namespace PrincesPalace.Domain.Tests
             // lagged difficulty the deep game would be worse value per fight.
             var payout = VictoryRewards.For(new[] { Kit(100, 100) }, isElite: false, depthStep: 25);
 
-            Assert.AreEqual(DifficultyCurve.ScaleReward(100, 25), payout.Gold);
+            Assert.AreEqual(91, payout.Gold, "100 raw gold cut to 15, then the depth-25 curve");
         }
 
         [Test]
@@ -123,7 +123,7 @@ namespace PrincesPalace.Domain.Tests
             // rate -- the whole reason the two are separate methods. The
             // literal pins live in ExperienceRateTests; this one only has to
             // catch the two being wired back together.
-            var payout = VictoryRewards.For(new[] { Kit(100, 100) }, isElite: false, depthStep: 25);
+            var payout = VictoryRewards.For(new[] { Kit(100, 1000) }, isElite: false, depthStep: 25);
 
             Assert.AreEqual(DifficultyCurve.ScaleExperience(100, 25), payout.Experience);
             Assert.Less(payout.Experience, payout.Gold,

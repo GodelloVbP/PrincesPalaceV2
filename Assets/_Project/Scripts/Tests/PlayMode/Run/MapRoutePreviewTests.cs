@@ -155,7 +155,7 @@ namespace PrincesPalace.PlayModeTests
                     RoomResolver.Resolve(run, RoomType.Treasure);
 
                     Assert.AreEqual(RoomResolver.Last.Gold, facts.StashGold, $"seed {seed} node {node.Id}");
-                    Assert.That(facts.StashGold, Is.InRange(15, 30));
+                    Assert.That(facts.StashGold, Is.InRange(2, 5));
                     RoomResolver.Reset();
                     found++;
                 }

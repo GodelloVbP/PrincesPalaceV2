@@ -237,7 +237,7 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.IsTrue(session.Payout.HasValue);
             Assert.AreEqual(10, session.Payout.Value.Experience, "the pup's 10, not the standing Bellwether's 100");
-            Assert.AreEqual(4, session.Payout.Value.Gold);
+            Assert.AreEqual(1, session.Payout.Value.Gold);
 
             CollectionAssert.AreEqual(new[] { Shawn }, session.VictoryVoiceIds);
             Assert.AreEqual(FightSession.Stances.Victory, beats.Last().Stances[hero]);

@@ -187,10 +187,11 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0, heart.Encounter.LivingEnemies.Count());
 
             // Paid: the boss (100 exp, 50 gold) and one elite anchor (20 x 1.56
-            // = 31.2 -> 31 exp; 10 x 1.56 = 15.6 -> 16 gold), at depth 0. The
+            // = 31.2 -> 31 exp; 10 x 1.56 = 15.6 -> 16 gold), 66 raw gold cut
+            // to 10, at depth 0. The
             // two standing and the one queued pay nothing.
             Assert.AreEqual(131, heart.Session.Payout.Value.Experience);
-            Assert.AreEqual(66, heart.Session.Payout.Value.Gold);
+            Assert.AreEqual(10, heart.Session.Payout.Value.Gold);
 
             CollectionAssert.AreEqual(new[] { 100 }, heart.Session.FallenAnchorNodeIds.ToList());
         }

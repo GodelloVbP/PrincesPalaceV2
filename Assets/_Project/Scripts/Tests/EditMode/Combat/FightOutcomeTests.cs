@@ -68,7 +68,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(session.PlayerWon);
             Assert.IsNotNull(session.Payout);
             Assert.AreEqual(20, session.Payout.Value.Experience);
-            Assert.AreEqual(10, session.Payout.Value.Gold);
+            Assert.AreEqual(2, session.Payout.Value.Gold);
         }
 
         [Test]
