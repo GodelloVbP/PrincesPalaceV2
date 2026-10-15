@@ -677,6 +677,14 @@ public static class ScreenRegistry
                 map.restIcon = SceneBuilder.LoadSpriteByKey(MapScreen.RestIconKey);
                 map.eventIcon = SceneBuilder.LoadSpriteByKey(MapScreen.EventIconKey);
                 map.treasureIcon = SceneBuilder.LoadSpriteByKey(MapScreen.TreasureIconKey);
+                map.shopIcon = SceneBuilder.LoadSpriteByKey(MapScreen.ShopIconKey);
+                map.cacheIcon = SceneBuilder.LoadSpriteByKey(MapScreen.CacheIconKey);
+                map.entryIcon = SceneBuilder.LoadSpriteByKey(MapScreen.EntryIconKey);
+                map.chipGoldIcon = SceneBuilder.LoadSpriteByKey(MapScreen.ChipGoldKey);
+                map.chipPotionIcon = SceneBuilder.LoadSpriteByKey(MapScreen.ChipPotionKey);
+                map.chipGearIcon = SceneBuilder.LoadSpriteByKey(MapScreen.ChipGearKey);
+                map.chipRelicIcon = SceneBuilder.LoadSpriteByKey(MapScreen.ChipRelicKey);
+                map.chipBookIcon = SceneBuilder.LoadSpriteByKey(MapScreen.ChipBookKey);
 
                 shopController = WireShop(result, screen.Shop);
                 map.shop = shopController;

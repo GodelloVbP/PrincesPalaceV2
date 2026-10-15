@@ -18,9 +18,9 @@ namespace PrincesPalace
     {
         [SerializeField] internal Image easedWood;
 
-        // The painting, lifted and warmed relative to the found wood
-        // (BackdropTint 0.5): the stand-in for a painted eased variant.
-        private static readonly Color EasedTint = new Color(0.92f, 0.90f, 0.80f, 1f);
+        // Dimmed like the found strip (BackdropTint 0.5), a touch lighter so the
+        // painted warmth reads as light coming back; the art carries the grade.
+        private static readonly Color EasedTint = new Color(0.6f, 0.6f, 0.6f, 1f);
 
         private const string EasingShaderPath = "Shaders/MapEasing";
 

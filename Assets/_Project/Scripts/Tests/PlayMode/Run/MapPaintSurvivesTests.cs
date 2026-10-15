@@ -111,9 +111,9 @@ namespace PrincesPalace.PlayModeTests
 
             var tile = ((RectTransform)room.transform).rect;
 
-            // 4 is Ui's HoverRimPad, stated as a literal on purpose.
-            Assert.AreEqual(tile.width + 8f, rim.rect.width, 0.5f, "the rim is sized for some other tile");
-            Assert.AreEqual(tile.height + 8f, rim.rect.height, 0.5f, "the rim is sized for some other tile");
+            // 18 is MapLayout.GlowPad, stated as a literal on purpose.
+            Assert.AreEqual(tile.width + 36f, rim.rect.width, 0.5f, "the rim is sized for some other tile");
+            Assert.AreEqual(tile.height + 36f, rim.rect.height, 0.5f, "the rim is sized for some other tile");
         }
 
         [UnityTest]

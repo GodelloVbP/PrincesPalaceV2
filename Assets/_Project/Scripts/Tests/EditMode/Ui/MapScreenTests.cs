@@ -69,7 +69,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheTilesCoverTheTallestRealm()
         {
-            Assert.AreEqual(1080f, MapLayout.BackgroundTileHeight);
+            Assert.AreEqual(3003f, MapLayout.BackgroundTileHeight);
             Assert.GreaterOrEqual(MapLayout.MaxBackgroundTiles * MapLayout.BackgroundTileHeight,
                 MapLayout.MaxContentHeight,
                 "the tallest realm outgrows the forest tiles");

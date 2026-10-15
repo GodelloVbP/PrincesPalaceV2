@@ -35,12 +35,12 @@ namespace PrincesPalace
         [SerializeField] internal Image walker;
 
         [SerializeField] internal Button[] nodeButtons;
-        [SerializeField] internal Image[] nodeIcons;
         [SerializeField] internal TMP_Text[] nodeLabels;
         [SerializeField] internal Image[] nodeMarkers;
         [SerializeField] internal Image[] nodePips;
         [SerializeField] internal Image[] nodeChips;
         [SerializeField] internal TMP_Text[] nodeChipTexts;
+        [SerializeField] internal Image[] nodeChipIcons;
         [SerializeField] internal Image[] nodeVeils;
         [SerializeField] internal Image[] trailSegments;
         [SerializeField] internal Image[] trailCores;
@@ -105,6 +105,19 @@ namespace PrincesPalace
         [SerializeField] internal Sprite restIcon;
         [SerializeField] internal Sprite eventIcon;
         [SerializeField] internal Sprite treasureIcon;
+        [SerializeField] internal Sprite shopIcon;
+        [SerializeField] internal Sprite cacheIcon;
+        [SerializeField] internal Sprite entryIcon;
+
+        // The prize chip's icons, one per kind MapNodeCard.ChipTag words.
+        [SerializeField] internal Sprite chipGoldIcon;
+        [SerializeField] internal Sprite chipPotionIcon;
+        [SerializeField] internal Sprite chipGearIcon;
+        [SerializeField] internal Sprite chipRelicIcon;
+        [SerializeField] internal Sprite chipBookIcon;
+
+        // The lair under the heart (MapController.cs LayoutWood).
+        [SerializeField] internal Image heartBackdrop;
 
         // A whole-tile colour MULTIPLY, applied to the painted tree and its icon
         // at once.
@@ -413,6 +426,7 @@ namespace PrincesPalace
                 HideHeart();
                 HideBackdrops(0);
                 if (easedWood != null) easedWood.gameObject.SetShown(false);
+                if (heartBackdrop != null) heartBackdrop.gameObject.SetShown(false);
                 fog.gameObject.SetShown(false);
                 walker.gameObject.SetShown(false);
                 if (attentionLabel != null) attentionLabel.gameObject.SetActive(false);
@@ -713,16 +727,16 @@ namespace PrincesPalace
             {
                 var tile = backdrops[i];
                 tile.gameObject.SetShown(i < needed);
-
-                // Every second tile is mirrored top to bottom so the edge it
-                // shares with the tile above matches. The pivot is the top
-                // edge, so a mirrored tile hangs from its bottom edge instead.
-                bool mirrored = MapLayout.BackgroundTileIsMirrored(i);
                 tile.color = BackdropTint;
-                tile.rectTransform.localScale = new Vector3(1f, mirrored ? -1f : 1f, 1f);
-                tile.rectTransform.anchoredPosition = new Vector2(0f,
-                    MapLayout.BackgroundTileY(i) - (mirrored ? MapLayout.BackgroundTileHeight : 0f));
+                tile.rectTransform.anchoredPosition = new Vector2(0f, MapLayout.BackgroundTileY(i));
             }
+
+            // Hung from the content's bottom edge, so the heart row lands in
+            // the lair's middle. Its top edge is baked to fade into the strip.
+            heartBackdrop.gameObject.SetShown(true);
+            heartBackdrop.color = BackdropTint;
+            heartBackdrop.rectTransform.anchoredPosition = new Vector2(
+                0f, -(graph.ContentHeight - MapLayout.HeartBackdropHeight));
 
             fog.gameObject.SetShown(true);
             fog.sizeDelta = new Vector2(viewport.rect.width, fog.sizeDelta.y);
@@ -995,18 +1009,21 @@ namespace PrincesPalace
             nodeLabels[index].rectTransform.anchoredPosition = new Vector2(0f, -height * 0.5f - MapLayout.CaptionGap);
             nodeMarkers[index].rectTransform.anchoredPosition = new Vector2(0f, height * 0.5f + MapLayout.MarkerGap);
 
-            var tree = button.targetGraphic as Image;
-            if (tree != null)
+            // The medallion is the plate: its sprite follows the room type.
+            var medallion = IconFor(node.Type) ?? fightIcon;
+            var plate = button.targetGraphic as Image;
+            if (plate != null)
             {
-                tree.preserveAspect = true;
-                tree.color = tint;
+                plate.sprite = medallion;
+                plate.preserveAspect = true;
+                plate.color = tint;
             }
 
-            PaintIcon(index, node.Type, tint, width, height);
             PaintCaption(index, node.Type);
             PaintGrammar(index, node, run, width, height, tint);
 
             var veil = nodeVeils[index];
+            veil.sprite = medallion;
             veil.preserveAspect = true;
             veil.color = VeilColour;
             veil.gameObject.SetShown(false);
@@ -1045,40 +1062,31 @@ namespace PrincesPalace
             }
 
             bool hasChip = fights && chip.Kind != PrizeKind.None;
-            var plate = nodeChips[index];
-            plate.gameObject.SetShown(hasChip);
+            var chipPlate = nodeChips[index];
+            chipPlate.gameObject.SetShown(hasChip);
             if (!hasChip) return;
 
             float chipWidth = MapLayout.ChipWidthFor(strength);
-            plate.rectTransform.sizeDelta = new Vector2(chipWidth, MapLayout.ChipHeightFor(strength));
-            plate.rectTransform.anchoredPosition = new Vector2(width * 0.5f + MapLayout.ChipGap + chipWidth * 0.5f, -20f);
+            chipPlate.rectTransform.sizeDelta = new Vector2(chipWidth, MapLayout.ChipHeightFor(strength));
+            chipPlate.rectTransform.anchoredPosition = new Vector2(width * 0.5f + MapLayout.ChipGap + chipWidth * 0.5f, -20f);
             nodeChipTexts[index].SetContent(MapNodeCard.ChipTag(chip));
+
+            var chipIcon = nodeChipIcons[index];
+            chipIcon.sprite = ChipIconFor(chip.Kind);
+            chipIcon.preserveAspect = true;
         }
 
-        // The type-specific foreground: what turns a shared tree into "this one
-        // has a fight in it" rather than "this one is a shrine". Types with no
-        // painted icon yet -- Entry, Shop, ItemSpawn, Unknown -- show a bare
-        // tree, same as the room you came from, rather than a missing-sprite
-        // quad.
-        private void PaintIcon(int index, RoomType type, Color tint, float width, float height)
+        private Sprite ChipIconFor(PrizeKind kind)
         {
-            var icon = nodeIcons[index];
-            var sprite = IconFor(type);
-
-            if (sprite == null)
+            switch (kind)
             {
-                icon.gameObject.SetShown(false);
-                return;
+                case PrizeKind.Gold: return chipGoldIcon;
+                case PrizeKind.Consumable: return chipPotionIcon;
+                case PrizeKind.Item: return chipGearIcon;
+                case PrizeKind.Relic: return chipRelicIcon;
+                case PrizeKind.Book: return chipBookIcon;
+                default: return null;
             }
-
-            float box = width * MapScreen.IconFractionFor(type);
-
-            icon.gameObject.SetShown(true);
-            icon.sprite = sprite;
-            icon.preserveAspect = true;
-            icon.color = tint;
-            icon.rectTransform.sizeDelta = new Vector2(box, box);
-            icon.rectTransform.anchoredPosition = new Vector2(0f, -height * 0.08f);
         }
 
         private Sprite IconFor(RoomType type)
@@ -1091,7 +1099,9 @@ namespace PrincesPalace
                 case RoomType.Rest: return restIcon;
                 case RoomType.Event: return eventIcon;
                 case RoomType.Treasure: return treasureIcon;
-                case RoomType.Cache: return treasureIcon;
+                case RoomType.Shop: return shopIcon;
+                case RoomType.Cache: return cacheIcon;
+                case RoomType.Entry: return entryIcon;
                 default: return null;
             }
         }

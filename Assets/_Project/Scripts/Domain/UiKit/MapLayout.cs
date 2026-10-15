@@ -36,12 +36,13 @@ namespace PrincesPalace.Domain.UiKit
 
         // ---- a node's parts -----------------------------------------------------
 
-        // A room tile is the painted tree plus its icon. Portrait, not square:
-        // trees read taller than wide, so the bonus is height only.
+        // A room tile is its medallion, which keeps its own proportions inside
+        // the box. The tallest shapes (the boss arch, the shield) are about
+        // 1.15 high for 1 wide, so the bonus is height only.
         public const float TileWidth = 100f;
         public const float EliteTileWidth = 118f;
         public const float BossTileWidth = 142f;
-        public const float TileHeightBonus = 30f;
+        public const float TileHeightBonus = 12f;
 
         public const float MaxTileWidth = BossTileWidth;
         public const float MaxTileHeight = BossTileWidth + TileHeightBonus;
@@ -69,7 +70,8 @@ namespace PrincesPalace.Domain.UiKit
         // readable. Its size follows strength: one step wider and taller per
         // pip.
         public const float ChipGap = 6f;
-        public const float ChipBaseWidth = 64f;
+        public const float ChipIconWidth = 18f;
+        public const float ChipBaseWidth = 64f + ChipIconWidth;
         public const float ChipBaseHeight = 24f;
         public const float ChipWidthStep = 10f;
         public const float ChipHeightStep = 4f;
@@ -88,6 +90,9 @@ namespace PrincesPalace.Domain.UiKit
 
         // The pips sit along the tile's top edge, inside it.
         public const float PipSize = 16f;
+        // How far the "choosable now" glow ring reaches past the tile on each
+        // side; the ring's soft falloff needs this room or it clips to a box.
+        public const float GlowPad = 18f;
         public const float PipPitch = 20f;
 
         // Everything a node can draw, as one box: tile, caption, tag, and the
@@ -155,11 +160,17 @@ namespace PrincesPalace.Domain.UiKit
         public static float ScrollToBottom(float contentHeight, float viewportHeight) =>
             System.Math.Max(0f, contentHeight - viewportHeight);
 
-        // The painted wood, tiled down the leg. One tile is the art's own
-        // canvas; every second tile is mirrored top to bottom by the controller
-        // so neighbouring edges match.
+        // The painted strip, tiled down the leg. One tile is the processed art
+        // (tools/ingest_map_art.py: scaled to 1920 wide, then 12% shorter for the
+        // seam crossfade: 941x1672 -> 1920x3411 -> 1920x3003), and it tiles
+        // top to bottom with no mirroring.
         public const float BackgroundTileWidth = 1920f;
-        public const float BackgroundTileHeight = 1080f;
+        public const float BackgroundTileHeight = 3003f;
+
+        // The heart's lair: 1672x941 scaled to 1920 wide (1081 tall), bottom-aligned to the
+        // content so its centre lands on the heart row (HeartDepth up).
+        public const float HeartBackdropWidth = 1920f;
+        public const float HeartBackdropHeight = 1081f;
 
         public static int MaxBackgroundTiles =>
             (int)System.Math.Ceiling(MaxContentHeight / BackgroundTileHeight);
@@ -168,8 +179,6 @@ namespace PrincesPalace.Domain.UiKit
             contentHeight <= 0f ? 0 : (int)System.Math.Ceiling(contentHeight / BackgroundTileHeight);
 
         public static float BackgroundTileY(int index) => -index * BackgroundTileHeight;
-
-        public static bool BackgroundTileIsMirrored(int index) => index % 2 == 1;
 
         // THE HEADER BAND. The floor, the realm name, the gold, the hints and
         // the attention badge and room message all live in the top band, and

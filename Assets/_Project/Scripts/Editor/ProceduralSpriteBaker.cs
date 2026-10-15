@@ -82,6 +82,7 @@ public static class ProceduralSpriteBaker
         BakeConstellation();
         BakeSpeedStreak();
         BakeGlowDisc();
+        BakeMapPieces();
 
         AssetDatabase.SaveAssets();
         Debug.Log("BUILD-COMPLETE: ProceduralSpriteBaker");
@@ -624,6 +625,44 @@ public static class ProceduralSpriteBaker
         texture.SetPixels32(pixels);
         texture.Apply();
         WritePng(GlowDiscPath, texture);
+    }
+
+    // The run map's three code-drawn pieces. All white or greyscale so the
+    // controller tints them per state.
+    private static void BakeMapPieces()
+    {
+        // A trail stroke: a flat body with a long taper to nothing on both
+        // edges. soft_edge_stripe is a bell with no body, which on a 7-24px
+        // road reads as a blurred line; the plateau keeps the road's width
+        // legible and the taper only softens where it meets the forest floor.
+        BakeGradient("trail_stroke", 64, y =>
+        {
+            float edge = Mathf.Clamp01(Mathf.Min(y, 1f - y) / 0.40f);
+            return (1f, Smoothstep(edge));
+        });
+
+        // "Choosable now": a soft ring that fades both inward and outward, so
+        // it reads as light around the tile. Stretched over the tile's own
+        // rect it is an ellipse, which is the shape the tree's canopy has
+        // anyway. Peak at 0.80 of the radius leaves the outer fifth for the
+        // falloff, which is what MapLayout.GlowPad pads out to.
+        Bake("node_glow_ring", dist =>
+        {
+            float inner = Smoothstep(Mathf.Clamp01((dist - 0.45f) / 0.35f));
+            float outer = 1f - Smoothstep(Mathf.Clamp01((dist - 0.80f) / 0.20f));
+            return inner * outer;
+        });
+
+        // A strength pip: bright body, dark rim, antialiased edge. The rim is
+        // baked as VALUE (not a second colour), so the controller's gold tint
+        // multiplies the body and leaves the rim near black.
+        BakeShaded("pip_round", 32, (nx, ny) =>
+        {
+            float dist = Mathf.Sqrt(nx * nx + ny * ny);
+            float alpha = 1f - Mathf.Clamp01((dist - 0.92f) / 0.08f);
+            float body = 1f - Smoothstep(Mathf.Clamp01((dist - 0.58f) / 0.08f));
+            return (Mathf.Lerp(0.10f, 1f, body), alpha);
+        });
     }
 
     // One field of stars, placed deterministically and drawn with a soft edge
@@ -1275,6 +1314,7 @@ public static class ProceduralSpriteBaker
         "band_fade", "card_ground", "soft_edge_stripe",
         "bar_track", "bar_fill", "bar_bloom",
         "scrim_band", "dossier_veil", "scrim_floor", "scrim_ceiling", "scrim_left",
+        "trail_stroke",
     };
 
     private static void Import(string path)

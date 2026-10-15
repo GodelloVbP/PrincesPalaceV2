@@ -5,15 +5,15 @@
 // the map scrolls, so a vertex position would slide under the mask. The pixel's
 // place on the leg is rebuilt from uv0 instead: the Image covers the whole leg
 // (_RectSize wide and tall, pinned top-centre), so uv maps linearly onto it. The
-// painting then tiles down the leg exactly as the found tiles do (every second
-// tile mirrored top to bottom, MapLayout.BackgroundTileIsMirrored).
+// painting then tiles down the leg exactly as the found tiles do.
 //
 // The mask is _Discs (x, y, radius, 0) in MapLayout's content coordinates, with
 // MapEasing.Falloff as its per-disc curve (MapEasingTests pin both). Stencil and
 // the clip rect are kept, because the viewport is a RectMask2D.
 //
-// The eased LOOK is a stand-in: the painting desaturated and warmed. A painted
-// eased variant replaces the derivation below with a second texture.
+// The eased LOOK is a second, painted texture (realm_hush_eased.png), so the
+// derivation below is the identity by default: full saturation, no warm tint.
+// Both stay as properties for a later grade.
 //
 // Under Resources so MapController finds it by path: no Shader.Find.
 Shader "PrincesPalace/MapEasing"
@@ -22,8 +22,8 @@ Shader "PrincesPalace/MapEasing"
     {
         [PerRendererData] _MainTex ("Painting", 2D) = "white" {}
         _Color ("Tint", Color) = (1,1,1,1)
-        _EaseSaturation ("Saturation kept", Range(0,1)) = 0.35
-        _EaseWarmth ("Warm tint", Color) = (1.06,1.0,0.86,1)
+        _EaseSaturation ("Saturation kept", Range(0,1)) = 1
+        _EaseWarmth ("Warm tint", Color) = (1,1,1,1)
         _TileHeight ("One painting's height in content units", Float) = 1080
         _RectSize ("Content width and height", Vector) = (1920, 1080, 0, 0)
         _DiscCount ("Discs in use", Float) = 0
@@ -136,12 +136,10 @@ Shader "PrincesPalace/MapEasing"
                     cover = max(cover, Falloff(distance(at, disc.xy), disc.z));
                 }
 
-                // The painting at this place, tiled and mirrored like the found
-                // wood: odd tiles run bottom to top.
+                // The painting at this place, tiled like the found strip: it tiles
+                // top to bottom with no mirroring.
                 float down = -at.y;
-                float span = _TileHeight * 2.0;
-                float within = down - floor(down / span) * span;
-                if (within > _TileHeight) within = span - within;
+                float within = down - floor(down / _TileHeight) * _TileHeight;
                 float2 uv = float2(at.x / _RectSize.x + 0.5, 1.0 - within / _TileHeight);
 
                 fixed4 painted = tex2D(_MainTex, uv) + _TextureSampleAdd;

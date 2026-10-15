@@ -94,9 +94,10 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void TheMapPaintsACacheWithTheChestUntilItHasItsOwnMedallion()
+        public void TheMapPaintsACacheWithItsOwnMedallion()
         {
-            Assert.AreEqual(UiKit.Screens.MapScreen.TreasureIconKey, UiKit.Screens.MapScreen.IconKeyFor(RoomType.Cache));
+            Assert.AreNotEqual(UiKit.Screens.MapScreen.TreasureIconKey, UiKit.Screens.MapScreen.IconKeyFor(RoomType.Cache));
+            Assert.IsNotNull(UiKit.Screens.MapScreen.IconKeyFor(RoomType.Cache));
         }
     }
 }

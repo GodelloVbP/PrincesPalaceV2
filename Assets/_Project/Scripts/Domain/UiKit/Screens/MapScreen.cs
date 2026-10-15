@@ -17,23 +17,36 @@ namespace PrincesPalace.Domain.UiKit.Screens
     // coordinate is content-local.
     public sealed class MapScreen
     {
-        // A FOREST FLOOR: the top-down canopy painting, tiled down the leg with
-        // every second tile mirrored (MapLayout.BackgroundTileIsMirrored). Its
-        // painted clearings were drawn for the old horizontal map and are not
-        // aligned to the graph; a vertical painting is an art-brief item.
-        public const string BackgroundKey = "Assets/_Project/Art/Backgrounds/forest_map_background.png";
+        // THE HUSH: a top-down forest strip that tiles vertically with no
+        // mirroring (tools/ingest_map_art.py crossfades its seam), laid down the
+        // leg. Its middle is plain floor so the graph reads on it.
+        public const string BackgroundKey = "Assets/_Project/Art/Backgrounds/Processed/realm_hush_found.png";
 
-        // The room tile itself: one painted tree, shared by every room, with
-        // the type icon standing in the clearing beneath its canopy. Six of the
-        // seven were committed with the backdrop and referenced by nothing for
-        // as long as this screen existed in v2.
-        public const string TreeKey = "Assets/_Project/Art/Backgrounds/Processed/map_forest_room.png";
-        public const string FightIconKey = "Assets/_Project/Art/Backgrounds/Processed/map_forest_mob.png";
-        public const string EliteIconKey = "Assets/_Project/Art/Backgrounds/Processed/map_forest_mob_elite.png";
-        public const string BossIconKey = "Assets/_Project/Art/Backgrounds/Processed/map_forest_mob_boss.png";
-        public const string RestIconKey = "Assets/_Project/Art/Backgrounds/Processed/map_forest_rest.png";
-        public const string EventIconKey = "Assets/_Project/Art/Backgrounds/Processed/map_forest_event.png";
-        public const string TreasureIconKey = "Assets/_Project/Art/Backgrounds/Processed/forest_map_chest.png";
+        // The room tile: one medallion per room type, which is also the
+        // button's plate. The shapes differ so a room reads in greyscale.
+        public const string FightIconKey = "Assets/_Project/Art/Backgrounds/Processed/map_node_fight.png";
+        public const string EliteIconKey = "Assets/_Project/Art/Backgrounds/Processed/map_node_elite.png";
+        public const string BossIconKey = "Assets/_Project/Art/Backgrounds/Processed/map_node_boss.png";
+        public const string RestIconKey = "Assets/_Project/Art/Backgrounds/Processed/map_node_rest.png";
+        public const string EventIconKey = "Assets/_Project/Art/Backgrounds/Processed/map_node_event.png";
+        public const string TreasureIconKey = "Assets/_Project/Art/Backgrounds/Processed/map_node_treasure.png";
+
+        public const string ShopIconKey = "Assets/_Project/Art/Backgrounds/Processed/map_node_shop.png";
+        public const string CacheIconKey = "Assets/_Project/Art/Backgrounds/Processed/map_node_cache.png";
+        public const string EntryIconKey = "Assets/_Project/Art/Backgrounds/Processed/map_node_entry.png";
+
+        public const string ChipGoldKey = "Assets/_Project/Art/Backgrounds/Processed/map_chip_gold.png";
+        public const string ChipPotionKey = "Assets/_Project/Art/Backgrounds/Processed/map_chip_potion.png";
+        public const string ChipGearKey = "Assets/_Project/Art/Backgrounds/Processed/map_chip_gear.png";
+        public const string ChipRelicKey = "Assets/_Project/Art/Backgrounds/Processed/map_chip_relic.png";
+        public const string ChipBookKey = "Assets/_Project/Art/Backgrounds/Processed/map_chip_book.png";
+
+        // The strip's eased twin: same pixels' framing, light and colour
+        // changed, so MapEasing can show it through discs over the found one.
+        public const string EasedBackgroundKey = "Assets/_Project/Art/Backgrounds/Processed/realm_hush_eased.png";
+
+        // The boss's lair, laid under the heart at the bottom of the leg.
+        public const string HeartBackdropKey = "Assets/_Project/Art/Backgrounds/Processed/realm_hush_heart.png";
 
         // The party's figure. Declared with Shawn because he is the only
         // character with actor art, and REPLACED at runtime from whoever is
@@ -54,7 +67,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const float ShawnAspect = 540f / 370f;
 
         // The one place a room type maps to painted art. Null for anything not
-        // painted yet -- Shop, Entry, ItemSpawn and Unknown show a bare tree,
+        // drawn -- ItemSpawn and Unknown show a bare tree,
         // which is the house's graceful-degradation posture rather than a
         // missing-sprite magenta quad.
         public static string IconKeyFor(RoomType type)
@@ -68,22 +81,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 case RoomType.Event: return EventIconKey;
                 case RoomType.Treasure: return TreasureIconKey;
 
-                // No painted medallion yet: the chest stands in (art brief).
-                case RoomType.Cache: return TreasureIconKey;
+                case RoomType.Shop: return ShopIconKey;
+                case RoomType.Cache: return CacheIconKey;
+                case RoomType.Entry: return EntryIconKey;
                 default: return null;
-            }
-        }
-
-        // How much of a tile's width the icon takes. Bigger rooms get a
-        // proportionally bigger icon rather than a fixed one, so an elite reads
-        // as more than a fight at a glance and not merely as a wider tree.
-        public static float IconFractionFor(RoomType type)
-        {
-            switch (type)
-            {
-                case RoomType.Boss: return 0.62f;
-                case RoomType.EliteFight: return 0.56f;
-                default: return 0.48f;
             }
         }
 
@@ -98,10 +99,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // The eased wood laid over the found one (MapController.Easing.cs).
         public NodeRef EasedWood;
+        public NodeRef HeartBackdrop;
 
         // One slot per node id.
         public List<NodeRef> NodeButtons = new List<NodeRef>();
-        public List<NodeRef> NodeIcons = new List<NodeRef>();
         public List<NodeRef> NodeLabels = new List<NodeRef>();
         public List<NodeRef> NodeMarkers = new List<NodeRef>();
 
@@ -110,6 +111,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> NodePips = new List<NodeRef>();
         public List<NodeRef> NodeChips = new List<NodeRef>();
         public List<NodeRef> NodeChipTexts = new List<NodeRef>();
+        public List<NodeRef> NodeChipIcons = new List<NodeRef>();
 
         // The painted fog over a room the focused choice would close off.
         public List<NodeRef> NodeVeils = new List<NodeRef>();
@@ -251,7 +253,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             // SILVER: leaving the descent, matching Cancel/Back everywhere
             // else in the kit. Room-node buttons are NOT themed here -- the
-            // painted tree IS their plate (button.SpriteKey = TreeKey below),
+            // medallion IS their plate (button.SpriteKey below),
             // so a theme's plate would replace the bespoke art rather than
             // dress a bare frame.
             // 240x60 was 4:1 against the FiveByOne plate's true 5:1 --
@@ -304,9 +306,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.AbandonButton = abandon;
             screen.RoomMessageLabel = roomMessage;
 
-            // The painted wood, tiled DOWN the leg. Every second tile is
-            // mirrored top to bottom by the controller so neighbouring edges
-            // match.
+            // The painted wood, tiled DOWN the leg; the strip tiles by itself.
             var backdrops = Ui.Pool("MapBackdrops", MapLayout.MaxBackgroundTiles, i => screen.BuildBackdrop(i))
                 .AsDecor();
 
@@ -326,10 +326,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .AllowOverlap("a pool's own rect is the whole canvas because its members are placed at runtime; it draws nothing itself and takes no clicks");
 
             var easedWood = screen.BuildEasedWood();
+            var heartBackdrop = screen.BuildHeartBackdrop();
             var walker = screen.BuildWalker();
             var fog = screen.BuildFog();
 
-            // BACKDROP, then the EASED WOOD over it, then TRAILS, then ROOTS, then NODES, then the HEART's
+            // BACKDROP, then the EASED WOOD over it, then the HEART's lair (over
+            // the eased wood, which would otherwise paint the strip across it),
+            // then TRAILS, then ROOTS, then NODES, then the HEART's
             // anchors, then the WALKER, then FOG. uGUI paints siblings in order
             // and this is the whole back-to-front stack: a path crossing over
             // the room it leads to would read as the rooms being behind the map
@@ -339,7 +342,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var content = Ui.Panel("MapContent",
                     Place.Pin(ContentTop, ContentTop, UiVec.Zero),
                     UiSize.Fixed(UiFrames.Reference.X, MapLayout.MaxContentHeight),
-                    backdrops, easedWood, trails, roots, nodes, heartPortraits, heartNames, walker, fog)
+                    backdrops, easedWood, heartBackdrop, trails, roots, nodes, heartPortraits, heartNames, walker, fog)
                 .AllowOverflow("the content rect is deliberately taller than the window it sits in - that overflow IS the scroll, and MapViewport clips it");
 
             screen.Content = content;
@@ -472,7 +475,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // shows it once the easing material is on.
         private UiNode BuildEasedWood()
         {
-            var eased = Ui.Sprite("MapEasedWood", BackgroundKey,
+            var eased = Ui.Sprite("MapEasedWood", EasedBackgroundKey,
                     Place.Pin(ContentTop, ContentTop, UiVec.Zero),
                     UiSize.Fixed(MapLayout.BackgroundTileWidth, MapLayout.MaxContentHeight))
                 .AsDecor()
@@ -481,6 +484,22 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             EasedWood = eased;
             return eased;
+        }
+
+        // The lair under the heart, hung from the content's bottom edge; the
+        // controller places it, because the content height is per realm. Its
+        // top edge is baked to fade, so it meets the strip without a seam.
+        private UiNode BuildHeartBackdrop()
+        {
+            var lair = Ui.Sprite("MapHeartBackdrop", HeartBackdropKey,
+                    Place.Pin(ContentTop, ContentTop, UiVec.Zero),
+                    UiSize.Fixed(MapLayout.HeartBackdropWidth, MapLayout.HeartBackdropHeight))
+                .AsDecor()
+                .AllowOverflow("the lair hangs from the content's bottom edge and may rise above the heart row")
+                .Inactive();
+
+            HeartBackdrop = lair;
+            return lair;
         }
 
         // The party, standing in the wood. Declared at the entrance's own
@@ -554,12 +573,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // inside its parent rather than sized. Calling it MapTrail...Core
             // swept it into that filter and failed the test, correctly: it is
             // not a segment, it is a layer of one.
-            var core = Ui.Solid($"MapTrack{index}", TrailCoreAheadHex,
+            var core = Ui.Sprite($"MapTrack{index}", TrailStrokeKey,
                     Place.Frac(new UiVec(0f, 0.24f), new UiVec(1f, 0.76f)), UiSize.Fill)
                 .AsDecor();
 
-            var segment = Ui.Solid($"MapTrail{index}", TrailAheadHex,
-                    new UiVec(8f, 8f), OnContent(0f, -MapLayout.TopMargin))
+            var segment = Ui.Sprite($"MapTrail{index}", TrailStrokeKey,
+                    OnContent(0f, -MapLayout.TopMargin), UiSize.Fixed(8f, 8f))
                 .AsDecor()
                 .Inactive();
 
@@ -595,6 +614,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // MEAN, and the eye separates hue faster than it separates opacity.
         //
         // The verge half, which is the darker outer edge.
+        // Soft-edged stroke the controller tints per state; both layers of a
+        // road use it so neither ends on a hard line.
+        public const string TrailStrokeKey = "proc:trail_stroke";
+        public const string PipKey = "proc:pip_round";
+        public const string GlowRingKey = "proc:node_glow_ring";
+
         public const string TrailTakenHex = "#3A2312";
         public const string TrailOpenHex = "#462D19F2";
         public const string TrailAheadHex = "#2E1C108C";
@@ -667,20 +692,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     CaptionHex, Place.At(0f, -size.Y * 0.5f - MapLayout.CaptionGap))
                 .AllowOverflow("the caption sits BELOW its node deliberately - inside, it would cover the room icon it names");
 
-            // The type icon, standing in the clearing under the tree's canopy
-            // rather than dead centre of it -- the branches close in overhead
-            // and an icon at true centre fights them.
-            //
-            // Declared with the fight icon and swapped at runtime: which room a
-            // slot holds is exactly what the build cannot know, and a Sprite
-            // with no key at all emits an Image with no sprite, which draws as
-            // a white quad the moment anything activates it.
-            var icon = Ui.Sprite($"MapNode{index}Icon", FightIconKey,
-                    Place.At(0f, -size.Y * 0.08f),
-                    UiSize.Fixed(MapLayout.MaxTileWidth * 0.62f, MapLayout.MaxTileWidth * 0.62f))
-                .AsDecor()
-                .Inactive();
-
             // The "you are here" tag. Its own node rather than a tint on the
             // button, so the button keeps saying what KIND of room it is while
             // this says where the party is -- two facts that have to be
@@ -703,7 +714,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var pips = new List<UiNode>();
             for (int p = 0; p < NodeStrength.Max; p++)
             {
-                var pip = Ui.Solid($"MapNode{index}Pip{p}", PipHex,
+                var pip = Ui.Sprite($"MapNode{index}Pip{p}", PipKey,
                         Place.At((p - (NodeStrength.Max - 1) * 0.5f) * MapLayout.PipPitch, size.Y * 0.5f - 18f),
                         UiSize.Fixed(MapLayout.PipSize, MapLayout.PipSize))
                     .AsDecor()
@@ -717,12 +728,21 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // inside it by a fixed inset, so resizing the chip resizes both.
             var chipText = Ui.Label($"MapNode{index}ChipText", UiString.Runtime,
                     new UiVec(MapLayout.MaxChipWidth - 6f, MapLayout.MaxChipHeight - 4f), 12,
-                    ChipTextHex, Place.Stretch(3f, 3f, 2f, 2f))
+                    ChipTextHex, Place.Stretch(3f + MapLayout.ChipIconWidth, 3f, 2f, 2f))
                 .Styled(TypographyRole.TacticalData);
             var chipFill = Ui.Solid($"MapNode{index}ChipFill", ChipFillHex,
                     Place.Stretch(2f, 2f, 2f, 2f), UiSize.Fill)
                 .AsDecor();
             chipFill.Children.Add(chipText);
+
+            // The prize's icon, before the text. Left-anchored at a fixed
+            // width and as tall as the chip (which follows strength), swapped
+            // per prize kind at runtime.
+            var chipIcon = Ui.Sprite($"MapNode{index}ChipIcon", ChipGoldKey,
+                    Place.Frac(UiVec.Zero, new UiVec(0f, 1f), 3f, -(3f + MapLayout.ChipIconWidth), 3f, 3f), UiSize.Fill)
+                .AsDecor();
+            chipFill.Children.Add(chipIcon);
+            NodeChipIcons.Add(chipIcon);
             var chip = Ui.Solid($"MapNode{index}Chip", ChipRimHex,
                     Place.At(size.X * 0.5f + MapLayout.ChipGap + MapLayout.MaxChipWidth * 0.5f, -20f),
                     UiSize.Fixed(MapLayout.MaxChipWidth, MapLayout.MaxChipHeight))
@@ -733,21 +753,32 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             // The fog over the whole tile when a focused choice would close
             // this room off.
-            // The tree again, tinted by the controller (VeilHex) rather than a
-            // flat rect, so the fog keeps the tile's own silhouette.
-            var veil = Ui.Sprite($"MapNode{index}Veil", TreeKey, Place.Stretch(0f, 0f, 0f, 0f), UiSize.Fill)
+            // The medallion again, tinted by the controller (VeilHex) rather than
+            // a flat rect, so the fog keeps the tile's own silhouette.
+            var veil = Ui.Sprite($"MapNode{index}Veil", FightIconKey, Place.Stretch(0f, 0f, 0f, 0f), UiSize.Fill)
                 .AsDecor()
                 .Inactive();
 
             var button = Ui.Button($"MapNode{index}", UiString.Runtime, size, 12,
                 OnContent(0f, -MapLayout.TopMargin));
 
-            // The painted tree IS the button's plate, so the tile the player
-            // clicks and the tile they see are one graphic. Without this the
-            // emitter would put its shared gold button frame behind every room.
-            button.SpriteKey = TreeKey;
+            // The medallion IS the button's plate, so the tile the player
+            // clicks and the tile they see are one graphic; the controller swaps
+            // the sprite per room type. Without this the emitter would put its
+            // shared gold button frame behind every room.
+            button.SpriteKey = FightIconKey;
 
-            button.Children.Add(icon);
+            // The default hover/focus box is a hard white outline; a room that
+            // can be chosen gets a soft glow instead. Named "HoverRim" so
+            // UiEmitter wires it into the same HoverBox the default rim uses.
+            Ui.RemoveDefaultHoverBox(button);
+            button.Children.Add(Ui.Sprite("HoverRim", GlowRingKey,
+                    Place.Stretch(-MapLayout.GlowPad, -MapLayout.GlowPad, -MapLayout.GlowPad, -MapLayout.GlowPad),
+                    UiSize.Fill)
+                .AsDecor()
+                .AllowOverflow("the glow ring reaches past the tile (MapLayout.GlowPad) so it reads as light around the room")
+                .Inactive());
+
             foreach (var pip in pips) button.Children.Add(pip);
             button.Children.Add(veil);
             button.Children.Add(label);
@@ -755,7 +786,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
             button.Children.Add(chip);
 
             NodeButtons.Add(button);
-            NodeIcons.Add(icon);
             NodeLabels.Add(label);
             NodeMarkers.Add(marker);
             NodeChips.Add(chip);

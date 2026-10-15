@@ -276,16 +276,13 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void TheForestTilesDownTheLegAndMirrorsEverySecondTile()
+        public void TheForestStripTilesDownTheLegWithoutMirroring()
         {
             Assert.AreEqual(0f, MapLayout.BackgroundTileY(0));
-            Assert.AreEqual(-1080f, MapLayout.BackgroundTileY(1));
-            Assert.IsFalse(MapLayout.BackgroundTileIsMirrored(0));
-            Assert.IsTrue(MapLayout.BackgroundTileIsMirrored(1));
-            Assert.IsFalse(MapLayout.BackgroundTileIsMirrored(2));
+            Assert.AreEqual(-3003f, MapLayout.BackgroundTileY(1));
 
-            Assert.AreEqual(1, MapLayout.BackgroundTilesFor(1080f));
-            Assert.AreEqual(2, MapLayout.BackgroundTilesFor(1081f));
+            Assert.AreEqual(1, MapLayout.BackgroundTilesFor(3003f));
+            Assert.AreEqual(2, MapLayout.BackgroundTilesFor(3004f));
             Assert.AreEqual(0, MapLayout.BackgroundTilesFor(0f));
         }
 
@@ -353,16 +350,16 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ChipsGrowOneStepPerPip()
         {
-            Assert.AreEqual(64f, MapLayout.ChipWidthFor(1), 0.001f);
-            Assert.AreEqual(74f, MapLayout.ChipWidthFor(2), 0.001f);
-            Assert.AreEqual(84f, MapLayout.ChipWidthFor(3), 0.001f);
+            Assert.AreEqual(82f, MapLayout.ChipWidthFor(1), 0.001f);
+            Assert.AreEqual(92f, MapLayout.ChipWidthFor(2), 0.001f);
+            Assert.AreEqual(102f, MapLayout.ChipWidthFor(3), 0.001f);
             Assert.AreEqual(24f, MapLayout.ChipHeightFor(1), 0.001f);
             Assert.AreEqual(32f, MapLayout.ChipHeightFor(3), 0.001f);
-            Assert.AreEqual(84f, MapLayout.MaxChipWidth, 0.001f);
+            Assert.AreEqual(102f, MapLayout.MaxChipWidth, 0.001f);
 
             // A node with no frozen strength reads as the smallest, as the
             // prize payout does.
-            Assert.AreEqual(64f, MapLayout.ChipWidthFor(0), 0.001f);
+            Assert.AreEqual(82f, MapLayout.ChipWidthFor(0), 0.001f);
         }
 
         [Test]
@@ -375,7 +372,7 @@ namespace PrincesPalace.Domain.Tests
                 if (type != RoomType.Boss) tallest = System.Math.Max(tallest, box.Height);
             }
 
-            Assert.AreEqual(209f, tallest, 0.01f);
+            Assert.AreEqual(191f, tallest, 0.01f);
             Assert.Less(tallest, MapLayout.RowPitch);
         }
 
@@ -386,7 +383,7 @@ namespace PrincesPalace.Domain.Tests
         {
             var unpainted = new[]
             {
-                RoomType.Entry, RoomType.Shop, RoomType.ItemSpawn, RoomType.Unknown,
+                RoomType.ItemSpawn, RoomType.Unknown,
             };
 
             foreach (RoomType type in System.Enum.GetValues(typeof(RoomType)))
