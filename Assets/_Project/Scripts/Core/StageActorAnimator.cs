@@ -193,6 +193,11 @@ namespace PrincesPalace
         // Multiplied rather than added in WriteScale, so neither has to know
         // the other exists or what range it works in.
         private float _stretch;
+
+        // The run-up's squash and sag, kept apart from _stretch: a lunge or
+        // recoil finishing its arc writes _stretch back to zero, and the sag
+        // of a defeated figure must outlast that.
+        private float _pose;
         private float _breath;
 
         // THE TWO DISPLACEMENTS, held the same way and for the same reason.
@@ -361,8 +366,9 @@ namespace PrincesPalace
         // an exception.
         private Vector3 UndeformedScale()
         {
-            float x = (1f + _stretch) * (1f - _breath * BreathVolumeRatio);
-            float y = (1f - _stretch * VolumeRatio) * (1f + _breath);
+            float total = _stretch + _pose;
+            float x = (1f + total) * (1f - _breath * BreathVolumeRatio);
+            float y = (1f - total * VolumeRatio) * (1f + _breath);
 
             return new Vector3(
                 Mathf.Abs(x) < 0.01f ? _rect.localScale.x : _rect.localScale.x / x,
@@ -730,6 +736,7 @@ namespace PrincesPalace
             if (_rect != null)
             {
                 _rect.localRotation = Quaternion.identity;
+                _pose = 0f;
                 _travel = Vector2.zero;
                 _hover = 0f;
                 WritePosition();
@@ -840,27 +847,36 @@ namespace PrincesPalace
             _posing = StartCoroutine(Squashing((1f - yScale) / VolumeRatio, holdSeconds, returnSeconds));
         }
 
+        private void ApplyPose(float amount)
+        {
+            if (_rect == null) return;
+
+            _pose = amount;
+            WriteScale();
+        }
+
         private IEnumerator Squashing(float stretch, float holdSeconds, float returnSeconds)
         {
-            ApplyStretch(stretch);
+            ApplyPose(stretch);
             for (float t = 0f; t < holdSeconds; t += Time.deltaTime) yield return null;
 
             for (float t = 0f; t < returnSeconds; t += Time.deltaTime)
             {
                 float k = 1f - t / returnSeconds;
-                ApplyStretch(stretch * k * k);
+                ApplyPose(stretch * k * k);
                 yield return null;
             }
 
-            ApplyStretch(0f);
+            ApplyPose(0f);
             _posing = null;
         }
 
         // A defeated figure sags before it fades: it squashes to `yScale` and
         // tips `tiltDegrees` (clockwise, away from the party) about its feet,
         // over `seconds`, and stays down. The slot pivots on the ground line,
-        // so the tip does not slide the figure through the floor. Undone by
-        // ResetToHome, which a new fight runs on every slot.
+        // so the tip does not slide the figure through the floor. Held in _pose,
+        // which no lunge or recoil clears; undone by ResetToHome, which a new
+        // fight runs on every slot.
         public void Collapse(float yScale, float tiltDegrees, float seconds)
         {
             if (_rect == null || !isActiveAndEnabled) return;
@@ -874,12 +890,12 @@ namespace PrincesPalace
             for (float t = 0f; t < seconds; t += Time.deltaTime)
             {
                 float k = 1f - (1f - t / seconds) * (1f - t / seconds);
-                ApplyStretch(stretch * k);
+                ApplyPose(stretch * k);
                 _rect.localRotation = Quaternion.Euler(0f, 0f, -tiltDegrees * k);
                 yield return null;
             }
 
-            ApplyStretch(stretch);
+            ApplyPose(stretch);
             _rect.localRotation = Quaternion.Euler(0f, 0f, -tiltDegrees);
             _posing = null;
         }
@@ -1317,8 +1333,8 @@ namespace PrincesPalace
 
             // The swing: wider and shorter, or the inverse when Punch feeds it
             // a negative amount.
-            float x = 1f + _stretch;
-            float y = 1f - _stretch * VolumeRatio;
+            float x = 1f + _stretch + _pose;
+            float y = 1f - (_stretch + _pose) * VolumeRatio;
 
             // The breath: taller, and a little of that taken back out of the
             // width. Never negative -- see BreathCurve, which only ever grows

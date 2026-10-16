@@ -71,7 +71,7 @@ namespace PrincesPalace.PlayModeTests
         // One blow from victory: a one-health foe against a hero who cannot miss
         // it, bound as a fight of `fightClass`, with the killing blow pressed
         // through the verbs a hand would press.
-        private IEnumerator KillTheFoe(EncounterClass fightClass)
+        private IEnumerator KillTheFoe(EncounterClass fightClass, FightRoundPresentation presentation = null)
         {
             yield return SharedScene.EnsureFight();
 
@@ -89,12 +89,13 @@ namespace PrincesPalace.PlayModeTests
             _session = new FightSession(encounter, new List<PlayerKit> { PlayModeSparkFixture.Kit() },
                 new List<EnemyKit> { enemyKit }, new SeededRandom(9),
                 isBossFight: fightClass == EncounterClass.Boss, isEliteFight: fightClass == EncounterClass.Elite);
+            if (presentation != null) _session.RoundLimit = 10;
             _session.Begin();
 
             _ended = 0;
             _onEnded = _ => _ended++;
             _fight.FightEnded += _onEnded;
-            _fight.Bind(_session, fightClass, null, null);
+            _fight.Bind(_session, fightClass, null, presentation);
             yield return null;
 
             float openDeadline = Time.time + 10f;
@@ -140,6 +141,16 @@ namespace PrincesPalace.PlayModeTests
             yield return PlayTheBlow();
 
             Assert.AreEqual(0.30f, _player.FinalStopWall, 1e-4f);
+        }
+
+        [UnityTest]
+        public IEnumerator AnEliteEventFightStopsLikeANormalOne()
+        {
+            var event10 = new FightRoundPresentation(roundLimit: 10, label: "Toll", roundSfxPath: "Audio/Sfx/does_not_exist");
+            yield return KillTheFoe(EncounterClass.Elite, event10);
+            yield return PlayTheBlow();
+
+            Assert.AreEqual(0.22f, _player.FinalStopWall, 1e-4f);
         }
 
         [UnityTest]
@@ -193,7 +204,7 @@ namespace PrincesPalace.PlayModeTests
                 "the sting lands when the fade's hold ends, not at the end of the playback");
 
             Assert.AreEqual(0.15f, Named("VictoryWash").GetComponent<Image>().color.a, 0.01f);
-            Assert.AreEqual(RunUpSchedule.EnemyDim, Named("EnemyDim").GetComponent<Image>().color.a, 0.01f);
+            Assert.AreEqual(0.10f, Named("EnemyDim").GetComponent<Image>().color.a, 0.01f);
         }
 
         [UnityTest]
@@ -201,8 +212,7 @@ namespace PrincesPalace.PlayModeTests
         {
             yield return KillTheFoe(EncounterClass.Boss);
             yield return PlayTheBlow();
-            yield return null;
-            yield return null;
+            for (float t = 0f; t < 0.3f; t += Time.deltaTime) yield return null;
 
             Assert.IsTrue(_fight.GetComponentsInChildren<StageActorAnimator>(true)
                     .Any(a => a.transform.localEulerAngles.z > 0.5f && a.transform.localEulerAngles.z < 359.5f),
@@ -214,6 +224,32 @@ namespace PrincesPalace.PlayModeTests
             var wash = Named("VictoryWash");
             Assert.AreEqual(0.32f, wash.GetComponent<Image>().color.a, 0.01f);
             Assert.AreEqual(1.6f, wash.transform.localScale.x, 0.01f);
+        }
+
+        // The sag is the enemy's pose until it has gone: a recoil or a lunge
+        // finishing its arc must not stand it back up before the fade.
+        [UnityTest]
+        public IEnumerator TheSagHoldsUntilTheWipe()
+        {
+            yield return KillTheFoe(EncounterClass.Boss);
+            yield return PlayTheBlow();
+            for (float t = 0f; t < 0.3f; t += Time.deltaTime) yield return null;
+
+            var foe = _fight.GetComponentsInChildren<StageActorAnimator>(true)
+                .FirstOrDefault(a => a.transform.localEulerAngles.z > 0.5f && a.transform.localEulerAngles.z < 359.5f);
+            Assert.IsNotNull(foe, "the enemy is tipped by now");
+            float lowest = foe.transform.localScale.y;
+
+            float deadline = Time.time + 5f;
+            while (_ended == 0 && Time.time < deadline)
+            {
+                float z = foe.transform.localEulerAngles.z;
+                Assert.IsTrue(z > 0.5f && z < 359.5f, "the enemy has stood back up");
+                Assert.LessOrEqual(foe.transform.localScale.y, lowest + 0.01f, "the enemy has risen back to full height");
+                yield return null;
+            }
+
+            Assert.AreEqual(1, _ended);
         }
 
         [UnityTest]

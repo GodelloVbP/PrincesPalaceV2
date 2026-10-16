@@ -11,7 +11,7 @@ namespace PrincesPalace.Domain.Rewards
     // enemy's death fade run on the fight's own pace (FightBeatPlayer.Pace), so
     // they arrive here as wall seconds already; what the run-up ADDS (the hop,
     // the wash, the collapse, the voices' delay) is authored at the default
-    // battle speed and goes through TimeScale, so it speeds up at 1.5x and 2x
+    // battle speed and goes through ReckoningTime.Scale, so it speeds up at 1.5x and 2x
     // and never slows below its authored time. Only the stop and the fade can
     // hold the wipe back, and CapSeconds ends the wait whatever they do.
     //
@@ -76,18 +76,13 @@ namespace PrincesPalace.Domain.Rewards
             {
                 case EncounterClass.Boss: return new Style(1.6f, 0.32f, 0.62f, 10f, 0.8f);
                 case EncounterClass.Elite: return new Style(1.25f, 0.22f, 0.88f, 4f, 0f);
-                default: return new Style(1f, 0.15f, 1f, 0f, 0f);
+                default: return new Style(1f, 0.15f, 0.94f, 2f, 0f);
             }
         }
 
         // The final-blow stop in wall seconds at this pace, under the ceiling.
         public static float FinalStopWall(EncounterClass fightClass, float pace) =>
             pace <= 0f ? 0f : Math.Min(StopCeilingSeconds, HitStop.FinalBlowSeconds(fightClass) / pace);
-
-        // min(1, Default / preset): the Reckoning's rule for every duration it
-        // adds (C10). A non-positive preset reads as the default.
-        public static float TimeScale(float presetDisplay) =>
-            presetDisplay <= 0f ? 1f : Math.Min(1f, BattleSpeed.DefaultDisplay / presetDisplay);
 
         public readonly Style Look;
         public readonly float StopEnd;
@@ -150,7 +145,7 @@ namespace PrincesPalace.Domain.Rewards
         private static RunUpSchedule Build(Style look, float stop, float pace, float presetDisplay,
                                            float fadeHoldAuthored, float fadeAuthored)
         {
-            float scale = TimeScale(presetDisplay);
+            float scale = ReckoningTime.Scale(presetDisplay);
             bool hasFade = fadeAuthored > 0f;
             float hold = pace <= 0f ? 0f : fadeHoldAuthored / pace;
             float fade = pace <= 0f ? 0f : fadeAuthored / pace;

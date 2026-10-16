@@ -48,10 +48,16 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void RunUpSchedule_ReadsTheSameRule()
+        public void Scale_IsPinnedPerPreset_AndTheRunUpUsesIt()
         {
-            foreach (float preset in new[] { 0.5f, 1f, 1.5f, 2f })
-                Assert.AreEqual(ReckoningTime.Scale(preset), RunUpSchedule.TimeScale(preset), 0f);
+            Assert.AreEqual(1f, ReckoningTime.Scale(0.5f), Tolerance);
+            Assert.AreEqual(1f, ReckoningTime.Scale(1f), Tolerance);
+            Assert.AreEqual(0.6667f, ReckoningTime.Scale(1.5f), 0.0001f);
+            Assert.AreEqual(0.5f, ReckoningTime.Scale(2f), Tolerance);
+
+            // The run-up's lift is authored 0.25 s: its wall time follows.
+            Assert.AreEqual(0.25f, RunUpSchedule.For(EncounterClass.Normal, 1f / 3f, 0.5f, 0.35f, 0.6f).LiftSecondsWall, Tolerance);
+            Assert.AreEqual(0.125f, RunUpSchedule.For(EncounterClass.Normal, 4f / 3f, 2f, 0.35f, 0.6f).LiftSecondsWall, Tolerance);
         }
 
         // The plan's wall-time table (C4), at 1x, then at the other presets.

@@ -5,6 +5,7 @@ using UnityEngine.UI;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Rewards;
+using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace
 {
@@ -33,6 +34,11 @@ namespace PrincesPalace
         private bool _runUpEnding;
 
         private bool _runUpSkipped;
+
+        // An event fight ends like a normal one whatever its reward class
+        // (plan C0); only a room's elite or boss earns the bigger ending.
+        private EncounterClass EndingClass =>
+            ReferenceEquals(_presentation, FightRoundPresentation.None) ? _session.EncounterClass : EncounterClass.Normal;
 
         // Held so a rebind (a new fight on the same controller) can stop a
         // run-up the previous fight left running; left alone it would finish
@@ -107,8 +113,8 @@ namespace PrincesPalace
 
                 float stoppedFor = beatPlayer != null ? beatPlayer.FinalStopWall : 0f;
                 schedule = stoppedFor > 0f
-                    ? RunUpSchedule.For(_session.EncounterClass, pace, preset, hold, fade)
-                    : RunUpSchedule.WithoutStop(_session.EncounterClass, pace, preset, hold, fade);
+                    ? RunUpSchedule.For(EndingClass, pace, preset, hold, fade)
+                    : RunUpSchedule.WithoutStop(EndingClass, pace, preset, hold, fade);
                 t = schedule.StopEnd;
             }
 
@@ -193,7 +199,7 @@ namespace PrincesPalace
         }
 
         // The kill registering: every body still fading sags first, then
-        // fades (a normal fight's does not sag), and a boss shudders the
+        // fades , and a boss shudders the
         // stage once more. Stage only; Time.timeScale is never touched.
         private void ReleaseTheKill(RunUpSchedule schedule)
         {
@@ -260,7 +266,7 @@ namespace PrincesPalace
                 if (lifted[i]) AnimatorFor(survivors[i])?.ResetToHome();
             }
 
-            SetVictoryLight(1f, _session.EncounterClass);
+            SetVictoryLight(1f, EndingClass);
         }
 
         // 0 hides both; 1 is the finished look: the wash at the class's

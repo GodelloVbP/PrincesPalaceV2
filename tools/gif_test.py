@@ -31,13 +31,21 @@ class NormalizeTests(unittest.TestCase):
         s = gif.normalize({"kind": "status", "id": "Poison"}, SKILLS)
         self.assertEqual((s["seconds"], s["crop"]), (2.0, "subject"))
 
-    def test_fightend_is_a_stage_film_of_one_fight_class(self):
+    def test_fightend_is_a_full_frame_film_of_one_fight_class(self):
         s = gif.normalize({"kind": "fightend", "id": "boss"}, SKILLS)
-        self.assertEqual((s["crop"], s["seconds"], s["formation"]), ("stage", 0.0, "lone"))
+        self.assertEqual((s["crop"], s["seconds"], s["formation"]), ("full", 0.0, "lone"))
         self.assertIn("fightend", gif.UNITY_KINDS)
         self.assertEqual(gif.refusals(s, {"enemies": ["rat"], "status": []}), [])
         bad = gif.normalize({"kind": "fightend", "id": "huge"}, SKILLS)
         self.assertIn("not one of normal, elite, boss", gif.refusals(bad, {"enemies": ["rat"], "status": []})[0])
+
+    def test_reveal_is_a_full_frame_film_of_one_r0_page(self):
+        s = gif.normalize({"kind": "reveal", "id": "cachetop"}, SKILLS)
+        self.assertEqual((s["crop"], s["seconds"]), ("full", 0.0))
+        self.assertIn("reveal", gif.UNITY_KINDS)
+        self.assertEqual(gif.refusals(s, {"enemies": ["rat"], "status": []}), [])
+        bad = gif.normalize({"kind": "reveal", "id": "huge"}, SKILLS)
+        self.assertIn("not one of nocache, cachetop, ghosts", gif.refusals(bad, {"enemies": ["rat"], "status": []})[0])
 
     def test_key_is_stable_and_differs_on_any_field(self):
         base = gif.normalize({"kind": "spell", "id": "bolt"}, SKILLS)

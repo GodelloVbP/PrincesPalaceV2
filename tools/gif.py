@@ -42,8 +42,9 @@ STATUS_SOURCE = os.path.join(ROOT, "Assets", "_Project", "Scripts", "Domain", "C
 RUNS = os.path.join(TOOLS, "screenshots", "gif", "runs")
 LATEST = os.path.join(TOOLS, "screenshots", "gif", "latest.json")
 
-UNITY_KINDS = ("spell", "attack", "relic", "status", "fightend")   # one GifBatchCaptureTests boot
+UNITY_KINDS = ("spell", "attack", "relic", "status", "fightend", "reveal")   # one GifBatchCaptureTests boot
 FIGHT_END_CLASSES = ("normal", "elite", "boss")        # fightend ids: the fight class of the killing blow
+REVEAL_FIXTURES = ("nocache", "cachetop", "ghosts")    # reveal ids: ReckoningRevealFilm.Ids, the R0 pages
 PY_KINDS = ("stance", "sheet")                         # no Unity at all
 KINDS = UNITY_KINDS + PY_KINDS + ("still",)            # still: a PlayMode capture class
 FORMATIONS = ("lone", "full")
@@ -195,8 +196,13 @@ def normalize(raw, skills=None, characters=None):
         # An all-target spell is only visible against a rack.
         aims_all = kind == "spell" and skills.get(out["id"], {}).get("targeting") == "AllEnemies"
         out["formation"] = "full" if aims_all else "lone"
+    if kind == "reveal" and not out["crop"]:
+        # The Reckoning's frame spans the screen, not the stage box.
+        out["crop"] = "full"
     if not out["crop"]:
-        out["crop"] = "subject" if kind == "status" else "stage"
+        # fightend shows a whole three-character party, whose rear member
+        # stands left of the stage box.
+        out["crop"] = "subject" if kind == "status" else ("full" if kind == "fightend" else "stage")
     if kind == "status" and out["seconds"] <= 0:
         out["seconds"] = 2.0
     if kind not in ("status", "spell"):
@@ -316,6 +322,7 @@ def known_ids():
         "allRelics": [r["id"] for r in relics],
         "status": status_names(),
         "fightend": list(FIGHT_END_CLASSES),
+        "reveal": list(REVEAL_FIXTURES),
     }
 
 
@@ -443,6 +450,9 @@ def refusals(scenario, ids=None):
     elif kind == "fightend":
         if sid not in ids.get("fightend", FIGHT_END_CLASSES):
             out.append("fight class '%s' is not one of %s" % (sid, ", ".join(FIGHT_END_CLASSES)))
+    elif kind == "reveal":
+        if sid not in ids.get("reveal", REVEAL_FIXTURES):
+            out.append("reveal fixture '%s' is not one of %s" % (sid, ", ".join(REVEAL_FIXTURES)))
     if kind in ("spell", "relic", "status", "fightend"):
         for foe in csv_list(scenario["vs"]):
             if foe not in ids["enemies"]:
@@ -1028,7 +1038,7 @@ def coverage_table(scenarios, outcomes, ids=None, skipped=(), gaps=(), manifest=
 
     lines.append("  known but not covered:")
     pools = {"spell": ids.get("playerSpell", ids["spell"]), "attack": ids["attack"], "relic": ids["relic"],
-             "status": ids["status"], "fightend": ids.get("fightend", []), "stance": ids.get("stance", []), "sheet": ids.get("sheet", [])}
+             "status": ids["status"], "fightend": ids.get("fightend", []), "reveal": ids.get("reveal", []), "stance": ids.get("stance", []), "sheet": ids.get("sheet", [])}
     for kind, pool in pools.items():
         have = {s["id"] for s in scenarios if s["kind"] == kind}
         missing = [i for i in pool if i not in have]

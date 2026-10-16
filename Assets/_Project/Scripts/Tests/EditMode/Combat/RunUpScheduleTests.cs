@@ -63,13 +63,15 @@ namespace PrincesPalace.Domain.Tests
             var elite = RunUpSchedule.StyleOf(EncounterClass.Elite);
             var boss = RunUpSchedule.StyleOf(EncounterClass.Boss);
 
-            Assert.AreEqual((1f, 0.15f, 1f, 0f, 0f),
+            Assert.AreEqual((1f, 0.15f, 0.94f, 2f, 0f),
                 (normal.WashScale, normal.WashAlpha, normal.CollapseYScale, normal.CollapseTiltDegrees, normal.Aftershock));
             Assert.AreEqual((1.25f, 0.22f, 0.88f, 4f, 0f),
                 (elite.WashScale, elite.WashAlpha, elite.CollapseYScale, elite.CollapseTiltDegrees, elite.Aftershock));
             Assert.AreEqual((1.6f, 0.32f, 0.62f, 10f, 0.8f),
                 (boss.WashScale, boss.WashAlpha, boss.CollapseYScale, boss.CollapseTiltDegrees, boss.Aftershock));
-            Assert.IsFalse(normal.Collapses);
+            Assert.IsTrue(normal.Collapses, "every class moves after the release");
+            Assert.Greater(normal.CollapseYScale, elite.CollapseYScale);
+            Assert.Greater(elite.CollapseYScale, boss.CollapseYScale);
             Assert.IsTrue(elite.Collapses);
             Assert.IsTrue(boss.Collapses);
         }
@@ -182,10 +184,10 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheAddedDurationsSpeedUpAtFastPresetsAndNeverSlowDown()
         {
-            Assert.AreEqual(1f, RunUpSchedule.TimeScale(0.5f), Tolerance);
-            Assert.AreEqual(1f, RunUpSchedule.TimeScale(1f), Tolerance);
-            Assert.AreEqual(2f / 3f, RunUpSchedule.TimeScale(1.5f), Tolerance);
-            Assert.AreEqual(0.5f, RunUpSchedule.TimeScale(2f), Tolerance);
+            Assert.AreEqual(1f, ReckoningTime.Scale(0.5f), Tolerance);
+            Assert.AreEqual(1f, ReckoningTime.Scale(1f), Tolerance);
+            Assert.AreEqual(2f / 3f, ReckoningTime.Scale(1.5f), Tolerance);
+            Assert.AreEqual(0.5f, ReckoningTime.Scale(2f), Tolerance);
 
             var half = RunUpSchedule.For(EncounterClass.Normal, 1f / 3f, 0.5f, Hold, Fade);
             Assert.AreEqual(0.25f, half.LiftSecondsWall, Tolerance, "0.5x does not slow the lift");

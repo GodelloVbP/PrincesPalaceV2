@@ -1361,6 +1361,7 @@ namespace PrincesPalace
             {
                 if (beat == null) continue;
                 beat.PaintActorDamageType(_session.ActorAttackType(beat.Actor));
+                if (beat.EndsFight) beat.FightClass = EndingClass;
             }
 
             if (beatPlayer != null && beats.Count > 0)
@@ -1489,7 +1490,9 @@ namespace PrincesPalace
             // The session COLLECTED these rather than playing them, because
             // Domain has no audio -- and until now nothing on this side drained
             // the list, so the celebration was decided and never heard.
-            if (_session != null && !_spokeVictory && _session.PlayerWon)
+            // An endure is not a kill: no sting, no voices (O2).
+            if (_session != null && !_spokeVictory && _session.PlayerWon
+                && _session.EndReason != FightEndReason.Survived)
             {
                 _spokeVictory = true;
 

@@ -279,8 +279,10 @@ namespace PrincesPalace.Domain.Combat.Session
             if (_victoryResolved || !_encounter.PlayerWon) return;
             _victoryResolved = true;
 
-            // A fight ended by survival has no final blow to stop on.
-            if (EndReason != FightEndReason.Survived) MarkLatestBeatEndsFight();
+            // Only a kill has a final blow to stop on: a survived fight has none,
+            // and a leader's fall keeps its ordinary beat (its followers fade
+            // after it, in the leader-fall ending).
+            if (EndReason == FightEndReason.Defeated) MarkLatestBeatEndsFight();
 
             foreach (var survivor in _encounter.LivingPlayerParty.ToList())
             {
