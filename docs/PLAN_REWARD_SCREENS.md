@@ -280,8 +280,8 @@ In order, for a won fight:
    The wash is alpha 0.15 at scale 1.0 for a normal fight, 0.22 at 1.25 for
    an elite, 0.32 at 1.6 for a boss. At the release the last enemy also
    sags before it fades (a squash and a tip about its feet over 0.18 s):
-   y scale 0.88 and 4 degrees for an elite, 0.62 and 10 degrees for a boss,
-   none for a normal fight. A boss also takes one more stage shake at the
+   y scale 0.94 and 2 degrees for a normal fight, 0.88 and 4 for an elite,
+   0.62 and 10 for a boss, held until the fade ends. A boss also takes one more stage shake at the
    release (0.8), stage only.
 5. **The sting lands on the kill** (F14): `VictorySting` moves from
    `OnPlaybackFinished` to the moment the last enemy's fade begins, after
@@ -365,8 +365,10 @@ One page at a time, gear then relic.
 
 - **Every page has a beat** (owner-session point a): as each card lands,
   one of the page's *k* choice embers lights above the row, with a soft
-  breath, and every card that lands as a live upgrade pops its up-chevron
-  with a short rising note, one step higher per up-card in row order (A1).
+  breath, and every card whose face shows the green up-chevron (C5) pops
+  it with a short rising note, one step higher per up-card in row order
+  (A1). The note follows the face: an affix-only gain on a flat bar is
+  silent.
   A downgrade lands silent. A page with nothing for anyone is quiet; a page
   with two upgrades sounds like good news before the cards are read. This
   adds no time: it rides the deal or the flips.
@@ -418,7 +420,7 @@ First sweep (fails at 32% beat over all pages, 15% on Normal pages): `docs/REWAR
    0.25 s silent beat before its own flip; the cards after it wait (a boss
    page keeps this rule; only its cache is unconditional; a relic: any
    top-tier live relic). Each flip plays the flip clip at its
-   quality's pitch step (four pre-pitched clips, C11).
+   quality's pitch step (one clip, pitched per step, C11). Quality here is `ContentDatabase.QualityOf`, the one source the plinth and name colour read.
 4. On landing: Uncommon a cloth puff; Rare a shimmer; top tier the burst at
    full size for 0.3 s, a 0.12 s screen-edge flare in its colour, a low
    bell. Common: a flat tap. A top-tier card that is not a live upgrade
@@ -612,7 +614,9 @@ Continue or Cancel leaves (`Dismiss`, acknowledging displayed receipts,
 - **`RevealSchedule`** (Domain, pure; M9): `RevealSchedule.For(cards, row
   order, live-upgrade flags, page class, preset)` returns timed events:
   haul ticks, deal or seal, slide, flip *i* with its pitch step, hold, land,
-  chevron pops, linger end, choosable. Skip returns the end state. The cap,
+  chevron pops, linger end, choosable. Skip returns the end state, and from
+  the skip on `IsRunningAt`/`GuardsAt` read the skipped timeline: input is
+  live over the face-up row, behind the same double-tap guard window. The cap,
   flip order, holds, pitch steps and skip are EditMode tests on literals;
   PlayMode only checks that the controller plays the schedule.
 - **`ReckoningTime`** turns an authored duration into wall time:
@@ -647,12 +651,13 @@ Continue or Cancel leaves (`Dismiss`, acknowledging displayed receipts,
 The palette is cloth, breath, wood, soft bells and low strings: tender, not
 a casino. Coins tick softly; no cascade.
 
-`SoundController.Play` is one `AudioSource` with `PlayOneShot`
-(`SoundController.cs:12-15, 119`), and pitch is the source's, not the
-shot's. So **no engine change**: pitch steps are **pre-pitched clips** (four
-flip clips, a short chevron-note ladder, the take's root note). And the
-haul is sequenced before the flips (C2), so the one source carries one
-layer at a time.
+Pitch steps go through `SoundController.Play(Sound, pitch)`, a pool of up
+to 8 pitched sources (ebcaa92f), so one clip per cue serves every step (the
+flips, the chevron-note ladder, the take's root note). When the pool is
+full, the oldest still-playing shot is cut, not round-robin. Placeholder
+cues never borrow `ButtonClick` or `ClickFail` clips; R6's gate checks the
+clip, not only the enum. The haul is still sequenced before the flips (C2),
+so layers don't pile up.
 
 **Every Reckoning control is `.Quiet()`** (cards, cache, catcher,
 whetstones, door, Continue, haul chips): the offer cards today are
