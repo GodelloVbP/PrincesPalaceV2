@@ -164,6 +164,10 @@ namespace PrincesPalace.PlayModeTests
                 Assert.AreEqual(1f, Part<CanvasGroup>($"ReckoningOffer{i}").alpha, 0.001f, $"card {i} is dealt");
                 Assert.IsFalse(Part<Image>($"ReckoningOffer{i}Back").gameObject.activeSelf, $"card {i} is face-up");
                 Assert.AreEqual(1f, Part<RectTransform>($"ReckoningOffer{i}").localScale.x, 0.001f);
+                Assert.AreEqual(1f, Part<RectTransform>($"ReckoningOffer{i}Face").localScale.x, 0.001f,
+                    $"card {i}'s face is unturned");
+                Assert.AreEqual(Vector2.zero, Part<RectTransform>($"ReckoningOffer{i}Face").anchoredPosition,
+                    $"card {i}'s face is home");
             }
         }
 
@@ -186,9 +190,10 @@ namespace PrincesPalace.PlayModeTests
         }
 
         // R6 gate (C11), reveal half. The plain page (ReckoningPageFixtures.
-        // NoCachePage: no card earns the cache) deals each card once with a
-        // rustle and has no cache cue; a boss page opens the cache once, flips
-        // five cards, and peaks once. Neither touches a button cue.
+        // NoCachePage: no card earns the cache) deals each card face-down once
+        // with a rustle, flips each once and has no cache cue; a boss page
+        // opens the cache once, flips five cards, and peaks once. Neither
+        // touches a button cue.
         [UnityTest]
         public IEnumerator APlainPage_PlayedOut_DealsEachCardOnce_WithNoCacheCue()
         {
@@ -199,7 +204,8 @@ namespace PrincesPalace.PlayModeTests
 
             CollectionAssert.DoesNotContain(heard, Sound.CacheOpen);
             Assert.AreEqual(pages[0].Cards.Count, heard.Count(s => s == Sound.CardDeal), string.Join(",", heard));
-            Assert.AreEqual(0, heard.Count(s => s == Sound.CardFlip || s == Sound.BossPeak));
+            Assert.AreEqual(pages[0].Cards.Count, heard.Count(s => s == Sound.CardFlip), "every page flips one by one");
+            Assert.AreEqual(0, heard.Count(s => s == Sound.BossPeak));
             CollectionAssert.DoesNotContain(heard, Sound.ButtonClick);
             CollectionAssert.DoesNotContain(heard, Sound.ClickFail);
         }
@@ -215,6 +221,10 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(1, heard.Count(s => s == Sound.CacheOpen));
             Assert.AreEqual(5, heard.Count(s => s == Sound.CardFlip));
             Assert.GreaterOrEqual(heard.Count(s => s == Sound.LegendaryBell), 1, "the forced Legendary rings");
+            Assert.AreEqual(heard.Count(s => s == Sound.LegendaryBell), heard.Count(s => s == Sound.RevealImpact),
+                "each bell rings over its impact");
+            Assert.AreEqual(heard.Count(s => s == Sound.LegendaryBell), heard.Count(s => s == Sound.RevealRiser),
+                "each ceremony builds under its riser");
             Assert.AreEqual(1, heard.Count(s => s == Sound.BossPeak),
                 "the peak is the page's, under its first top-tier bell, however many ring");
             Assert.AreEqual(0, heard.Count(s => s == Sound.CardDeal), "a cache page deals nothing");

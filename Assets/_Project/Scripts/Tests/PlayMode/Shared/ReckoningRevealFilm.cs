@@ -25,7 +25,9 @@ namespace PrincesPalace.PlayModeTests
         public static readonly string[] Ids = { "nocache", "cachetop", "ghosts" };
 
         private const float TailSeconds = 0.4f;
-        private const float CapSeconds = 5f;
+        // The one-by-one reveal runs to about 4 s on a five-card page, plus
+        // the cache, the linger and the landing's tail.
+        private const float CapSeconds = 10f;
 
         public static IEnumerator Record(string id, int width, int height, CaptureSink sink, CaptureOutcome outcome)
         {

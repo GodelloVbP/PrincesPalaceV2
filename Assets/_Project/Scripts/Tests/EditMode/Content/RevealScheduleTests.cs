@@ -19,7 +19,7 @@ namespace PrincesPalace.Domain.Tests
         private static RevealBeat[] Of(RevealSchedule s, RevealBeatKind kind) =>
             s.Beats.Where(b => b.Kind == kind).ToArray();
 
-        // A cache page, 3 cards: choosable at 1.15 s unskipped.
+        // A cache page, 3 cards: choosable at 2.54 s unskipped.
         [Test]
         public void ASkip_MovesTheGuardToThePress()
         {
@@ -77,7 +77,7 @@ namespace PrincesPalace.Domain.Tests
             for (int i = 0; i < 4; i++) Assert.AreEqual(expected[i], ticks[i].Start, Tolerance);
             Assert.AreEqual(8, Of(RevealSchedule.For(new[] { Common }, 1, 1f, haulTicks: 20), RevealBeatKind.HaulTick).Length);
             Assert.IsEmpty(Of(RevealSchedule.For(new[] { Common }, 1, 1f), RevealBeatKind.HaulTick));
-            Assert.AreEqual(0.59f, s.ChoosableAt, Tolerance, "the haul adds no time");
+            Assert.AreEqual(1.67f, s.ChoosableAt, Tolerance, "the haul adds no time");
         }
 
         [Test]
@@ -86,6 +86,44 @@ namespace PrincesPalace.Domain.Tests
             var s = RevealSchedule.For(new RevealCard[0], 0, 1f, EncounterClass.Boss);
             Assert.IsFalse(s.HasCache);
             Assert.AreEqual(0.34f, s.ChoosableAt, Tolerance);
+        }
+
+        // The treatments' look (RevealFeel): only a Rare and the ceremony
+        // shake, only the ceremony shakes the stage, and the punch grows with
+        // the treatment.
+        [Test]
+        public void TheTreatments_ShakeAndPunch_ByQuality()
+        {
+            Assert.AreEqual(0f, RevealFeel.PanelShakePixels(LandStyle.Flat));
+            Assert.AreEqual(0f, RevealFeel.PanelShakePixels(LandStyle.Puff));
+            Assert.AreEqual(3f, RevealFeel.PanelShakePixels(LandStyle.Shimmer));
+            Assert.AreEqual(8f, RevealFeel.PanelShakePixels(LandStyle.Burst));
+            Assert.AreEqual(0f, RevealFeel.StageShakePixels(LandStyle.Shimmer));
+            Assert.AreEqual(8f, RevealFeel.StageShakePixels(LandStyle.Burst));
+            Assert.AreEqual(0.25f, RevealFeel.ShakeSeconds(LandStyle.Burst), Tolerance);
+            Assert.AreEqual(1.15f, RevealFeel.Punch(LandStyle.Burst, 0f), Tolerance);
+            Assert.AreEqual(1f, RevealFeel.Punch(LandStyle.Burst, 0.25f), Tolerance);
+            Assert.AreEqual(8f, RevealFeel.Lift(LandStyle.Shimmer, 1f, -1f), Tolerance);
+            Assert.AreEqual(0f, RevealFeel.Lift(LandStyle.Flat, 1f, -1f), Tolerance);
+        }
+
+        // The tremble rises to at most 3 px and is the same at the same instant.
+        [Test]
+        public void TheTremble_StaysWithinThreePixels_AndRepeats()
+        {
+            for (int f = 0; f < 60; f++)
+            {
+                RevealFeel.Tremble(LandStyle.Burst, 0.99f, f / 60f, out float dx, out float dy);
+                Assert.LessOrEqual(System.Math.Abs(dx), 3f);
+                Assert.LessOrEqual(System.Math.Abs(dy), 3f);
+                RevealFeel.Tremble(LandStyle.Burst, 0.99f, f / 60f, out float dx2, out float dy2);
+                Assert.AreEqual(dx, dx2);
+                Assert.AreEqual(dy, dy2);
+            }
+
+            RevealFeel.Tremble(LandStyle.Shimmer, 0.5f, 0.3f, out float rx, out float ry);
+            Assert.AreEqual(0f, rx);
+            Assert.AreEqual(0f, ry);
         }
 
         [Test]

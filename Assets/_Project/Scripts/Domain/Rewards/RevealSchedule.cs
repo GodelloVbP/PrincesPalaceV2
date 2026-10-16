@@ -49,20 +49,22 @@ namespace PrincesPalace.Domain.Rewards
         // wrapped bundle for a Common would be a false promise.
         public bool EarnsCache => LiveUpgrade && IsRarePlus && (IsRelic || Tier > WornTier);
 
-        // Earns the held beat, the flare and the linger: a live Legendary
-        // over a worn item below Legendary (a relic: any top-tier live one).
-        public bool EarnsHold => LiveUpgrade && IsTop && (IsRelic || WornTier < RevealSchedule.TopTier);
+        // Earns the full ceremony (tremble, rays, the big shake, the bell, the
+        // linger): a live Legendary over a worn item below Legendary (a
+        // relic: any top-tier live one). Any other top tier lands as a Rare
+        // in its own colour, so useless loot is never celebrated (C4).
+        public bool EarnsCeremony => LiveUpgrade && IsTop && (IsRelic || WornTier < RevealSchedule.TopTier);
     }
 
     public enum RevealBeatKind
     {
         Wipe,          // the page's entrance: the frame's wipe on the first page, the map chip flying in on a later one (C1, C2)
         HaulTick,      // one soft tick of the gold count, inside the wipe (C2); Card is the tick's index
-        OpenWait,      // the cache sits closed before it opens by itself
+        OpenWait,      // the cache stands closed and hums before it opens by itself
         Seal,          // the seal snaps
-        Slide,         // k + 2 cards slide out face-down
-        Deal,          // no cache: the cards deal face-up; Card -1, spans the whole deal
-        Hold,          // silent beat before a top-tier live upgrade's own flip; the cards after it wait; Card is that card
+        Slide,         // every card comes out face-down into the row; spans the whole motion
+        Deal,          // no cache: card Card arrives face-down (its rustle); the deal runs left to right inside the slide
+        Anticipate,    // the build under card Card before its flip; Style says how (a Common has none)
         Flip,          // PitchStep is the flip clip
         Land,          // the card is face-up; Style says how it arrives
         Ember,         // a choice ember lights (rides the landing)
@@ -71,12 +73,13 @@ namespace PrincesPalace.Domain.Rewards
         Linger,        // non-blocking; the top-tier halo holds at full strength
     }
 
+    // A card's treatment, for its anticipation and its landing alike (C4).
     public enum LandStyle
     {
-        Flat,          // Common: a flat tap
-        Puff,          // Uncommon: a cloth puff
-        Shimmer,       // Rare, and a top tier that is not a live upgrade
-        Burst,         // top-tier live upgrade: burst, flare, low bell
+        Flat,          // Common: no build, a flat tap and a little dust
+        Puff,          // Uncommon: a faint under-glow, a puff of motes
+        Shimmer,       // Rare, and a top tier that is not a live upgrade: glow and lift, ring and shimmer
+        Burst,         // top-tier live upgrade: glow, tremble and embers, then rays, explosion, shake, flare, bell
     }
 
     public readonly struct RevealBeat
@@ -106,6 +109,10 @@ namespace PrincesPalace.Domain.Rewards
     // at a time (docs/PLAN_REWARD_SCREENS.md C3, C4, C10). Pure; the controller
     // plays the beats and never derives a time. Times are wall seconds from the
     // wipe start, already through ReckoningTime.
+    //
+    // ONE CARD AT A TIME, LEFT TO RIGHT: a card's anticipation starts only
+    // after the card before it has landed and settled, so each card gets its
+    // own moment and the row reads as a run of reveals, not one burst.
     public sealed class RevealSchedule
     {
         public const int RareTier = 3;
@@ -113,30 +120,37 @@ namespace PrincesPalace.Domain.Rewards
 
         // Authored at the default battle speed (C4 table).
         public const float WipeSeconds = 0.34f;
-        public const float DealSeconds = 0.25f;
-        public const float OpenWaitSeconds = 0.2f;
+        public const float OpenWaitSeconds = 0.5f;
         public const float SealSeconds = 0.12f;
         public const float SlideSeconds = 0.25f;
-        public const float FlipSeconds = 0.12f;
-        public const float FlipStaggerSeconds = 0.06f;
-        public const float HoldSeconds = 0.25f;
-        public const float FlareSeconds = 0.12f;
+        public const float FlipSeconds = 0.18f;
+
+        // From a landing to the next card's anticipation, so the landing's
+        // effect reads before anything else moves: a Common's cadence is flip
+        // plus settle, 0.45 s. The ceremony's rays and shake need longer.
+        public const float SettleSeconds = 0.27f;
+        public const float CeremonySettleSeconds = 0.55f;
+
         public const float LingerSeconds = 1.2f;
+        public const float FlareSeconds = 0.3f;
         public const float GuardSeconds = 0.15f;
 
         // The gold count lands in at most this many soft ticks (C2).
         public const int MaxHaulTicks = 8;
 
-        // Wipe start to choosable, at every preset. A page that would pass it
-        // gives up its waits in the order of Fit.
-        public const float CapSeconds = 1.6f;
-
-        // The floors Fit shortens to first, each the least that still reads:
-        // the cache on screen (open wait plus seal), the flips as a sequence,
-        // a top tier's own moment.
-        public const float MinCacheStandSeconds = 0.35f;
-        public const float MinStaggerSeconds = 0.04f;
-        public const float MinHoldSeconds = 0.15f;
+        // The build before a flip, by treatment: none for a Common, a breath
+        // for an Uncommon, a held lift for a Rare, a long tremble for the
+        // ceremony. The quiet part is what makes the loud part loud.
+        public static float AnticipationSeconds(LandStyle style)
+        {
+            switch (style)
+            {
+                case LandStyle.Puff: return 0.1f;
+                case LandStyle.Shimmer: return 0.25f;
+                case LandStyle.Burst: return 0.6f;
+                default: return 0f;
+            }
+        }
 
         public readonly bool HasCache;
         public readonly bool HasTopLiveUpgrade;
@@ -179,10 +193,6 @@ namespace PrincesPalace.Domain.Rewards
             return false;
         }
 
-        // The held beat, the flare and the linger key on a Legendary live
-        // upgrade over a worn item below Legendary, boss page or not.
-        public static bool HoldsFor(RevealCard card) => card.EarnsHold;
-
         // cards: row order. choices: the page's k. pageClass: the page's
         // SourceClass (a boss page always gets the cache). seam: a duration
         // multiplier for a test (1 in play). haulTicks: the gold count's soft
@@ -197,7 +207,7 @@ namespace PrincesPalace.Domain.Rewards
             // A page with no cards has nothing to wrap or flip.
             bool cache = n > 0 && CacheApplies(cards, pageClass);
             bool topLive = false;
-            for (int i = 0; i < n; i++) topLive |= HoldsFor(cards[i]);
+            for (int i = 0; i < n; i++) topLive |= cards[i].EarnsCeremony;
 
             var beats = new List<RevealBeat>();
             float wipe = W(WipeSeconds);
@@ -209,42 +219,43 @@ namespace PrincesPalace.Domain.Rewards
 
             float t = wipe;
             var landAt = new float[n];
-            if (!cache && n > 0)
+            if (n > 0)
             {
-                float deal = W(DealSeconds);
-                beats.Add(new RevealBeat(RevealBeatKind.Deal, wipe, deal));
-                for (int i = 0; i < n; i++) landAt[i] = wipe + deal * (i + 1) / n;
-                t = wipe + deal;
-            }
-            else if (cache)
-            {
-                Fit(W, n, CountHolds(cards), out float wait, out float stagger, out float[] holds);
-                float seal = W(SealSeconds), slide = W(SlideSeconds), flip = W(FlipSeconds);
-                if (wait > 0f) beats.Add(new RevealBeat(RevealBeatKind.OpenWait, t, wait));
-                t += wait;
-                beats.Add(new RevealBeat(RevealBeatKind.Seal, t, seal));
-                t += seal;
+                // The cache stands, hums and snaps; a page without one deals
+                // its cards out of the chip instead, a rustle per card.
+                if (cache)
+                {
+                    float wait = W(OpenWaitSeconds), seal = W(SealSeconds);
+                    beats.Add(new RevealBeat(RevealBeatKind.OpenWait, t, wait));
+                    t += wait;
+                    beats.Add(new RevealBeat(RevealBeatKind.Seal, t, seal));
+                    t += seal;
+                }
+
+                float slide = W(SlideSeconds);
                 beats.Add(new RevealBeat(RevealBeatKind.Slide, t, slide));
+                if (!cache)
+                {
+                    for (int i = 0; i < n; i++)
+                        beats.Add(new RevealBeat(RevealBeatKind.Deal, t + slide * (i + 1) / n, 0f, i));
+                }
+
                 t += slide;
 
-                // Flip i starts `stagger` after flip i-1 started; a top-tier
-                // live upgrade holds before its own flip and the cards after it
-                // wait, so it lands alone.
-                float start = t;
-                int held = 0;
+                float flip = W(FlipSeconds);
                 for (int i = 0; i < n; i++)
                 {
-                    if (i > 0) start += stagger;
-                    if (HoldsFor(cards[i]))
-                    {
-                        float hold = holds[held++];
-                        if (hold > 0f) beats.Add(new RevealBeat(RevealBeatKind.Hold, start, hold, i));
-                        start += hold;
-                    }
-                    beats.Add(new RevealBeat(RevealBeatKind.Flip, start, flip, i, cards[i].Tier));
-                    landAt[i] = start + flip;
+                    var style = StyleOf(cards[i]);
+                    float build = W(AnticipationSeconds(style));
+                    if (build > 0f) beats.Add(new RevealBeat(RevealBeatKind.Anticipate, t, build, i, cards[i].Tier, style));
+                    t += build;
+
+                    beats.Add(new RevealBeat(RevealBeatKind.Flip, t, flip, i, cards[i].Tier, style));
+                    t += flip;
+                    landAt[i] = t;
+
+                    if (i < n - 1) t += W(style == LandStyle.Burst ? CeremonySettleSeconds : SettleSeconds);
                 }
-                t = landAt[n - 1];
             }
 
             int ups = 0;
@@ -270,53 +281,9 @@ namespace PrincesPalace.Domain.Rewards
 
         public static LandStyle StyleOf(RevealCard card)
         {
-            if (HoldsFor(card)) return LandStyle.Burst;
+            if (card.EarnsCeremony) return LandStyle.Burst;
             if (card.Tier >= RareTier) return LandStyle.Shimmer;
             return card.Tier == 2 ? LandStyle.Puff : LandStyle.Flat;
-        }
-
-        private static int CountHolds(IReadOnlyList<RevealCard> cards)
-        {
-            int h = 0;
-            for (int i = 0; i < cards.Count; i++) if (HoldsFor(cards[i])) h++;
-            return h;
-        }
-
-        // SHORTENING ORDER when a cache page would pass the cap (two holds
-        // on five cards do): the cache's open wait, down to where the cache
-        // still stands MinCacheStandSeconds with its seal; then the flip
-        // stagger, down to a floor that still reads as a sequence; then the
-        // holds, the last first, each down to its floor, so a second top tier
-        // gives up its moment before the first. Past every floor, the holds
-        // (last first), the stagger and the wait go to nothing in that order.
-        // The wipe, seal, slide and the flips themselves never shorten.
-        private static void Fit(Func<float, float> w, int n, int holdCount, out float wait, out float stagger,
-                                out float[] holds)
-        {
-            float waitW = w(OpenWaitSeconds), staggerW = w(FlipStaggerSeconds);
-            holds = new float[holdCount];
-            for (int i = 0; i < holdCount; i++) holds[i] = w(HoldSeconds);
-            float fixedPart = w(WipeSeconds) + w(SealSeconds) + w(SlideSeconds) + w(FlipSeconds);
-            int gaps = Math.Max(0, n - 1);
-
-            float over = fixedPart + waitW + gaps * staggerW + holdCount * w(HoldSeconds) - CapSeconds;
-            Shorten(ref waitW, Math.Max(0f, w(MinCacheStandSeconds) - w(SealSeconds)), 1, ref over);
-            Shorten(ref staggerW, w(MinStaggerSeconds), gaps, ref over);
-            for (int i = holdCount - 1; i >= 0; i--) Shorten(ref holds[i], w(MinHoldSeconds), 1, ref over);
-            for (int i = holdCount - 1; i >= 0; i--) Shorten(ref holds[i], 0f, 1, ref over);
-            Shorten(ref staggerW, 0f, gaps, ref over);
-            Shorten(ref waitW, 0f, 1, ref over);
-            wait = waitW;
-            stagger = staggerW;
-        }
-
-        // Takes up to `over` off `count` copies of `value`, never below `floor`.
-        private static void Shorten(ref float value, float floor, int count, ref float over)
-        {
-            if (over <= 0f || count <= 0 || value <= floor) return;
-            float cut = Math.Min(value - floor, over / count);
-            value -= cut;
-            over -= cut * count;
         }
 
         // Whether a beat is running at `t` (the controller's Act gate: while

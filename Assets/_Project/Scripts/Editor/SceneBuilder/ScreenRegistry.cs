@@ -163,6 +163,10 @@ public static class ScreenRegistry
                 // against.
 
                 fight.reckoning = WireReckoning(result, screen.Reckoning);
+
+                // The same two racks: a top-tier reveal kicks the fight behind
+                // the reward panel as well as the panel itself.
+                fight.reckoning.stageShakes = fight.stageShakes;
                 fight.defeat = WireDefeat(result, screen.Defeat);
 
                 // Readable mid-fight, inert mid-fight. Same tree as the hub's,

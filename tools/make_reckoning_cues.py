@@ -55,6 +55,12 @@ CUES = [
     ("level_bell", FILMCOW + "ding 3.wav", "onset", 1.40, 0.002, 0.60, None),
     ("fell", SKY % 26, "onset", 1.40, 0.02, 0.60, None),
     ("endured", SKY % 31, "onset", 1.40, 0.02, 0.60, None),
+    # Placeholders for the one-by-one reveal, cut from shipped clips until the
+    # real ones are picked: a cast riser, a ward chime, an impact, a slam.
+    ("reveal_riser", "repo:Assets/_Project/Resources/Audio/Sfx/court_of_whispers_cast.wav", 0.0, 0.70, 0.05, 0.10, None),
+    ("reveal_ring", "repo:Assets/_Project/Resources/Audio/Sfx/status_ward_1.wav", "onset", 0.90, 0.003, 0.40, None),
+    ("reveal_impact", "repo:Assets/_Project/Resources/Audio/Sfx/crownfall_impact.wav", "onset", 0.80, 0.002, 0.30, None),
+    ("reveal_rumble", "repo:Assets/_Project/Resources/Audio/Sfx/boulder_slam_impact.wav", "onset", 0.39, 0.002, 0.15, 900),
 ]
 
 

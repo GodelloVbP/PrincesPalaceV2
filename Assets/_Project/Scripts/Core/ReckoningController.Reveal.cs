@@ -2,20 +2,28 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using PrincesPalace.Domain.Combat.Presentation;
 using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Rewards;
+using PrincesPalace.Domain.UiKit;
 using PrincesPalace.Domain.UiKit.Screens;
 
 namespace PrincesPalace
 {
     // THE REVEAL, played (docs/PLAN_REWARD_SCREENS.md C2-C4, C10, C11). The
-    // timing is Domain's RevealSchedule; this file only draws the schedule at
-    // the reveal's clock and fires each beat's sound once. Nothing here
-    // derives a time.
+    // timing is Domain's RevealSchedule and the look of each treatment is
+    // RevealFeel; this file only draws them at the reveal's clock and fires
+    // each beat's sound once. Nothing here derives a time.
     //
-    // Every visual is a function of the clock (ApplyReveal), so a skip is one
-    // jump of the schedule (SkippedAt) and one redraw, and a frame dropped or
-    // doubled cannot leave a card half-dealt.
+    // Every visual is a function of the clock (ApplyReveal, DrawEffects), so a
+    // skip is one jump of the schedule (SkippedAt) and one redraw, and a frame
+    // dropped or doubled cannot leave a card half-dealt. The two shakes are
+    // the exception: StageShake owns its own short envelope.
+    //
+    // THE CARD'S FACE AND BACK TURN, NOT THE CARD: the button keeps its slide,
+    // its fade and the nudge; the face and back take the flip, the lift, the
+    // tremble and the punch; the under-glow, rays, flash and ring sit behind
+    // them on the button and never flip.
     public partial class ReckoningController
     {
         [SerializeField] internal Button catcher;
@@ -25,12 +33,26 @@ namespace PrincesPalace
         [SerializeField] internal Image cacheSeam;
         [SerializeField] internal Image[] offerBacks;
         [SerializeField] internal Image[] embers;
+        [SerializeField] internal Image[] offerUnderGlows;
+        [SerializeField] internal Image[] offerRays;
+        [SerializeField] internal Image[] offerFlashes;
+        [SerializeField] internal Image[] offerRings;
+        [SerializeField] internal Image[] revealMotes;
+
+        // The fight's two stage racks (ScreenRegistry wires the same shakers
+        // the fight's blows kick): a top-tier landing kicks them too.
+        [SerializeField] internal StageShake[] stageShakes;
 
         private const float ChipRise = 140f;
         private const float EmberLit = 0.85f;
         private const float EmberSpent = 0.15f;
         private const float LingerHaloAlpha = 0.6f;
         private const float FlareGlowAlpha = 0.75f;
+        private const float OpenHaloAlpha = 0.30f;
+
+        // A particle is its card's colour pulled toward white, so it reads as
+        // light rather than as paint.
+        private const float MoteWhiten = 0.35f;
 
         private RevealSchedule _reveal;
         private float _revealClock;
@@ -49,6 +71,20 @@ namespace PrincesPalace
         private float[] _homeX = new float[0];
         private readonly List<int> _burstRows = new List<int>();
 
+        // Per row, from the schedule: the build, the flip and the landing.
+        private RowTimes[] _rowTimes = new RowTimes[0];
+        private float _effectsEnd;
+        private bool[] _pulseRested = new bool[0];
+
+        // The landing's and the build's particles per row, sized to the card.
+        private SpellEmitter[] _landEmitters = new SpellEmitter[0];
+        private SpellEmitter[] _buildEmitters = new SpellEmitter[0];
+
+        // Each card's under-glow at rest (PaintUnderGlow), by page index.
+        private Color[] _underRest = new Color[0];
+
+        private StageShake _panelShake;
+
         // Pages already revealed this session open face-up, with no sound
         // (C4 precedence 3): the pages live in memory only, so identity is
         // enough.
@@ -63,18 +99,31 @@ namespace PrincesPalace
         private bool _wantedHone;
         private bool _cacheUp;
 
+        private struct RowTimes
+        {
+            public LandStyle Style;
+            public float BuildFrom;
+            public float BuildFor;
+            public float FlipFrom;
+            public float FlipFor;
+            public float LandAt;
+        }
+
         // Whether the choice controls act now: false during a beat and the
         // guard after it. For a test or a capture that must wait for the row.
         public bool AcceptsChoices => !RevealBlocks();
 
-        // Whether the reveal has nothing left to draw: no beat, guard, linger
-        // or flare. For a film that stops on the settled row.
+        // Whether the reveal has nothing left to draw: no beat, guard, linger,
+        // flare or landing effect. For a film that stops on the settled row.
         public bool RevealSettled => _revealRoutine == null;
 
         private bool RevealBlocks() =>
             _reveal != null && (_reveal.IsRunningAt(_revealClock) || _reveal.GuardsAt(_revealClock));
 
         private bool RevealRunning => _reveal != null && _reveal.IsRunningAt(_revealClock);
+
+        // Wall seconds per authored second of RevealFeel.
+        private float FeelScale => ReckoningTime.Scale(_preset);
 
         // ---- start and stop -------------------------------------------------------------
 
@@ -103,6 +152,7 @@ namespace PrincesPalace
             }
 
             _reveal = RevealSchedule.For(cards, _page.Choices, _preset, _page.SourceClass);
+            ReadRowTimes(n);
             PaintCache();
             _revealClock = 0f;
             _fired = 0;
@@ -114,10 +164,67 @@ namespace PrincesPalace
             _glowRest.a = GlowAlpha;
             _wantedTip = -1;
             HideCardTip();
+            EnsurePanelShake();
 
             if (catcher != null) catcher.gameObject.SetActive(true);
             ApplyReveal();
             _revealRoutine = StartCoroutine(RunReveal());
+        }
+
+        // The schedule's per-card beats, read once, and the emitters sized to
+        // the row's cards; the effects end when the last landing's tail does.
+        private void ReadRowTimes(int n)
+        {
+            _rowTimes = new RowTimes[n];
+            _pulseRested = new bool[n];
+            _landEmitters = new SpellEmitter[n];
+            _buildEmitters = new SpellEmitter[n];
+            _effectsEnd = 0f;
+
+            foreach (var beat in _reveal.Beats)
+            {
+                if (beat.Card < 0 || beat.Card >= n) continue;
+                switch (beat.Kind)
+                {
+                    case RevealBeatKind.Anticipate:
+                        _rowTimes[beat.Card].BuildFrom = beat.Start;
+                        _rowTimes[beat.Card].BuildFor = beat.Duration;
+                        break;
+                    case RevealBeatKind.Flip:
+                        _rowTimes[beat.Card].FlipFrom = beat.Start;
+                        _rowTimes[beat.Card].FlipFor = beat.Duration;
+                        break;
+                    case RevealBeatKind.Land:
+                        _rowTimes[beat.Card].Style = beat.Style;
+                        _rowTimes[beat.Card].LandAt = beat.Start;
+                        _effectsEnd = Mathf.Max(_effectsEnd,
+                            beat.Start + RevealFeel.TailSeconds(beat.Style) * FeelScale);
+                        break;
+                }
+            }
+
+            for (int r = 0; r < n; r++)
+            {
+                if (_rowTimes[r].BuildFor <= 0f) _rowTimes[r].BuildFrom = _rowTimes[r].FlipFrom;
+
+                var rect = RectAt(offerRects, _revealRows[r]);
+                float w = rect == null ? 200f : rect.rect.width;
+                float h = rect == null ? 300f : rect.rect.height;
+                _landEmitters[r] = RevealFeel.LandEmitter(_rowTimes[r].Style, w, h);
+                _buildEmitters[r] = RevealFeel.BuildEmitter(_rowTimes[r].Style, w, h);
+            }
+        }
+
+        // The reward panel's shaker, attached at runtime as CardGroup's fade
+        // is: it lives on the panel's content (the frame and its drop), which
+        // nothing else moves, so the frame's lift and wipe stay its own.
+        private void EnsurePanelShake()
+        {
+            if (_panelShake != null || frameGlow == null) return;
+            var content = frameGlow.rectTransform.parent;
+            if (content == null) return;
+            var shake = content.GetComponent<StageShake>();
+            _panelShake = shake != null ? shake : content.gameObject.AddComponent<StageShake>();
         }
 
         // Everything at rest, whatever the reveal was doing: the cards home and
@@ -129,6 +236,7 @@ namespace PrincesPalace
 
             bool was = _reveal != null;
             for (int i = 0; i < offerButtons.Length; i++) RestCard(i, was);
+            RestEffects();
             _reveal = null;
             _cacheUp = false;
             if (catcher != null) catcher.gameObject.SetActive(false);
@@ -146,9 +254,9 @@ namespace PrincesPalace
             {
                 FireDue();
 
-                // Once the row has landed and been drawn there, only the linger
-                // and the flare move: the cards are left to the nudge and the
-                // choices.
+                // Once the row has landed and been drawn there, the cards are
+                // left to the nudge and the choices; only the landing's
+                // effects, the linger and the flare still move.
                 if (!settled)
                 {
                     ApplyReveal();
@@ -156,6 +264,7 @@ namespace PrincesPalace
                 }
                 else
                 {
+                    DrawEffects(_revealClock);
                     DrawLinger(_revealClock);
                     DrawFlare();
                 }
@@ -168,15 +277,18 @@ namespace PrincesPalace
 
             _revealRoutine = null;
             if (!_lingerEnded) EndLinger();
+            RestEffects();
             _reveal = null;
             PaintEmbers();
         }
 
-        // The clock runs past the row's landing for the guard, the linger and
-        // a flare; none of them blocks input but the guard.
+        // The clock runs past the row's landing for the guard, the landing's
+        // effects, the linger and a flare; none of them blocks input but the
+        // guard.
         private float RevealEnd()
         {
             float end = _reveal.GuardUntil;
+            if (!_reveal.Skipped) end = Mathf.Max(end, _effectsEnd);
             if (!_lingerEnded)
             {
                 foreach (var beat in _reveal.Beats)
@@ -190,8 +302,9 @@ namespace PrincesPalace
         // ---- the press -------------------------------------------------------------------
 
         // Any press during a beat: the haul lands, the cache opens, every card
-        // turns face-up at once; a top tier keeps only its flare. Nothing else
-        // sounds. The row is choosable from now, behind the guard.
+        // turns face-up at once with its glow at rest; a top tier keeps only
+        // its flare. Nothing else sounds or shakes. The row is choosable from
+        // now, behind the guard.
         private void SkipReveal()
         {
             if (!RevealRunning) return;
@@ -251,6 +364,12 @@ namespace PrincesPalace
                 case RevealBeatKind.Seal:
                     SoundController.Play(Sound.CacheOpen);
                     break;
+                case RevealBeatKind.Deal:
+                    SoundController.Play(Sound.CardDeal);
+                    break;
+                case RevealBeatKind.Anticipate:
+                    if (beat.Style == LandStyle.Burst) SoundController.Play(Sound.RevealRiser);
+                    break;
                 case RevealBeatKind.Flip:
                     SoundController.Play(Sound.CardFlip, RevealSchedule.LadderPitch(beat.PitchStep));
                     break;
@@ -269,19 +388,43 @@ namespace PrincesPalace
             }
         }
 
-        // A dealt card rustles; a cache card lands by its quality, and a
-        // top-tier live upgrade bursts, flares and rings the bell. The boss
-        // page's peak is the page's, once, under its first top-tier bell.
+        // A Rare rings and kicks the panel; a top-tier live upgrade bursts,
+        // flares, rings the bell over its impact and kicks the panel and the
+        // stage. The boss page's peak is the page's, once, under its first
+        // top-tier bell.
         private void Land(RevealBeat beat)
         {
-            if (!_reveal.HasCache) SoundController.Play(Sound.CardDeal);
+            if (beat.Style == LandStyle.Shimmer)
+            {
+                SoundController.Play(Sound.RevealRing);
+                Kick(beat.Style);
+                return;
+            }
+
             if (beat.Style != LandStyle.Burst) return;
 
             _burstRows.Add(beat.Card);
+            SoundController.Play(Sound.RevealImpact);
             SoundController.Play(Sound.LegendaryBell);
+            SoundController.Play(Sound.RevealRumble);
             if (_burstRows.Count == 1 && _page != null && _page.SourceClass == EncounterClass.Boss)
                 SoundController.Play(Sound.BossPeak);
-            StartFlare(_revealRows[beat.Card], RevealSchedule.FlareSeconds * ReckoningTime.Scale(_preset));
+            StartFlare(_revealRows[beat.Card], RevealSchedule.FlareSeconds * FeelScale);
+            Kick(beat.Style);
+        }
+
+        // The kicks run on real time (StageShake's envelope), so their length
+        // follows the reveal's own speed: the preset and the test seam.
+        private void Kick(LandStyle style)
+        {
+            float seconds = RevealFeel.ShakeSeconds(style) * FeelScale / Mathf.Max(0.001f, SpeedMultiplier);
+            float panel = RevealFeel.PanelShakePixels(style) / StageShake.MaxPixels;
+            if (_panelShake != null) _panelShake.Kick(panel, seconds);
+
+            float stage = RevealFeel.StageShakePixels(style) / StageShake.MaxPixels;
+            if (stage <= 0f || stageShakes == null) return;
+            foreach (var shake in stageShakes)
+                if (shake != null) shake.Kick(stage, seconds);
         }
 
         private void StartFlare(int pageIndex, float seconds)
@@ -318,18 +461,15 @@ namespace PrincesPalace
             if (_reveal == null) return;
 
             float t = _reveal.Skipped ? float.MaxValue : _revealClock;
-            RevealBeat? wipe = null, deal = null, seal = null, slide = null;
-            var flips = new Dictionary<int, RevealBeat>();
+            RevealBeat? wipe = null, seal = null, slide = null;
             int embersLit = 0;
             foreach (var beat in _reveal.Beats)
             {
                 switch (beat.Kind)
                 {
                     case RevealBeatKind.Wipe: wipe = beat; break;
-                    case RevealBeatKind.Deal: deal = beat; break;
                     case RevealBeatKind.Seal: seal = beat; break;
                     case RevealBeatKind.Slide: slide = beat; break;
-                    case RevealBeatKind.Flip: flips[beat.Card] = beat; break;
                     case RevealBeatKind.Ember: if (beat.Start <= t) embersLit++; break;
                 }
             }
@@ -371,58 +511,254 @@ namespace PrincesPalace
                 }
             }
 
+            // Every card comes out face-down: out of the cache all together, or
+            // dealt out of the chip left to right.
             int n = _revealRows.Length;
             for (int r = 0; r < n; r++)
             {
                 int i = _revealRows[r];
-                float from, to;
-                if (deal.HasValue)
-                {
-                    from = deal.Value.Start + deal.Value.Duration * r / n;
-                    to = deal.Value.Start + deal.Value.Duration * (r + 1) / n;
-                }
-                else if (slide.HasValue)
+                float from = 0f, to = 0f;
+                if (slide.HasValue)
                 {
                     from = slide.Value.Start;
                     to = slide.Value.End;
-                }
-                else
-                {
-                    from = to = 0f;
+                    if (!_reveal.HasCache)
+                    {
+                        from = slide.Value.Start + slide.Value.Duration * r / n;
+                        to = slide.Value.Start + slide.Value.Duration * (r + 1) / n;
+                    }
                 }
 
                 float arrive = to > from ? Mathf.Clamp01((t - from) / (to - from)) : (t >= to ? 1f : 0f);
                 float x = Mathf.Lerp(0f, _homeX[i], Easing.OutCubic(arrive));
-
-                bool faceUp = true;
-                float scaleX = 1f;
-                if (flips.TryGetValue(r, out var flip))
-                {
-                    float k = Mathf.Clamp01((t - flip.Start) / Mathf.Max(0.0001f, flip.Duration));
-                    faceUp = k >= 0.5f;
-                    scaleX = t < flip.Start ? 1f : Mathf.Abs(Mathf.Cos(Mathf.PI * k));
-                }
-
-                DrawCard(i, x, t >= from ? arrive : 0f, scaleX, faceUp);
+                bool faceUp = r >= _rowTimes.Length || t >= _rowTimes[r].FlipFrom + _rowTimes[r].FlipFor * 0.5f;
+                DrawCard(i, x, t >= from ? arrive : 0f, faceUp);
             }
 
             DrawEmbers(embersLit);
+            DrawEffects(t);
             DrawLinger(t);
             DrawFlare();
         }
 
-        private void DrawCard(int i, float x, float alpha, float scaleX, bool faceUp)
+        private void DrawCard(int i, float x, float alpha, bool faceUp)
         {
             var rect = RectAt(offerRects, i);
             if (rect != null)
             {
                 rect.anchoredPosition = new Vector2(x, rect.anchoredPosition.y);
-                rect.localScale = new Vector3(Mathf.Max(0.02f, scaleX), 1f, 1f);
+                rect.localScale = Vector3.one;
             }
 
             var group = CardGroup(i);
             if (group != null) group.alpha = alpha;
             ShowBack(i, !faceUp);
+        }
+
+        // Each card's build and landing at `t` (float.MaxValue: everything at
+        // rest), and the particles of the whole row.
+        private void DrawEffects(float t)
+        {
+            if (_reveal == null) return;
+            if (_reveal.Skipped || t >= _effectsEnd + 0.0001f)
+            {
+                RestEffects();
+                return;
+            }
+
+            float scale = Mathf.Max(0.0001f, FeelScale);
+            int mote = 0;
+            for (int r = 0; r < _rowTimes.Length; r++)
+            {
+                int i = _revealRows[r];
+                var row = _rowTimes[r];
+                var colour = CardColour(i);
+
+                float build = row.BuildFor > 0f
+                    ? Mathf.Clamp01((t - row.BuildFrom) / row.BuildFor)
+                    : (t >= row.FlipFrom ? 1f : 0f);
+                if (t < row.BuildFrom) build = 0f;
+                float afterLand = t >= row.LandAt ? (t - row.LandAt) / scale : -1f;
+
+                // The under-glow: builds, flashes on landing, settles to rest.
+                float rest = i < _underRest.Length ? _underRest[i].a : 0f;
+                RevealFeel.Glow(row.Style, build, afterLand, rest, out float glowAlpha, out float glowScale);
+                var under = Part(offerUnderGlows, i);
+                if (under != null)
+                {
+                    under.color = WithAlpha(colour, glowAlpha);
+                    under.rectTransform.localScale = Vector3.one * glowScale;
+                }
+
+                // The card: lifted and trembling through its build, turning
+                // through its flip, punching as it lands.
+                float flipK = row.FlipFor > 0f ? Mathf.Clamp01((t - row.FlipFrom) / row.FlipFor) : 1f;
+                float turn = t < row.FlipFrom ? 1f : Mathf.Abs(Mathf.Cos(Mathf.PI * flipK));
+                float punch = RevealFeel.Punch(row.Style, afterLand);
+                float lift = RevealFeel.Lift(row.Style, build, afterLand);
+                RevealFeel.Tremble(row.Style, afterLand < 0f && t < row.FlipFrom ? build : 0f, t / scale,
+                    out float dx, out float dy);
+                PoseCard(i, new Vector2(dx, lift + dy), new Vector3(Mathf.Max(0.02f, turn) * punch, punch, 1f));
+
+                // The landing's light.
+                float reach = RevealFeel.RingReach(row.Style);
+                float ringSeconds = RevealFeel.RingSeconds(row.Style);
+                var ring = Part(offerRings, i);
+                if (reach > 0f && afterLand >= 0f && afterLand < ringSeconds)
+                    UiBurst.Ring(ring, afterLand / ringSeconds, colour, reach);
+                else if (ring != null) SetAlpha(ring, 0f);
+
+                bool rays = row.Style == LandStyle.Burst && afterLand >= 0f && afterLand < RevealFeel.RaysSeconds;
+                if (rays)
+                {
+                    UiBurst.Rays(Part(offerRays, i), afterLand / RevealFeel.RaysSeconds, colour);
+                    UiBurst.Core(Part(offerFlashes, i), afterLand / RevealFeel.RaysSeconds, colour);
+                }
+                else
+                {
+                    if (Part(offerRays, i) != null) SetAlpha(Part(offerRays, i), 0f);
+                    if (Part(offerFlashes, i) != null) SetAlpha(Part(offerFlashes, i), 0f);
+                }
+
+                // A Rare's edge pulse: its halo flares and falls back to rest.
+                if (row.Style == LandStyle.Shimmer && afterLand >= 0f && !_pulseRested[r])
+                {
+                    var halo = Part(offerHalos, i);
+                    float u = afterLand / RevealFeel.EdgePulseSeconds;
+                    if (u >= 1f)
+                    {
+                        _pulseRested[r] = true;
+                        RestHalo(i);
+                    }
+                    else if (halo != null)
+                    {
+                        SetAlpha(halo, Mathf.Lerp(RevealFeel.EdgePulseAlpha, OpenHaloAlpha, u));
+                    }
+                }
+
+                var centre = RectAt(offerRects, i) is RectTransform cardRect ? cardRect.anchoredPosition : Vector2.zero;
+                var light = Color.Lerp(colour, Color.white, MoteWhiten);
+                if (_buildEmitters[r] != null && row.BuildFor > 0f)
+                    mote = DrawMotes(_buildEmitters[r], r, row.BuildFrom, t, scale, centre, light, mote);
+                mote = DrawMotes(_landEmitters[r], r, row.LandAt, t, scale, centre, light, mote);
+            }
+
+            HideMotes(mote);
+        }
+
+        // One emitter's live particles into the shared pool from `next` on;
+        // returns the next free mote. A pool that runs out drops the rest.
+        private int DrawMotes(SpellEmitter spec, int row, float windowStart, float t, float scale, Vector2 centre,
+                              Color tint, int next)
+        {
+            if (spec == null || revealMotes == null || t < windowStart) return next;
+
+            int seed = spec.seed + row * 31;
+            int count = SpellEmitterSim.CountOf(spec);
+            var source = new UiVec(centre.x + spec.sourceDx, centre.y + spec.sourceDy);
+            for (int p = 0; p < count && next < revealMotes.Length; p++)
+            {
+                float birth = windowStart + SpellEmitterSim.BirthOf(spec, p, 0f) * scale;
+                if (t < birth) continue;
+
+                var origin = source + SpellEmitterSim.LateralOf(spec, seed, p, UiVec.Zero, new UiVec(0f, 1f));
+                var particle = SpellEmitterSim.At(spec, seed, p, origin, SpellEmitterSim.LaunchOf(spec, seed, p, 1f),
+                    (t - birth) / scale, 1);
+                if (!particle.Alive) continue;
+
+                var image = revealMotes[next++];
+                if (image == null) continue;
+                image.rectTransform.anchoredPosition = new Vector2(particle.Position.X, particle.Position.Y);
+                image.rectTransform.localScale = Vector3.one * particle.Scale;
+                image.color = WithAlpha(tint, particle.Alpha);
+            }
+
+            return next;
+        }
+
+        private void HideMotes(int from)
+        {
+            if (revealMotes == null) return;
+            for (int m = from; m < revealMotes.Length; m++)
+                if (revealMotes[m] != null && revealMotes[m].color.a > 0f) SetAlpha(revealMotes[m], 0f);
+        }
+
+        // Every card's effects at rest: posed home, the light out, the glow at
+        // its resting level, no particles.
+        private void RestEffects()
+        {
+            for (int i = 0; i < offerButtons.Length; i++)
+            {
+                PoseCard(i, Vector2.zero, Vector3.one);
+                if (Part(offerRays, i) != null) SetAlpha(Part(offerRays, i), 0f);
+                if (Part(offerFlashes, i) != null) SetAlpha(Part(offerFlashes, i), 0f);
+                if (Part(offerRings, i) != null) SetAlpha(Part(offerRings, i), 0f);
+                RestUnderGlow(i);
+            }
+
+            for (int r = 0; r < _pulseRested.Length; r++)
+            {
+                if (_pulseRested[r] || r >= _rowTimes.Length || _rowTimes[r].Style != LandStyle.Shimmer) continue;
+                _pulseRested[r] = true;
+                RestHalo(_revealRows[r]);
+            }
+
+            HideMotes(0);
+        }
+
+        // The face and the back move together: offset from home, and scaled.
+        private void PoseCard(int i, Vector2 offset, Vector3 scale)
+        {
+            if (offerFaces != null && i < offerFaces.Length && offerFaces[i] != null)
+            {
+                var face = (RectTransform)offerFaces[i].transform;
+                face.anchoredPosition = offset;
+                face.localScale = scale;
+            }
+
+            var back = Part(offerBacks, i);
+            if (back != null)
+            {
+                back.rectTransform.anchoredPosition = offset;
+                back.rectTransform.localScale = scale;
+            }
+        }
+
+        // The quality's colour under card `i`, at rest: the face paint calls
+        // this with the open/spent state the halo reads, so the row keeps
+        // reading by rarity after it lands (C4). A running reveal draws the
+        // glow itself and settles onto this.
+        private void PaintUnderGlow(int i, Color colour, int tier, bool open, bool spent)
+        {
+            if (_underRest.Length != offerButtons.Length) _underRest = new Color[offerButtons.Length];
+            if (i < 0 || i >= _underRest.Length) return;
+
+            float rest = RevealFeel.RestGlow(tier);
+            _underRest[i] = WithAlpha(colour, open ? rest : spent ? 0f : rest * 0.5f);
+            if (_revealRoutine == null) RestUnderGlow(i);
+        }
+
+        private void RestUnderGlow(int i)
+        {
+            var under = Part(offerUnderGlows, i);
+            if (under == null) return;
+            under.color = i < _underRest.Length ? _underRest[i] : Color.clear;
+            under.rectTransform.localScale = Vector3.one;
+        }
+
+        private Color CardColour(int i)
+        {
+            var face = i < _faces.Length ? _faces[i] : null;
+            return HexColour(face?.Hex ?? "#FFFFFF");
+        }
+
+        private static Image Part(Image[] items, int i) =>
+            items != null && i >= 0 && i < items.Length ? items[i] : null;
+
+        private static Color WithAlpha(Color colour, float alpha)
+        {
+            colour.a = alpha;
+            return colour;
         }
 
         private void RestCard(int i, bool home)
@@ -472,7 +808,7 @@ namespace PrincesPalace
         {
             if (offerHalos == null || i >= offerHalos.Length || offerHalos[i] == null || _page == null || i >= _page.Cards.Count) return;
             bool open = _page.Cards[i].Outcome == CardOutcome.Open && _page.ChoicesLeft > 0;
-            SetAlpha(offerHalos[i], open ? 0.30f : 0f);
+            SetAlpha(offerHalos[i], open ? OpenHaloAlpha : 0f);
         }
 
         // The screen-edge flare: the frame's glow in the card's colour.

@@ -971,6 +971,8 @@ namespace PrincesPalace
                     offerHalos[i].rectTransform.localScale = Vector3.one;
                 }
 
+                PaintUnderGlow(i, glow, face.PlinthStep, open, spent);
+
                 PaintPlinth(i, face, count, open);
                 if (!Flying(i)) PaintGhost(i, face);
                 PaintWearer(i, face);

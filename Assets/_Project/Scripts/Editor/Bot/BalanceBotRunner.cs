@@ -653,7 +653,7 @@ namespace PrincesPalace.Editor.Bot
                     if (pg.Kind == "Gear" && pg.Cards.Count > 0)
                     {
                         // The shipped rule, not a restatement: RevealSchedule
-                        // decides cache, hold and the 1x wall time.
+                        // decides cache, ceremony and the 1x wall time.
                         var cls = Enum.TryParse(r.EncounterClass, out PrincesPalace.Domain.Rewards.EncounterClass parsed)
                             ? parsed : PrincesPalace.Domain.Rewards.EncounterClass.Normal;
                         var reveal = pg.Cards

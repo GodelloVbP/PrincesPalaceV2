@@ -14,12 +14,13 @@ namespace PrincesPalace.PlayModeTests
             Sound.CardDeal, Sound.CacheOpen, Sound.CardFlip, Sound.LegendaryBell, Sound.CoinTick,
             Sound.PotionLand, Sound.BookLand, Sound.Take, Sound.HoneScrape, Sound.EmberSnuff, Sound.XpHum,
             Sound.LevelBell, Sound.Fell, Sound.Endured, Sound.EmberLight, Sound.ChevronNote, Sound.BossPeak,
+            Sound.RevealRiser, Sound.RevealRing, Sound.RevealImpact, Sound.RevealRumble,
         };
 
         [Test]
         public void NoReckoningCue_BorrowsTheButtonClickOrTheRefusalBuzz()
         {
-            Assert.AreEqual(17, Reckoning.Length, "vacuity guard: the cue list");
+            Assert.AreEqual(21, Reckoning.Length, "vacuity guard: the cue list");
             foreach (var cue in Reckoning)
             {
                 string path = SoundLibrary.PathOf(cue);

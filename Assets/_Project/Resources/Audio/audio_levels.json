@@ -189,6 +189,38 @@
       "peakDb": -2.8
     },
     {
+      "path": "Sfx/Reckoning/reveal_impact",
+      "gainDb": -3.5,
+      "gain": 0.6683,
+      "metric": "rms",
+      "measuredDb": -14.5,
+      "peakDb": -3.0
+    },
+    {
+      "path": "Sfx/Reckoning/reveal_ring",
+      "gainDb": -1.0,
+      "gain": 0.8913,
+      "metric": "rms",
+      "measuredDb": -17.0,
+      "peakDb": -3.0
+    },
+    {
+      "path": "Sfx/Reckoning/reveal_riser",
+      "gainDb": -0.4,
+      "gain": 0.955,
+      "metric": "rms",
+      "measuredDb": -17.6,
+      "peakDb": -3.0
+    },
+    {
+      "path": "Sfx/Reckoning/reveal_rumble",
+      "gainDb": 2.0,
+      "gain": 1.2589,
+      "metric": "rms",
+      "measuredDb": -22.9,
+      "peakDb": -3.0
+    },
+    {
       "path": "Sfx/Reckoning/take",
       "gainDb": -0.9,
       "gain": 0.9016,
@@ -350,10 +382,10 @@
     },
     {
       "path": "Sfx/ashen_reckoning_cast",
-      "gainDb": -2.7,
-      "gain": 0.7328,
+      "gainDb": 0.1,
+      "gain": 1.0116,
       "metric": "rms",
-      "measuredDb": -15.3,
+      "measuredDb": -18.1,
       "peakDb": -2.9
     },
     {
@@ -470,10 +502,10 @@
     },
     {
       "path": "Sfx/court_of_whispers_cast",
-      "gainDb": 2.5,
-      "gain": 1.3335,
+      "gainDb": 4.8,
+      "gain": 1.7378,
       "metric": "rms",
-      "measuredDb": -20.5,
+      "measuredDb": -22.8,
       "peakDb": -9.8
     },
     {
@@ -830,10 +862,10 @@
     },
     {
       "path": "Sfx/thorn_tithe_cast",
-      "gainDb": 3.4,
-      "gain": 1.4791,
+      "gainDb": 3.45,
+      "gain": 1.4876,
       "metric": "rms",
-      "measuredDb": -21.4,
+      "measuredDb": -21.7,
       "peakDb": -4.5
     },
     {
@@ -878,10 +910,10 @@
     },
     {
       "path": "Sfx/vipers_bite_cast",
-      "gainDb": -0.6,
-      "gain": 0.9333,
+      "gainDb": 0.6,
+      "gain": 1.0715,
       "metric": "rms",
-      "measuredDb": -17.4,
+      "measuredDb": -18.6,
       "peakDb": -4.4
     },
     {

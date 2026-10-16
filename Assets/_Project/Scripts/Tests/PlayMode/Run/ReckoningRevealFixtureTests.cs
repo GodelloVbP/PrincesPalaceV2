@@ -7,8 +7,8 @@ namespace PrincesPalace.PlayModeTests
 {
     // The three R0 reveal pages (ReckoningPageFixtures) are what the reveal is
     // judged on (tools/gif.ps1 reveal, ReckoningCaptureTests), so each must
-    // stay the page it is named for: the plain deal, a cache with a held top
-    // tier, and a five-card row with a ghost on every card.
+    // stay the page it is named for: the plain deal, a cache with a top-tier
+    // ceremony, and a five-card row with a ghost on every card.
     public class ReckoningRevealFixtureTests
     {
         private string _root;
@@ -46,18 +46,21 @@ namespace PrincesPalace.PlayModeTests
             var schedule = ScheduleOf(page);
 
             Assert.IsFalse(schedule.HasCache);
-            Assert.AreEqual(1, schedule.Beats.Count(b => b.Kind == RevealBeatKind.Deal));
-            Assert.AreEqual(0.59f, schedule.ChoosableAt, 0.0005f);
+            Assert.IsEmpty(schedule.Beats.Where(b => b.Kind == RevealBeatKind.Seal).ToArray());
+            Assert.AreEqual(page.Cards.Count, schedule.Beats.Count(b => b.Kind == RevealBeatKind.Deal));
+            Assert.AreEqual(page.Cards.Count, schedule.Beats.Count(b => b.Kind == RevealBeatKind.Flip),
+                "dealt face-down, flipped one by one");
         }
 
         [Test]
-        public void TheCacheTopTierPage_HasACacheAndAHeldTopTier()
+        public void TheCacheTopTierPage_HasACacheAndATopTierCeremony()
         {
             var schedule = ScheduleOf(ReckoningPageFixtures.CacheTopTierPages()[0]);
 
             Assert.IsTrue(schedule.HasCache);
             Assert.IsTrue(schedule.HasTopLiveUpgrade);
-            Assert.IsNotEmpty(schedule.Beats.Where(b => b.Kind == RevealBeatKind.Hold).ToArray());
+            Assert.IsNotEmpty(schedule.Beats
+                .Where(b => b.Kind == RevealBeatKind.Anticipate && b.Style == LandStyle.Burst).ToArray());
         }
 
         [Test]

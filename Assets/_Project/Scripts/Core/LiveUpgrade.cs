@@ -40,7 +40,7 @@ namespace PrincesPalace
 
         // The tier (1..4, Common..Legendary) of the item the card's recipient
         // wears in the card's slot now; 0 for an empty slot or a relic card.
-        // The reveal's cache and held beat compare against it.
+        // The reveal's cache and ceremony compare against it.
         public static int WornTier(SaveData save, PendingCard card)
         {
             if (save == null || card == null || !card.IsGear) return 0;

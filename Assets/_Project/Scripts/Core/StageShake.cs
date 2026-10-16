@@ -39,7 +39,7 @@ namespace PrincesPalace
         // "hits" against a 1080-tall stage. The threshold where the eye
         // starts tracking the movement rather than the blow is nearer
         // 45-50px on this stage; 30 sits well under it.
-        private const float MaxPixels = 30f;
+        public const float MaxPixels = 30f;
 
         // Vertical is deliberately smaller. The stage recedes along a fake
         // ground plane (StageLayout), so a big vertical throw breaks the floor
@@ -81,9 +81,21 @@ namespace PrincesPalace
         // `strength` is 0..1. Anything at or below zero is not a no-op by
         // accident -- a beat that landed nothing should not shake, and saying
         // so here means no caller has to.
-        public void Kick(float strength)
+        //
+        // LONGER FOR A HEAVIER KICK, rather than the same length at every
+        // amplitude. A big throw over a short envelope decays before the eye
+        // has found it, which is the shape the first pass had and part of why
+        // it read as no shake at all. 0.7x at a scratch, 1.3x at the top of
+        // the scale, at the fight's own pace.
+        public void Kick(float strength) =>
+            Kick(strength, FightBeatPlayer.Scaled(Seconds * (0.7f + 0.6f * Mathf.Clamp01(strength))));
+
+        // A kick whose length the caller owns: the Reckoning's reveal runs on
+        // its own clock (ReckoningTime), not the fight's pace. `strength` 1 is
+        // MaxPixels.
+        public void Kick(float strength, float seconds)
         {
-            if (_rect == null || !isActiveAndEnabled || strength <= 0f) return;
+            if (_rect == null || !isActiveAndEnabled || strength <= 0f || seconds <= 0f) return;
 
             if (_running != null)
             {
@@ -91,7 +103,7 @@ namespace PrincesPalace
                 _rect.anchoredPosition = _home + _nudge;
             }
 
-            _running = StartCoroutine(Kicking(Mathf.Clamp01(strength)));
+            _running = StartCoroutine(Kicking(Mathf.Clamp01(strength), seconds));
         }
 
         // Snaps back, for a fight ending or the panel closing mid-kick. Same
@@ -110,7 +122,7 @@ namespace PrincesPalace
             if (_rect != null) _rect.anchoredPosition = _home;
         }
 
-        private IEnumerator Kicking(float strength)
+        private IEnumerator Kicking(float strength, float seconds)
         {
             // DELIBERATELY NOT re-reading _home here. It looks defensive and is
             // the opposite: this runs while the rack may be sitting off-mark
@@ -118,12 +130,6 @@ namespace PrincesPalace
             // adopt that offset as the new home and keep it forever. Awake and
             // Rehome are the only two places this is captured, and both of them
             // are looking at a rack that is definitely at rest.
-            // LONGER FOR A HEAVIER KICK, rather than the same length at every
-            // amplitude. A big throw over a short envelope decays before the
-            // eye has found it, which is the shape the first pass had and part
-            // of why it read as no shake at all. 0.7x at a scratch, 1.3x at the
-            // top of the scale.
-            float seconds = FightBeatPlayer.Scaled(Seconds * (0.7f + 0.6f * strength));
             float elapsed = 0f;
 
             while (elapsed < seconds)

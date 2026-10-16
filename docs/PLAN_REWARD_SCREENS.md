@@ -306,9 +306,9 @@ the fade, decides when the wipe starts.
 the wipe: fades complete, the hops settle, the sting keeps playing (audio
 is never cut). The press is consumed and does not reach the Reckoning.
 There is no other input to delay: the fight's verbs are hidden once it is
-over (`FightController.Input.cs:1518-1524`). The worst case from final
-contact to a choosable reward row is the run-up cap plus the reveal cap,
-1.3 + 1.6 = 2.9 s at 1x, before any skip.
+over (`FightController.Input.cs:1518-1524`). The reveal has no cap since
+the one-by-one reveal (C4): a five-card page takes about 2.5-4 s at 1x, and
+any press skips it.
 
 **Precedence.** The existing endings stay first and keep their timing: a
 darkness ending (`BeginDarknessEnding`) and a leader-fall ending
@@ -371,7 +371,7 @@ One page at a time, gear then relic.
   silent.
   A downgrade lands silent. A page with nothing for anyone is quiet; a page
   with two upgrades sounds like good news before the cards are read. This
-  adds no time: it rides the deal or the flips.
+  adds no time: it rides the landings.
 - **No cache** unless the page earns one. **Gear page:** it holds a live
   upgrade that is Rare or better and whose *quality* is higher than the
   item its wearer wears in that slot (an empty slot counts as lower than
@@ -386,11 +386,13 @@ One page at a time, gear then relic.
   "Rare+ live upgrade" rule on 79% of gear pages and the Legendary beat on
   32%, against a target of one page in five; comparing with the worn item
   thins the ceremony as the party gears up.
-- **No cache**: the cards deal face-up into the row (0.25 s, left to right,
-  a cloth rustle per card).
+- **No cache**: the cards deal **face-down** into the row (0.25 s, left to
+  right, a cloth rustle per card), then flip one by one as on a cache page
+  (C4). Changed from "deal face-up" by the owner after watching c7e5e85e:
+  every page gets the one-by-one reveal.
 - The cache's size and binding follow the page's class
   (`PendingPage.SourceClass`, highest of its chips): normal, anchor, boss.
-- The cache opens by itself 0.2 s after landing; any press opens it at once.
+- The cache stands and hums 0.5 s, then opens by itself; any press opens it at once.
 - **Choice embers**: *k* embers, one per choice; spending a choice snuffs
   one.
 
@@ -406,62 +408,69 @@ measured, not argued: A9's bot-seed sweep reports cache rate and top-tier
 beat rate per act, and the R4 gate holds the top-tier beat to at most one
 gear page in five at mid-run Favor. Wall time is short at the upper bound
 anyway: 0.53 x 0.59 + 0.24 x 1.15 + 0.23 x 1.40 = 0.91 s mean to choosable
-at Favor 14, 1.06 s at the cap (C4 table). Fight 200 stays short because
+at Favor 14, 1.06 s at the cap, under the superseded R4 timing; the
+one-by-one reveal (C4) is slower on every page by design. Fight 200 stays short because
 the wait is short and the ceremony is rarer than the quality odds, not
 because a counter shortens it.
 Sweep on db515a0b: beat 16.3% on non-boss pages (passes 1 in 5), 60.7% on boss pages, 32.2% over all (`docs/REWARD_CACHE_RATES.md`). The 1-in-5 target applies to non-boss pages only: a boss page is the peak and keeps its beat (owner, 2026-10-16).
 
-### C4. The opening (cache pages only)
+### C4. The opening: one card at a time
 
-1. The cache stands closed and hums through the open wait.
-2. The seal snaps (0.12 s), a breath of light.
-3. The *k* + 2 cards slide out face-down into the row (0.25 s), and the
-   first flip starts as the slide ends. Cards flip **left to right in row
-   order**, 0.06 s apart, each flip 0.12 s. A **Legendary live upgrade over
-   a worn item below Legendary** holds a 0.25 s silent beat before its own
-   flip and the cards after it wait, so it lands alone, never in a burst of
-   flips (a boss page keeps this rule; only its cache is unconditional; a
-   relic: any top-tier live relic). Each flip plays the flip clip at its
-   quality's pitch step (one clip, pitched per step, C11). Quality here is `ContentDatabase.QualityOf`, the one source the plinth and name colour read.
-4. On landing: Uncommon a cloth puff; Rare a shimmer; top tier the burst at
-   full size for 0.3 s, a 0.12 s screen-edge flare in its colour, a low
-   bell. Common: a flat tap. A top-tier card that is not a live upgrade
-   lands like a Rare: no hold, no flare; its plinth still says what it is.
-5. **A Legendary live upgrade (same rule as the hold) lingers without blocking** (F3, F4): for 1.2 s
-   after the row is choosable its halo stays at full strength, motes rise
-   off its plinth and the bell decays. Input works throughout. A take, a
-   hone, a leave or a Submit ends the linger; **moving focus does not**.
+The owner rejected the R4 burst of flips (c7e5e85e): "a bit slower,
+revealing cards one by one left to right ... nice glows and effects, maybe
+even shakes with higher rarity ... impactful". Timing: `RevealSchedule`;
+the look of each treatment: `RevealFeel` (both Domain, pure); drawn by
+`ReckoningController.Reveal.cs` at the reveal's clock.
+
+1. A cache page: the cache stands closed and hums 0.5 s, the seal snaps
+   (0.12 s), and every card slides out face-down (0.25 s). A page without
+   a cache deals its cards face-down out of the chip instead (C3).
+2. **Strictly one card at a time, left to right in row order.** Each card
+   builds (its anticipation), flips (0.18 s, the flip clip at its quality's
+   pitch step, C11) and lands; only then does the next card's build start,
+   after a 0.27 s settle (0.55 s after the ceremony). Quality is
+   `ContentDatabase.QualityOf`, the one source the plinth and name colour read.
+3. **Treatment by quality** (`LandStyle`):
+
+| Quality | Build before the flip | Landing |
+|---|---|---|
+| Common (`Flat`) | none | a flat tap (scale 0.97 -> 1) and a little dust off the bottom edge |
+| Uncommon (`Puff`) | 0.1 s faint under-glow | punch 1.04, a puff of motes |
+| Rare (`Shimmer`) | 0.25 s: the glow builds under the card, the card lifts 8 px | punch 1.07, a ring of light bursts outward, shimmer particles, a 0.2 s edge pulse on the halo, a 3 px kick of the reward panel, the ring cue |
+| Top-tier live upgrade (`Burst`, **the ceremony**) | 0.6 s: the glow builds and spills past the card's edges (+40%), the card lifts and trembles with a jitter rising to 3 px, embers drift up, the riser cue | rays and a white-hot core burst behind the card, the full ring, a particle explosion, punch 1.15 -> 1.0, an 8 px kick of the panel and the fight stage for 0.25 s, the screen-edge flare in its colour (0.3 s), the impact, the bell and the rumble |
+
+   The under-glow stays faintly lit in the card's colour after landing, by
+   quality tier, so the row reads by rarity at rest.
+4. **The ceremony is the top-tier live upgrade's only**: a Legendary live
+   upgrade over a worn item below Legendary (boss page or not; a relic: any
+   top-tier live relic). A top-tier card that is not a live upgrade lands
+   with the Rare treatment in its own colour; its plinth still says what it
+   is. Nothing celebrates useless loot.
+5. **The ceremony lingers without blocking** (F3, F4): for 1.2 s after the
+   row is choosable its halo stays at full strength and the bell decays.
+   Input works throughout. A take, a hone, a leave or a Submit ends the
+   linger; **moving focus does not**.
 6. **Boss peak** (A5): a boss page whose top-tier card is a live upgrade
-   adds one short musical sting under the bell. The only thing above the
-   ordinary top-tier landing.
+   adds one short musical sting under its first bell.
 7. Focus: the first card in row order, or the card the player already
    moved to (C10). Nothing marks a "best" card.
 8. **No near miss** (F3): a card never shows a higher quality than it has,
-   not for a frame.
+   not for a frame. Its build is its own quality's.
+9. Shakes move UI and stage transforms only (`StageShake`), never
+   `Time.timeScale` (CLAUDE.md game-feel override). Every effect is a
+   function of the reveal's clock except the two shakes' envelopes.
 
-**Wall time to choosable, at 1x:**
+**Wall time to choosable, at 1x** (pinned in `ReckoningTimingTests`):
 
 | Page | Arithmetic | Total |
 |---|---|---|
-| No cache, any count | wipe 0.34 + deal 0.25 | 0.59 s |
-| Cache, 3 cards (k = 1, the common case) | wipe 0.34 + open wait 0.2 + seal 0.12 + slide 0.25 + flips (2 x 0.06 + 0.12) 0.24 | 1.15 s |
-| Cache, 3 cards, top-tier upgrade | the above + held beat 0.25 | 1.40 s |
-| Cache, 5 cards, no top tier | wipe 0.34 + 0.2 + 0.12 + 0.25 + (4 x 0.06 + 0.12) 0.36 | 1.27 s |
-| Cache, 5 cards, top-tier upgrade | the above + 0.25 | 1.52 s |
+| No cache, 3 Commons | wipe 0.34 + deal 0.25 + 3 flips 0.18 + 2 settles 0.27 | 1.67 s |
+| Cache, 5 cards, four Commons then a top-tier live upgrade | wipe 0.34 + stand 0.5 + seal 0.12 + slide 0.25 + 4 x (0.18 + 0.27) + build 0.6 + flip 0.18 | 3.79 s |
+| No cache, 5 cards, a top tier that is no upgrade (Common, Uncommon, top, Common, Common) | wipe 0.34 + deal 0.25 + builds 0.1 + 0.25 + 5 flips 0.18 + 4 settles 0.27 | 2.92 s |
 
-**Cap: 1.6 s** at every preset: the factor never exceeds 1 (C10), so a
-preset never lengthens a page. That alone does not hold the cap for every
-page: two top-tier live upgrades in 4 cards run 1.71 s at 1x, and 7 cards
-with one hold run 1.64 s. `RevealSchedule` shortens a page that would pass
-it in this order: the cache's open wait, as long as the cache still stands
-0.35 s with its seal (at 1x the authored 0.2 + 0.12 is already under that,
-so it gives nothing); then the flip stagger (floor 0.04 s, still a
-sequence); then the holds, the last first (floor 0.15 s each), so a
-second top tier gives up its moment before the first. Past every floor,
-the holds (last first), the stagger and the wait go to 0. The wipe, seal,
-slide and the flips never shorten. Five cards with two top tiers (1.77 s)
-land at 1.6 s with stagger 0.04 and holds 0.25 and 0.16. The two
-pages above land at exactly 1.6 s.
+There is **no cap**: the reveal is as long as its cards, and any press
+skips it (C10). Every duration goes through `ReckoningTime`, so 1.5x and 2x
+shorten it and no preset lengthens it.
 
 ### C5. The card face
 
@@ -620,17 +629,18 @@ Continue or Cancel leaves (`Dismiss`, acknowledging displayed receipts,
 
 - **`RevealSchedule`** (Domain, pure; M9): `RevealSchedule.For(cards, row
   order, live-upgrade flags, page class, preset)` returns timed events:
-  haul ticks, deal or seal, slide, flip *i* with its pitch step, hold, land,
+  haul ticks, wait and seal, slide, deal, each card's build, flip *i* with its pitch step, land,
   chevron pops, linger end, choosable. Skip returns the end state, and from
   the skip on `IsRunningAt`/`GuardsAt` read the skipped timeline: input is
-  live over the face-up row, behind the same double-tap guard window. The cap,
-  flip order, holds, pitch steps and skip are EditMode tests on literals;
-  PlayMode only checks that the controller plays the schedule.
+  live over the face-up row, behind the same double-tap guard window. Flip
+  order, builds, landings, pitch steps and skip are EditMode tests on
+  literals (`ReckoningTimingTests`, `RevealScheduleTests`); PlayMode only
+  checks that the controller plays the schedule.
 - **`ReckoningTime`** turns an authored duration into wall time:
   `authored x min(1, BattleSpeed.DefaultDisplay / preset.Display)`, times
   the test seam `ReckoningController.SpeedMultiplier`, reading the preset
   from `GameSettings` when the overlay opens. The Reckoning speeds up at
-  1.5x and 2x and never slows below its authored times (M8, O3 decided), so the cap holds at every preset. Every wait and tween goes through
+  1.5x and 2x and never slows below its authored times (M8, O3 decided). Every wait and tween goes through
   it, including today's wipe, sweep and bar fills.
 - **One gate** (B1): take, hone instead and leave all call `Act(kind,
   rowIndex)`. While `RevealSchedule` reports a beat running, `Act` completes
@@ -644,8 +654,9 @@ Continue or Cancel leaves (`Dismiss`, acknowledging displayed receipts,
   slide onward, so a player who moves to one keeps it when the cards land
   (NavContext's remembered-or-entry rule, `NavContext.cs:231-250`).
 - **Skip**: any Submit or click during a beat completes it (the haul lands,
-  the cache opens, all cards flip at once; a top tier keeps only its 0.12 s
-  flare). The press is consumed and nudges. A press when nothing runs acts
+  the cache opens, all cards flip at once with their glow at rest; a top
+  tier keeps only its 0.3 s flare; no shake, no particles). The press is
+  consumed and nudges. A press when nothing runs acts
   at once.
 - **Moving focus never skips** and never ends the linger. Face-down cards
   show no tooltip (`TooltipFocusRouter` suppressed during the reveal).
@@ -683,6 +694,10 @@ pins for the general case).
 | Cache open | `OpenPack` | `Sfx/open_the_pack`, unedited |
 | Card flip | one clip, pitched per step | `card_flip` (rubberduck book_01, CC0) |
 | Top-tier landing | low bell | `legendary_bell` (the `toll` bell, trimmed, 0.8 s tail) |
+| Top-tier build (`RevealRiser`) | riser under the 0.6 s tremble | `reveal_riser`. **Placeholder**: `court_of_whispers_cast`, trimmed to 0.7 s |
+| Rare landing (`RevealRing`) | the ring of light | `reveal_ring`. **Placeholder**: `status_ward_1` |
+| Top-tier landing (`RevealImpact`) | impact under the bell | `reveal_impact`. **Placeholder**: `crownfall_impact` |
+| Top-tier shake (`RevealRumble`) | low rumble of the 8 px kick | `reveal_rumble`. **Placeholder**: `boulder_slam_impact`, low-passed at 900 Hz |
 | Boss peak | short musical sting | `boss_peak` (Skyward Hero UI 40, 1.6 s) |
 | Coin count | soft tick | `coin_tick` (rubberduck item_coins_01, CC0) |
 | Potion / book land | glass clink / paper thump | `potion_land` (FilmCow glass clink 2); `book_land` (FilmCow book pick up 3). **Needed**: a dull paper-bound thump; the pick-up is a proxy |
@@ -859,7 +874,8 @@ No owner calls are open. The four below were confirmed by the owner on
 3. **Battle speed: decided 2026-10-16.** Follow faster
    presets only: `min(1, DefaultDisplay / preset.Display)`. A 2x player
    gets a shorter Reckoning; a 0.5x player chose a slower fight, not a
-   longer reward screen; the 1.6 s cap holds at every preset.
+   longer reward screen. (The 1.6 s cap this relied on went with the
+   one-by-one reveal, C4.)
 4. **Held relics and tally: decided 2026-10-16.** Both off
    the board: held relics live on the RUN pane; the tally becomes deeds
    under each portrait, with the physical/other split and shielded in the
@@ -1019,6 +1035,10 @@ the A9 sweep script beside `tools/bot.ps1`. Docs: `docs/CODE_MAP.md` rows
   table, the hand-off-ready prompts moved to
   `docs/ART_PROMPTS_REWARD_SCREENS.md`. C0 is a new contract that no
   reviewer has seen; RU's feel gate is its check.
+- **R4 rework** (owner, after watching c7e5e85e): C4 redrawn as the
+  one-by-one reveal with a build and a landing per quality; the 1.6 s cap,
+  the stagger, the hold and their shortening order are gone; C3's no-cache
+  deal is face-down; the cache stands 0.5 s; four placeholder cues (C11).
 
 ## 11. Research notes, per game
 

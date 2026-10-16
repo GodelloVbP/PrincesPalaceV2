@@ -380,6 +380,18 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 offerChildren.Add(screen.BuildHone(i));
             }
 
+            // The reveal's particles (RevealFeel), over the cards they leave;
+            // transparent at rest.
+            for (int i = 0; i < RevealMoteCount; i++)
+            {
+                var mote = Ui.Sprite($"ReckoningRevealMote{i}", "proc:radial_glow", Place.At(0f, CardCentreY),
+                        UiSize.Fixed(RevealMoteSize, RevealMoteSize))
+                    .Coloured("#FFFFFF00")
+                    .AsDecor();
+                screen.RevealMotes.Add(mote);
+                offerChildren.Add(mote);
+            }
+
             for (int i = 0; i < MaxChoices; i++)
             {
                 var ember = Ui.Sprite($"ReckoningEmber{i}", "proc:radial_glow",
@@ -1067,6 +1079,20 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // Positioned for a FULL-WIDTH row (MaxCards wide). A narrower one is
         // re-centred at runtime by ReckoningController, from the same
         // OfferRowLayout.CardX this calls, so the two widths cannot drift apart.
+        // THE REVEAL'S LIGHT per card, behind its face and back (C4): the
+        // under-glow that builds before the flip and stays faintly lit in the
+        // quality's colour, and the landing's rays, core flash and ring. All
+        // transparent at rest; the controller paints them from the clock.
+        public List<NodeRef> OfferUnderGlows = new List<NodeRef>();
+        public List<NodeRef> OfferRays = new List<NodeRef>();
+        public List<NodeRef> OfferFlashes = new List<NodeRef>();
+        public List<NodeRef> OfferRings = new List<NodeRef>();
+
+        // The reveal's particle pool, shared by every card on the row.
+        public List<NodeRef> RevealMotes = new List<NodeRef>();
+        public const int RevealMoteCount = 64;
+        public const float RevealMoteSize = 20f;
+
         private UiNode BuildOffer(int index)
         {
             int count = OfferRowLayout.MaxCards;
@@ -1205,6 +1231,39 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     new UiVec(cardWidth, CardHeight), 14, Place.At(x, CardCentreY))
                 .NoChrome()
                 .Quiet();
+
+            // The reveal's light, FIRST so it sits behind the face and the back
+            // and does not flip with them: the controller turns the face and
+            // back, never the button.
+            const string spills = "the reveal's light spills past the card on purpose - that bleed is the quality read";
+            var underGlow = Ui.Sprite($"ReckoningOffer{index}UnderGlow", "proc:radial_glow", Place.At(0f, 0f),
+                    UiSize.Fixed(cardWidth * 1.3f, CardHeight * 1.15f))
+                .Coloured("#FFFFFF00")
+                .AsDecor()
+                .AllowOverflow(spills);
+            var rays = Ui.Sprite($"ReckoningOffer{index}Rays", BurstKey, Place.At(0f, 0f),
+                    UiSize.Fixed(cardWidth * 1.6f, cardWidth * 1.6f))
+                .Coloured("#FFFFFF00")
+                .AsDecor()
+                .AllowOverflow(spills);
+            var flash = Ui.Sprite($"ReckoningOffer{index}Flash", "proc:radial_glow", Place.At(0f, 0f),
+                    UiSize.Fixed(cardWidth * 0.8f, cardWidth * 0.8f))
+                .Coloured("#FFFFFF00")
+                .AsDecor()
+                .AllowOverflow(spills);
+            var ring = Ui.Sprite($"ReckoningOffer{index}Ring", "proc:ring_hairline", Place.At(0f, 0f),
+                    UiSize.Fixed(cardWidth * 0.7f, cardWidth * 0.7f))
+                .Coloured("#FFFFFF00")
+                .AsDecor()
+                .AllowOverflow(spills);
+            button.Children.Add(underGlow);
+            button.Children.Add(rays);
+            button.Children.Add(flash);
+            button.Children.Add(ring);
+            OfferUnderGlows.Add(underGlow);
+            OfferRays.Add(rays);
+            OfferFlashes.Add(flash);
+            OfferRings.Add(ring);
 
             // The face is one node so the controller can hide all of it while
             // the back shows: the back art keeps its own aspect and is narrower

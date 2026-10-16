@@ -67,6 +67,15 @@ namespace PrincesPalace
         EmberLight,
         ChevronNote,
         BossPeak,
+
+        // The one-by-one reveal's new moments (C11): the riser under a
+        // top-tier card's build, a Rare's ring, the top tier's impact and the
+        // rumble of its shake. Placeholders cut from shipped clips until the
+        // real ones are picked.
+        RevealRiser,
+        RevealRing,
+        RevealImpact,
+        RevealRumble,
     }
 
     public static class TabSwipe
@@ -115,6 +124,10 @@ namespace PrincesPalace
                 case Sound.EmberLight: return "Audio/Sfx/Reckoning/ember_light";
                 case Sound.ChevronNote: return "Audio/Sfx/Reckoning/chevron_note";
                 case Sound.BossPeak: return "Audio/Sfx/Reckoning/boss_peak";
+                case Sound.RevealRiser: return "Audio/Sfx/Reckoning/reveal_riser";
+                case Sound.RevealRing: return "Audio/Sfx/Reckoning/reveal_ring";
+                case Sound.RevealImpact: return "Audio/Sfx/Reckoning/reveal_impact";
+                case Sound.RevealRumble: return "Audio/Sfx/Reckoning/reveal_rumble";
                 default: return null;
             }
         }

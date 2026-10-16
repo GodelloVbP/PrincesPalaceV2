@@ -506,53 +506,13 @@ namespace PrincesPalace
             root.gameObject.SetActive(false);
         }
 
-        // THE FOUR PARTS, each on its own curve, which is the whole difference
-        // between an impact and a thing getting bigger.
-        //
-        // The flash is fastest and dies first; the shockwave outlives it and
-        // travels furthest; the rays turn while they fan, so the burst is not
-        // radially symmetric for its whole life; the sparks leave late, in
-        // sequence, and fall as they go. Nothing here shares a duration with
-        // anything else on purpose.
+        // THE FOUR PARTS: the flash, the shockwave and the rays are the shared
+        // burst (UiBurst); the sparks are this track's own.
         private void PaintBurst(int rig, float t)
         {
-            // The core: a white-hot flash cooling to gold as it dies. It is
-            // over in the first 60% of the burst, which is what makes the
-            // shockwave look like it is leaving something behind.
-            var core = Rig(burstCores, rig);
-            if (core != null)
-            {
-                float u = Mathf.Clamp01(t / 0.6f);
-
-                core.rectTransform.localScale = Vector3.one * Mathf.Lerp(0.35f, 2.1f, Easing.OutCubic(u));
-                core.color = WithAlpha(
-                    Color.Lerp(Color.white, Gold, Easing.OutCubic(u)),
-                    (1f - u) * (1f - u));
-            }
-
-            // The shockwave: all the way out, thinning as it goes because a
-            // scaled hairline does exactly that, and fading on a curve that
-            // holds its brightness early and drops it late.
-            var ring = Rig(burstRings, rig);
-            if (ring != null)
-            {
-                ring.rectTransform.localScale = Vector3.one * Mathf.Lerp(0.3f, 3.4f, Easing.OutCubic(t));
-                ring.color = WithAlpha(Gold, 0.95f * Mathf.Pow(1f - t, 1.6f));
-            }
-
-            // The rays, turning as they fan. Twenty-two degrees over the whole
-            // burst is not enough to read as a spin and is exactly enough to
-            // stop the shape being the same shape twice.
-            var rays = Rig(burstRays, rig);
-            if (rays != null)
-            {
-                float u = Mathf.Clamp01(t / 0.8f);
-
-                rays.rectTransform.localScale = Vector3.one * Mathf.Lerp(0.45f, 1.55f, Easing.OutCubic(u));
-                rays.rectTransform.localRotation = Quaternion.Euler(0f, 0f, -22f * u);
-                rays.color = WithAlpha(Gold, 0.85f * (1f - u) * (1f - u));
-            }
-
+            UiBurst.Core(Rig(burstCores, rig), t, Gold);
+            UiBurst.Ring(Rig(burstRings, rig), t, Gold);
+            UiBurst.Rays(Rig(burstRays, rig), t, Gold);
             PaintSparks(rig, t);
         }
 
