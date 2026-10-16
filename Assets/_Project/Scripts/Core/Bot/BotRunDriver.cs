@@ -1943,8 +1943,25 @@ namespace PrincesPalace
             var offerRng = StreamFor(seed, OfferStream, roomTrace.Step, node.Id);
             foreach (var page in pages)
             {
-                var trace = new PageTrace { SourceId = page.SourceId, Choices = page.Choices };
+                var trace = new PageTrace { SourceId = page.SourceId, Choices = page.Choices, Kind = page.Kind.ToString() };
                 roomTrace.Pages.Add(trace);
+            }
+
+            // Read before any choice moves the save: the ceremony keys on the
+            // page as it opens. No RNG, no writes.
+            for (int p = 0; p < pages.Count; p++)
+            {
+                roomTrace.Pages[p].Cards.AddRange(pages[p].Cards.Select(c => new CardTrace
+                {
+                    Quality = c.IsGear ? c.Rolled.ToString() : c.Rarity.ToString(),
+                    Live = LiveUpgrade.Of(save, c),
+                }));
+            }
+
+            int pageIndex = 0;
+            foreach (var page in pages)
+            {
+                var trace = roomTrace.Pages[pageIndex++];
 
                 if (page.Kind == RewardPageKind.Gear) PlayGearPage(save, runPolicy, page, trace, offerRng, roomTrace);
                 else PlayRelicPage(save, runPolicy, page, trace, offerRng);

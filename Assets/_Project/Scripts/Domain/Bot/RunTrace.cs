@@ -157,12 +157,24 @@ namespace PrincesPalace.Domain.Bot
         public int ModifierCount;
     }
 
+    public sealed class CardTrace
+    {
+        public string Quality = "";
+        public bool Live;
+    }
+
     // One reward page the bot played: the rewards.json row that rolled it and
     // what each choice did, in order ("take:2", "hone:0", "pay:1"), then what
     // leaving paid for the unused choices.
     public sealed class PageTrace
     {
         public string SourceId = "";
+        public string Kind = "";
+
+        // Each card's quality and whether it was a live upgrade for its
+        // wearer, read before the first choice (LiveUpgrade.Of is pure).
+        // Feeds tools/reward_cache_rates.py through pages.jsonl only.
+        public List<CardTrace> Cards = new List<CardTrace>();
         public int Choices;
         public List<string> Taken = new List<string>();
         public int UnusedHones;

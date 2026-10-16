@@ -295,6 +295,7 @@ namespace PrincesPalace.Editor.Bot
 
             string tracesPath = Path.Combine(o.OutDir, "traces.jsonl");
             string runsPath = Path.Combine(o.OutDir, "runs.jsonl");
+            string pagesPath = Path.Combine(o.OutDir, "pages.jsonl");
             var played = new List<Played>();
             var progress = new List<string>();
 
@@ -315,6 +316,7 @@ namespace PrincesPalace.Editor.Bot
             // files go out through the same encoding for the same reason.
             using (var traces = new StreamWriter(tracesPath, append: false, NoBom))
             using (var runs = new StreamWriter(runsPath, append: false, NoBom))
+            using (var pages = new StreamWriter(pagesPath, append: false, NoBom))
             try
             {
                 Debug.unityLogger.filterLogType = LogType.Error;
@@ -338,7 +340,7 @@ namespace PrincesPalace.Editor.Bot
                             // run has: this life's own index and the
                             // per-character level/exp it leaves the save
                             // holding.
-                            RunCareerCell(o, profile, archetype, traces, runs, careerLines);
+                            RunCareerCell(o, profile, archetype, traces, runs, pages, careerLines);
                             progress.Add($"[BalanceBot] {profile}/{archetype}: career of {o.Runs} runs done.");
                             continue;
                         }
@@ -372,6 +374,7 @@ namespace PrincesPalace.Editor.Bot
                             using (BotPhaseTimers.Measure(BotPhase.TraceJson))
                             {
                                 traces.WriteLine(TraceJson(entry.Result.Trace));
+                                WritePages(pages, entry.Result.Trace);
                                 runs.WriteLine(RunRowJson(entry));
                             }
                         }
@@ -497,7 +500,7 @@ namespace PrincesPalace.Editor.Bot
         // and the per-character level/exp a career-only question needs.
         private static void RunCareerCell(
             Options o, string profile, string archetype, StreamWriter traces, StreamWriter runs,
-            List<string> careerLines)
+            StreamWriter pages, List<string> careerLines)
         {
             // NOT WRAPPED IN A PHASE TIMER HERE -- PlayCareer already measures
             // its own internals (HarnessSetup, PresetBuild, RelicDraft,
@@ -547,6 +550,7 @@ namespace PrincesPalace.Editor.Bot
                 using (BotPhaseTimers.Measure(BotPhase.TraceJson))
                 {
                     traces.WriteLine(TraceJson(entry.Result.Trace));
+                                WritePages(pages, entry.Result.Trace);
                     runs.WriteLine(RunRowJson(entry));
                 }
 
@@ -625,6 +629,38 @@ namespace PrincesPalace.Editor.Bot
             }
             sb.Append(']');
             return sb.ToString();
+        }
+
+        // pages.jsonl: one line per reward page, for tools/reward_cache_rates.py.
+        // A file of its own so traces.jsonl and runs.jsonl stay byte-identical
+        // to a build without it. quality/live are index-aligned per card.
+        private static void WritePages(StreamWriter w, RunTrace t)
+        {
+            foreach (var r in t.Rooms)
+            {
+                if (r.Pages == null) continue;
+                foreach (var pg in r.Pages)
+                {
+                    var sb = new StringBuilder();
+                    sb.Append("{\"seed\":").Append(t.Seed.ToString(CultureInfo.InvariantCulture));
+                    sb.Append(",\"archetype\":").Append(Str(t.Archetype));
+                    sb.Append(",\"profile\":").Append(Str(t.Profile));
+                    sb.Append(",\"step\":").Append(r.Step);
+                    sb.Append(",\"favor\":").Append(r.Favor);
+                    sb.Append(",\"roomType\":").Append(Str(r.RoomType));
+                    sb.Append(",\"encounter\":").Append(Str(r.EncounterClass));
+                    sb.Append(",\"kind\":").Append(Str(pg.Kind));
+                    sb.Append(",\"cards\":[");
+                    for (int i = 0; i < pg.Cards.Count; i++)
+                    {
+                        if (i > 0) sb.Append(',');
+                        sb.Append("{\"q\":").Append(Str(pg.Cards[i].Quality));
+                        sb.Append(",\"live\":").Append(pg.Cards[i].Live ? "true" : "false").Append('}');
+                    }
+                    sb.Append("]}");
+                    w.WriteLine(sb.ToString());
+                }
+            }
         }
 
         private static string TraceJson(RunTrace t)
