@@ -25,6 +25,14 @@ namespace PrincesPalace.Domain.UiKit
         public IReadOnlyDictionary<string, object> Selectables { get; private set; }
         public Action Cancel { get; }
         public bool IsNonSelecting { get; }
+
+        // OPT-IN: nothing is focused until the player asks to move. By default
+        // the dispatcher puts the entry under focus whenever the context has
+        // none (a screen always opens with something selected). A lazy context
+        // leaves a null selection null, and its Entry is selected by the first
+        // move press only. Pointer hover still shows its own highlight; this
+        // is about the EventSystem selection.
+        public bool LazyEntry { get; set; }
         public IFightNavigationTarget FightTarget { get; }
 
         // By STABLE STRING ID, not a reference (plan section 4) -- a node

@@ -195,6 +195,10 @@ namespace PrincesPalace
 
             UpdateMoveGate();
 
+            // Read before base.Process() spends the gate: whether this frame
+            // carries a move press, for a LazyEntry context's first focus.
+            bool movePress = _movePassesThisFrame;
+
             // SUBMIT'S FIRST OFFER (INavSubmitClaim): the top context may
             // spend the press before uGUI sends it to the selected Button --
             // the dialogue stage advancing a line. A spent press clears the
@@ -317,7 +321,7 @@ namespace PrincesPalace
             // IsNonSelecting's branch above, decided from topAtStart same as
             // ever.
             var topAtEnd = Contexts?.Top;
-            ReselectIfOutsideDeclaredSet(topAtEnd, selectedBeforeDispatch);
+            ReselectIfOutsideDeclaredSet(topAtEnd, selectedBeforeDispatch, movePress && ReferenceEquals(topAtEnd, topAtStart));
 
             // FOCUS MEMORY IS THE DISPATCHER'S JOB, not each screen's (plan
             // sections 4 and 6, AUDIT.md #163's second half). Before this,
@@ -693,7 +697,8 @@ namespace PrincesPalace
         // Cancel that popped the stack down to nothing lands here too: null
         // is a legitimate answer, meaning nothing declares a set to enforce
         // right now, not an error.
-        private void ReselectIfOutsideDeclaredSet(NavContext top, GameObject selectedBeforeDispatch)
+        private void ReselectIfOutsideDeclaredSet(NavContext top, GameObject selectedBeforeDispatch,
+                                                   bool movePress)
         {
             if (top == null) return;
 
@@ -709,6 +714,18 @@ namespace PrincesPalace
             // entry if none remain."
             var current = EventSystem.current.currentSelectedGameObject;
             if (Usable(current) && top.ContainsSelectable(current)) return;
+
+            // A LAZY context never puts focus anywhere on its own: whatever
+            // is selected and not declared here (a modal's leftover, a click
+            // on nothing) is cleared, and the entry is taken by a move press
+            // that found nothing focused. The press that focuses is spent on
+            // focusing, not on stepping away from the entry.
+            if (top.LazyEntry)
+            {
+                var first = movePress ? top.Entry as GameObject : null;
+                EventSystem.current.SetSelectedGameObject(Usable(first) ? first : null);
+                return;
+            }
 
             // PREFER WHAT WAS SELECTED A MOMENT AGO, if the SAME top context
             // still declares it (see Process()'s own comment on
