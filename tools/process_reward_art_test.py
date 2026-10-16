@@ -31,5 +31,17 @@ class GradeTests(unittest.TestCase):
         self.assertEqual(out[3], 255)
 
 
+class RestoreOpaqueTests(unittest.TestCase):
+    def test_violet_cloth_keeps_its_colour_and_the_backdrop_goes(self):
+        arr = np.zeros((40, 40, 3), np.uint8)
+        arr[:] = (240, 10, 245)                 # magenta backdrop
+        arr[10:30, 10:30] = (90, 50, 85)        # cloth, magentaness 35
+        src = Image.fromarray(arr, "RGB")
+        keyed = pra.key_out(src, "magenta", 55, 150)
+        out = np.asarray(pra.restore_opaque(src, keyed, "magenta", 55))
+        self.assertEqual(tuple(out[20, 20]), (90, 50, 85, 255))
+        self.assertEqual(out[2, 2, 3], 0)
+
+
 if __name__ == "__main__":
     unittest.main()

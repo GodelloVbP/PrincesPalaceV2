@@ -20,7 +20,7 @@ from PIL import Image
 from scipy import ndimage
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from key_green_screen import key_out, resize_premultiplied, force_sprite_import  # noqa: E402
+from key_green_screen import key_out, resize_premultiplied, force_sprite_import, KEY_COLOURS  # noqa: E402
 
 ALPHA_VISIBLE = 16
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -74,6 +74,28 @@ def grade(rgba, saturation, value, cool=0.0):
     return Image.fromarray((res * 255 + 0.5).astype(np.uint8), "RGBA")
 
 
+def restore_opaque(source, keyed, key, opaque_below, rim=3):
+    """Give pixels that sit inside the opaque band their source colour back.
+
+    key_out lowers the backdrop channels of every pixel with positive dominance,
+    which is right for a fringe and wrong for a subject whose own colour leans
+    toward the key (violet cloth against magenta, dominance 25-45 on a backdrop
+    near 240). With the band moved above the subject, those pixels are fully
+    opaque anyway, so they keep the painted colour; only the band's fringe
+    pixels and the `rim` px next to the cut-out still get the spill pull.
+    """
+    measure, _ = KEY_COLOURS[key]
+    src = np.asarray(source.convert("RGB")).astype(np.int32)
+    solid = measure(src[..., 0], src[..., 1], src[..., 2]) <= opaque_below
+    # Within `rim` px of the cut-out the colour is an outline blended with the
+    # backdrop, not subject colour: leave those to the spill pull.
+    gone = np.asarray(keyed)[..., 3] == 0
+    solid &= ~ndimage.binary_dilation(gone, structure=disc(1), iterations=rim)
+    out = np.asarray(keyed).copy()
+    out[..., :3] = np.where(solid[..., None], src.astype(np.uint8), out[..., :3])
+    return Image.fromarray(out, "RGBA")
+
+
 def cell_rect(sheet_size, spec, grid):
     if "rect" in spec:
         return tuple(spec["rect"])
@@ -87,7 +109,10 @@ def cell_rect(sheet_size, spec, grid):
 def process_sheet(sheet, out_dir):
     src = os.path.join(FOLDER, sheet["sheet"])
     image = Image.open(src).convert("RGB")
-    keyed = key_out(image, sheet["key"], sheet.get("opaque_below", 18), sheet.get("transparent_above", 60))
+    opaque_below = sheet.get("opaque_below", 18)
+    keyed = key_out(image, sheet["key"], opaque_below, sheet.get("transparent_above", 60))
+    if sheet.get("restore_opaque"):
+        keyed = restore_opaque(image, keyed, sheet["key"], opaque_below)
     if sheet.get("trim_wisps"):
         keyed = trim_wisps(keyed, sheet["trim_wisps"])
     if sheet.get("grade"):
@@ -103,9 +128,10 @@ def process_sheet(sheet, out_dir):
         bbox = cell.getchannel("A").point(lambda v: 255 if v > ALPHA_VISIBLE else 0).getbbox()
         if bbox is None:
             sys.exit(f"{spec['name']}: no opaque pixels in {x},{y},{w},{h}")
-        pieces.append((spec["name"], cell.crop(bbox)))
+        # no_trim keeps the cell's own frame (a sprite that must fill its container).
+        pieces.append((spec["name"], cell if sheet.get("no_trim") else cell.crop(bbox)))
 
-    pad = sheet.get("pad", 8)
+    pad = 0 if sheet.get("no_trim") else sheet.get("pad", 8)
     if sheet.get("shared_canvas"):
         cw = max(p.width for _, p in pieces) + pad * 2
         ch = max(p.height for _, p in pieces) + pad * 2
@@ -123,7 +149,8 @@ def process_sheet(sheet, out_dir):
     for name, piece in pieces:
         w, h = sizes[name]
         canvas = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-        canvas.paste(piece, ((w - piece.width) // 2, (h - piece.height) // 2))
+        top = h - pad - piece.height if sheet.get("align") == "bottom" else (h - piece.height) // 2
+        canvas.paste(piece, ((w - piece.width) // 2, top))
         if scale < 1.0:
             canvas = resize_premultiplied(canvas, (max(1, round(w * scale)), max(1, round(h * scale))))
         path = os.path.join(out_dir, name + ".png")

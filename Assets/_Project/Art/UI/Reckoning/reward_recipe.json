@@ -5,7 +5,8 @@
     "chain: grade pulls saturation and value down so the pink-mauve stone reads as dark iron over greyed art.",
     "caches: cell cuts sit in the empty columns between bundles (the large one starts at x=1019, so an even third cut shaves a sliver into its neighbour).",
     "Skipped on purpose, being regenerated: caches row 2 (relic tins), glyphs satchel (r1c0) and whetstone (r0c2).",
-    "Round 2: reward_caches_relic.png replaces caches row 2; reward_glyphs_2.png adds potion, whetstone, sword, shield, mana. Rects sit in the empty columns between objects; square pads each icon to a square canvas."
+    "Round 2: reward_caches_relic.png replaces caches row 2; reward_glyphs_2.png adds potion, whetstone, sword, shield, mana. Rects sit in the empty columns between objects; square pads each icon to a square canvas.",
+    "Round 3: spread and plinths carry violet cloth (magentaness 25-45, backdrop ~240), so their band sits above the cloth (spread 55/150, plinths 80/170) and restore_opaque keeps the painted colour of pixels inside the opaque band, except the 3 px next to the cut-out, which take the spill pull. spread uses no_trim (full 3:2 canvas). plinths use align bottom on one shared canvas. glyphs_3 matches the glyph_* canvas convention. crack is trimmed square with a 16 px margin."
   ],
   "sheets": [
     {
@@ -240,6 +241,135 @@
       ],
       "pad": 4,
       "long_edge": 128
+    },
+    {
+      "sheet": "reward_spread.png",
+      "key": "magenta",
+      "opaque_below": 55,
+      "transparent_above": 150,
+      "restore_opaque": true,
+      "no_trim": true,
+      "min_blob": 1,
+      "cells": [
+        {
+          "name": "reward_spread",
+          "rect": [
+            0,
+            0,
+            1536,
+            1024
+          ]
+        }
+      ],
+      "long_edge": 1536
+    },
+    {
+      "sheet": "reward_plinths.png",
+      "key": "magenta",
+      "opaque_below": 80,
+      "transparent_above": 170,
+      "restore_opaque": true,
+      "shared_canvas": true,
+      "align": "bottom",
+      "cells": [
+        {
+          "name": "reward_plinth_common",
+          "rect": [
+            0,
+            0,
+            527,
+            724
+          ]
+        },
+        {
+          "name": "reward_plinth_uncommon",
+          "rect": [
+            527,
+            0,
+            500,
+            724
+          ]
+        },
+        {
+          "name": "reward_plinth_rare",
+          "rect": [
+            1027,
+            0,
+            510,
+            724
+          ]
+        },
+        {
+          "name": "reward_plinth_toptier",
+          "rect": [
+            1537,
+            0,
+            635,
+            724
+          ]
+        }
+      ],
+      "pad": 8,
+      "long_edge": 1024
+    },
+    {
+      "sheet": "reward_glyphs_3.png",
+      "key": "magenta",
+      "opaque_below": 30,
+      "transparent_above": 90,
+      "shared_canvas": true,
+      "square": true,
+      "cells": [
+        {
+          "name": "glyph_up",
+          "rect": [
+            0,
+            0,
+            724,
+            724
+          ]
+        },
+        {
+          "name": "glyph_down",
+          "rect": [
+            724,
+            0,
+            724,
+            724
+          ]
+        },
+        {
+          "name": "glyph_level",
+          "rect": [
+            1448,
+            0,
+            724,
+            724
+          ]
+        }
+      ],
+      "pad": 4,
+      "long_edge": 128
+    },
+    {
+      "sheet": "reward_crack.png",
+      "key": "green",
+      "opaque_below": 30,
+      "transparent_above": 90,
+      "square": true,
+      "cells": [
+        {
+          "name": "reward_crack",
+          "rect": [
+            0,
+            0,
+            1254,
+            1254
+          ]
+        }
+      ],
+      "pad": 16,
+      "long_edge": 1024
     }
   ]
 }
