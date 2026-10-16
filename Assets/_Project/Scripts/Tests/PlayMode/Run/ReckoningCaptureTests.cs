@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -9,6 +10,7 @@ using UnityEngine.TestTools;
 using PrincesPalace;
 using PrincesPalace.Content;
 using PrincesPalace.Domain.Rewards;
+using PrincesPalace.Domain.Combat;
 
 namespace PrincesPalace.PlayModeTests
 {
@@ -151,6 +153,122 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(File.Exists(path));
             Debug.Log($"[ReckoningCapture] wrote {path}");
             yield return null;
+        }
+
+        // ---- docs/PLAN_REWARD_SCREENS.md R0 fixtures ----------------------------
+        //
+        // One file name per state, fixed across phases, so a before/after pair
+        // from any later phase lines up. R2 (card face, cache opening, ghosts),
+        // R4 (reveal) and R5 (board, outcome board) change what each of these
+        // shows; the data they set up does not change. States the screen cannot
+        // yet draw (the cache, ghost cards, the board) seed the data that will
+        // produce them and capture today's rendering.
+        private const string NoGraphics =
+            "No graphics device. Run: tools/screenshot.ps1 -Runtime -RuntimeFilter ReckoningCaptureTests";
+
+        private IEnumerator OpenFight()
+        {
+            yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
+            yield return null;
+            yield return null;
+
+            _reckoning = Object.FindAnyObjectByType<ReckoningController>(FindObjectsInactive.Include);
+            Assert.IsNotNull(_reckoning, "the Reckoning was never wired into the fight scene");
+        }
+
+        // The run is started here rather than inside Settle so a fixture can
+        // set run state (legendary pity) before the page rolls.
+        private static void StartFixtureRun()
+        {
+            LogAssert.Expect(LogType.Log, new Regex(@"\[RealmOpening\]"));
+            RunManager.StartRun(ReckoningPageFixtures.Seed);
+        }
+
+        private static CombatReward PartyReward()
+        {
+            var reward = Reward();
+            reward.Characters.Add(new CharacterReward("odette", "Odette", 1, 0, 1, 40, 100, 40, expToNextBefore: 100));
+            reward.Characters.Add(new CharacterReward("bjorn", "Bjorn", 1, 0, 1, 60, 100, 60, expToNextBefore: 100));
+            return reward;
+        }
+
+        // A normal fight's page: three cards, none above the ordinary ladder.
+        [UnityTest]
+        public IEnumerator CaptureTheNoCachePage()
+        {
+            if (!CanvasCapture.IsSupported) Assert.Ignore(NoGraphics);
+
+            yield return OpenFight();
+            StartFixtureRun();
+            _reckoning.Show(Reward(), ReckoningPageFixtures.OneGearPage());
+            yield return new WaitForSecondsRealtime(2.5f);
+            yield return Shoot("Reckoning_nocache_page.png");
+        }
+
+        // Pity one page short of its cap forces a Legendary on the boss gear
+        // page, the top-tier gear a cache will hold.
+        [UnityTest]
+        public IEnumerator CaptureTheCachePageWithATopTierUpgrade()
+        {
+            if (!CanvasCapture.IsSupported) Assert.Ignore(NoGraphics);
+
+            yield return OpenFight();
+            StartFixtureRun();
+            RunManager.Run.legendaryPity = GearPage.LegendaryPityPages - 1;
+            _reckoning.Show(Reward(), ReckoningPageFixtures.BossAndTwoAnchors());
+            yield return new WaitForSecondsRealtime(2.5f);
+            yield return Shoot("Reckoning_cache_toptier_page.png");
+        }
+
+        // The boss gear page is the five-card row. Cards 3 and 4 are marked
+        // inert so the row carries the ghosts R2 draws.
+        [UnityTest]
+        public IEnumerator CaptureTheFiveCardRowWithGhosts()
+        {
+            if (!CanvasCapture.IsSupported) Assert.Ignore(NoGraphics);
+
+            yield return OpenFight();
+            StartFixtureRun();
+            var pages = ReckoningPageFixtures.BossAndTwoAnchors();
+            var cards = pages[0].Cards;
+            Assert.AreEqual(5, cards.Count, "the boss gear page is no longer five cards");
+            cards[3].Inert = true;
+            cards[4].Inert = true;
+            _reckoning.Show(Reward(), pages);
+            yield return new WaitForSecondsRealtime(2.5f);
+            yield return Shoot("Reckoning_five_ghosts_page.png");
+        }
+
+        // The full party after one pick: today's spoils/tally pages stand in
+        // for the board.
+        [UnityTest]
+        public IEnumerator CaptureTheBoard()
+        {
+            if (!CanvasCapture.IsSupported) Assert.Ignore(NoGraphics);
+
+            yield return OpenFight();
+            StartFixtureRun();
+            _reckoning.Show(PartyReward(), ReckoningPageFixtures.OneGearPage());
+            yield return new WaitForSecondsRealtime(1f);
+            Press("ReckoningOffer0");
+            Press("ReckoningLeaveButton");
+            yield return new WaitForSecondsRealtime(3f);
+            yield return Shoot("Reckoning_board.png");
+        }
+
+        // A run fight that paid nothing: the party fell, no offers.
+        [UnityTest]
+        public IEnumerator CaptureTheOutcomeBoard()
+        {
+            if (!CanvasCapture.IsSupported) Assert.Ignore(NoGraphics);
+
+            yield return OpenFight();
+            var tally = PartyReward().Characters
+                .Select(c => new TallyMember(c.CharacterId, c.DisplayName)).ToList();
+            _reckoning.Show(ReckoningRequest.Outcome(
+                FightEnding.Fell, new List<string>(), new List<string>(), tally, new CombatLedger()));
+            yield return new WaitForSecondsRealtime(3f);
+            yield return Shoot("Reckoning_outcome_board.png");
         }
 
         // The summary phase's Continue plate against the spoils and tally
