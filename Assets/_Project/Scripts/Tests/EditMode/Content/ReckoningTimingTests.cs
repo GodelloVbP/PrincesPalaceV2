@@ -1,0 +1,341 @@
+using System.Collections.Generic;
+using System.Linq;
+using NUnit.Framework;
+using PrincesPalace.Domain.Content;
+using PrincesPalace.Domain.Rewards;
+
+namespace PrincesPalace.Domain.Tests
+{
+    // The Reckoning's speed rule and the reveal's timed beats, on literals
+    // (docs/PLAN_REWARD_SCREENS.md C3, C4, C10). The controller plays the
+    // schedule back; PlayMode only checks that it does.
+    public class ReckoningTimingTests
+    {
+        private const float Tolerance = 0.0005f;
+
+        private static readonly RevealCard Common = new RevealCard(1, false);
+        private static readonly RevealCard Uncommon = new RevealCard(2, true);
+        private static readonly RevealCard RareLive = new RevealCard(3, true);
+        private static readonly RevealCard RareDown = new RevealCard(3, false);
+        private static readonly RevealCard TopLive = new RevealCard(4, true);
+        private static readonly RevealCard TopDown = new RevealCard(4, false);
+
+        private static RevealSchedule At(float preset, int choices, params RevealCard[] cards) =>
+            RevealSchedule.For(cards, choices, preset);
+
+        private static RevealBeat[] Of(RevealSchedule s, RevealBeatKind kind) =>
+            s.Beats.Where(b => b.Kind == kind).ToArray();
+
+        // ReckoningTime
+
+        [Test]
+        public void TheSpeedRule_FollowsFasterPresetsOnly()
+        {
+            Assert.AreEqual(1f, ReckoningTime.Scale(0.5f), Tolerance);
+            Assert.AreEqual(1f, ReckoningTime.Scale(1f), Tolerance);
+            Assert.AreEqual(2f / 3f, ReckoningTime.Scale(1.5f), Tolerance);
+            Assert.AreEqual(0.5f, ReckoningTime.Scale(2f), Tolerance);
+            Assert.AreEqual(1f, ReckoningTime.Scale(0f), Tolerance, "a non-positive preset reads as the default");
+        }
+
+        [Test]
+        public void Wall_MultipliesTheTestSeam_AndNeverGoesNegative()
+        {
+            Assert.AreEqual(0.25f, ReckoningTime.Wall(0.5f, 2f), Tolerance);
+            Assert.AreEqual(0.1f, ReckoningTime.Wall(0.5f, 2f, 0.4f), Tolerance);
+            Assert.AreEqual(0f, ReckoningTime.Wall(0.5f, 1f, -3f), Tolerance);
+        }
+
+        [Test]
+        public void RunUpSchedule_ReadsTheSameRule()
+        {
+            foreach (float preset in new[] { 0.5f, 1f, 1.5f, 2f })
+                Assert.AreEqual(ReckoningTime.Scale(preset), RunUpSchedule.TimeScale(preset), 0f);
+        }
+
+        // The plan's wall-time table (C4), at 1x, then at the other presets.
+
+        [Test]
+        public void NoCachePage_IsChoosableAtPointFiveNine_ForAnyCount()
+        {
+            Assert.AreEqual(0.59f, At(1f, 1, Common, Uncommon, RareDown).ChoosableAt, Tolerance);
+            Assert.AreEqual(0.59f, At(1f, 3, Common, Common, Common, Uncommon, TopDown).ChoosableAt, Tolerance);
+            Assert.IsFalse(At(1f, 1, Common, Uncommon, TopDown).HasCache);
+        }
+
+        [Test]
+        public void CacheThreeCards_IsChoosableAtOnePointOneFive()
+        {
+            Assert.AreEqual(1.15f, At(1f, 1, RareLive, Common, Common).ChoosableAt, Tolerance);
+        }
+
+        [Test]
+        public void CacheThreeCards_WithTopLive_IsChoosableAtOnePointFour()
+        {
+            Assert.AreEqual(1.40f, At(1f, 1, RareLive, Common, TopLive).ChoosableAt, Tolerance);
+        }
+
+        [Test]
+        public void CacheFiveCards_IsOnePointTwoSeven_AndWithTopLive_OnePointFiveTwo()
+        {
+            Assert.AreEqual(1.27f, At(1f, 3, RareLive, Common, Common, Common, Common).ChoosableAt, Tolerance);
+            Assert.AreEqual(1.52f, At(1f, 3, Common, Common, Common, Common, TopLive).ChoosableAt, Tolerance);
+        }
+
+        [Test]
+        public void TheTableAtTwoX_IsHalved()
+        {
+            Assert.AreEqual(0.295f, At(2f, 1, Common, Common, Common).ChoosableAt, Tolerance);
+            Assert.AreEqual(0.575f, At(2f, 1, RareLive, Common, Common).ChoosableAt, Tolerance);
+            Assert.AreEqual(0.70f, At(2f, 1, RareLive, Common, TopLive).ChoosableAt, Tolerance);
+            Assert.AreEqual(0.635f, At(2f, 3, RareLive, Common, Common, Common, Common).ChoosableAt, Tolerance);
+            Assert.AreEqual(0.76f, At(2f, 3, Common, Common, Common, Common, TopLive).ChoosableAt, Tolerance);
+        }
+
+        [Test]
+        public void TheTable_NeverSlowsBelowOneX()
+        {
+            Assert.AreEqual(1.15f, At(0.5f, 1, RareLive, Common, Common).ChoosableAt, Tolerance);
+            Assert.AreEqual(0.59f, At(0.5f, 1, Common, Common, Common).ChoosableAt, Tolerance);
+            Assert.AreEqual(0.7667f, At(1.5f, 1, RareLive, Common, Common).ChoosableAt, Tolerance);
+        }
+
+        // Schedule order
+
+        [Test]
+        public void CachePage_BeatsRunWipeWaitSealSlideFlips_InOrder()
+        {
+            var s = At(1f, 1, RareLive, Common, Common);
+            var timed = s.Beats.Where(b => b.Kind != RevealBeatKind.Land && b.Kind != RevealBeatKind.Ember
+                                        && b.Kind != RevealBeatKind.Chevron).ToArray();
+            CollectionAssert.AreEqual(
+                new[]
+                {
+                    RevealBeatKind.Wipe, RevealBeatKind.OpenWait, RevealBeatKind.Seal, RevealBeatKind.Slide,
+                    RevealBeatKind.Flip, RevealBeatKind.Flip, RevealBeatKind.Flip, RevealBeatKind.Choosable,
+                },
+                timed.Select(b => b.Kind).ToArray());
+            float[] starts = { 0f, 0.34f, 0.54f, 0.66f, 0.91f, 0.97f, 1.03f, 1.15f };
+            for (int i = 0; i < starts.Length; i++) Assert.AreEqual(starts[i], timed[i].Start, Tolerance, "beat " + i);
+            Assert.AreEqual(0.12f, timed[4].Duration, Tolerance);
+        }
+
+        [Test]
+        public void NoCachePage_DealsLeftToRight_ThenIsChoosable()
+        {
+            var s = At(1f, 1, Common, Uncommon, RareDown);
+            Assert.AreEqual(0.34f, Of(s, RevealBeatKind.Deal)[0].Start, Tolerance);
+            Assert.AreEqual(0.25f, Of(s, RevealBeatKind.Deal)[0].Duration, Tolerance);
+            CollectionAssert.AreEqual(new[] { 0, 1, 2 }, Of(s, RevealBeatKind.Land).Select(b => b.Card).ToArray());
+            float[] lands = { 0.4233f, 0.5067f, 0.59f };
+            for (int i = 0; i < 3; i++) Assert.AreEqual(lands[i], Of(s, RevealBeatKind.Land)[i].Start, Tolerance);
+            Assert.IsEmpty(Of(s, RevealBeatKind.Flip));
+            Assert.IsEmpty(Of(s, RevealBeatKind.Seal));
+        }
+
+        [Test]
+        public void CacheRequiresARarePlusLiveUpgrade_NotJustQuality()
+        {
+            Assert.IsFalse(At(1f, 1, RareDown, TopDown, Common).HasCache, "a downgrade never earns the cache");
+            Assert.IsFalse(At(1f, 1, Uncommon, Common, Common).HasCache, "a live Uncommon is below the line");
+            Assert.IsTrue(At(1f, 1, Common, RareLive, Common).HasCache);
+        }
+
+        // Holds
+
+        [Test]
+        public void HoldsBelongToTopTierLiveUpgradesOnly()
+        {
+            Assert.IsEmpty(Of(At(1f, 1, RareLive, Common, Common), RevealBeatKind.Hold));
+            Assert.IsEmpty(Of(At(1f, 1, RareLive, TopDown, Common), RevealBeatKind.Hold), "top tier that is a downgrade");
+            Assert.IsEmpty(Of(At(1f, 1, RareDown, TopDown, Common), RevealBeatKind.Hold));
+            Assert.IsEmpty(Of(At(1f, 1, RareLive, Common, RareLive), RevealBeatKind.Hold));
+            var hold = Of(At(1f, 1, RareLive, TopLive, Common), RevealBeatKind.Hold);
+            Assert.AreEqual(1, hold.Length);
+            Assert.AreEqual(1, hold[0].Card);
+        }
+
+        [Test]
+        public void TheHold_PrecedesItsCardsFlip_AndDelaysTheOnesAfter()
+        {
+            var s = At(1f, 1, RareLive, TopLive, Common);
+            var hold = Of(s, RevealBeatKind.Hold)[0];
+            var flips = Of(s, RevealBeatKind.Flip);
+            Assert.AreEqual(0.97f, hold.Start, Tolerance);
+            Assert.AreEqual(0.25f, hold.Duration, Tolerance);
+            Assert.AreEqual(hold.End, flips[1].Start, Tolerance);
+            Assert.AreEqual(0.91f, flips[0].Start, Tolerance, "the card before it flips on time");
+            Assert.AreEqual(1.28f, flips[2].Start, Tolerance, "the card after it waits");
+            Assert.AreEqual(1.40f, s.ChoosableAt, Tolerance);
+        }
+
+        [Test]
+        public void TwoTopLiveUpgrades_HoldTwice()
+        {
+            var s = At(1f, 2, TopLive, Common, TopLive, Common);
+            Assert.AreEqual(2, Of(s, RevealBeatKind.Hold).Length);
+            // 1.71 s authored; the cap takes 0.11 s out of the open wait, not the holds.
+            Assert.AreEqual(1.6f, s.ChoosableAt, Tolerance);
+            Assert.AreEqual(0.09f, Of(s, RevealBeatKind.OpenWait)[0].Duration, Tolerance);
+        }
+
+        [Test]
+        public void LandStyles_FollowQualityAndLiveStatus()
+        {
+            var s = At(1f, 1, Common, Uncommon, RareLive, TopLive);
+            CollectionAssert.AreEqual(
+                new[] { LandStyle.Flat, LandStyle.Puff, LandStyle.Shimmer, LandStyle.Burst },
+                Of(s, RevealBeatKind.Land).Select(b => b.Style).ToArray());
+            Assert.AreEqual(LandStyle.Shimmer, RevealSchedule.StyleOf(TopDown), "no flare for a downgrade");
+        }
+
+        // Pitch steps
+
+        [Test]
+        public void FlipPitch_IsTheQualityStep_InRowOrder()
+        {
+            var s = At(1f, 2, Common, Uncommon, RareLive, TopLive);
+            CollectionAssert.AreEqual(new[] { 1, 2, 3, 4 }, Of(s, RevealBeatKind.Flip).Select(b => b.PitchStep).ToArray());
+            CollectionAssert.AreEqual(new[] { 0, 1, 2, 3 }, Of(s, RevealBeatKind.Flip).Select(b => b.Card).ToArray());
+        }
+
+        [Test]
+        public void RelicRarityTiers_MapToTheTablesPitchSteps()
+        {
+            Assert.AreEqual(1, RevealCard.Gear(Quality.Common, false).Tier);
+            Assert.AreEqual(2, RevealCard.Gear(Quality.Uncommon, false).Tier);
+            Assert.AreEqual(3, RevealCard.Gear(Quality.Rare, false).Tier);
+            Assert.AreEqual(4, RevealCard.Gear(Quality.Legendary, false).Tier);
+            Assert.AreEqual(4, new RevealCard(9, false).Tier, "clamped to the top clip");
+            Assert.AreEqual(1, new RevealCard(0, false).Tier);
+        }
+
+        [Test]
+        public void ChevronNotes_RiseOneStepPerUpCard_AndADowngradeIsSilent()
+        {
+            var s = At(1f, 1, Uncommon, Common, RareLive, RareDown, TopLive);
+            var chevrons = Of(s, RevealBeatKind.Chevron);
+            CollectionAssert.AreEqual(new[] { 0, 2, 4 }, chevrons.Select(b => b.Card).ToArray());
+            CollectionAssert.AreEqual(new[] { 1, 2, 3 }, chevrons.Select(b => b.PitchStep).ToArray());
+            Assert.IsEmpty(Of(At(1f, 1, Common, RareDown, TopDown), RevealBeatKind.Chevron), "a page with nothing for anyone is quiet");
+        }
+
+        [Test]
+        public void EveryPageHasEmbers_OnePerChoice_AtTheLandings()
+        {
+            var noCache = At(1f, 2, Common, Common, Common, Common);
+            CollectionAssert.AreEqual(new[] { 0, 1 }, Of(noCache, RevealBeatKind.Ember).Select(b => b.Card).ToArray());
+            var cache = At(1f, 1, RareLive, Common, Common);
+            Assert.AreEqual(1, Of(cache, RevealBeatKind.Ember).Length);
+            Assert.AreEqual(Of(cache, RevealBeatKind.Land)[0].Start, Of(cache, RevealBeatKind.Ember)[0].Start, Tolerance);
+        }
+
+        // Linger and guard
+
+        [Test]
+        public void TheLinger_ExistsOnlyForATopLiveUpgrade_AndStartsAtChoosable()
+        {
+            var s = At(1f, 1, RareLive, Common, TopLive);
+            var linger = Of(s, RevealBeatKind.Linger);
+            Assert.AreEqual(1, linger.Length);
+            Assert.AreEqual(1.40f, linger[0].Start, Tolerance);
+            Assert.AreEqual(1.2f, linger[0].Duration, Tolerance);
+            Assert.IsEmpty(Of(At(1f, 1, RareLive, Common, Common), RevealBeatKind.Linger));
+            Assert.AreEqual(0.6f, Of(At(2f, 1, RareLive, Common, TopLive), RevealBeatKind.Linger)[0].Duration, Tolerance);
+        }
+
+        [Test]
+        public void TheGuard_SwallowsASubmitForPointOneFiveAfterTheLastLanding()
+        {
+            var s = At(1f, 1, RareLive, Common, Common);
+            Assert.IsTrue(s.IsRunningAt(1.14f));
+            Assert.IsFalse(s.GuardsAt(1.14f));
+            Assert.IsFalse(s.IsRunningAt(1.15f));
+            Assert.IsTrue(s.GuardsAt(1.2f));
+            Assert.IsFalse(s.GuardsAt(1.31f));
+        }
+
+        // Skip
+
+        [Test]
+        public void Skip_ReachesTheEndState_AndAFlareRemainsOnlyForATopLiveUpgrade()
+        {
+            var top = At(1f, 1, RareLive, Common, TopLive);
+            var skipped = top.SkippedAt(0.5f);
+            Assert.AreEqual(0.5f, skipped.ChoosableAt, Tolerance, "choosable now");
+            Assert.AreEqual(0.12f, skipped.FlareSeconds, Tolerance);
+            Assert.AreEqual(1.2f, skipped.LingerSeconds, Tolerance);
+            Assert.IsTrue(skipped.CacheOpen);
+            Assert.IsTrue(skipped.AllFaceUp);
+
+            var plain = At(1f, 1, RareLive, Common, Common).SkippedAt(0.5f);
+            Assert.AreEqual(0f, plain.FlareSeconds, Tolerance);
+            Assert.AreEqual(0f, plain.LingerSeconds, Tolerance);
+
+            Assert.AreEqual(0.06f, At(2f, 1, RareLive, Common, TopLive).SkippedAt(0.2f).FlareSeconds, Tolerance);
+        }
+
+        [Test]
+        public void Skip_AfterTheRowIsChoosable_ChangesNothing()
+        {
+            var s = At(1f, 1, RareLive, Common, TopLive);
+            var late = s.SkippedAt(2f);
+            Assert.AreEqual(1.40f, late.ChoosableAt, Tolerance);
+            Assert.AreEqual(0f, late.FlareSeconds, Tolerance);
+        }
+
+        [Test]
+        public void Skip_OnANoCachePage_HasNoCacheToOpen()
+        {
+            Assert.IsFalse(At(1f, 1, Common, Common, Common).SkippedAt(0.4f).CacheOpen);
+        }
+
+        // Cap
+
+        private static IEnumerable<RevealCard[]> Pages()
+        {
+            yield return new[] { Common, Common, Common };
+            yield return new[] { RareLive, Common, Common };
+            yield return new[] { RareLive, Common, TopLive };
+            yield return new[] { Common, Common, Common, Common, TopLive };
+            yield return new[] { TopLive, TopLive, TopLive, TopLive, TopLive, TopLive, TopLive };
+            yield return Enumerable.Repeat(TopLive, 9).ToArray();
+            yield return Enumerable.Repeat(TopLive, 12).ToArray();
+        }
+
+        [Test]
+        public void TheCap_HoldsAtEveryPreset_ForEveryPage()
+        {
+            foreach (float preset in new[] { 0.5f, 1f, 1.5f, 2f })
+                foreach (var page in Pages())
+                    Assert.LessOrEqual(RevealSchedule.For(page, 3, preset).ChoosableAt, RevealSchedule.CapSeconds + Tolerance,
+                        $"preset {preset}, {page.Length} cards");
+        }
+
+        [Test]
+        public void ALongPage_ShortensItsOpenWaitFirst_ThenTheStagger_ThenTheHolds()
+        {
+            // Seven cards, one hold, 1x: 1.64 s authored, 0.04 over; the wait gives it up.
+            var seven = At(1f, 5, TopLive, Common, Common, Common, Common, Common, Common);
+            Assert.AreEqual(1.6f, seven.ChoosableAt, Tolerance);
+            Assert.AreEqual(0.16f, Of(seven, RevealBeatKind.OpenWait)[0].Duration, Tolerance);
+            Assert.AreEqual(0.25f, Of(seven, RevealBeatKind.Hold)[0].Duration, Tolerance);
+
+            // Twelve cards, one hold: the wait is gone and the stagger tightens; the hold stays.
+            var twelve = At(1f, 10, new[] { TopLive }.Concat(Enumerable.Repeat(Common, 11)).ToArray());
+            Assert.AreEqual(1.6f, twelve.ChoosableAt, Tolerance);
+            Assert.IsEmpty(Of(twelve, RevealBeatKind.OpenWait));
+            Assert.AreEqual(0.25f, Of(twelve, RevealBeatKind.Hold)[0].Duration, Tolerance);
+            var flips = Of(twelve, RevealBeatKind.Flip);
+            Assert.AreEqual(0.0473f, flips[2].Start - flips[1].Start, Tolerance);
+        }
+
+        [Test]
+        public void ThePlainFiveCardTopLivePage_IsNotShortened()
+        {
+            var s = At(1f, 3, Common, Common, Common, Common, TopLive);
+            Assert.AreEqual(0.2f, Of(s, RevealBeatKind.OpenWait)[0].Duration, Tolerance);
+            Assert.AreEqual(0.25f, Of(s, RevealBeatKind.Hold)[0].Duration, Tolerance);
+        }
+    }
+}

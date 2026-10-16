@@ -41,10 +41,8 @@ namespace PrincesPalace.Domain.Rewards
         // The voices follow the sting by this much.
         public const float VoiceDelaySeconds = 0.2f;
 
-        // min(1, Default / preset): the Reckoning's rule for every duration it
-        // adds (C10). A non-positive preset reads as the default.
-        public static float TimeScale(float presetDisplay) =>
-            presetDisplay <= 0f ? 1f : Math.Min(1f, BattleSpeed.DefaultDisplay / presetDisplay);
+        // The Reckoning's rule for every duration it adds; ReckoningTime owns it.
+        public static float TimeScale(float presetDisplay) => ReckoningTime.Scale(presetDisplay);
 
         public readonly float StopEnd;
         public readonly float StingAt;
