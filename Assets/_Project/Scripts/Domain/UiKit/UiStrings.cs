@@ -633,8 +633,6 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString ReckoningChevronDown = UiString.Define("reckoning.chevron_down", "v");
         public static readonly UiString ReckoningChevronFlat = UiString.Define("reckoning.chevron_flat", "=");
 
-        // The red mark on the ghost when the worn copy has an affix the new one lacks.
-        public static readonly UiString ReckoningLostMark = UiString.Define("reckoning.lost_mark", "-");
 
         // The relic card's face.
         public static readonly UiString ReckoningAddsNothing =

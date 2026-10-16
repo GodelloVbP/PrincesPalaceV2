@@ -145,21 +145,20 @@ namespace PrincesPalace.PlayModeTests
             var helm = ContentDatabase.Offerable.First(i => i.equipSlot == EquipmentSlot.Head);
             var empty = RewardCardFace.OfGear(save, Card(ItemInstance.Of(helm.id, 2), EquipmentSlot.Head));
             Assert.IsNull(empty.GhostKey, "nothing worn on the head: no ghost");
-            Assert.IsFalse(empty.HasLost);
         }
 
         [Test]
-        public void ALostAffixIsNamedWhenTheWornCopyHasOneTheCardLacks()
+        // The face draws no lost-affix mark (an owner call); the focus
+        // detail's compare names the affix the swap would lose.
+        public void ALostAffixIsNamedInTheDetail_WhenTheWornCopyHasOneTheCardLacks()
         {
             var sheep = ArmedSheep(out var save);
             sheep.equipment.Set(EquipmentSlot.Weapon1, "sword", new List<string> { "stalwart" }, tier: 0);
+            var lacking = RewardCardFace.DetailOfGear(save, Card(ItemInstance.Of("sword", 4)));
+            StringAssert.Contains("loses: Stalwart", lacking.Body);
 
-            var lacking = RewardCardFace.OfGear(save, Card(ItemInstance.Of("sword", 4)));
-            Assert.IsTrue(lacking.HasLost);
-            Assert.IsNotEmpty(lacking.LostName);
-
-            var keeping = RewardCardFace.OfGear(save, Card(ItemInstance.Of("sword", 4, new[] { "stalwart" })));
-            Assert.IsFalse(keeping.HasLost);
+            var keeping = RewardCardFace.DetailOfGear(save, Card(ItemInstance.Of("sword", 4, new[] { "stalwart" })));
+            StringAssert.DoesNotContain("loses:", keeping.Body);
         }
 
         // ---- the delta -------------------------------------------------------------

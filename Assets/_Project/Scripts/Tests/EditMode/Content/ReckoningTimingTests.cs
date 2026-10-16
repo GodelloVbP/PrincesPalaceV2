@@ -269,35 +269,70 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(1, hold[0].Card);
         }
 
-        // The cache stands through the open wait and the hold, then snaps;
-        // only the slide lies between the snap and the first flip.
         [Test]
-        public void TheHold_KeepsTheCacheStanding_AndTheFlipsFollowTheSlide()
+        public void TheHold_PrecedesItsCardsFlip_AndDelaysTheOnesAfter()
         {
             var s = At(1f, 1, RareLive, TopLive, Common);
             var hold = Of(s, RevealBeatKind.Hold)[0];
             var flips = Of(s, RevealBeatKind.Flip);
-            Assert.AreEqual(0.54f, hold.Start, Tolerance, "after the open wait");
+            Assert.AreEqual(0.97f, hold.Start, Tolerance);
             Assert.AreEqual(0.25f, hold.Duration, Tolerance);
-            Assert.AreEqual(0.79f, Of(s, RevealBeatKind.Seal)[0].Start, Tolerance, "the seal snaps after the hold");
-            Assert.AreEqual(1.16f, flips[0].Start, Tolerance, "the first flip starts as the slide ends");
-            Assert.AreEqual(1.22f, flips[1].Start, Tolerance);
-            Assert.AreEqual(1.28f, flips[2].Start, Tolerance);
+            Assert.AreEqual(1.22f, flips[1].Start, Tolerance, "the top tier flips after its hold");
+            Assert.AreEqual(0.91f, flips[0].Start, Tolerance, "the card before it flips on time, as the slide ends");
+            Assert.AreEqual(1.28f, flips[2].Start, Tolerance, "the card after it waits");
             Assert.AreEqual(1.40f, s.ChoosableAt, Tolerance);
         }
 
+        // Four cards, two holds: 1.71 s authored, 0.11 over. The cache's wait
+        // is already at its floor (0.2 + 0.12 seal < 0.35), the stagger gives
+        // 0.06 down to 0.04, and the second hold gives the last 0.05.
         [Test]
-        public void TwoTopLiveUpgrades_HoldTwice()
+        public void TwoTopLiveUpgrades_HoldTwice_TheSecondShrinksFirst()
         {
             var s = At(1f, 2, TopLive, Common, TopLive, Common);
-            Assert.AreEqual(2, Of(s, RevealBeatKind.Hold).Length);
-            // 1.71 s authored; the cap takes 0.11 s out of the stagger, not the
-            // holds or the cache's open wait.
+            var holds = Of(s, RevealBeatKind.Hold);
+            Assert.AreEqual(2, holds.Length);
             Assert.AreEqual(1.6f, s.ChoosableAt, Tolerance);
             Assert.AreEqual(0.2f, Of(s, RevealBeatKind.OpenWait)[0].Duration, Tolerance);
-            Assert.AreEqual(0.25f, Of(s, RevealBeatKind.Hold)[1].Duration, Tolerance);
+            Assert.AreEqual(0.25f, holds[0].Duration, Tolerance);
+            Assert.AreEqual(0.20f, holds[1].Duration, Tolerance);
             var flips = Of(s, RevealBeatKind.Flip);
-            Assert.AreEqual(0.0233f, flips[1].Start - flips[0].Start, Tolerance);
+            Assert.AreEqual(0.04f, flips[2].Start - holds[1].Duration - flips[1].Start, Tolerance);
+        }
+
+        // THE CACHETOP PAGE (ReckoningPageFixtures.CacheTopTierPages): five
+        // cards, two top tiers. 1.77 s authored, 0.17 over: the stagger gives
+        // 0.08 (0.06 -> 0.04), the second hold 0.09 (0.25 -> 0.16). Every flip
+        // still lands on its own.
+        [Test]
+        public void FiveCardsTwoTopTiers_FitTheCap_EachTopTierLandingAlone()
+        {
+            var s = At(1f, 3, TopLive, Common, TopLive, Common, Common);
+            Assert.AreEqual(1.6f, s.ChoosableAt, Tolerance);
+
+            var holds = Of(s, RevealBeatKind.Hold);
+            Assert.AreEqual(2, holds.Length);
+            Assert.AreEqual(0.91f, holds[0].Start, Tolerance, "the first top tier holds as the slide ends");
+            Assert.AreEqual(0.25f, holds[0].Duration, Tolerance);
+            Assert.AreEqual(1.24f, holds[1].Start, Tolerance);
+            Assert.AreEqual(0.16f, holds[1].Duration, Tolerance);
+
+            float[] flips = { 1.16f, 1.20f, 1.40f, 1.44f, 1.48f };
+            var flipBeats = Of(s, RevealBeatKind.Flip);
+            for (int i = 0; i < flips.Length; i++) Assert.AreEqual(flips[i], flipBeats[i].Start, Tolerance, "flip " + i);
+        }
+
+        // One top tier on five cards fits unshortened: 1.52 s.
+        [Test]
+        public void FiveCardsOneTopTier_KeepsTheAuthoredStaggerAndHold()
+        {
+            var s = At(1f, 3, Common, Common, Common, Common, TopLive);
+            Assert.AreEqual(1.52f, s.ChoosableAt, Tolerance);
+            float[] flips = { 0.91f, 0.97f, 1.03f, 1.09f, 1.40f };
+            var flipBeats = Of(s, RevealBeatKind.Flip);
+            for (int i = 0; i < flips.Length; i++) Assert.AreEqual(flips[i], flipBeats[i].Start, Tolerance, "flip " + i);
+            Assert.AreEqual(1.15f, Of(s, RevealBeatKind.Hold)[0].Start, Tolerance);
+            Assert.AreEqual(0.25f, Of(s, RevealBeatKind.Hold)[0].Duration, Tolerance);
         }
 
         [Test]
@@ -436,7 +471,7 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void ALongPage_ShortensTheStaggerFirst_ThenTheHolds_ThenTheOpenWait()
+        public void ALongPage_ShortensTheStagger_ThenTheHolds_LastFirst()
         {
             // Seven cards, one hold, 1x: 1.64 s authored, 0.04 over; the stagger gives it up.
             var seven = At(1f, 5, TopLive, Common, Common, Common, Common, Common, Common);
@@ -444,24 +479,25 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0.2f, Of(seven, RevealBeatKind.OpenWait)[0].Duration, Tolerance);
             Assert.AreEqual(0.25f, Of(seven, RevealBeatKind.Hold)[0].Duration, Tolerance);
             var flips = Of(seven, RevealBeatKind.Flip);
-            Assert.AreEqual(0.0533f, flips[1].Start - flips[0].Start, Tolerance);
+            Assert.AreEqual(0.0533f, flips[2].Start - flips[1].Start, Tolerance);
 
-            // Twelve cards, one hold: 0.34 over, still inside the stagger's floor.
+            // Twelve cards, one hold: 0.34 over. The stagger reaches its floor
+            // (0.22), the hold its floor (0.10), and the hold gives the last 0.02.
             var twelve = At(1f, 10, new[] { TopLive }.Concat(Enumerable.Repeat(Common, 11)).ToArray());
             Assert.AreEqual(1.6f, twelve.ChoosableAt, Tolerance);
-            Assert.AreEqual(0.2f, Of(twelve, RevealBeatKind.OpenWait)[0].Duration, Tolerance);
-            Assert.AreEqual(0.25f, Of(twelve, RevealBeatKind.Hold)[0].Duration, Tolerance);
+            Assert.AreEqual(0.13f, Of(twelve, RevealBeatKind.Hold)[0].Duration, Tolerance);
             var twelveFlips = Of(twelve, RevealBeatKind.Flip);
-            Assert.AreEqual(0.0291f, twelveFlips[2].Start - twelveFlips[1].Start, Tolerance);
+            Assert.AreEqual(0.04f, twelveFlips[2].Start - twelveFlips[1].Start, Tolerance);
 
-            // Nine top-tier upgrades: every floor is reached (stagger 0.02,
-            // holds and wait 0.10), then the holds give up the rest.
+            // Nine top tiers: past every floor the holds go to nothing from the
+            // last; the first keeps its floor and the second 0.10.
             var nine = At(1f, 7, Enumerable.Repeat(TopLive, 9).ToArray());
             Assert.AreEqual(1.6f, nine.ChoosableAt, Tolerance);
-            Assert.AreEqual(0.1f, Of(nine, RevealBeatKind.OpenWait)[0].Duration, Tolerance);
-            Assert.AreEqual(0.0567f, Of(nine, RevealBeatKind.Hold)[0].Duration, Tolerance);
-            var nineFlips = Of(nine, RevealBeatKind.Flip);
-            Assert.AreEqual(0.02f, nineFlips[1].Start - nineFlips[0].Start, Tolerance);
+            var nineHolds = Of(nine, RevealBeatKind.Hold);
+            Assert.AreEqual(2, nineHolds.Length, "a hold shrunk to nothing is no beat");
+            Assert.AreEqual(0.15f, nineHolds[0].Duration, Tolerance);
+            Assert.AreEqual(0.10f, nineHolds[1].Duration, Tolerance);
+            Assert.AreEqual(0.2f, Of(nine, RevealBeatKind.OpenWait)[0].Duration, Tolerance);
         }
 
         [Test]

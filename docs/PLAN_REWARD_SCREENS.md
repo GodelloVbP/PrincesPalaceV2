@@ -413,16 +413,15 @@ Sweep on db515a0b: beat 16.3% on non-boss pages (passes 1 in 5), 60.7% on boss p
 
 ### C4. The opening (cache pages only)
 
-1. The cache stands closed and hums through the open wait. A cache holding
-   a **Legendary live upgrade over a worn item below Legendary** stands one
-   0.25 s silent beat longer per such card (a boss page keeps this rule;
-   only its cache is unconditional; a relic: any top-tier live relic). The
-   anticipation is on the cache: face-down backs that sit still read as a
-   stall (feel gate, 2026-10-16).
+1. The cache stands closed and hums through the open wait.
 2. The seal snaps (0.12 s), a breath of light.
 3. The *k* + 2 cards slide out face-down into the row (0.25 s), and the
    first flip starts as the slide ends. Cards flip **left to right in row
-   order**, 0.06 s apart, each flip 0.12 s. Each flip plays the flip clip at its
+   order**, 0.06 s apart, each flip 0.12 s. A **Legendary live upgrade over
+   a worn item below Legendary** holds a 0.25 s silent beat before its own
+   flip and the cards after it wait, so it lands alone, never in a burst of
+   flips (a boss page keeps this rule; only its cache is unconditional; a
+   relic: any top-tier live relic). Each flip plays the flip clip at its
    quality's pitch step (one clip, pitched per step, C11). Quality here is `ContentDatabase.QualityOf`, the one source the plinth and name colour read.
 4. On landing: Uncommon a cloth puff; Rare a shimmer; top tier the burst at
    full size for 0.3 s, a 0.12 s screen-edge flare in its colour, a low
@@ -454,10 +453,14 @@ Sweep on db515a0b: beat 16.3% on non-boss pages (passes 1 in 5), 60.7% on boss p
 preset never lengthens a page. That alone does not hold the cap for every
 page: two top-tier live upgrades in 4 cards run 1.71 s at 1x, and 7 cards
 with one hold run 1.64 s. `RevealSchedule` shortens a page that would pass
-it in this order: the flip stagger (floor 0.02 s), then each hold (floor
-0.10 s), then the open wait (floor 0.10 s), then, past every floor, holds,
-stagger and wait to 0. The cache keeps its wait longest because it is
-what the player watches. The wipe, seal, slide and the flips never shorten. The two
+it in this order: the cache's open wait, as long as the cache still stands
+0.35 s with its seal (at 1x the authored 0.2 + 0.12 is already under that,
+so it gives nothing); then the flip stagger (floor 0.04 s, still a
+sequence); then the holds, the last first (floor 0.15 s each), so a
+second top tier gives up its moment before the first. Past every floor,
+the holds (last first), the stagger and the wait go to 0. The wipe, seal,
+slide and the flips never shorten. Five cards with two top tiers (1.77 s)
+land at 1.6 s with stagger 0.04 and holds 0.25 and 0.16. The two
 pages above land at exactly 1.6 s.
 
 ### C5. The card face
@@ -475,7 +478,7 @@ it, while `offerButtons[]`, test names and `RewardPages` stay page-indexed.
 | Slot band | The plinth's front band. Left: the tier numeral. Right: the **slot's honing `+N`** for this wearer and slot (`ContentDatabase.HoningOf`), lit gold when above 0. It belongs to the slot, so it stays lit when the items swap | yes | yes |
 | New item | The existing icon, large, in front; halo and slow burst behind (kept) | yes | yes |
 | Worn item (ghost) | What the wearer has in that slot now, behind and to the left at 55% size and 45% alpha. No honing is drawn on it. Empty slot: no ghost. Gated in R2 (§6) before its size is fixed | yes | yes |
-| Lost affix | A red minus badge on the ghost when the worn copy has an affix the new one lacks; name on focus | yes | yes |
+| Lost affix | Not on the face (owner call): the focus detail's compare names the affix the worn copy has and the new one lacks | focus only | focus only |
 | Wearer | Round portrait medallion at the top-left (`CharacterPortraits.For`; null -> the character's plate art silhouette). Identity only | yes | yes |
 | Name | Item name in its quality colour, **without** today's `+N` suffix (`RewardCardFace.cs:53`): the band shows it | yes | truncated |
 | Delta | The headline stat's glyph, a signed number, and a chevron shape: up (green), down (red), flat bar (grey). Shape carries the sign | yes | yes |

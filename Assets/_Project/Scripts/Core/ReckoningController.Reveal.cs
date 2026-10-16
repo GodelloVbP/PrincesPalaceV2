@@ -365,8 +365,7 @@ namespace PrincesPalace
                 cache.transform.localScale = Vector3.one * (1f + 0.3f * snap);
                 if (cacheSeam != null)
                 {
-                    // It hums for as long as it stands closed: the open wait
-                    // and any held beat for a top tier inside.
+                    // It hums for as long as it stands closed.
                     float hum = 0.45f + 0.25f * Mathf.Sin(t * 30f);
                     SetAlpha(cacheSeam, t >= seal.Value.Start ? 1f - snap * 0.5f : hum);
                 }

@@ -62,7 +62,7 @@ namespace PrincesPalace.Domain.Rewards
         Seal,          // the seal snaps
         Slide,         // k + 2 cards slide out face-down
         Deal,          // no cache: the cards deal face-up; Card -1, spans the whole deal
-        Hold,          // the cache stands a silent beat longer for a top-tier live upgrade inside; Card is that card
+        Hold,          // silent beat before a top-tier live upgrade's own flip; the cards after it wait; Card is that card
         Flip,          // PitchStep is the flip clip
         Land,          // the card is face-up; Style says how it arrives
         Ember,         // a choice ember lights (rides the landing)
@@ -131,10 +131,12 @@ namespace PrincesPalace.Domain.Rewards
         // gives up its waits in the order of Fit.
         public const float CapSeconds = 1.6f;
 
-        // The floors Fit shortens to first: each keeps a readable sliver.
-        public const float MinStaggerSeconds = 0.02f;
-        public const float MinHoldSeconds = 0.1f;
-        public const float MinOpenWaitSeconds = 0.1f;
+        // The floors Fit shortens to first, each the least that still reads:
+        // the cache on screen (open wait plus seal), the flips as a sequence,
+        // a top tier's own moment.
+        public const float MinCacheStandSeconds = 0.35f;
+        public const float MinStaggerSeconds = 0.04f;
+        public const float MinHoldSeconds = 0.15f;
 
         public readonly bool HasCache;
         public readonly bool HasTopLiveUpgrade;
@@ -216,33 +218,29 @@ namespace PrincesPalace.Domain.Rewards
             }
             else if (cache)
             {
-                Fit(W, n, CountHolds(cards), out float wait, out float stagger, out float hold);
+                Fit(W, n, CountHolds(cards), out float wait, out float stagger, out float[] holds);
                 float seal = W(SealSeconds), slide = W(SlideSeconds), flip = W(FlipSeconds);
                 if (wait > 0f) beats.Add(new RevealBeat(RevealBeatKind.OpenWait, t, wait));
                 t += wait;
-
-                // THE ANTICIPATION IS THE CACHE'S: a top-tier live upgrade
-                // inside keeps it standing (and humming) one silent beat
-                // longer, before the seal snaps. Face-down backs that sit still
-                // read as a stall, not as suspense.
-                for (int i = 0; i < n; i++)
-                {
-                    if (!HoldsFor(cards[i])) continue;
-                    beats.Add(new RevealBeat(RevealBeatKind.Hold, t, hold, i));
-                    t += hold;
-                }
-
                 beats.Add(new RevealBeat(RevealBeatKind.Seal, t, seal));
                 t += seal;
                 beats.Add(new RevealBeat(RevealBeatKind.Slide, t, slide));
                 t += slide;
 
-                // The slide ends on the first flip; flip i starts `stagger`
-                // after flip i-1 started.
+                // Flip i starts `stagger` after flip i-1 started; a top-tier
+                // live upgrade holds before its own flip and the cards after it
+                // wait, so it lands alone.
                 float start = t;
+                int held = 0;
                 for (int i = 0; i < n; i++)
                 {
                     if (i > 0) start += stagger;
+                    if (HoldsFor(cards[i]))
+                    {
+                        float hold = holds[held++];
+                        if (hold > 0f) beats.Add(new RevealBeat(RevealBeatKind.Hold, start, hold, i));
+                        start += hold;
+                    }
                     beats.Add(new RevealBeat(RevealBeatKind.Flip, start, flip, i, cards[i].Tier));
                     landAt[i] = start + flip;
                 }
@@ -285,28 +283,31 @@ namespace PrincesPalace.Domain.Rewards
         }
 
         // SHORTENING ORDER when a cache page would pass the cap (two holds
-        // on four cards can, as can one hold on seven): the flip stagger down
-        // to its floor, then each hold, then the open wait, each to its
-        // floor; past every floor, holds, stagger and wait to nothing in that
-        // order. The cache keeps its open wait longest because it is what
-        // the player watches. The wipe, seal, slide and the flips themselves
-        // never shorten.
-        private static void Fit(Func<float, float> w, int n, int holds, out float wait, out float stagger, out float hold)
+        // on five cards do): the cache's open wait, down to where the cache
+        // still stands MinCacheStandSeconds with its seal; then the flip
+        // stagger, down to a floor that still reads as a sequence; then the
+        // holds, the last first, each down to its floor, so a second top tier
+        // gives up its moment before the first. Past every floor, the holds
+        // (last first), the stagger and the wait go to nothing in that order.
+        // The wipe, seal, slide and the flips themselves never shorten.
+        private static void Fit(Func<float, float> w, int n, int holdCount, out float wait, out float stagger,
+                                out float[] holds)
         {
-            float waitW = w(OpenWaitSeconds), staggerW = w(FlipStaggerSeconds), holdW = w(HoldSeconds);
+            float waitW = w(OpenWaitSeconds), staggerW = w(FlipStaggerSeconds);
+            holds = new float[holdCount];
+            for (int i = 0; i < holdCount; i++) holds[i] = w(HoldSeconds);
             float fixedPart = w(WipeSeconds) + w(SealSeconds) + w(SlideSeconds) + w(FlipSeconds);
             int gaps = Math.Max(0, n - 1);
 
-            float over = fixedPart + waitW + gaps * staggerW + holds * holdW - CapSeconds;
+            float over = fixedPart + waitW + gaps * staggerW + holdCount * w(HoldSeconds) - CapSeconds;
+            Shorten(ref waitW, Math.Max(0f, w(MinCacheStandSeconds) - w(SealSeconds)), 1, ref over);
             Shorten(ref staggerW, w(MinStaggerSeconds), gaps, ref over);
-            Shorten(ref holdW, w(MinHoldSeconds), holds, ref over);
-            Shorten(ref waitW, w(MinOpenWaitSeconds), 1, ref over);
-            Shorten(ref holdW, 0f, holds, ref over);
+            for (int i = holdCount - 1; i >= 0; i--) Shorten(ref holds[i], w(MinHoldSeconds), 1, ref over);
+            for (int i = holdCount - 1; i >= 0; i--) Shorten(ref holds[i], 0f, 1, ref over);
             Shorten(ref staggerW, 0f, gaps, ref over);
             Shorten(ref waitW, 0f, 1, ref over);
             wait = waitW;
             stagger = staggerW;
-            hold = holdW;
         }
 
         // Takes up to `over` off `count` copies of `value`, never below `floor`.

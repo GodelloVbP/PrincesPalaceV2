@@ -189,8 +189,6 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(5, screen.OfferPlinths.Count);
             Assert.AreEqual(5, screen.OfferGhosts.Count);
             Assert.AreEqual(5, screen.OfferChains.Count);
-            Assert.AreEqual(5, screen.OfferLostDiscs.Count);
-            Assert.AreEqual(5, screen.OfferLostMarks.Count);
             Assert.AreEqual(5, screen.OfferWearerDiscs.Count);
             Assert.AreEqual(5, screen.OfferWearerPortraits.Count);
             Assert.AreEqual(5, screen.OfferBands.Count);
@@ -204,16 +202,17 @@ namespace PrincesPalace.Domain.Tests
         {
             // Honing is the slot's and is drawn on the band (C5); the old
             // meta, recipient and loses lines are the plinth, the medallion
-            // and the red mark. A card that still has them is two faces.
+            // and the focus detail (the lost affix too). A card that still has
+            // them is two faces.
             var card = Walk(Tree()).Single(n => n.Name == "ReckoningOffer0");
             var names = Walk(card).Select(n => n.Name).ToList();
 
-            foreach (string gone in new[] { "Meta", "Recipient", "Loses", "Action" })
+            foreach (string gone in new[] { "Meta", "Recipient", "Loses", "Action", "LostDisc", "LostMark" })
             {
                 CollectionAssert.DoesNotContain(names, "ReckoningOffer0" + gone);
             }
 
-            foreach (string part in new[] { "Plinth", "Ghost", "Icon", "LostDisc", "LostMark", "WearerDisc",
+            foreach (string part in new[] { "Plinth", "Ghost", "Icon", "WearerDisc",
                 "WearerPortrait", "Band", "BandTier", "BandPlus", "Name", "Delta", "Chevron", "Feature", "Spark" })
             {
                 CollectionAssert.Contains(names, "ReckoningOffer0" + part);

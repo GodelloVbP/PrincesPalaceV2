@@ -132,11 +132,6 @@ namespace PrincesPalace.Domain.UiKit
         public static float GhostX(int visibleCount) =>
             -(CardWidth(visibleCount) - GhostWidth(visibleCount)) * 0.5f + 6f;
 
-        public const float LostBadgeSize = 22f;
-
-        // The lost-affix mark sits on the ghost's top-left corner.
-        public static float LostBadgeX(int visibleCount) =>
-            GhostX(visibleCount) - GhostWidth(visibleCount) * 0.5f + LostBadgeSize * 0.5f;
 
         public const float MedallionSize = 44f;
 

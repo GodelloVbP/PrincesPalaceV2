@@ -208,8 +208,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> OfferPlinths = new List<NodeRef>();
         public List<NodeRef> OfferGhosts = new List<NodeRef>();
         public List<NodeRef> OfferChains = new List<NodeRef>();
-        public List<NodeRef> OfferLostDiscs = new List<NodeRef>();
-        public List<NodeRef> OfferLostMarks = new List<NodeRef>();
         public List<NodeRef> OfferWearerDiscs = new List<NodeRef>();
         public List<NodeRef> OfferWearerPortraits = new List<NodeRef>();
         public List<NodeRef> OfferBands = new List<NodeRef>();
@@ -1134,18 +1132,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .AsDecor();
             chain.PreserveAspect = true;
 
-            var lostDisc = Ui.Sprite($"ReckoningOffer{index}LostDisc", "proc:solid_circle",
-                    Place.At(OfferRowLayout.LostBadgeX(count),
-                        GhostCentre + GhostHeight * 0.5f - OfferRowLayout.LostBadgeSize * 0.5f),
-                    UiSize.Fixed(OfferRowLayout.LostBadgeSize, OfferRowLayout.LostBadgeSize))
-                .Coloured("#C8453CFF")
-                .AsDecor();
-            var lostMark = Ui.Label($"ReckoningOffer{index}LostMark", UiStrings.ReckoningLostMark,
-                    new UiVec(OfferRowLayout.LostBadgeSize, OfferRowLayout.LostBadgeSize), 16, "#FFFFFF",
-                    Place.At(OfferRowLayout.LostBadgeX(count),
-                        GhostCentre + GhostHeight * 0.5f - OfferRowLayout.LostBadgeSize * 0.5f))
-                .AsDecor();
-
             // Identity only: who this is for. A square portrait on a disc until
             // the medallion art exists.
             var wearerDisc = Ui.Sprite($"ReckoningOffer{index}WearerDisc", "proc:solid_circle",
@@ -1225,7 +1211,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // than the card, so it cannot cover the face by size.
             var face = Ui.Panel($"ReckoningOffer{index}Face", Place.Stretch(), UiSize.Fill, new List<UiNode>
             {
-                plinth, halo, burst, ghost, icon, chain, lostDisc, lostMark, wearerDisc, wearerPortrait,
+                plinth, halo, burst, ghost, icon, chain, wearerDisc, wearerPortrait,
                 band, bandTier, bandPlus, name, delta, deltaGlyph, chevron, feature, spark,
             });
             button.Children.Add(face);
@@ -1246,8 +1232,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
             OfferGhosts.Add(ghost);
             OfferIcons.Add(icon);
             OfferChains.Add(chain);
-            OfferLostDiscs.Add(lostDisc);
-            OfferLostMarks.Add(lostMark);
             OfferWearerDiscs.Add(wearerDisc);
             OfferWearerPortraits.Add(wearerPortrait);
             OfferBands.Add(band);

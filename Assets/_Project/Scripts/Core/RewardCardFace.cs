@@ -51,10 +51,6 @@ namespace PrincesPalace
         // an empty slot or a card that is no longer open.
         public string GhostKey;
 
-        // The worn copy has an affix the new one lacks; its name.
-        public bool HasLost;
-        public string LostName = "";
-
         public bool Inert;
 
         public static int PlinthStepOf(RelicRarity rarity)
@@ -104,8 +100,6 @@ namespace PrincesPalace
             if (card.Outcome == CardOutcome.Open)
             {
                 SetDelta(face, recipient, card);
-                face.LostName = LostAffixName(recipient, card);
-                face.HasLost = face.LostName.Length > 0;
                 if (recipient?.equipment != null && !recipient.equipment.IsEmpty(card.Slot))
                 {
                     face.GhostKey = ItemIcons.KeyOf(recipient.equipment.GetInstance(card.Slot));

@@ -52,8 +52,6 @@ namespace PrincesPalace
         [SerializeField] internal Image[] offerPlinths;
         [SerializeField] internal Image[] offerGhosts;
         [SerializeField] internal Image[] offerChains;
-        [SerializeField] internal Image[] offerLostDiscs;
-        [SerializeField] internal TMP_Text[] offerLostMarks;
         [SerializeField] internal Image[] offerWearerDiscs;
         [SerializeField] internal Image[] offerWearerPortraits;
         [SerializeField] internal Image[] offerBands;
@@ -788,8 +786,6 @@ namespace PrincesPalace
                 SetSquare(RectAt(offerBursts, i), OfferRowLayout.BurstDiameter(count));
 
                 Seat(RectAt(offerGhosts, i), OfferRowLayout.GhostX(count), OfferRowLayout.GhostWidth(count));
-                Seat(RectAt(offerLostDiscs, i), OfferRowLayout.LostBadgeX(count), null);
-                Seat(RectAt(offerLostMarks, i), OfferRowLayout.LostBadgeX(count), null);
                 Seat(RectAt(offerWearerDiscs, i), OfferRowLayout.MedallionX(count), null);
                 Seat(RectAt(offerWearerPortraits, i), OfferRowLayout.MedallionX(count), null);
 
@@ -1056,8 +1052,8 @@ namespace PrincesPalace
             plinth.color = tint;
         }
 
-        // What the wearer has now, behind and to the left, and the red minus
-        // when the worn copy has an affix this one lacks.
+        // What the wearer has now, behind and to the left. An affix the worn
+        // copy has and this one lacks is named in the focus detail only.
         private void PaintGhost(int i, RewardCardFace face)
         {
             var ghost = i < offerGhosts.Length ? offerGhosts[i] : null;
@@ -1068,10 +1064,6 @@ namespace PrincesPalace
 
                 ghost.color = new Color(1f, 1f, 1f, OfferRowLayout.GhostAlpha);
             }
-
-            bool lost = face.HasLost && face.GhostKey != null;
-            if (i < offerLostDiscs.Length && offerLostDiscs[i] != null) offerLostDiscs[i].gameObject.SetActive(lost);
-            if (i < offerLostMarks.Length && offerLostMarks[i] != null) offerLostMarks[i].gameObject.SetActive(lost);
         }
 
         // Identity only: whose slot this is.
