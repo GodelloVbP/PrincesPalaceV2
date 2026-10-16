@@ -38,9 +38,10 @@ namespace PrincesPalace.Domain.Rewards
         public bool IsRarePlus => Tier >= RevealSchedule.RareTier;
         public bool IsTop => Tier >= RevealSchedule.TopTier;
 
-        // Earns the cache by itself: a live gear card better than what is
-        // worn (an empty slot is lower than anything), or a Rare+ live relic.
-        public bool EarnsCache => LiveUpgrade && (IsRelic ? IsRarePlus : Tier > WornTier);
+        // Earns the cache by itself: a live Rare+ card, and for gear also
+        // better than what is worn (an empty slot is lower than anything). A
+        // wrapped bundle for a Common would be a false promise.
+        public bool EarnsCache => LiveUpgrade && IsRarePlus && (IsRelic || Tier > WornTier);
 
         // Earns the held beat, the flare and the linger: a live Legendary
         // over a worn item below Legendary (a relic: any top-tier live one).

@@ -257,22 +257,32 @@ In order, for a won fight:
    hit-stop (`FightBeatPlayer.cs:1183-1184`, a coroutine wait on the actors,
    never global `Time.timeScale`, per the game-feel override in CLAUDE.md)
    uses `HitStop.FinalBlowSeconds(class)` instead of the blow's weight:
-   normal 0.22 s, elite 0.26 s, boss 0.34 s (Sakurai's "boss stop"), against
-   today's per-blow cap of 0.18 s (`HitStop.cs:50`). The stage's ambient
-   motion (motes, glows, the darkness) keeps moving through it (F12: effects
-   move during a freeze). `StageShake` fires at full strength on that
-   contact (opinion: the biggest event gets the biggest kick, F10).
+   normal 0.22 s, elite 0.30 s, boss 0.46 s (Sakurai's "boss stop"), held to
+   0.9 s of wall time at slow presets (`RunUpSchedule.StopCeilingSeconds`),
+   against today's per-blow cap of 0.18 s (`HitStop.cs:50`). The stage's
+   ambient motion (motes, glows, the darkness) keeps moving through it (F12:
+   effects move during a freeze). `StageShake` kicks on that contact at
+   0.6 / 0.8 / 1.0 by class (F10). The beat has no settle and no gap: the
+   last enemy's fade starts as the stop releases.
 2. **The last enemy falls in view**: its existing `StageDeathFade` plays,
    and the run-up waits for it (the darkness ending's `AnyEnemyFading` wait,
    reused), within the cap.
 3. **The survivors answer** (F14): their `victory` stills are already on
-   the last beat; at the end of the final hit-stop each survivor lifts 8 px
-   and settles over 0.25 s (a tween on the still), staggered 0.08 s in squad
-   order. A survivor without a `victory` still keeps its idle, no lift.
+   the last beat; **the moment the stop releases** each survivor hops 24 px
+   and comes down over 0.25 s, then squashes on the landing (y scale 0.94
+   for 0.06 s, then back), staggered 0.08 s in squad order, through the
+   existing `StageActorAnimator`. A survivor without a `victory` still keeps
+   its idle, no hop.
 4. **The light turns** (opinion; the direction bible's "clearing eases",
-   [My read]): during the fade a warm wash (`proc:radial_glow`, amber,
-   0 -> 15% alpha over 0.4 s) rises behind the party and the enemy half of
-   the stage dims 10%.
+   [My read]), **also from the release, so nothing waits on the fade's
+   hold**: a warm wash (`proc:radial_glow`, amber, 0 -> class alpha over
+   0.5 s) rises behind the party and the enemy half of the stage dims 10%.
+   The wash is alpha 0.15 at scale 1.0 for a normal fight, 0.22 at 1.25 for
+   an elite, 0.32 at 1.6 for a boss. At the release the last enemy also
+   sags before it fades (a squash and a tip about its feet over 0.18 s):
+   y scale 0.88 and 4 degrees for an elite, 0.62 and 10 degrees for a boss,
+   none for a normal fight. A boss also takes one more stage shake at the
+   release (0.8), stage only.
 5. **The sting lands on the kill** (F14): `VictorySting` moves from
    `OnPlaybackFinished` to the moment the last enemy's fade begins, after
    its hold, so the music marks the kill registering; the voice lines follow
@@ -283,15 +293,17 @@ In order, for a won fight:
 
 **Cap and pace.** One pure model, `RunUpSchedule` (Domain, beside
 `RevealSchedule`), returns the timed events; EditMode tests pin them on
-literals. At 1x a normal fight's run-up, final contact to wipe start, is
-hit-stop 0.22 + fade hold 0.35 + fade 0.6 = 1.17 s; the **cap is 1.3 s** at
-any preset. Durations C0 adds go through `ReckoningTime`
+literals. At pace 1 (the 1.5x preset) a normal fight's run-up, final
+contact to wipe start, is hit-stop 0.22 + fade hold 0.35 + fade 0.6 =
+1.17 s, an elite's 1.25 s, and a boss's 1.41 s is cut to the **cap of
+1.3 s**, which holds at any preset. At 1x (pace 2/3) the stop and the fade
+run 1.5 times longer and the cap decides for every class. Durations C0 adds go through `ReckoningTime`
 (`min(1, Default/preset)`, C10). The death fade keeps the fight's own
 `FightBeatPlayer.Scaled` pace; at 0.5x it would run longer, so the cap, not
 the fade, decides when the wipe starts.
 
 **Skip and input.** Any Submit, click or Cancel during the run-up jumps to
-the wipe: fades complete, the lift settles, the sting keeps playing (audio
+the wipe: fades complete, the hops settle, the sting keeps playing (audio
 is never cut). The press is consumed and does not reach the Reckoning.
 There is no other input to delay: the fight's verbs are hidden once it is
 over (`FightController.Input.cs:1518-1524`). The worst case from final
@@ -359,8 +371,10 @@ One page at a time, gear then relic.
   with two upgrades sounds like good news before the cards are read. This
   adds no time: it rides the deal or the flips.
 - **No cache** unless the page earns one. **Gear page:** it holds a live
-  upgrade whose *quality* is higher than the item its wearer wears in that
-  slot (an empty slot counts as lower than anything). **Boss page:** always.
+  upgrade that is Rare or better and whose *quality* is higher than the
+  item its wearer wears in that slot (an empty slot counts as lower than
+  anything; a wrapped bundle for a Common or Uncommon would be a false
+  promise). **Boss page:** always.
   **Relic page:** a Rare+ live relic (unchanged; A9 measured gear only).
   Such a page gets a cache (§5 A1) that the map's chip unfolds into, its
   seam leaking warm light, humming. The light does not say which card, nor

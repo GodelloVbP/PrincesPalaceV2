@@ -153,8 +153,7 @@ namespace PrincesPalace.Domain.Tests
         public void GearCache_AUpgradeOverALowerWornQuality_Earns()
         {
             Assert.IsTrue(Page(EncounterClass.Normal, Gear(3, 2), Gear(1, 1, false), Gear(1, 1, false)).HasCache);
-            Assert.IsTrue(Page(EncounterClass.Normal, Gear(2, 1), Gear(1, 1, false), Gear(1, 1, false)).HasCache,
-                "Uncommon over Common: higher is higher, whatever the tier");
+            Assert.IsTrue(Page(EncounterClass.Normal, Gear(4, 3), Gear(1, 1, false), Gear(1, 1, false)).HasCache);
         }
 
         [Test]
@@ -168,7 +167,19 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void GearCache_OverAnEmptySlot_Earns()
         {
-            Assert.IsTrue(Page(EncounterClass.Normal, Gear(1, 0), Gear(1, 1, false), Gear(1, 1, false)).HasCache);
+            Assert.IsTrue(Page(EncounterClass.Normal, Gear(3, 0), Gear(1, 1, false), Gear(1, 1, false)).HasCache,
+                "a live Rare over an empty slot");
+        }
+
+        [Test]
+        public void GearCache_BelowRare_NeverEarns_EvenOverAnEmptySlotOrALowerWornItem()
+        {
+            Assert.IsFalse(Page(EncounterClass.Normal, Gear(1, 0), Gear(1, 1, false), Gear(1, 1, false)).HasCache,
+                "a live Common over an empty slot");
+            Assert.IsFalse(Page(EncounterClass.Normal, Gear(2, 0), Gear(1, 1, false), Gear(1, 1, false)).HasCache,
+                "a live Uncommon over an empty slot");
+            Assert.IsFalse(Page(EncounterClass.Normal, Gear(2, 1), Gear(1, 1, false), Gear(1, 1, false)).HasCache,
+                "a live Uncommon over a Common");
         }
 
         [Test]
