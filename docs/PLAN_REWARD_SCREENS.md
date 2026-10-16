@@ -409,7 +409,7 @@ anyway: 0.53 x 0.59 + 0.24 x 1.15 + 0.23 x 1.40 = 0.91 s mean to choosable
 at Favor 14, 1.06 s at the cap (C4 table). Fight 200 stays short because
 the wait is short and the ceremony is rarer than the quality odds, not
 because a counter shortens it.
-First sweep (fails at 32% beat over all pages, 15% on Normal pages): `docs/REWARD_CACHE_RATES.md`.
+Sweep on db515a0b: beat 16.3% on non-boss pages (passes 1 in 5), 60.7% on boss pages, 32.2% over all (`docs/REWARD_CACHE_RATES.md`). The 1-in-5 target applies to non-boss pages only: a boss page is the peak and keeps its beat (owner, 2026-10-16).
 
 ### C4. The opening (cache pages only)
 
