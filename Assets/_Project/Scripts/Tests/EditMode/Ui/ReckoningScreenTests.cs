@@ -182,13 +182,57 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(5, OfferRowLayout.MaxCards);
             Assert.AreEqual(5, screen.OfferButtons.Count);
             Assert.AreEqual(5, screen.OfferNames.Count);
-            Assert.AreEqual(5, screen.OfferMetas.Count);
-            Assert.AreEqual(5, screen.OfferRecipients.Count);
             Assert.AreEqual(5, screen.OfferDeltas.Count);
+            Assert.AreEqual(5, screen.OfferChevrons.Count);
             Assert.AreEqual(5, screen.OfferFeatures.Count);
-            Assert.AreEqual(5, screen.OfferLoses.Count);
             Assert.AreEqual(5, screen.OfferActions.Count);
+            Assert.AreEqual(5, screen.OfferPlinths.Count);
+            Assert.AreEqual(5, screen.OfferGhosts.Count);
+            Assert.AreEqual(5, screen.OfferChains.Count);
+            Assert.AreEqual(5, screen.OfferLostDiscs.Count);
+            Assert.AreEqual(5, screen.OfferLostMarks.Count);
+            Assert.AreEqual(5, screen.OfferWearerDiscs.Count);
+            Assert.AreEqual(5, screen.OfferWearerPortraits.Count);
+            Assert.AreEqual(5, screen.OfferBands.Count);
+            Assert.AreEqual(5, screen.OfferBandTiers.Count);
+            Assert.AreEqual(5, screen.OfferBandPluses.Count);
             Assert.AreEqual(5, screen.HoneButtons.Count);
+        }
+
+        [Test]
+        public void ACardCarriesNoItemNamePlusAndNoLabelsTheFaceReplaced()
+        {
+            // Honing is the slot's and is drawn on the band (C5); the old
+            // meta, recipient and loses lines are the plinth, the medallion
+            // and the red mark. A card that still has them is two faces.
+            var card = Walk(Tree()).Single(n => n.Name == "ReckoningOffer0");
+            var names = Walk(card).Select(n => n.Name).ToList();
+
+            foreach (string gone in new[] { "Meta", "Recipient", "Loses" })
+            {
+                CollectionAssert.DoesNotContain(names, "ReckoningOffer0" + gone);
+            }
+
+            foreach (string part in new[] { "Plinth", "Ghost", "Icon", "LostDisc", "LostMark", "WearerDisc",
+                "WearerPortrait", "Band", "BandTier", "BandPlus", "Name", "Delta", "Chevron", "Feature", "Action" })
+            {
+                CollectionAssert.Contains(names, "ReckoningOffer0" + part);
+            }
+        }
+
+        [Test]
+        public void TheGhostIsLeftOfTheItemAndSmallerThanIt()
+        {
+            // 55% size, behind and to the left (C5). The ghost gate reads the
+            // capture; this pins the geometry the capture shows.
+            var card = Walk(Tree()).Single(n => n.Name == "ReckoningOffer0");
+            var ghost = Walk(card).Single(n => n.Name == "ReckoningOffer0Ghost");
+            var icon = Walk(card).Single(n => n.Name == "ReckoningOffer0Icon");
+
+            Assert.Less(ghost.Place.Offset.X, icon.Place.Offset.X, "the ghost is not to the left");
+            Assert.AreEqual(icon.Size.X * 0.55f, ghost.Size.X, 0.01f);
+            Assert.AreEqual(icon.Size.Y * 0.55f, ghost.Size.Y, 0.01f);
+            Assert.AreEqual(0.45f, OfferRowLayout.GhostAlpha, 0.0001f);
         }
 
         [Test]

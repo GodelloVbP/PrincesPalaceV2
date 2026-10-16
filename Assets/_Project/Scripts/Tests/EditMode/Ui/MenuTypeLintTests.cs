@@ -37,12 +37,18 @@ namespace PrincesPalace.Domain.Tests
             // screen lost its labels.
             public readonly int MinimumNodes;
 
-            public Scope(string name, Func<UiNode> build, int minimumNodes, string onlyNamePrefix)
+            // When set, only nodes whose name also ends with it are checked:
+            // the card face's name and delta rows, among nodes sharing a prefix.
+            public readonly string OnlyNameSuffix;
+
+            public Scope(string name, Func<UiNode> build, int minimumNodes, string onlyNamePrefix,
+                string onlyNameSuffix = null)
             {
                 Name = name;
                 Build = build;
                 MinimumNodes = minimumNodes;
                 OnlyNamePrefix = onlyNamePrefix;
+                OnlyNameSuffix = onlyNameSuffix;
             }
         }
 
@@ -50,6 +56,8 @@ namespace PrincesPalace.Domain.Tests
         {
             new Scope("system menu: frame and every pane", () => SystemMenuScreen.Build().Root, MenuMinimumNodes, null),
             new Scope("reckoning relics tab", () => ReckoningScreen.Build().Root, 15, "ReckoningRelic"),
+            new Scope("reckoning card name", () => ReckoningScreen.Build().Root, 5, "ReckoningOffer", "Name"),
+            new Scope("reckoning card delta", () => ReckoningScreen.Build().Root, 5, "ReckoningOffer", "Delta"),
             new Scope("relic draft held strip", () => RelicDraftScreen.Build().Root, 9, "DraftHeld"),
         };
 
@@ -71,7 +79,8 @@ namespace PrincesPalace.Domain.Tests
 
         // Every problem in a tree, as "path: what is wrong", and how many
         // labels and buttons it looked at.
-        private static List<string> Problems(UiNode root, out int checkedCount, string onlyNamePrefix = null)
+        private static List<string> Problems(UiNode root, out int checkedCount, string onlyNamePrefix = null,
+            string onlyNameSuffix = null)
         {
             var solved = UiSolver.Solve(root, UiFrames.Reference);
             var problems = new List<string>();
@@ -81,6 +90,7 @@ namespace PrincesPalace.Domain.Tests
             {
                 if (node.Source.Kind != UiNodeKind.Label && node.Source.Kind != UiNodeKind.Button) continue;
                 if (onlyNamePrefix != null && !node.Name.StartsWith(onlyNamePrefix, StringComparison.Ordinal)) continue;
+                if (onlyNameSuffix != null && !node.Name.EndsWith(onlyNameSuffix, StringComparison.Ordinal)) continue;
 
                 checkedCount++;
                 var problem = MenuTypeFloor.Problem(node.Source);
@@ -95,7 +105,7 @@ namespace PrincesPalace.Domain.Tests
         {
             foreach (var scope in Scoped)
             {
-                var problems = Problems(scope.Build(), out int count, scope.OnlyNamePrefix);
+                var problems = Problems(scope.Build(), out int count, scope.OnlyNamePrefix, scope.OnlyNameSuffix);
 
                 Assert.GreaterOrEqual(count, scope.MinimumNodes,
                     $"'{scope.Name}': only {count} labels and buttons were checked, so the walk is not " +

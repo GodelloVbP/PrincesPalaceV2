@@ -202,12 +202,27 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         public List<NodeRef> OfferIcons = new List<NodeRef>();
         public List<NodeRef> OfferNames = new List<NodeRef>();
-        public List<NodeRef> OfferMetas = new List<NodeRef>();
-        public List<NodeRef> OfferRecipients = new List<NodeRef>();
         public List<NodeRef> OfferDeltas = new List<NodeRef>();
         public List<NodeRef> OfferFeatures = new List<NodeRef>();
-        public List<NodeRef> OfferLoses = new List<NodeRef>();
         public List<NodeRef> OfferActions = new List<NodeRef>();
+
+        // The card face's other parts (docs/PLAN_REWARD_SCREENS.md C5).
+        public List<NodeRef> OfferPlinths = new List<NodeRef>();
+        public List<NodeRef> OfferGhosts = new List<NodeRef>();
+        public List<NodeRef> OfferChains = new List<NodeRef>();
+        public List<NodeRef> OfferLostDiscs = new List<NodeRef>();
+        public List<NodeRef> OfferLostMarks = new List<NodeRef>();
+        public List<NodeRef> OfferWearerDiscs = new List<NodeRef>();
+        public List<NodeRef> OfferWearerPortraits = new List<NodeRef>();
+        public List<NodeRef> OfferBands = new List<NodeRef>();
+        public List<NodeRef> OfferBandTiers = new List<NodeRef>();
+        public List<NodeRef> OfferBandPluses = new List<NodeRef>();
+        public List<NodeRef> OfferChevrons = new List<NodeRef>();
+
+        // The shared focus detail, shown beside the focused face-up card.
+        public NodeRef CardTip;
+        public NodeRef CardTipTitle;
+        public NodeRef CardTipBody;
 
         // "Hone instead", one per gear card; the Favor line under the heading;
         // the ledger of what the page did (displaced copies, hones, what
@@ -362,6 +377,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .Themed(ButtonTheme.Gold);
             screen.LeaveButton = leave;
             offerChildren.Add(leave);
+
+            // The focus detail, last so it draws over the cards it describes.
+            var tip = ItemComparisonPanel.Build("ReckoningCardTip", Place.At(0f, 0f),
+                new UiVec(CardTipWidth, CardTipHeight), CardTipTitleHeight, 20, "#F2DB9E", 15, "#D9CCF2");
+            tip.Panel.Inactive();
+            screen.CardTip = tip.Panel;
+            screen.CardTipTitle = tip.Title;
+            screen.CardTipBody = tip.Body;
+            offerChildren.Add(tip.Panel);
 
             var offerPhase = Ui.Panel("ReckoningOfferPhase", Place.Stretch(), UiSize.Fill, offerChildren);
             screen.OfferPhase = offerPhase;
@@ -889,42 +913,52 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // A relic card has no recipient or stat line, so its description takes
         // those two bands as well (RelicFeatureBand).
         private const float CardTop = 200f;
-        private const float IconBand = 170f;
-        private const float NameBand = 44f;
-        private const float MetaBand = 22f;
-        private const float RecipientBand = 22f;
-        private const float DeltaBand = 26f;
-        private const float FeatureBand = 64f;
-        private const float LosesBand = 38f;
+
+        // The art zone: plinth, ghost, item and wearer medallion share it. The
+        // item's box leaves 8 px above and the plinth sits on the zone's floor.
+        private const float IconBand = 190f;
+        public const float IconBoxHeight = 150f;
+        private const float BandBand = 28f;
+        private const float NameBand = 52f;
+        private const float DeltaBand = 32f;
+        private const float FeatureBand = 62f;
         private const float ActionBand = 24f;
 
         private const float IconTop = CardTop;
         private const float IconBottom = IconTop - IconBand;
-        private const float NameTop = IconBottom;
-        private const float MetaTop = NameTop - NameBand;
-        private const float RecipientTop = MetaTop - MetaBand;
-        private const float DeltaTop = RecipientTop - RecipientBand;
+        private const float BandTop = IconBottom;
+        private const float NameTop = BandTop - BandBand;
+        private const float DeltaTop = NameTop - NameBand;
         private const float FeatureTop = DeltaTop - DeltaBand;
-        private const float LosesTop = FeatureTop - FeatureBand;
-        private const float ActionTop = LosesTop - LosesBand;
+        private const float ActionTop = FeatureTop - FeatureBand;
         private const float CardBottom = ActionTop - ActionBand;
         private const float CardHeight = CardTop - CardBottom;
         private const float CardCentreY = (CardTop + CardBottom) * 0.5f;
 
         // Band centres relative to the CARD's centre, which is what a child's
-        // Place is measured from. Public where the controller re-seats a label
-        // for the other page kind.
-        private const float IconCentre = IconTop - IconBand * 0.5f - CardCentreY;
+        // Place is measured from.
+        private const float IconCentre = IconTop - 8f - IconBoxHeight * 0.5f - CardCentreY;
+        private const float PlinthCentre = IconBottom + OfferRowLayout.PlinthHeight * 0.5f + 4f - CardCentreY;
+        private const float GhostHeight = IconBoxHeight * OfferRowLayout.GhostScale;
+        private const float GhostCentre = IconBottom + GhostHeight * 0.5f + 8f - CardCentreY;
+        private const float MedallionCentre = IconTop - 4f - OfferRowLayout.MedallionSize * 0.5f - CardCentreY;
+        private const float BandCentre = BandTop - BandBand * 0.5f - CardCentreY;
         private const float NameCentre = NameTop - NameBand * 0.5f - CardCentreY;
-        private const float MetaCentre = MetaTop - MetaBand * 0.5f - CardCentreY;
-        private const float RecipientCentre = RecipientTop - RecipientBand * 0.5f - CardCentreY;
         private const float DeltaCentre = DeltaTop - DeltaBand * 0.5f - CardCentreY;
-        private const float LosesCentre = LosesTop - LosesBand * 0.5f - CardCentreY;
         private const float ActionCentre = ActionTop - ActionBand * 0.5f - CardCentreY;
         public const float FeatureCentre = FeatureTop - FeatureBand * 0.5f - CardCentreY;
         public const float FeatureHeight = FeatureBand;
-        public const float RelicFeatureHeight = RecipientBand + DeltaBand + FeatureBand;
-        public const float RelicFeatureCentre = RecipientTop - RelicFeatureHeight * 0.5f - CardCentreY;
+
+        // A relic has no stat line, so its description takes that band too.
+        public const float RelicFeatureHeight = DeltaBand + FeatureBand;
+        public const float RelicFeatureCentre = DeltaTop - RelicFeatureHeight * 0.5f - CardCentreY;
+
+        // The focus detail's box; its height is refitted to the text at runtime.
+        public const float CardTipWidth = 340f;
+        public const float CardTipHeight = 220f;
+        public const float CardTipTitleHeight = 30f;
+        public const float CardTipMinBody = 60f;
+        public const float CardTipMaxHeight = 420f;
 
         // Under each gear card: "hone instead", and the ledger and the way out
         // below them. All in the offer phase's own coordinates.
@@ -955,6 +989,20 @@ namespace PrincesPalace.Domain.UiKit.Screens
             float iconWidth = OfferRowLayout.IconWidth(count);
             float haloSize = OfferRowLayout.HaloDiameter(count);
             float burstSize = OfferRowLayout.BurstDiameter(count);
+            float ghostWidth = OfferRowLayout.GhostWidth(count);
+
+            // BACK TO FRONT, which is the child order below: plinth, halo,
+            // burst, the worn item's ghost, the new item, then the marks that
+            // sit on them.
+            //
+            // The plinth is the item's quality as a silhouette (width by step,
+            // set at runtime) and a placeholder disc until the plinth sheet
+            // lands; the halo and burst repeat the colour behind the item.
+            var plinth = Ui.Sprite($"ReckoningOffer{index}Plinth", "proc:radial_glow",
+                    Place.At(0f, PlinthCentre),
+                    UiSize.Fixed(OfferRowLayout.PlinthWidth(count, 4), OfferRowLayout.PlinthHeight))
+                .Coloured("#FFFFFF00")
+                .AsDecor();
 
             // TWO layers behind the icon, because one was not readable.
             //
@@ -975,28 +1023,77 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .AsDecor()
                 .AllowOverflow("the burst is deliberately larger than the icon it sits behind - that bleed IS the quality signal");
 
-            var icon = Ui.Sprite($"ReckoningOffer{index}Icon", null,
-                    Place.At(0f, IconCentre), UiSize.Fixed(iconWidth, IconBand))
+            // What the wearer has in this slot now: behind and to the left,
+            // small and faint. No honing is drawn on it; that is the slot's.
+            var ghost = Ui.Sprite($"ReckoningOffer{index}Ghost", null,
+                    Place.At(OfferRowLayout.GhostX(count), GhostCentre), UiSize.Fixed(ghostWidth, GhostHeight))
                 .AsDecor();
 
-            var name = Ui.Label($"ReckoningOffer{index}Name", UiString.Runtime, new UiVec(labelWidth, NameBand), 18,
+            var icon = Ui.Sprite($"ReckoningOffer{index}Icon", null,
+                    Place.At(0f, IconCentre), UiSize.Fixed(iconWidth, IconBoxHeight))
+                .AsDecor();
+
+            // Placeholder for the chain sheet: a grey ring over an inert card's art.
+            var chain = Ui.Sprite($"ReckoningOffer{index}Chain", "proc:ring_outline",
+                    Place.At(0f, IconCentre), UiSize.Fixed(iconWidth, IconBoxHeight))
+                .Coloured("#FFFFFF00")
+                .AsDecor();
+
+            var lostDisc = Ui.Sprite($"ReckoningOffer{index}LostDisc", "proc:solid_circle",
+                    Place.At(OfferRowLayout.LostBadgeX(count),
+                        GhostCentre + GhostHeight * 0.5f - OfferRowLayout.LostBadgeSize * 0.5f),
+                    UiSize.Fixed(OfferRowLayout.LostBadgeSize, OfferRowLayout.LostBadgeSize))
+                .Coloured("#C8453CFF")
+                .AsDecor();
+            var lostMark = Ui.Label($"ReckoningOffer{index}LostMark", UiStrings.ReckoningLostMark,
+                    new UiVec(OfferRowLayout.LostBadgeSize, OfferRowLayout.LostBadgeSize), 16, "#FFFFFF",
+                    Place.At(OfferRowLayout.LostBadgeX(count),
+                        GhostCentre + GhostHeight * 0.5f - OfferRowLayout.LostBadgeSize * 0.5f))
+                .AsDecor();
+
+            // Identity only: who this is for. A square portrait on a disc until
+            // the medallion art exists.
+            var wearerDisc = Ui.Sprite($"ReckoningOffer{index}WearerDisc", "proc:solid_circle",
+                    Place.At(OfferRowLayout.MedallionX(count), MedallionCentre),
+                    UiSize.Fixed(OfferRowLayout.MedallionSize, OfferRowLayout.MedallionSize))
+                .Coloured("#3A2A52FF")
+                .AsDecor();
+            var wearerPortrait = Ui.Sprite($"ReckoningOffer{index}WearerPortrait", null,
+                    Place.At(OfferRowLayout.MedallionX(count), MedallionCentre),
+                    UiSize.Fixed(OfferRowLayout.MedallionSize - 6f, OfferRowLayout.MedallionSize - 6f))
+                .AsDecor();
+
+            // THE SLOT BAND: the plinth's front. The tier numeral on the left,
+            // the SLOT's honing on the right (it stays lit when the items swap).
+            var band = Ui.Solid($"ReckoningOffer{index}Band", "#1D1226E6",
+                    new UiVec(OfferRowLayout.BandWidth(count), BandBand - 4f), Place.At(0f, BandCentre))
+                .AsDecor();
+            var bandTier = Ui.Label($"ReckoningOffer{index}BandTier", UiString.Runtime,
+                    new UiVec(64f, BandBand - 4f), 16, "#D9CCF2", Place.At(-OfferRowLayout.BandLabelX(count), BandCentre))
+                .AsDecor();
+            var bandPlus = Ui.Label($"ReckoningOffer{index}BandPlus", UiString.Runtime,
+                    new UiVec(64f, BandBand - 4f), 16, "#8A7BA6", Place.At(OfferRowLayout.BandLabelX(count), BandCentre))
+                .AsDecor();
+
+            var name = Ui.Label($"ReckoningOffer{index}Name", UiString.Runtime, new UiVec(labelWidth, NameBand), 20,
                     "#EDE6FF", Place.At(0f, NameCentre))
+                .AsDecor()
+                .Styled(TypographyRole.Body);
+
+            // The number takes the left, the chevron the right; the chevron's
+            // shape (up, down, flat) carries the sign.
+            var delta = Ui.Label($"ReckoningOffer{index}Delta", UiString.Runtime,
+                    new UiVec(OfferRowLayout.DeltaLabelWidth(count), DeltaBand), 20, "#F2DB9E",
+                    Place.At(OfferRowLayout.DeltaLabelX(count), DeltaCentre))
+                .AsDecor()
+                .Styled(TypographyRole.TacticalData);
+            var chevron = Ui.Label($"ReckoningOffer{index}Chevron", UiString.Runtime,
+                    new UiVec(OfferRowLayout.ChevronSize, DeltaBand), 24, "#9A93A8",
+                    Place.At(OfferRowLayout.ChevronX(count), DeltaCentre))
                 .AsDecor();
-            var meta = Ui.Label($"ReckoningOffer{index}Meta", UiString.Runtime, new UiVec(labelWidth, MetaBand), 13,
-                    "#B8A8D9", Place.At(0f, MetaCentre))
-                .AsDecor();
-            var recipient = Ui.Label($"ReckoningOffer{index}Recipient", UiString.Runtime,
-                    new UiVec(labelWidth, RecipientBand), 12, "#D9CCF2", Place.At(0f, RecipientCentre))
-                .AsDecor();
-            var delta = Ui.Label($"ReckoningOffer{index}Delta", UiString.Runtime, new UiVec(labelWidth, DeltaBand), 16,
-                    "#F2DB9E", Place.At(0f, DeltaCentre))
-                .AsDecor();
+
             var feature = Ui.Label($"ReckoningOffer{index}Feature", UiString.Runtime,
                     new UiVec(labelWidth, FeatureBand), 13, "#D9CCF2", Place.At(0f, FeatureCentre))
-                .TextAligned(UiTextAlign.TopLeft)
-                .AsDecor();
-            var loses = Ui.Label($"ReckoningOffer{index}Loses", UiString.Runtime, new UiVec(labelWidth, LosesBand), 12,
-                    "#E58A8A", Place.At(0f, LosesCentre))
                 .TextAligned(UiTextAlign.TopLeft)
                 .AsDecor();
             var action = Ui.Label($"ReckoningOffer{index}Action", UiString.Runtime, new UiVec(labelWidth, ActionBand), 16,
@@ -1020,27 +1117,43 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     new UiVec(cardWidth, CardHeight), 14, Place.At(x, CardCentreY))
                 .NoChrome();
 
+            button.Children.Add(plinth);
             button.Children.Add(halo);
             button.Children.Add(burst);
+            button.Children.Add(ghost);
             button.Children.Add(icon);
+            button.Children.Add(chain);
+            button.Children.Add(lostDisc);
+            button.Children.Add(lostMark);
+            button.Children.Add(wearerDisc);
+            button.Children.Add(wearerPortrait);
+            button.Children.Add(band);
+            button.Children.Add(bandTier);
+            button.Children.Add(bandPlus);
             button.Children.Add(name);
-            button.Children.Add(meta);
-            button.Children.Add(recipient);
             button.Children.Add(delta);
+            button.Children.Add(chevron);
             button.Children.Add(feature);
-            button.Children.Add(loses);
             button.Children.Add(action);
 
             OfferButtons.Add(button);
+            OfferPlinths.Add(plinth);
             OfferHalos.Add(halo);
             OfferBursts.Add(burst);
+            OfferGhosts.Add(ghost);
             OfferIcons.Add(icon);
+            OfferChains.Add(chain);
+            OfferLostDiscs.Add(lostDisc);
+            OfferLostMarks.Add(lostMark);
+            OfferWearerDiscs.Add(wearerDisc);
+            OfferWearerPortraits.Add(wearerPortrait);
+            OfferBands.Add(band);
+            OfferBandTiers.Add(bandTier);
+            OfferBandPluses.Add(bandPlus);
             OfferNames.Add(name);
-            OfferMetas.Add(meta);
-            OfferRecipients.Add(recipient);
             OfferDeltas.Add(delta);
+            OfferChevrons.Add(chevron);
             OfferFeatures.Add(feature);
-            OfferLoses.Add(loses);
             OfferActions.Add(action);
             return button;
         }

@@ -650,20 +650,41 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("reckoning.no_change", "NO STAT CHANGE");
         public static readonly UiString ReckoningInert =
             UiString.Define("reckoning.inert", "Inert until its requirements are met.");
-        public static readonly UiString ReckoningDeltaDamage =
-            UiString.Define("reckoning.delta_damage", "{0} DMG", "+999 DMG");
         public static readonly UiString ReckoningDeltaHealth =
             UiString.Define("reckoning.delta_health", "{0} HP", "+999 HP");
         public static readonly UiString ReckoningDeltaDefence =
             UiString.Define("reckoning.delta_defence", "{0} DEF", "+999 DEF");
         public static readonly UiString ReckoningDeltaSpeed =
             UiString.Define("reckoning.delta_speed", "{0} SPEED", "+999 SPEED");
-        public static readonly UiString ReckoningDeltaMana =
-            UiString.Define("reckoning.delta_mana", "{0} MANA REGEN", "+999 MANA REGEN");
+
+        // A stat with a glyph in the description icon set: the glyph's markup
+        // tag, then the signed number.
+        public static readonly UiString ReckoningDeltaGlyph =
+            UiString.Define("reckoning.delta_glyph", "{0} {1}", "[] +999");
+
+        // The slot band: tier numeral on the left, the slot's honing on the right.
+        public static readonly UiString ReckoningBandTier =
+            UiString.Define("reckoning.band_tier", "T{0}", "T10");
+        public static readonly UiString ReckoningBandHone =
+            UiString.Define("reckoning.band_hone", "+{0}", "+10");
+
+        // The delta's shape: up, down, flat. Shape alone carries the sign.
+        public static readonly UiString ReckoningChevronUp = UiString.Define("reckoning.chevron_up", "^");
+        public static readonly UiString ReckoningChevronDown = UiString.Define("reckoning.chevron_down", "v");
+        public static readonly UiString ReckoningChevronFlat = UiString.Define("reckoning.chevron_flat", "=");
+
+        // The red mark on the ghost when the worn copy has an affix the new one lacks.
+        public static readonly UiString ReckoningLostMark = UiString.Define("reckoning.lost_mark", "-");
 
         // The relic card's face.
         public static readonly UiString ReckoningAddsNothing =
             UiString.Define("reckoning.adds_nothing", "adds nothing for {0}", "adds nothing for Bjorn, Odette, Shawn");
+
+        // The relic card's focus detail: who gains, and who is never reached.
+        public static readonly UiString ReckoningTipGains =
+            UiString.Define("reckoning.tip_gains", "gains: {0}", "gains: Bjorn, Odette, Shawn");
+        public static readonly UiString ReckoningTipUnreached =
+            UiString.Define("reckoning.tip_unreached", "not reached: {0}", "not reached: Bjorn, Odette, Shawn");
 
         // What a card says it will do, then what became of it.
         public static readonly UiString ReckoningTake = UiString.Define("reckoning.take", "TAKE");

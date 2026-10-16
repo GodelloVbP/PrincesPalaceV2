@@ -140,5 +140,81 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(ReckoningScreen.ContentHalfWidth * 2f, OfferRowLayout.RowWidth(3), 0.001f);
             Assert.AreEqual(ReckoningScreen.ContentHalfWidth * 2f, OfferRowLayout.RowWidth(4), 0.001f);
         }
+
+        // ---- RowOrder (docs/PLAN_REWARD_SCREENS.md C5) -----------------------------
+
+        private static readonly string[] Squad = { "sheep", "owl", "bear" };
+
+        [Test]
+        public void RowOrder_GroupsCardsByWearerInSquadOrder_StableWithinAWearer()
+        {
+            // Pages deal in cycling squad order: sheep, owl, bear, sheep, owl.
+            var order = OfferRowLayout.RowOrder(new[] { "sheep", "owl", "bear", "sheep", "owl" }, Squad);
+
+            CollectionAssert.AreEqual(new[] { 0, 3, 1, 4, 2 }, order);
+        }
+
+        [Test]
+        public void RowOrder_FollowsTheSquadNotThePage()
+        {
+            var order = OfferRowLayout.RowOrder(new[] { "bear", "sheep", "owl" }, Squad);
+
+            CollectionAssert.AreEqual(new[] { 1, 2, 0 }, order);
+        }
+
+        [Test]
+        public void RowOrder_KeepsPageOrderForARelicPageAndPutsStrangersAfterTheSquad()
+        {
+            CollectionAssert.AreEqual(new[] { 0, 1, 2 }, OfferRowLayout.RowOrder(new[] { "", "", "" }, Squad));
+            CollectionAssert.AreEqual(new[] { 2, 0, 1 },
+                OfferRowLayout.RowOrder(new[] { "ghost", "wolf", "owl" }, Squad));
+        }
+
+        [Test]
+        public void RowOf_IsTheInverseOfRowOrder()
+        {
+            var order = OfferRowLayout.RowOrder(new[] { "sheep", "owl", "bear", "sheep", "owl" }, Squad);
+            var rowOf = OfferRowLayout.RowOf(order);
+
+            CollectionAssert.AreEqual(new[] { 0, 2, 4, 1, 3 }, rowOf);
+        }
+
+        [Test]
+        public void RowOrder_OfNothingIsEmpty()
+        {
+            Assert.IsEmpty(OfferRowLayout.RowOrder(new string[0], Squad));
+            Assert.IsEmpty(OfferRowLayout.RowOrder(null, Squad));
+        }
+
+        [TestCase(1, 0.7f)]
+        [TestCase(2, 0.8f)]
+        [TestCase(3, 0.9f)]
+        [TestCase(4, 1.0f)]
+        public void ThePlinthWidensWithTheQualityStep(int step, float fraction)
+        {
+            Assert.AreEqual(OfferRowLayout.CardWidth(3) * fraction, OfferRowLayout.PlinthWidth(3, step), 0.01f);
+        }
+
+        [Test]
+        public void TheFacesPartsStayInsideTheirCardAtEveryCount()
+        {
+            for (int count = 1; count <= OfferRowLayout.MaxCards; count++)
+            {
+                float half = OfferRowLayout.CardWidth(count) * 0.5f;
+
+                Assert.GreaterOrEqual(OfferRowLayout.GhostX(count) - OfferRowLayout.GhostWidth(count) * 0.5f, -half - 0.01f);
+                Assert.GreaterOrEqual(OfferRowLayout.MedallionX(count) - OfferRowLayout.MedallionSize * 0.5f, -half - 0.01f);
+                Assert.LessOrEqual(OfferRowLayout.ChevronX(count) + OfferRowLayout.ChevronSize * 0.5f, half + 0.01f);
+                Assert.LessOrEqual(OfferRowLayout.BandLabelX(count) + 32f, half + 0.01f);
+            }
+        }
+
+        [Test]
+        public void OnlyFourAndFiveCardRowsAreNarrow()
+        {
+            Assert.IsFalse(OfferRowLayout.IsNarrow(3));
+            Assert.IsTrue(OfferRowLayout.IsNarrow(4));
+            Assert.IsTrue(OfferRowLayout.IsNarrow(5));
+        }
     }
 }

@@ -45,12 +45,27 @@ namespace PrincesPalace
 
         [SerializeField] internal Button[] offerButtons;
         [SerializeField] internal TMP_Text[] offerNames;
-        [SerializeField] internal TMP_Text[] offerMetas;
-        [SerializeField] internal TMP_Text[] offerRecipients;
         [SerializeField] internal TMP_Text[] offerDeltas;
+        [SerializeField] internal TMP_Text[] offerChevrons;
         [SerializeField] internal TMP_Text[] offerFeatures;
-        [SerializeField] internal TMP_Text[] offerLoses;
         [SerializeField] internal TMP_Text[] offerActions;
+
+        // The card face's other parts (docs/PLAN_REWARD_SCREENS.md C5), one per card.
+        [SerializeField] internal Image[] offerPlinths;
+        [SerializeField] internal Image[] offerGhosts;
+        [SerializeField] internal Image[] offerChains;
+        [SerializeField] internal Image[] offerLostDiscs;
+        [SerializeField] internal TMP_Text[] offerLostMarks;
+        [SerializeField] internal Image[] offerWearerDiscs;
+        [SerializeField] internal Image[] offerWearerPortraits;
+        [SerializeField] internal Image[] offerBands;
+        [SerializeField] internal TMP_Text[] offerBandTiers;
+        [SerializeField] internal TMP_Text[] offerBandPluses;
+
+        // The focus detail shared by every card.
+        [SerializeField] internal GameObject cardTip;
+        [SerializeField] internal TMP_Text cardTipTitle;
+        [SerializeField] internal TMP_Text cardTipBody;
 
         // "Hone instead" under each gear card, the page's Favor line and
         // ledger, and the button that leaves the page (or carries on once
@@ -229,6 +244,12 @@ namespace PrincesPalace
         // (Core/TooltipFocusRouter, docs/GAMEPAD_NAVIGATION_PLAN.md section 7).
         private readonly TooltipFocusRouter _tooltips = new TooltipFocusRouter();
 
+        // Row position -> page index and back (OfferRowLayout.RowOrder); the
+        // card whose detail is showing, or -1.
+        private int[] _rowOrder;
+        private int[] _rowOf;
+        private int _tipIndex = -1;
+
         // Pushed in Show() once Wire()/Paint() have settled which cards are
         // on screen, reconfigured when the choice resolves into the summary,
         // and removed on OnDisable -- Defeat's own PushNavContext header has
@@ -273,6 +294,14 @@ namespace PrincesPalace
             {
                 int index = i;
                 offerButtons[i].onClick.AddListener(() => Take(index));
+
+                // The focus detail, by the stick (selection) and the pointer
+                // through one router.
+                var node = offerButtons[i].gameObject;
+                _tooltips.Register(offerButtons[i], entered => ShowCardTip(index, entered));
+                var hover = node.GetComponent<HoverIndex>() ?? node.AddComponent<HoverIndex>();
+                hover.Index = index;
+                hover.Changed = (_, entered) => _tooltips.Pointer(node, entered);
             }
         }
 
@@ -303,8 +332,11 @@ namespace PrincesPalace
                 var cards = new List<Selectable>();
                 var hones = new List<Selectable>();
                 var openIndexes = new List<int>();
-                for (int i = 0; _page != null && i < offerButtons.Length && i < _page.Cards.Count; i++)
+                // In ROW order, so Left/Right walk the cards as they sit.
+                for (int row = 0; _page != null && row < offerButtons.Length && row < _page.Cards.Count; row++)
                 {
+                    int i = PageAt(row);
+                    if (i >= offerButtons.Length || i >= _page.Cards.Count) continue;
                     if (offerButtons[i] == null || !offerButtons[i].interactable) continue;
 
                     cards.Add(offerButtons[i]);
@@ -333,6 +365,14 @@ namespace PrincesPalace
                 if (leave != null)
                 {
                     links.Add(RuntimeNavWiring.Link(leave, UiNavDirection.Up, First(hones) ?? First(cards)));
+
+                    // Right from the last card is the way off the page; Left
+                    // from it comes back.
+                    if (cards.Count > 0)
+                    {
+                        links.Add(RuntimeNavWiring.Link(cards[cards.Count - 1], UiNavDirection.Right, leave));
+                        links.Add(RuntimeNavWiring.Link(leave, UiNavDirection.Left, cards[cards.Count - 1]));
+                    }
                 }
 
                 // THE GAMEOBJECT, never the Button. NavContext reads its
@@ -636,52 +676,99 @@ namespace PrincesPalace
 
             float cardWidth = OfferRowLayout.CardWidth(count);
             float labelWidth = OfferRowLayout.LabelWidth(count);
+            float iconWidth = OfferRowLayout.IconWidth(count);
+            float bandLabelX = OfferRowLayout.BandLabelX(count);
 
             for (int i = 0; i < count; i++)
             {
-                if (offerRects != null && i < offerRects.Length && offerRects[i] != null)
-                {
-                    var rect = offerRects[i];
+                // The card sits at its ROW position, not its page index: cards
+                // group by wearer (OfferRowLayout.RowOrder) while the buttons,
+                // their names and the page stay page-indexed.
+                float x = OfferRowLayout.CardX(RowOf(i), count);
 
-                    var position = rect.anchoredPosition;
-                    position.x = OfferRowLayout.CardX(i, count);
-                    rect.anchoredPosition = position;
-
-                    var size = rect.sizeDelta;
-                    size.x = cardWidth;
-                    rect.sizeDelta = size;
-                }
+                Seat(RectAt(offerRects, i), x, cardWidth);
 
                 // "Hone instead" keeps its size, because a plate is a 3:1 art
                 // and stretching it with the row would bend it; only its x
                 // follows the card.
-                var hone = honeButtons != null && i < honeButtons.Length && honeButtons[i] != null
+                Seat(honeButtons != null && i < honeButtons.Length && honeButtons[i] != null
                     ? honeButtons[i].transform as RectTransform
-                    : null;
-                if (hone != null)
-                {
-                    var position = hone.anchoredPosition;
-                    position.x = OfferRowLayout.CardX(i, count);
-                    hone.anchoredPosition = position;
-                }
+                    : null, x, null);
 
                 SetWidth(RectAt(offerNames, i), labelWidth);
-                SetWidth(RectAt(offerMetas, i), labelWidth);
-                SetWidth(RectAt(offerRecipients, i), labelWidth);
-                SetWidth(RectAt(offerDeltas, i), labelWidth);
                 SetWidth(RectAt(offerFeatures, i), labelWidth);
-                SetWidth(RectAt(offerLoses, i), labelWidth);
                 SetWidth(RectAt(offerActions, i), labelWidth);
 
-                // THE ART TOO, which the labels' own comment below explains the
-                // general case of. The icon box is emitted at the widest row's
+                Seat(RectAt(offerDeltas, i), OfferRowLayout.DeltaLabelX(count), OfferRowLayout.DeltaLabelWidth(count));
+                Seat(RectAt(offerChevrons, i), OfferRowLayout.ChevronX(count), null);
+
+                // THE ART TOO. The icon box is emitted at the widest row's
                 // width because that is the row the audit solves; leaving it
                 // there would mean a three-card row drawing its items smaller
                 // than the card can hold, for no reason but the audit's
                 // convenience.
-                SetWidth(RectAt(offerIcons, i), OfferRowLayout.IconWidth(count));
+                SetWidth(RectAt(offerIcons, i), iconWidth);
+                SetWidth(RectAt(offerChains, i), iconWidth);
                 SetSquare(RectAt(offerHalos, i), OfferRowLayout.HaloDiameter(count));
                 SetSquare(RectAt(offerBursts, i), OfferRowLayout.BurstDiameter(count));
+
+                Seat(RectAt(offerGhosts, i), OfferRowLayout.GhostX(count), OfferRowLayout.GhostWidth(count));
+                Seat(RectAt(offerLostDiscs, i), OfferRowLayout.LostBadgeX(count), null);
+                Seat(RectAt(offerLostMarks, i), OfferRowLayout.LostBadgeX(count), null);
+                Seat(RectAt(offerWearerDiscs, i), OfferRowLayout.MedallionX(count), null);
+                Seat(RectAt(offerWearerPortraits, i), OfferRowLayout.MedallionX(count), null);
+
+                Seat(RectAt(offerBands, i), 0f, OfferRowLayout.BandWidth(count));
+                Seat(RectAt(offerBandTiers, i), -bandLabelX, null);
+                Seat(RectAt(offerBandPluses, i), bandLabelX, null);
+            }
+        }
+
+        // Where card `pageIndex` sits in the row.
+        private int RowOf(int pageIndex) =>
+            _rowOf != null && pageIndex >= 0 && pageIndex < _rowOf.Length ? _rowOf[pageIndex] : pageIndex;
+
+        // Row position -> page index for the cards on screen; identity before
+        // the first paint.
+        private int PageAt(int row) =>
+            _rowOrder != null && row >= 0 && row < _rowOrder.Length ? _rowOrder[row] : row;
+
+        // Cards group by wearer in squad order (C5), recomputed on every paint
+        // because a take or a leave never changes the page's wearers but a new
+        // page does.
+        private void UpdateRowOrder(int count)
+        {
+            var wearers = new List<string>(count);
+            for (int i = 0; i < count; i++) wearers.Add(_page.Cards[i].RecipientId);
+
+            var squad = new List<string>();
+            var save = SaveSlotManager.CurrentSave;
+            if (save != null)
+            {
+                foreach (var member in save.ActiveSquad())
+                {
+                    if (member != null) squad.Add(member.definitionId);
+                }
+            }
+
+            _rowOrder = OfferRowLayout.RowOrder(wearers, squad);
+            _rowOf = OfferRowLayout.RowOf(_rowOrder);
+        }
+
+        // Position x and, when given, width; y and height are the tree's.
+        private static void Seat(RectTransform rect, float x, float? width)
+        {
+            if (rect == null) return;
+
+            var position = rect.anchoredPosition;
+            position.x = x;
+            rect.anchoredPosition = position;
+
+            if (width.HasValue)
+            {
+                var size = rect.sizeDelta;
+                size.x = width.Value;
+                rect.sizeDelta = size;
             }
         }
 
@@ -706,6 +793,9 @@ namespace PrincesPalace
             items == null || index < 0 || index >= items.Length || items[index] == null
                 ? null
                 : items[index].rectTransform;
+
+        private static RectTransform RectAt(RectTransform[] items, int index) =>
+            items == null || index < 0 || index >= items.Length ? null : items[index];
 
         // Width only. The icon's HEIGHT is the band ReckoningScreen fixed, and
         // ItemIcons.Apply fits the art inside whatever box it is given, so
@@ -746,9 +836,11 @@ namespace PrincesPalace
             // at those positions would sit off-axis with a gap where the
             // missing ones belong -- which is what a hidden card looks like if
             // nobody moves the rest.
+            if (any) UpdateRowOrder(count);
             LayOutOfferRow(count);
 
             var save = SaveSlotManager.CurrentSave;
+            bool narrow = OfferRowLayout.IsNarrow(count);
             for (int i = 0; i < offerButtons.Length; i++)
             {
                 bool present = i < count;
@@ -767,15 +859,12 @@ namespace PrincesPalace
                 // Graceful degradation: a card naming content that no longer
                 // exists shows what it can rather than taking the screen down.
                 SetText(offerNames, i, face.Name);
-                SetText(offerMetas, i, face.Meta);
-                SetText(offerRecipients, i, face.Recipient);
-                SetText(offerDeltas, i, face.Delta);
-                SetText(offerFeatures, i, face.Feature);
-                SetText(offerLoses, i, face.Loses);
+                SetText(offerFeatures, i, narrow ? "" : face.Feature);
                 SeatFeature(i, relic: !card.IsGear);
+                PaintNameWrap(i, narrow);
 
-                // The frame colour is the QUALITY, and it is the burst and the
-                // halo that wear it, from the same table the name and the
+                // The frame colour is the QUALITY, and it is the plinth, burst
+                // and halo that wear it, from the same table the name and the
                 // dossier's cell edges read. Held well under full alpha: it is
                 // a glow behind an object, and at full strength it competes
                 // with the object it exists to frame.
@@ -790,6 +879,10 @@ namespace PrincesPalace
                 {
                     ItemIcons.Apply(offerIcons[i], relicArt, card.RelicId);
                 }
+
+                // An inert card is grey with a chain over it.
+                if (offerIcons[i] != null) offerIcons[i].color = face.Inert ? InertTint : Color.white;
+                if (offerChains[i] != null) offerChains[i].color = face.Inert ? InertTint : Color.clear;
 
                 glow.a = open ? 0.42f : 0.18f;
                 offerBursts[i].color = glow;
@@ -810,6 +903,12 @@ namespace PrincesPalace
                     offerHalos[i].rectTransform.localScale = Vector3.one;
                 }
 
+                PaintPlinth(i, face, count, open);
+                PaintGhost(i, face);
+                PaintWearer(i, face);
+                PaintBand(i, face);
+                PaintDelta(i, face);
+
                 PaintAction(i, card, open);
                 PaintHone(i, card);
 
@@ -821,6 +920,194 @@ namespace PrincesPalace
             }
 
             PaintPageChrome();
+
+            // The page repainted under a held focus (a take changes the worn
+            // item): the detail follows it.
+            if (_tipIndex >= 0) ShowCardTip(_tipIndex, true);
+        }
+
+        private static readonly Color InertTint = new Color(0.5f, 0.5f, 0.55f, 1f);
+        private static readonly Color Up = new Color(0.44f, 0.75f, 0.45f, 1f);
+        private static readonly Color Down = new Color(0.9f, 0.35f, 0.32f, 1f);
+        private static readonly Color Flat = new Color(0.6f, 0.58f, 0.66f, 1f);
+        private static readonly Color BandLit = new Color(0.95f, 0.82f, 0.45f, 1f);
+        private static readonly Color BandDim = new Color(0.54f, 0.48f, 0.65f, 1f);
+
+        // From four cards up the name truncates to one line.
+        private void PaintNameWrap(int i, bool narrow)
+        {
+            var name = i < offerNames.Length ? offerNames[i] : null;
+            if (name == null) return;
+
+            name.textWrappingMode = narrow ? TextWrappingModes.NoWrap : TextWrappingModes.Normal;
+            name.overflowMode = narrow ? TextOverflowModes.Ellipsis : TextOverflowModes.Overflow;
+        }
+
+        // The plinth is the quality's primary channel: its width steps with
+        // the quality (1..4), tinted by the quality colour.
+        private void PaintPlinth(int i, RewardCardFace face, int count, bool open)
+        {
+            var plinth = i < offerPlinths.Length ? offerPlinths[i] : null;
+            if (plinth == null) return;
+
+            var rect = plinth.rectTransform;
+            var size = rect.sizeDelta;
+            size.x = OfferRowLayout.PlinthWidth(count, face.PlinthStep);
+            rect.sizeDelta = size;
+
+            var tint = HexColour(face.Hex);
+            tint.a = open ? 0.55f : 0.25f;
+            plinth.color = tint;
+        }
+
+        // What the wearer has now, behind and to the left, and the red minus
+        // when the worn copy has an affix this one lacks.
+        private void PaintGhost(int i, RewardCardFace face)
+        {
+            var ghost = i < offerGhosts.Length ? offerGhosts[i] : null;
+            if (ghost != null)
+            {
+                if (face.GhostKey != null) ItemIcons.Apply(ghost, icons, face.GhostKey);
+                else ghost.enabled = false;
+
+                ghost.color = new Color(1f, 1f, 1f, OfferRowLayout.GhostAlpha);
+            }
+
+            bool lost = face.HasLost && face.GhostKey != null;
+            if (i < offerLostDiscs.Length && offerLostDiscs[i] != null) offerLostDiscs[i].gameObject.SetActive(lost);
+            if (i < offerLostMarks.Length && offerLostMarks[i] != null) offerLostMarks[i].gameObject.SetActive(lost);
+        }
+
+        // Identity only: whose slot this is.
+        private void PaintWearer(int i, RewardCardFace face)
+        {
+            bool gear = face.WearerId.Length > 0;
+            if (i < offerWearerDiscs.Length && offerWearerDiscs[i] != null) offerWearerDiscs[i].gameObject.SetActive(gear);
+
+            var portrait = i < offerWearerPortraits.Length ? offerWearerPortraits[i] : null;
+            if (portrait == null) return;
+
+            var sprite = gear ? CharacterPortraits.For(face.WearerId) : null;
+            portrait.sprite = sprite;
+            portrait.preserveAspect = true;
+            portrait.enabled = sprite != null;
+            portrait.gameObject.SetActive(gear);
+        }
+
+        // The slot band: the tier numeral and the SLOT's honing, which stays
+        // lit across a swap because it belongs to the slot.
+        private void PaintBand(int i, RewardCardFace face)
+        {
+            if (i < offerBands.Length && offerBands[i] != null) offerBands[i].gameObject.SetActive(face.HasBand);
+
+            var tier = i < offerBandTiers.Length ? offerBandTiers[i] : null;
+            if (tier != null)
+            {
+                tier.gameObject.SetActive(face.HasBand);
+                if (face.HasBand) tier.Set(UiStrings.ReckoningBandTier, face.BandTier);
+            }
+
+            var plus = i < offerBandPluses.Length ? offerBandPluses[i] : null;
+            if (plus != null)
+            {
+                plus.gameObject.SetActive(face.HasBand);
+                if (face.HasBand)
+                {
+                    plus.Set(UiStrings.ReckoningBandHone, face.BandPlus);
+                    plus.color = face.BandPlus > 0 ? BandLit : BandDim;
+                }
+            }
+        }
+
+        // The headline stat, signed, and the chevron whose shape carries the sign.
+        private void PaintDelta(int i, RewardCardFace face)
+        {
+            SetText(offerDeltas, i, face.HasDelta ? face.DeltaText : "");
+
+            var chevron = i < offerChevrons.Length ? offerChevrons[i] : null;
+            if (chevron == null) return;
+
+            chevron.gameObject.SetActive(face.HasDelta);
+            if (!face.HasDelta) return;
+
+            if (face.DeltaSign > 0) chevron.Set(UiStrings.ReckoningChevronUp);
+            else if (face.DeltaSign < 0) chevron.Set(UiStrings.ReckoningChevronDown);
+            else chevron.Set(UiStrings.ReckoningChevronFlat);
+
+            chevron.color = face.DeltaSign > 0 ? Up : face.DeltaSign < 0 ? Down : Flat;
+        }
+
+        // ---- the focus detail ---------------------------------------------------------
+        //
+        // One shared box over the offer phase, shown for the focused (or
+        // hovered) card through the same router the chips use, so the stick
+        // and the mouse share one arbitration.
+        private void ShowCardTip(int index, bool entered)
+        {
+            if (cardTip == null) return;
+
+            if (!entered || _page == null || index < 0 || index >= _page.Cards.Count
+                || index >= offerButtons.Length || !offerButtons[index].gameObject.activeInHierarchy)
+            {
+                if (!entered && index == _tipIndex) HideCardTip();
+                return;
+            }
+
+            _tipIndex = index;
+            var card = _page.Cards[index];
+            var save = SaveSlotManager.CurrentSave;
+            var detail = card.IsGear ? RewardCardFace.DetailOfGear(save, card) : RewardCardFace.DetailOfRelic(save, card);
+
+            if (cardTipTitle != null)
+            {
+                cardTipTitle.SetContent(detail.Title);
+                if (offerNames[index] != null) cardTipTitle.color = offerNames[index].color;
+            }
+
+            if (cardTipBody != null) cardTipBody.SetContent(detail.Body);
+
+            FitCardTip();
+            PlaceCardTip(index);
+            cardTip.SetActive(true);
+        }
+
+        private void HideCardTip()
+        {
+            _tipIndex = -1;
+            if (cardTip != null) cardTip.SetActive(false);
+        }
+
+        private void FitCardTip()
+        {
+            var box = cardTip.transform as RectTransform;
+            if (box == null) return;
+
+            float inner = ItemComparisonPanel.BodyWidthFor(ReckoningScreen.CardTipWidth);
+            float body = ReckoningScreen.CardTipMinBody;
+            if (cardTipBody != null)
+            {
+                body = Mathf.Max(body, cardTipBody.GetPreferredValues(cardTipBody.text, inner, 0f).y);
+            }
+
+            float height = Mathf.Min(ReckoningScreen.CardTipMaxHeight,
+                ItemComparisonPanel.HeightFor(ReckoningScreen.CardTipTitleHeight, body));
+            box.sizeDelta = new Vector2(ReckoningScreen.CardTipWidth, height);
+        }
+
+        // Beside the card if a side has room, else over or under it, never
+        // outside the painted interior (TooltipPlacement.Beside).
+        private void PlaceCardTip(int index)
+        {
+            var box = cardTip.transform as RectTransform;
+            var card = RectAt(offerRects, index);
+            if (box == null || card == null) return;
+
+            var at = TooltipPlacement.Beside(
+                card.anchoredPosition.x, card.anchoredPosition.y, card.sizeDelta.x, card.sizeDelta.y,
+                box.sizeDelta.x, box.sizeDelta.y,
+                -ReckoningScreen.ContentHalfWidth, ReckoningScreen.ContentHalfWidth,
+                ReckoningScreen.ContentBottom, ReckoningScreen.ContentTop);
+            box.anchoredPosition = new Vector2(at.X, at.Y);
         }
 
         // The caption at the foot of a card: what it will do, then what became
