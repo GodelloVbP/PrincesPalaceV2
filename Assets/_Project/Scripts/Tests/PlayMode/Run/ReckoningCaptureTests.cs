@@ -11,6 +11,7 @@ using PrincesPalace;
 using PrincesPalace.Content;
 using PrincesPalace.Domain.Rewards;
 using PrincesPalace.Domain.Combat;
+using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace.PlayModeTests
 {
@@ -220,8 +221,12 @@ namespace PrincesPalace.PlayModeTests
             yield return Shoot("Reckoning_cache_toptier_page.png");
         }
 
-        // The boss gear page is the five-card row. Cards 3 and 4 are marked
-        // inert so the row carries the ghosts R2 draws.
+        // The boss gear page is the five-card row. A ghost is the item the
+        // wearer already wears in the card's slot (docs/PLAN_REWARD_SCREENS.md
+        // C5), so cards 0-3 get their wearer+slot filled and card 4's slot is
+        // emptied: the row shows ghost present and ghost absent. No card is
+        // marked inert; the inert case is left to the live-upgrade fixtures R1/R2
+        // add.
         [UnityTest]
         public IEnumerator CaptureTheFiveCardRowWithGhosts()
         {
@@ -232,8 +237,34 @@ namespace PrincesPalace.PlayModeTests
             var pages = ReckoningPageFixtures.BossAndTwoAnchors();
             var cards = pages[0].Cards;
             Assert.AreEqual(5, cards.Count, "the boss gear page is no longer five cards");
-            cards[3].Inert = true;
-            cards[4].Inert = true;
+
+            // A second, ordinary page supplies the worn items (any item that
+            // fits the slot); rolled after the boss page, which it must not
+            // disturb, and discarded from the run's pending pages after.
+            var wornSource = ReckoningPageFixtures.Settle(
+                new List<EncounterClass> { EncounterClass.Normal, EncounterClass.Normal, EncounterClass.Normal },
+                nodeId: 3)[0].Cards;
+            RunManager.Run.pendingPages = pages.ToList();
+
+            var save = SaveSlotManager.CurrentSave;
+            for (int i = 0; i < cards.Count; i++)
+            {
+                var who = save.roster.First(c => c != null && c.definitionId == cards[i].RecipientId);
+                if (i == cards.Count - 1)
+                {
+                    EquipmentOps.Unequip(MenuContext.Descent, save, who, cards[i].Slot);
+                    Assert.IsNull(who.equipment.GetInstance(cards[i].Slot), "the no-ghost slot is not empty");
+                    continue;
+                }
+
+                var worn = wornSource.FirstOrDefault(c => c.IsGear && c.RecipientId == cards[i].RecipientId &&
+                                                          c.Slot == cards[i].Slot) ?? cards[i];
+                var definition = ContentDatabase.DefinitionOf(worn.Copy);
+                InventoryOps.Add(save.stockpiledItems, worn.Copy, 1);
+                Assert.IsTrue(EquipmentOps.Equip(MenuContext.Descent, save, who, worn.Copy, definition.equipSlot,
+                    definition.IsEquippable, cards[i].Slot), $"could not wear card {i}'s slot");
+            }
+
             _reckoning.Show(Reward(), pages);
             yield return new WaitForSecondsRealtime(2.5f);
             yield return Shoot("Reckoning_five_ghosts_page.png");
