@@ -11,7 +11,7 @@ results to `Assets/_Project/Art/UI/Reckoning/`.
 | Sheet | Output file | When |
 |---|---|---|
 | A1 Caches | `reward_caches.png` | **now** |
-| A2 Plinths | `reward_plinths.png` | **wait**: after the R2 ghost gate (a capture of the five-card row with ghosts must read first; the plan's §6) |
+| A2 Plinths | `reward_plinths.png` | superseded by A2b (round 3) |
 | A3 Card back | `reward_card_back.png` | **now** |
 | A4 Glyphs | `reward_glyphs.png` | **now** |
 | A5 Chain overlay | `reward_chain.png` | **now** |
@@ -277,6 +277,99 @@ simple, so each reads at 24 pixels:
 
 Flat solid pure magenta #FF00FF background, no shadow on it, no gradient,
 no magenta anywhere inside the icons.
+```
+
+---
+
+## Round 3: after the ghost gate
+
+The ghost gate passed: on the five-card row, the worn item reads as a smaller,
+dimmer object standing at the front-left of the new one
+(`docs/captures/reward/five_ghosts_row.png`). These three replace A2 above and
+add the last placeholders.
+
+### A2b. Plinths: generate now
+
+Output: `reward_plinths.png`. Keyed magenta (the moss is green). Replaces A2.
+
+Attach:
+- `docs/captures/reward/five_ghosts_row.png` (where they sit: one under each card's item, the coloured glow is today's placeholder)
+- `Assets/_Project/Art/UI/Reckoning/reward_caches.png` (match the cloth bundles' style, outline and palette)
+- `Assets/_Project/Art/Enemies/Giant_rat_sheet.png`
+
+```
+2D game art for a dark-fantasy roguelike's reward screen, matching the
+attached references exactly: the same flat cel shading, bold dark outlines
+and palette as the cloth bundles in the reward sheet. Worn and handmade,
+tender rather than grim. No text, letters, numbers, UI, frames or
+watermark.
+
+A sheet of 4 low resting places for objects, in a 4x1 row of equal square
+cells, highest resolution you can make, seen from slightly above, each
+centred with generous margin. Each has a wide, flat, empty top surface
+with room for a tall object in the middle AND a smaller second object
+standing at its front-left. Each has a DIFFERENT outline so they can be
+told apart in greyscale:
+1. a bare square flagstone, cracked at one corner;
+2. a rough folded cloth on a round stone, a band of moss along its edge;
+3. a cloth embroidered with blue thread on a taller hexagonal stone;
+4. a cloth woven with gold thread on a wide scalloped stone, a small lit
+   votive candle at the back right.
+All four the same width, increasing in height from 1 to 4, the tallest no
+more than half as tall as it is wide. Across the front of each stone, a
+smooth flat band left completely plain and wide enough for two short
+numbers (the game engraves them there). Nothing stands on the top
+surfaces.
+
+Flat solid pure magenta #FF00FF background, no shadow on it, no gradient,
+no magenta anywhere inside the objects.
+```
+
+### A4c. Up, down and level marks: generate now
+
+Output: `reward_glyphs_3.png`. Keyed magenta. Replaces the text `^` and `v`
+beside each card's number.
+
+Attach:
+- `Assets/_Project/Art/UI/Reckoning/reward_glyphs_2.png` (match these icons' style, outline weight and size exactly)
+
+```
+2D game icons matching the attached sheet exactly: the same chunky flat
+cel shading, the same bold dark outline weight, the same size in the cell.
+No text, letters, numbers, UI, frames or watermark.
+
+A sheet of 3 small icons in a 3x1 row of equal square cells, highest
+resolution you can make, each centred with generous margin. Very bold and
+simple, so each reads at 24 pixels, and each told apart by SHAPE alone:
+1. a thick upward chevron, bright leaf green with a lighter top edge;
+2. a thick downward chevron, deep red with a darker bottom edge;
+3. a short thick horizontal bar with rounded ends, cool grey.
+
+Flat solid pure magenta #FF00FF background, no shadow on it, no gradient,
+no magenta anywhere inside the icons.
+```
+
+### A6. Crack overlay for a fallen fight: generate now
+
+Output: `reward_crack.png`. Keyed green. Laid over the fight's round
+medallion when the party falls.
+
+Attach:
+- `Assets/_Project/Art/Backgrounds/Processed/map_node_fight.png` (the medallion it is laid over: match its outline weight and size)
+
+```
+2D game art matching the attached medallion's flat cel style and bold dark
+outline. No text, letters, numbers, UI, frames or watermark.
+
+One overlay, centred, highest resolution you can make, the same size as
+the attached round medallion: a single jagged crack running from the top
+edge down through the centre to the lower right, with two short branches,
+drawn as a dark near-black line with a thin pale highlight along one side,
+as if the medallion's surface had split. Only the crack lines; everything
+else is background.
+
+Flat solid pure green #00FF00 background, no shadow, no gradient, no green
+anywhere in the crack.
 ```
 
 ---
