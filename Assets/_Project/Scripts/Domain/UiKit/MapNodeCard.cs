@@ -92,59 +92,21 @@ namespace PrincesPalace.Domain.UiKit
                 GuardsHeart, ClosesRooms, title);
     }
 
-    // THE WORDS ON THE MAP'S ROOMS: the caption under each tile, the prize
-    // chip's tag, and the reason a refused press gives.
-    // One home so the controller, the tests and the build read the same text.
+    // THE ONE LINE OF MAP COPY THAT NAMES A KEY: the overview hint, and the
+    // banner that replaces it while the overview is up. One home so the
+    // controller, the tests and the build read the same text.
     public static class MapNodeCard
     {
-        public static string Caption(RoomType type)
+        // The key that toggles the overview on this device, in capitals. Empty
+        // when the device has none, which hides the hint instead of naming a
+        // key the player cannot press.
+        public static string OverviewText(bool inOverview, PromptDevice device)
         {
-            switch (type)
-            {
-                case RoomType.Entry: return "START";
-                case RoomType.Fight: return "FIGHT";
-                case RoomType.EliteFight: return "ELITE";
-                case RoomType.Boss: return "BOSS";
-                case RoomType.Treasure: return "TREASURE";
-                case RoomType.Rest: return "REST";
-                case RoomType.Shop: return "SHOP";
-                case RoomType.Event: return "EVENT";
-                case RoomType.Cache: return "CACHE";
-                default: return type.ToString().ToUpperInvariant();
-            }
-        }
+            var glyph = PromptGlyphs.For(device, PromptButton.Overview);
+            if (!glyph.IsSet) return string.Empty;
 
-        // The badge on the node itself: the kind, and the gold or potions when
-        // they are a number. Empty for a node with no prize.
-        public static string ChipTag(MapNodeChip chip)
-        {
-            switch (chip.Kind)
-            {
-                case PrizeKind.Gold: return UiStrings.MapChipGold.Format(chip.Amount);
-                case PrizeKind.Consumable:
-                    return chip.Amount == 1
-                        ? UiStrings.MapChipPotion.Format()
-                        : UiStrings.MapChipPotions.Format(chip.Amount);
-                case PrizeKind.Item: return UiStrings.MapChipGear.Format();
-                case PrizeKind.Book: return UiStrings.MapChipBook.Format();
-                case PrizeKind.Relic: return UiStrings.MapChipRelic.Format();
-                default: return string.Empty;
-            }
-        }
-
-        // What a press on a room that cannot be entered says. Open is the one
-        // state that is enterable, so it has no refusal of its own; it gets the
-        // walking reason, the only way an open room's press is ignored.
-        public static string Refusal(MapTileState state)
-        {
-            switch (state)
-            {
-                case MapTileState.Current: return UiStrings.MapYouAreHere.Format();
-                case MapTileState.Walked: return UiStrings.MapRefuseCleared.Format();
-                case MapTileState.Ahead: return UiStrings.MapRefuseAhead.Format();
-                case MapTileState.Closed: return UiStrings.MapRefuseClosed.Format();
-                default: return UiStrings.MapRefuseWalking.Format();
-            }
+            string key = glyph.Text.ToUpperInvariant();
+            return inOverview ? UiStrings.MapOverview.Format(key) : UiStrings.MapOverviewHint.Format(key);
         }
     }
 }

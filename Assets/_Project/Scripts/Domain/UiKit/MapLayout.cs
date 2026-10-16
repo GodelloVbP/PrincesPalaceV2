@@ -59,7 +59,8 @@ namespace PrincesPalace.Domain.UiKit
 
         public static float TileHeightFor(RoomType type) => TileWidthFor(type) + TileHeightBonus;
 
-        // The caption hangs below its tile, the you-are-here tag stands above.
+        // Room the footprint keeps clear below and above each tile (the heart
+        // names reuse CaptionHeight). Spacing, not drawn elements.
         public const float CaptionWidth = 130f;
         public const float CaptionHeight = 28f;
         public const float CaptionGap = 16f;
@@ -76,9 +77,7 @@ namespace PrincesPalace.Domain.UiKit
         public const float ChipWidthStep = 10f;
         public const float ChipHeightStep = 4f;
 
-        public static float ChipWidthFor(int strength) =>
-            ChipBaseWidth + ChipWidthStep * (ClampStrength(strength) - 1);
-
+        // The icon is square: its edge is this, one step bigger per pip.
         public static float ChipHeightFor(int strength) =>
             ChipBaseHeight + ChipHeightStep * (ClampStrength(strength) - 1);
 
@@ -93,10 +92,23 @@ namespace PrincesPalace.Domain.UiKit
         // How far the "choosable now" glow ring reaches past the tile on each
         // side; the ring's soft falloff needs this room or it clips to a box.
         public const float GlowPad = 18f;
+
+        // The ring's resting pulse: alpha swings between these as the shared
+        // beacon curve (AmbienceCurves.BeaconProgressAt, 0..1) goes round. Well
+        // under the hover rim, which is full strength and steady.
+        public const float GlowMinAlpha = 0.12f;
+        public const float GlowMaxAlpha = 0.38f;
+        public const float GlowPeriodSeconds = 2.6f;
+
+        public static float GlowAlpha(float beaconProgress)
+        {
+            float t = beaconProgress < 0f ? 0f : beaconProgress > 1f ? 1f : beaconProgress;
+            return GlowMinAlpha + (GlowMaxAlpha - GlowMinAlpha) * t;
+        }
         public const float PipPitch = 20f;
 
-        // Everything a node can draw, as one box: tile, caption, tag, and the
-        // widest chip on the right (mirrored on the left, which keeps the box
+        // The space a node claims, as one box: tile, the clear bands above and
+        // below it, and the widest chip on the right (mirrored on the left, which keeps the box
         // symmetric about the node's own x). Two nodes whose boxes do not
         // intersect cannot have overlapping tiles, captions or chips; the
         // layout test holds every default realm to that.

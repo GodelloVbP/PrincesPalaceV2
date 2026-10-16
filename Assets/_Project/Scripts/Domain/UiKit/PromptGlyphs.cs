@@ -33,6 +33,9 @@ namespace PrincesPalace.Domain.UiKit
         View,
         Start,
 
+        // The map's zoomed-out overview: Y on a pad, Space on a keyboard.
+        Overview,
+
         // What opens the menu on CHARACTER: the C hotkey, or Start on a pad.
         Character,
     }
@@ -97,6 +100,7 @@ namespace PrincesPalace.Domain.UiKit
                 case PromptButton.View: return new PromptGlyph("View", Plain);
                 case PromptButton.Start: return new PromptGlyph("Start", Plain);
                 case PromptButton.Character: return new PromptGlyph("Start", Plain);
+                case PromptButton.Overview: return new PromptGlyph("Y", Yellow);
                 default: throw new System.ArgumentOutOfRangeException(nameof(button), button, null);
             }
         }
@@ -113,6 +117,7 @@ namespace PrincesPalace.Domain.UiKit
                 case PromptButton.Tabs: return new PromptGlyph("Click", Plain);
                 case PromptButton.Start: return new PromptGlyph("Esc", Plain);
                 case PromptButton.Character: return new PromptGlyph("C", Plain);
+                case PromptButton.Overview: return new PromptGlyph("Space", Plain);
 
                 // No keys: the keyboard reaches these through the pointer and
                 // the hotkeys, so a prompt naming them is dropped.

@@ -5,6 +5,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using PrincesPalace.Domain.Ambience;
 using PrincesPalace.Domain.Dungeon;
 using PrincesPalace.Domain.UiKit;
 using PrincesPalace.Domain.UiKit.Screens;
@@ -35,12 +36,9 @@ namespace PrincesPalace
         [SerializeField] internal Image walker;
 
         [SerializeField] internal Button[] nodeButtons;
-        [SerializeField] internal TMP_Text[] nodeLabels;
-        [SerializeField] internal Image[] nodeMarkers;
+        [SerializeField] internal Image[] nodeGlows;
         [SerializeField] internal Image[] nodePips;
         [SerializeField] internal Image[] nodeChips;
-        [SerializeField] internal TMP_Text[] nodeChipTexts;
-        [SerializeField] internal Image[] nodeChipIcons;
         [SerializeField] internal Image[] nodeVeils;
         [SerializeField] internal Image[] trailSegments;
         [SerializeField] internal Image[] trailCores;
@@ -54,8 +52,8 @@ namespace PrincesPalace
 
         [SerializeField] internal TMP_Text titleLabel;
         [SerializeField] internal TMP_Text overviewLabel;
-        [SerializeField] internal TMP_Text depthLabel;
         [SerializeField] internal TMP_Text goldLabel;
+        [SerializeField] internal Image goldIcon;
 
         // What the room the party just walked into did. Empty between rooms,
         // rather than left showing the last one's result under a new heading.
@@ -96,7 +94,7 @@ namespace PrincesPalace
         [SerializeField] internal Sprite cacheIcon;
         [SerializeField] internal Sprite entryIcon;
 
-        // The prize chip's icons, one per kind MapNodeCard.ChipTag words.
+        // The prize chip's icons, one per prize kind.
         [SerializeField] internal Sprite chipGoldIcon;
         [SerializeField] internal Sprite chipPotionIcon;
         [SerializeField] internal Sprite chipGearIcon;
@@ -213,6 +211,12 @@ namespace PrincesPalace
                 click.Clicked = _ => RefuseIfNotOffered(index);
             }
 
+            // A press and drag on the wood (or on a room) pans the map. The
+            // EventSystem's own drag threshold decides when a press has become
+            // a drag, and a press that never does still clicks its room.
+            var drag = viewport.GetComponent<MapDragScroll>() ?? viewport.gameObject.AddComponent<MapDragScroll>();
+            drag.Dragged = ScrollBy;
+
         }
 
         // ---- the character sheet, between rooms --------------------------------
@@ -232,6 +236,9 @@ namespace PrincesPalace
 
         private void Update()
         {
+            PulseGlows();
+            RefreshOverviewHintIfDeviceChanged();
+
             if (NavigationInputModule.Contexts != null && !NavigationInputModule.Contexts.IsTop(_navContext))
             {
                 return;
@@ -242,6 +249,8 @@ namespace PrincesPalace
             // module because the map is the only screen that answers it;
             // tests drive ToggleOverview directly.
             if (Input.GetButtonDown(OverviewButton)) ToggleOverview();
+
+            ReadScrollInput();
 
             // Gated on the KEY, not on SetDebugMenu, so PlayMode can still
             // drive the methods -- see HubController's F1 for the same split.
@@ -263,6 +272,11 @@ namespace PrincesPalace
             _navContext = new NavContext(entry: null, selectables: null,
                 cancel: null, systemMenu: HandleSystemMenu,
                 menuHotkey: hotkey => MenuHotkeys.Press(systemMenu, hotkey));
+
+            // No room is chosen for the player: nothing is focused on open or
+            // after a move, and the first navigation press focuses the room
+            // nearest the walker (RefreshNavLinks picks it as the entry).
+            _navContext.LazyEntry = true;
             NavigationInputModule.Contexts?.Push(_navContext);
         }
 
@@ -354,6 +368,7 @@ namespace PrincesPalace
             // A repaint ends the opening shot: the camera is about to be put
             // where the party stands.
             SkipOpening();
+            EndRefusal();
 
             // No run: every node off, and the labels say nothing rather than
             // lying about a descent that is not happening.
@@ -383,11 +398,11 @@ namespace PrincesPalace
             var ahead = map.AllReachableFrom(current.Id);
             var cleared = new HashSet<int>(run.clearedNodeIds);
 
-            titleLabel.Set(UiStrings.MapTitle, run.floor);
-            depthLabel.Set(UiStrings.MapDepth, RealmOpening.NameOf(run).ToUpperInvariant(), run.roomsWalked);
+            titleLabel.Set(UiStrings.MapTitle, run.floor, run.roomsWalked);
             if (run.bankedGold > 0) goldLabel.Set(UiStrings.MapGoldBanked, run.gold, run.bankedGold);
             else goldLabel.Set(UiStrings.MapGold, run.gold);
-            overviewLabel.Set(_overview ? UiStrings.MapOverview : UiStrings.MapOverviewHint);
+            PlaceGoldIcon();
+            RefreshOverviewLabel();
 
             // Painted from the LAST resolved room, which Arrive has already
             // written by the time this runs. A fight clears it on the way out,
@@ -452,7 +467,27 @@ namespace PrincesPalace
                 ApplyCamera(graph, graph.PositionOf(current.Id).Y);
             }
 
+            ClearRoomFocus();
             RefreshNavLinks(current, choices);
+        }
+
+        // Nothing stays chosen across a repaint (a move, the overview, a
+        // grant): the player's next navigation press focuses a room afresh.
+        // Only a room's button is cleared; a modal's own selection stays.
+        private void ClearRoomFocus()
+        {
+            var system = EventSystem.current;
+            var selected = system != null ? system.currentSelectedGameObject : null;
+            if (selected == null) return;
+
+            foreach (var button in nodeButtons)
+            {
+                if (button != null && button.gameObject == selected)
+                {
+                    system.SetSelectedGameObject(null);
+                    return;
+                }
+            }
         }
 
         // ---- gamepad navigation: the Graph shape (docs/GAMEPAD_NAVIGATION_PLAN.md
@@ -474,7 +509,7 @@ namespace PrincesPalace
         // room in the direction pressed (OverviewLinks), so a room that is not
         // a choice can still be inspected.
         //
-        // Entry is the leftmost choice, not current itself: current's own
+        // Entry is the choice nearest the walker, not current itself: current's own
         // button is never interactable (isReachable is false for it,
         // PaintNode's own `button.interactable = isReachable`), so selecting
         // it would land on a Submit that does nothing.
@@ -538,11 +573,35 @@ namespace PrincesPalace
 
                 if (currentButton != null) selectables["current"] = currentButton.gameObject;
                 for (int i = 0; i < choiceButtons.Count; i++) selectables[$"choice{i}"] = choiceButtons[i].gameObject;
-                entry = choiceButtons.Count > 0 ? choiceButtons[0].gameObject : null;
+                var nearest = NearestChoice(ordered, graph, current);
+                entry = (nearest != null ? ButtonFor(nearest) : null)?.gameObject;
             }
 
             RuntimeNavWiring.Apply(System.Array.Empty<UiNavGroup<Selectable>>(), links);
             _navContext.Reconfigure(entry: entry, selectables);
+        }
+
+        // The room the first navigation press focuses: the choice closest to
+        // the walker, the leftmost on a tie.
+        private static RealmNode NearestChoice(List<RealmNode> ordered, MapGraph graph, RealmNode current)
+        {
+            var at = graph.PositionOf(current.Id);
+            RealmNode best = null;
+            float bestDistance = float.MaxValue;
+            foreach (var node in ordered)
+            {
+                var other = graph.PositionOf(node.Id);
+                float dx = other.X - at.X;
+                float dy = other.Y - at.Y;
+                float distance = dx * dx + dy * dy;
+                if (distance < bestDistance)
+                {
+                    bestDistance = distance;
+                    best = node;
+                }
+            }
+
+            return best;
         }
 
         // For each shown room and each direction, the nearest shown room that
@@ -731,11 +790,10 @@ namespace PrincesPalace
             if (IsWalking || _overview == on || RunManager.Map == null) return;
 
             _overview = on;
-            Refresh();
 
-            // The selection may sit on a room that is not a choice any more.
-            var entry = _navContext?.Entry as GameObject;
-            if (entry != null) EventSystem.current?.SetSelectedGameObject(entry);
+            // Refresh also clears the room focus: the selection may sit on a
+            // room that is not a choice any more.
+            Refresh();
         }
 
         // ---- the opening shot ---------------------------------------------------
@@ -939,11 +997,6 @@ namespace PrincesPalace
             var at = graph.PositionOf(node.Id);
             rect.anchoredPosition = new Vector2(at.X, at.Y);
 
-            // The caption hangs below its tile and the tag stands above it, at
-            // the offsets MapLayout.Footprint reserves for them.
-            nodeLabels[index].rectTransform.anchoredPosition = new Vector2(0f, -height * 0.5f - MapLayout.CaptionGap);
-            nodeMarkers[index].rectTransform.anchoredPosition = new Vector2(0f, height * 0.5f + MapLayout.MarkerGap);
-
             // The medallion is the plate: its sprite follows the room type.
             var medallion = IconFor(node.Type) ?? fightIcon;
             var plate = button.targetGraphic as Image;
@@ -954,7 +1007,6 @@ namespace PrincesPalace
                 plate.color = tint;
             }
 
-            PaintCaption(index, node.Type);
             PaintGrammar(index, node, run, width, height, tint);
 
             var veil = nodeVeils[index];
@@ -975,7 +1027,9 @@ namespace PrincesPalace
             var rim = button.GetComponent<HoverBox>();
             if (rim != null) rim.enabled = isReachable && !_overview;
 
-            nodeMarkers[index].gameObject.SetShown(state == MapTileState.Current);
+            // The soft ring on a room that can be entered (PulseGlows animates
+            // it); none on a room that cannot.
+            nodeGlows[index].gameObject.SetShown(isReachable && !_overview);
         }
 
         // The fixed node grammar (plan section 7): the medallion is the type
@@ -1001,14 +1055,11 @@ namespace PrincesPalace
             chipPlate.gameObject.SetShown(hasChip);
             if (!hasChip) return;
 
-            float chipWidth = MapLayout.ChipWidthFor(strength);
-            chipPlate.rectTransform.sizeDelta = new Vector2(chipWidth, MapLayout.ChipHeightFor(strength));
-            chipPlate.rectTransform.anchoredPosition = new Vector2(width * 0.5f + MapLayout.ChipGap + chipWidth * 0.5f, -20f);
-            nodeChipTexts[index].SetContent(MapNodeCard.ChipTag(chip));
-
-            var chipIcon = nodeChipIcons[index];
-            chipIcon.sprite = ChipIconFor(chip.Kind);
-            chipIcon.preserveAspect = true;
+            float chipSize = MapLayout.ChipHeightFor(strength);
+            chipPlate.rectTransform.sizeDelta = new Vector2(chipSize, chipSize);
+            chipPlate.rectTransform.anchoredPosition = new Vector2(width * 0.5f + MapLayout.ChipGap + chipSize * 0.5f, -20f);
+            chipPlate.sprite = ChipIconFor(chip.Kind);
+            chipPlate.preserveAspect = true;
         }
 
         private Sprite ChipIconFor(PrizeKind kind)
@@ -1053,13 +1104,6 @@ namespace PrincesPalace
             }
         }
 
-        private void PaintCaption(int index, RoomType type)
-        {
-            var label = nodeLabels[index];
-            label.SetContent(MapNodeCard.Caption(type));
-            label.color = CaptionColour;
-        }
-
         private RealmNode NodeAt(int index)
         {
             var map = RunManager.Map;
@@ -1074,7 +1118,7 @@ namespace PrincesPalace
 
         // The focused room veils the rooms its choice would close off, under
         // fog, and in the overview scrolls to it. Nothing is written out: the
-        // room's own caption, chip and veil carry what it holds.
+        // room's own icon, chip and veil carry what it holds.
         private void ShowPreview(int index, bool shown)
         {
             var node = shown ? NodeAt(index) : null;
@@ -1122,49 +1166,179 @@ namespace PrincesPalace
             ApplyCamera(graph, graph.PositionOf(node.Id).Y);
         }
 
+        // ---- free scrolling -------------------------------------------------------
+
+        // The normal map view only. Drag, wheel, right stick and PageUp/PageDown
+        // slide the content within its own extent; the next move pans the camera
+        // back to its pin on the party's room (MapController.Walk.cs PanTo).
+        // Pure camera: nothing here reads or writes Time.timeScale.
+        private const float WheelUnits = 140f;
+        private const float StickUnitsPerSecond = 1100f;
+        private const float KeyUnitsPerSecond = 900f;
+        private const float StickDeadZone = 0.25f;
+        private const string ScrollAxis = "MapScroll";
+
+        private bool CanScroll => !_overview && !IsWalking && !IsOpening && RunManager.Map != null;
+
+        public float ScrollY => content.anchoredPosition.y;
+
+        // The deepest the content can slide: the heart at the window's bottom.
+        public float MaxScroll => Mathf.Max(0f, content.sizeDelta.y - viewport.rect.height);
+
+        // `units` is how far the content moves UP (positive) on screen; the
+        // result stays between the leg's top and the heart at its bottom.
+        public void ScrollBy(float units)
+        {
+            if (!CanScroll || units == 0f) return;
+
+            content.anchoredPosition = new Vector2(content.anchoredPosition.x,
+                Mathf.Clamp(content.anchoredPosition.y + units, 0f, MaxScroll));
+        }
+
+        private void ReadScrollInput()
+        {
+            if (!CanScroll) return;
+
+            float wheel = Input.mouseScrollDelta.y;
+            if (wheel != 0f) ScrollBy(-wheel * WheelUnits);
+
+            // Stick up reads positive (the axis is inverted in the Input
+            // Manager), and up shows the rooms above.
+            float stick = Input.GetAxisRaw(ScrollAxis);
+            if (Mathf.Abs(stick) > StickDeadZone) ScrollBy(-stick * StickUnitsPerSecond * Time.unscaledDeltaTime);
+
+            float keys = (Input.GetKey(KeyCode.PageDown) ? 1f : 0f) - (Input.GetKey(KeyCode.PageUp) ? 1f : 0f);
+            if (keys != 0f) ScrollBy(keys * KeyUnitsPerSecond * Time.unscaledDeltaTime);
+        }
+
+        // ---- the ring on a room that can be entered --------------------------------
+
+        private void PulseGlows()
+        {
+            if (nodeGlows == null || nodeGlows.Length == 0) return;
+
+            var colour = GlowColour;
+            colour.a = MapLayout.GlowAlpha(
+                AmbienceCurves.BeaconProgressAt(Time.time, MapLayout.GlowPeriodSeconds, 0f));
+            foreach (var glow in nodeGlows)
+            {
+                if (glow != null && glow.gameObject.activeSelf) glow.color = colour;
+            }
+        }
+
+        // ---- the top-right stack ---------------------------------------------------
+
+        // The coin sits just left of the right-aligned amount.
+        private void PlaceGoldIcon()
+        {
+            if (goldIcon == null || goldLabel == null) return;
+
+            goldLabel.ForceMeshUpdate();
+            var box = goldLabel.rectTransform;
+            float textWidth = goldLabel.GetPreferredValues(goldLabel.text).x;
+            float right = box.anchoredPosition.x + box.rect.width * 0.5f;
+            goldIcon.rectTransform.anchoredPosition = new Vector2(
+                right - textWidth - MapScreen.GoldIconSize * 0.5f - 6f, box.anchoredPosition.y);
+        }
+
+        // The overview hint names the key of the device in the player's hands.
+        // A pad counts only while one is plugged in: the last-input flag starts
+        // true, which would show a pad button to a keyboard player.
+        private PromptDevice? _hintDevice;
+
+        private static PromptDevice CurrentDevice() =>
+            PromptGlyphs.DeviceFor(NavigationInputModule.LastInputWasPad && PadConnected());
+
+        private static bool PadConnected()
+        {
+            foreach (var name in Input.GetJoystickNames())
+            {
+                if (!string.IsNullOrEmpty(name)) return true;
+            }
+
+            return false;
+        }
+
+        private void RefreshOverviewLabel()
+        {
+            if (overviewLabel == null) return;
+
+            _hintDevice = CurrentDevice();
+            string text = MapNodeCard.OverviewText(_overview, _hintDevice.Value);
+            overviewLabel.gameObject.SetShown(text.Length > 0);
+            if (text.Length > 0) overviewLabel.SetContent(text);
+        }
+
+        private void RefreshOverviewHintIfDeviceChanged()
+        {
+            if (_hintDevice.HasValue && _hintDevice.Value != CurrentDevice() && RunManager.Run != null)
+            {
+                RefreshOverviewLabel();
+            }
+        }
+
         // ---- refused presses ------------------------------------------------------
 
-        // How long a refusal stays on the caption before the room's name returns.
-        internal const float RefusalSeconds = 1.2f;
+        // A press that goes nowhere answers on the tile itself, in no words: a
+        // flash toward red that fades out while the tile shakes side to side.
+        internal const float RefusalSeconds = 0.35f;
+        private const float RefusalShakePixels = 7f;
+        private const float RefusalShakeRate = 70f;
 
         private static readonly Color CaptionColour = Hex(MapScreen.CaptionHex);
         private static readonly Color RefusalColour = Hex(MapScreen.RefusalHex);
         private static readonly Color PipColour = Hex(MapScreen.PipHex);
+        private static readonly Color GlowColour = Hex(MapScreen.GlowHex);
         private static readonly Color VeilColour = Hex(MapScreen.VeilHex);
 
         private Coroutine _refusal;
         private int _refusedIndex = -1;
+        private Color _refusedColour;
+        private Vector2 _refusedAt;
 
-        // The caption says why, in the refusal colour, then goes back. No modal:
-        // the player's eyes are already on the room they pressed.
-        private void Refuse(int index, string reason)
+        private void Refuse(int index)
         {
-            if (index < 0 || index >= nodeLabels.Length) return;
+            if (index < 0 || index >= nodeButtons.Length) return;
 
-            if (_refusal != null) StopCoroutine(_refusal);
-            RestoreCaption(_refusedIndex);
+            var plate = nodeButtons[index].targetGraphic as Image;
+            if (plate == null) return;
 
+            EndRefusal();
             _refusedIndex = index;
-            nodeLabels[index].SetContent(reason);
-            nodeLabels[index].color = RefusalColour;
-            _refusal = StartCoroutine(RestoreCaptionAfterRefusal(index));
+            _refusedColour = plate.color;
+            _refusedAt = ((RectTransform)nodeButtons[index].transform).anchoredPosition;
+            _refusal = StartCoroutine(RefusalCue(index, plate));
         }
 
-        private System.Collections.IEnumerator RestoreCaptionAfterRefusal(int index)
+        private IEnumerator RefusalCue(int index, Image plate)
         {
-            yield return new WaitForSeconds(RefusalSeconds);
+            var rect = (RectTransform)nodeButtons[index].transform;
+            for (float elapsed = 0f; elapsed < RefusalSeconds; elapsed += Time.unscaledDeltaTime)
+            {
+                float fade = 1f - elapsed / RefusalSeconds;
+                plate.color = Color.Lerp(_refusedColour, RefusalColour, fade);
+                rect.anchoredPosition = _refusedAt +
+                    new Vector2(Mathf.Sin(elapsed * RefusalShakeRate) * RefusalShakePixels * fade, 0f);
+                yield return null;
+            }
 
-            RestoreCaption(index);
+            EndRefusal();
+        }
+
+        // Puts the tile back exactly as it was before the cue touched it.
+        private void EndRefusal()
+        {
+            if (_refusal != null) StopCoroutine(_refusal);
             _refusal = null;
+
+            if (_refusedIndex >= 0 && _refusedIndex < nodeButtons.Length)
+            {
+                var plate = nodeButtons[_refusedIndex].targetGraphic as Image;
+                if (plate != null) plate.color = _refusedColour;
+                ((RectTransform)nodeButtons[_refusedIndex].transform).anchoredPosition = _refusedAt;
+            }
+
             _refusedIndex = -1;
-        }
-
-        private void RestoreCaption(int index)
-        {
-            if (index < 0 || index >= nodeLabels.Length) return;
-
-            var node = NodeAt(index);
-            if (node != null) PaintCaption(index, node.Type);
         }
 
         // The pointer's half: a click on a room that is not offered.
@@ -1175,15 +1349,8 @@ namespace PrincesPalace
 
         private void RefuseIllegal(int index)
         {
-            var node = NodeAt(index);
-            var current = RunManager.CurrentNode;
-            if (node == null || current == null) return;
-
-            var state = StateOf(node, current,
-                new HashSet<int>(RunManager.Choices().Select(n => n.Id)),
-                RunManager.Map.AllReachableFrom(current.Id),
-                new HashSet<int>(RunManager.Run.clearedNodeIds));
-            Refuse(index, MapNodeCard.Refusal(state));
+            if (NodeAt(index) == null || RunManager.CurrentNode == null) return;
+            Refuse(index);
         }
 
         private void OnNodePressed(int index)
@@ -1200,7 +1367,7 @@ namespace PrincesPalace
             // rather than ignored: the press was on a room that IS offered.
             if (IsWalking)
             {
-                Refuse(index, MapNodeCard.Refusal(MapTileState.Open));
+                Refuse(index);
                 return;
             }
 

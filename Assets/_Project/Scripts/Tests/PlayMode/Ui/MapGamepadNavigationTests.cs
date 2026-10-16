@@ -107,14 +107,32 @@ namespace PrincesPalace.PlayModeTests
         private static GameObject Node(string name) => GameObject.Find(name);
 
         [UnityTest]
-        public IEnumerator EntryIsTheLeftmostChoice_MapNode2()
+        public IEnumerator NothingIsFocusedOnOpen_AndTheFirstPressFocusesTheChoiceNearestTheWalker()
         {
-            SharedScene.MarkDirty("asserts the entry a freshly loaded map selects, not one a reset put back");
+            SharedScene.MarkDirty("asserts the focus a freshly loaded map has, not one a reset put back");
             yield return LoadTheMap();
 
-            Assert.AreEqual(Node("MapNode2"), EventSystem.current.currentSelectedGameObject,
-                "the current node's leftmost reachable choice is the declared entry -- " +
-                "current itself is never interactable and would be a dead Submit");
+            Assert.IsNull(EventSystem.current.currentSelectedGameObject,
+                "no room is chosen for the player when the map opens");
+
+            yield return Move(1f, 0f);
+
+            Assert.AreEqual(Node("MapNode3"), EventSystem.current.currentSelectedGameObject,
+                "the first press focuses the choice nearest the walker (spine room 3, straight below) " +
+                "instead of stepping off it");
+        }
+
+        [UnityTest]
+        public IEnumerator ARepaintAfterAMoveLeavesNothingFocused()
+        {
+            yield return LoadTheMap();
+            EventSystem.current.SetSelectedGameObject(Node("MapNode2"));
+            yield return null;
+
+            _map.Refresh();
+            yield return null;
+
+            Assert.IsNull(EventSystem.current.currentSelectedGameObject);
         }
 
         [UnityTest]

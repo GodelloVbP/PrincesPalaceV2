@@ -65,8 +65,6 @@ namespace PrincesPalace.PlayModeTests
 
         private GameObject NodeObject(RealmNode node) => Named($"MapNode{IndexOf(node)}");
 
-        private TMP_Text CaptionOf(RealmNode node) => Named($"MapNode{IndexOf(node)}Name").GetComponent<TMP_Text>();
-
         private static void Pointer(GameObject go, bool enter)
         {
             var data = new PointerEventData(EventSystem.current);
@@ -76,19 +74,6 @@ namespace PrincesPalace.PlayModeTests
 
         private static void Click(GameObject go) =>
             ExecuteEvents.Execute(go, new PointerEventData(EventSystem.current), ExecuteEvents.pointerClickHandler);
-
-        private static Color Hex(string hex)
-        {
-            ColorUtility.TryParseHtmlString(hex, out var colour);
-            return colour;
-        }
-
-        private static readonly Dictionary<RoomType, string> TitleByType = new Dictionary<RoomType, string>
-        {
-            { RoomType.Entry, "START" }, { RoomType.Fight, "FIGHT" }, { RoomType.EliteFight, "ELITE" },
-            { RoomType.Boss, "BOSS" }, { RoomType.Treasure, "TREASURE" }, { RoomType.Rest, "REST" },
-            { RoomType.Shop, "SHOP" }, { RoomType.Event, "EVENT" },
-        };
 
         // ---- the data ------------------------------------------------------------
 
@@ -281,42 +266,97 @@ namespace PrincesPalace.PlayModeTests
             Assert.Greater(dead, 0, "a leg has rooms the entry cannot reach");
         }
 
-        // ---- the refusal ---------------------------------------------------------
+        [UnityTest]
+        public IEnumerator OnlyARoomThatCanBeEnteredCarriesTheSoftGlow()
+        {
+            yield return OpenTheMap();
+
+            int lit = 0;
+            foreach (var node in RunManager.Map.Nodes)
+            {
+                var go = NodeObject(node);
+                var glow = Named($"MapNode{IndexOf(node)}Glow");
+                Assert.IsNotNull(glow, $"{go.name} has no glow ring");
+                Assert.AreEqual(go.GetComponent<Button>().interactable, glow.activeSelf, $"{go.name} ({node.Type})");
+                if (glow.activeSelf) lit++;
+            }
+
+            Assert.Greater(lit, 0, "vacuity: the entry offers somewhere to go");
+        }
 
         [UnityTest]
-        public IEnumerator PressingARoomTooFarAheadSaysSoOnItsCaptionThenRestoresIt()
+        public IEnumerator TheGlowPulsesWithinItsAuthoredAlphaBand()
+        {
+            yield return OpenTheMap();
+
+            var reachable = RunManager.Choices().First();
+            var glow = Named($"MapNode{IndexOf(reachable)}Glow").GetComponent<Image>();
+
+            float low = float.MaxValue;
+            float high = float.MinValue;
+            for (float waited = 0f; waited < 2.8f; waited += Time.deltaTime)
+            {
+                yield return null;
+                low = Mathf.Min(low, glow.color.a);
+                high = Mathf.Max(high, glow.color.a);
+            }
+
+            Assert.GreaterOrEqual(low, 0.12f - 0.001f, "the glow dipped under its floor");
+            Assert.LessOrEqual(high, 0.38f + 0.001f, "the glow rose over its ceiling");
+            Assert.Greater(high - low, 0.15f, "the glow did not pulse through one period");
+        }
+
+        // ---- the refusal, in no words --------------------------------------------
+
+        // The tile flashes toward red and shakes, then returns exactly as it was.
+        private IEnumerator ExpectTheCue(RealmNode node, System.Action press)
+        {
+            var go = NodeObject(node);
+            var rect = (RectTransform)go.transform;
+            var plate = (Image)go.GetComponent<Button>().targetGraphic;
+            var rest = plate.color;
+            var restAt = rect.anchoredPosition;
+
+            press();
+
+            float moved = 0f;
+            float tinted = 0f;
+            for (int frame = 0; frame < 12; frame++)
+            {
+                yield return null;
+                moved = Mathf.Max(moved, Mathf.Abs(rect.anchoredPosition.x - restAt.x));
+                var c = plate.color;
+                tinted = Mathf.Max(tinted, Mathf.Abs(c.r - rest.r) + Mathf.Abs(c.g - rest.g) + Mathf.Abs(c.b - rest.b));
+            }
+
+            Assert.Greater(moved, 0.5f, "the tile did not shake");
+            Assert.Greater(tinted, 0.05f, "the tile did not flash");
+
+            yield return new WaitForSecondsRealtime(0.35f + 0.3f);
+
+            Assert.That(plate.color.r, Is.EqualTo(rest.r).Within(0.002f));
+            Assert.That(plate.color.g, Is.EqualTo(rest.g).Within(0.002f));
+            Assert.That(plate.color.b, Is.EqualTo(rest.b).Within(0.002f));
+            Assert.That(rect.anchoredPosition.x, Is.EqualTo(restAt.x).Within(0.001f), "the tile did not settle");
+        }
+
+        [UnityTest]
+        public IEnumerator PressingARoomTooFarAheadShakesAndFlashesItsTile()
         {
             yield return OpenTheMap();
 
             var far = RunManager.Map.Nodes.First(n => n.Offset >= 2);
-            var caption = CaptionOf(far);
-            string before = caption.text;
-            Assert.AreEqual(TitleByType[far.Type], before, "fixture: the caption should be the room's name");
-
-            Click(NodeObject(far));
-            yield return null;
-
-            Assert.AreEqual("TOO FAR AHEAD", caption.text);
-            Assert.That(caption.color.r, Is.EqualTo(Hex("#E0786E").r).Within(0.01f));
-            Assert.That(caption.color.g, Is.EqualTo(Hex("#E0786E").g).Within(0.01f));
+            yield return ExpectTheCue(far, () => Click(NodeObject(far)));
             Assert.IsFalse(_map.IsWalking, "a refused press must not start a walk");
-
-            yield return new WaitForSeconds(1.5f);
-
-            Assert.AreEqual(before, caption.text, "the caption did not come back");
-            Assert.That(caption.color.g, Is.EqualTo(Hex("#EDE6FF").g).Within(0.01f));
         }
 
         [UnityTest]
-        public IEnumerator PressingThePartysOwnRoomSaysYouAreHere()
+        public IEnumerator PressingThePartysOwnRoomGivesTheSameCue()
         {
             yield return OpenTheMap();
 
-            var caption = CaptionOf(RunManager.CurrentNode);
-            Click(NodeObject(RunManager.CurrentNode));
-            yield return null;
-
-            Assert.AreEqual("YOU ARE HERE", caption.text);
+            var here = RunManager.CurrentNode;
+            yield return ExpectTheCue(here, () => Click(NodeObject(here)));
         }
 
         [UnityTest]
@@ -327,15 +367,12 @@ namespace PrincesPalace.PlayModeTests
             yield return OpenTheMap();
 
             var far = RunManager.Map.Nodes.First(n => n.Offset >= 2);
-            NodeObject(far).GetComponent<Button>().onClick.Invoke();
-            yield return null;
-
-            Assert.AreEqual("TOO FAR AHEAD", CaptionOf(far).text);
+            yield return ExpectTheCue(far, () => NodeObject(far).GetComponent<Button>().onClick.Invoke());
             Assert.IsFalse(_map.IsWalking);
         }
 
         [UnityTest]
-        public IEnumerator ASecondPressMidWalkIsAnsweredOnTheCaption()
+        public IEnumerator ASecondPressMidWalkGivesTheCue()
         {
             // A treasure opening its pocket: quiet, and one column over.
             yield return OpenTheMap(RealmPaths.SeedWhere(
@@ -349,9 +386,18 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
             Assert.IsTrue(_map.IsWalking, "fixture: the first press should start a walk");
 
+            var rect = (RectTransform)NodeObject(quiet).transform;
+            float restX = rect.anchoredPosition.x;
             button.onClick.Invoke();
-            yield return null;
-            Assert.AreEqual("ON THE MOVE", CaptionOf(quiet).text);
+
+            float moved = 0f;
+            for (int frame = 0; frame < 8; frame++)
+            {
+                yield return null;
+                moved = Mathf.Max(moved, Mathf.Abs(rect.anchoredPosition.x - restX));
+            }
+
+            Assert.Greater(moved, 0.5f, "the second press went unanswered");
 
             for (float waited = 0f; waited < 5f && _map.IsWalking; waited += Time.deltaTime) yield return null;
             Assert.IsFalse(_map.IsWalking, "the walk should have finished");

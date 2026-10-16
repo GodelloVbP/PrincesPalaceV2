@@ -130,9 +130,10 @@ namespace PrincesPalace.PlayModeTests
 
                     withChips++;
                     var size = ((RectTransform)chip.transform).sizeDelta;
-                    Assert.AreEqual(MapLayout.ChipWidthFor(strength), size.x, 0.01f, $"{go.name} chip width");
+                    Assert.AreEqual(MapLayout.ChipHeightFor(strength), size.x, 0.01f, $"{go.name} chip width");
                     Assert.AreEqual(MapLayout.ChipHeightFor(strength), size.y, 0.01f, $"{go.name} chip height");
-                    Assert.IsNotEmpty(Named($"{go.name}ChipText").GetComponent<TMP_Text>().text);
+                    Assert.IsNotNull(chip.GetComponent<UnityEngine.UI.Image>().sprite, $"{go.name} chip has no icon");
+                    Assert.IsNull(Named($"{go.name}ChipText"), $"{go.name} still carries chip words");
                 }
             }
 

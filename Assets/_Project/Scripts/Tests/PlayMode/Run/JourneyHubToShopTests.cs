@@ -130,7 +130,7 @@ namespace PrincesPalace.PlayModeTests
                 $"fixture: seed {seed} should put the shop first among the party's choices");
 
             string entryName = RealmPaths.ButtonName(entryNode);
-            AssertSelectedName(entryName, "the current node's first reachable choice is the declared entry");
+            yield return FocusMapRoom(entryName);
 
             yield return PressSubmit(); // walk to the room -> Arrival.Shop -> OpenShop() in place
             yield return WaitUntil(() =>
@@ -210,10 +210,8 @@ namespace PrincesPalace.PlayModeTests
             AssertTopIsNotFight("leaving the shop should never leave Fight's own non-selecting context on top");
 
             var selected = UnityEngine.EventSystems.EventSystem.current.currentSelectedGameObject;
-            Assert.IsNotNull(selected, "leaving the shop should restore a selection on the Map underneath it");
-            StringAssert.StartsWith("MapNode", selected.name,
-                "leaving the shop should land back on the Map's own node graph, not strand selection " +
-                "somewhere else -- there is no path from this shop straight to the hub");
+            Assert.IsNull(selected, "leaving the shop should leave the Map underneath with nothing focused -- " +
+                "no room is chosen for the player, and nothing of the shop's is left selected");
         }
     }
 }

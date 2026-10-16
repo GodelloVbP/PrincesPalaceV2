@@ -378,6 +378,27 @@ namespace PrincesPalace.PlayModeTests
 
         protected static GameObject Node(string name) => GameObject.Find(name);
 
+        // The map chooses nothing for the player: it opens with nothing
+        // focused, the first navigation press focuses the choice nearest the
+        // walker, and Right/Left then step through the choices to the room
+        // wanted.
+        protected IEnumerator FocusMapRoom(string buttonName)
+        {
+            Assert.IsNull(UnityEngine.EventSystems.EventSystem.current.currentSelectedGameObject,
+                "the map should open with nothing focused");
+
+            yield return MoveDown();
+            foreach (var step in new System.Func<IEnumerator>[] { MoveRight, MoveLeft })
+            {
+                for (int i = 0; i < 8 && SelectedName() != buttonName; i++) yield return step();
+            }
+
+            AssertSelectedName(buttonName, "stepping through the choices should reach the wanted room");
+        }
+
+        private static string SelectedName() =>
+            UnityEngine.EventSystems.EventSystem.current.currentSelectedGameObject?.name;
+
         protected static void AssertSelectedName(string name, string because)
         {
             var current = EventSystem.current.currentSelectedGameObject;

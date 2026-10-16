@@ -89,13 +89,11 @@ namespace PrincesPalace.Domain.Tests
         {
             var screen = MapScreen.Build();
             Assert.AreEqual(MapLayout.MaxNodes, screen.NodeButtons.Count);
-            Assert.AreEqual(screen.NodeButtons.Count, screen.NodeLabels.Count);
-            Assert.AreEqual(screen.NodeButtons.Count, screen.NodeMarkers.Count);
+            Assert.AreEqual(screen.NodeButtons.Count, screen.NodeGlows.Count);
 
-            // The node grammar: three pips, one chip and one veil to a node.
+            // The node grammar: three pips, one chip icon and one veil to a node.
             Assert.AreEqual(screen.NodeButtons.Count * 3, screen.NodePips.Count);
             Assert.AreEqual(screen.NodeButtons.Count, screen.NodeChips.Count);
-            Assert.AreEqual(screen.NodeButtons.Count, screen.NodeChipTexts.Count);
             Assert.AreEqual(screen.NodeButtons.Count, screen.NodeVeils.Count);
 
             // The heart: two in front and four queued.

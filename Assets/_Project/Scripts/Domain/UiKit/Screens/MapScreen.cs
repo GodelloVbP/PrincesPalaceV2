@@ -103,15 +103,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // One slot per node id.
         public List<NodeRef> NodeButtons = new List<NodeRef>();
-        public List<NodeRef> NodeLabels = new List<NodeRef>();
-        public List<NodeRef> NodeMarkers = new List<NodeRef>();
+
+        // The soft pulsing ring on a room that can be entered.
+        public List<NodeRef> NodeGlows = new List<NodeRef>();
 
         // The fixed node grammar (plan section 7): pips for strength, three to
         // a node and flat in slot order, and one prize chip per node.
         public List<NodeRef> NodePips = new List<NodeRef>();
         public List<NodeRef> NodeChips = new List<NodeRef>();
-        public List<NodeRef> NodeChipTexts = new List<NodeRef>();
-        public List<NodeRef> NodeChipIcons = new List<NodeRef>();
 
         // The painted fog over a room the focused choice would close off.
         public List<NodeRef> NodeVeils = new List<NodeRef>();
@@ -139,8 +138,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef Walker;
 
         public NodeRef TitleLabel;
-        public NodeRef DepthLabel;
         public NodeRef GoldLabel;
+        public NodeRef GoldIcon;
         public NodeRef RoomMessageLabel;
         public NodeRef OverviewLabel;
 
@@ -189,7 +188,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         {
             var screen = new MapScreen();
 
-            // THE TOP-RIGHT STACK: floor, depth line, gold, then the overview
+            // THE TOP-RIGHT STACK: floor and room, gold, then the overview
             // hint, right-aligned down the right edge over the bare wood. Every
             // element is pinned to the TOP edge, so a frame that is not 16:9
             // does not drift them. Heights are tight so the stack ends above
@@ -201,15 +200,20 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // FunctionalHeading, not CeremonialTitle -- the map is a working
             // screen the player passes through every room, not a title or a
             // ceremonial moment the way Defeat/Reckoning's own titles are.
-            var title = Ui.Label("MapTitleLabel", UiStrings.MapTitle, new UiVec(460f, 56f), 40, "#EDE6FF",
-                OnContent(690f, -42f)).TextAligned(UiTextAlign.Right).OverArt(backing: false)
+            // Wide enough for the worst case, FLOOR 99 and ROOM 999 on one line;
+            // the box grows left from the fixed right edge (x 920).
+            var title = Ui.Label("MapTitleLabel", UiStrings.MapTitle, new UiVec(660f, 56f), 40, "#EDE6FF",
+                OnContent(590f, -42f)).TextAligned(UiTextAlign.Right).OverArt(backing: false)
                 .Styled(TypographyRole.FunctionalHeading);
-            var depth = Ui.Label("MapDepthLabel", UiStrings.MapDepth, new UiVec(460f, 28f), 20, "#B8A8D9",
-                OnContent(690f, -86f)).TextAligned(UiTextAlign.Right).OverArt(backing: false)
-                .Styled(TypographyRole.TacticalData);
             var gold = Ui.Label("MapGoldLabel", UiStrings.MapGold, new UiVec(460f, 32f), 22, "#F2DB9E",
-                OnContent(690f, -118f)).TextAligned(UiTextAlign.Right).OverArt(backing: false)
+                OnContent(690f, -90f)).TextAligned(UiTextAlign.Right).OverArt(backing: false)
                 .Styled(TypographyRole.TacticalData);
+
+            // The coin before the amount. The controller slides it to the left
+            // of the right-aligned text, whose width is a runtime fact.
+            var goldIcon = Ui.Sprite("MapGoldIcon", ChipGoldKey, OnContent(850f, -90f),
+                    UiSize.Fixed(GoldIconSize, GoldIconSize))
+                .AsDecor();
 
             // What the room the party just walked into did.
             //
@@ -227,15 +231,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // The hint for Y, and the overview's own banner in its place while
             // it is up; the same label, its text swapped by the controller.
             var overview = Ui.Label("MapOverviewLabel", UiStrings.MapOverviewHint, new UiVec(460f, 24f), 18,
-                    FightHudPalette.GoldLight, OnContent(690f, -148f))
+                    FightHudPalette.GoldLight, OnContent(690f, -122f))
                 .TextAligned(UiTextAlign.Right)
                 .OverArt(backing: false)
                 .Styled(TypographyRole.TacticalData);
             screen.OverviewLabel = overview;
 
             screen.TitleLabel = title;
-            screen.DepthLabel = depth;
             screen.GoldLabel = gold;
+            screen.GoldIcon = goldIcon;
             screen.RoomMessageLabel = roomMessage;
 
             // The painted wood, tiled DOWN the leg; the strip tiles by itself.
@@ -281,11 +285,23 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             // The window. Full-bleed and clipping, with no graphic of its own:
             // it is a coordinate frame and a mask, never a surface.
-            var viewport = Ui.Panel("MapViewport", Place.Stretch(), UiSize.Fill, content)
+            // The transparent catcher behind the content takes a press on bare
+            // wood, so a drag that starts there reaches the viewport (the
+            // decor sprites take no raycasts and would swallow the press).
+            var dragCatcher = Ui.Solid("MapDragCatcher", "#00000000", Place.Stretch(), UiSize.Fill)
+                .AllowOverlap("a transparent full-bleed catcher for the drag-to-scroll press; it draws nothing");
+            var viewport = Ui.Panel("MapViewport", Place.Stretch(), UiSize.Fill, dragCatcher, content)
                 .Clipping()
                 .AllowOverlap("a full-bleed viewport spans the headings it shares the panel with; it draws nothing and has no graphic to intercept a click");
 
             screen.Viewport = viewport;
+
+            // A soft dark gradient hugging the four screen edges, fixed to the
+            // screen (a sibling of the viewport, not a child of the scrolling
+            // content), over the map and under the text and the modals.
+            var vignette = Ui.Sprite("MapVignette", VignetteKey, Place.Stretch(), UiSize.Fill)
+                .Coloured(VignetteHex)
+                .AsDecor();
 
             // The character sheet, reachable between rooms.
             //
@@ -327,7 +343,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.Debug = debug;
 
             screen.Root = Ui.Panel("MapPanel", UiSize.Fill,
-                viewport, title, depth, gold,
+                viewport, vignette, title, gold, goldIcon,
                 roomMessage, overview, shop.Root, eventRoom.Root, hone.Root, systemMenu.Root, debug.Root);
 
             return screen;
@@ -509,6 +525,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public const string TrailStrokeKey = "proc:trail_stroke";
         public const string PipKey = "proc:pip_round";
         public const string GlowRingKey = "proc:node_glow_ring";
+        public const string VignetteKey = "proc:vignette_band";
+
+        // Black at 40%: a filter on the edges, not a frame.
+        public const string VignetteHex = "#00000066";
+        public const float GoldIconSize = 26f;
 
         public const string TrailTakenHex = "#3A2312";
         public const string TrailOpenHex = "#462D19F2";
@@ -553,17 +574,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public const string CaptionHex = "#EDE6FF";
         public const string RefusalHex = "#E0786E";
 
-        // The pip and the chip: gold on the tile's own canopy, the chip's
-        // plate dark so its text keeps contrast on any prize.
+        // The pips: gold on the tile's own canopy.
         public const string PipHex = "#F2DB9E";
-        public const string ChipRimHex = "#C9A24B";
-        public const string ChipFillHex = "#241A38F2";
-        public const string ChipTextHex = "#F2DB9E";
+
+        // The ring on a room that can be entered; the controller pulses its alpha.
+        public const string GlowHex = "#F2DB9E";
 
         // The fog drawn over a room a focused choice would close off.
         public const string VeilHex = "#0B0813B8";
-
-        private const float MarkerWidth = 118f;
 
         private UiNode BuildNode(int index)
         {
@@ -571,34 +589,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // boss is a runtime fact. The controller shrinks it per type; the
             // audit therefore checks a box at least as big as the real one.
             var size = new UiVec(MapLayout.MaxTileWidth, MapLayout.MaxTileHeight);
-
-            // "Name", NOT "Label". UiEmitter generates every button's own
-            // caption as "<button>Label", so "MapNode3Label" produced two
-            // GameObjects with that name under one parent -- the wiring bound
-            // this one and painted it, while every lookup by name silently took
-            // the emitter's empty one. UiAudit's A4b is what catches it now.
-            var label = Ui.Label($"MapNode{index}Name", UiString.Runtime,
-                    new UiVec(MapLayout.CaptionWidth, MapLayout.CaptionHeight), 13,
-                    CaptionHex, Place.At(0f, -size.Y * 0.5f - MapLayout.CaptionGap))
-                .AllowOverflow("the caption sits BELOW its node deliberately - inside, it would cover the room icon it names");
-
-            // The "you are here" tag. Its own node rather than a tint on the
-            // button, so the button keeps saying what KIND of room it is while
-            // this says where the party is -- two facts that have to be
-            // readable at once. Words in a gold-rimmed plate: the flat 18 px
-            // square it replaced said nothing to a player who had not been
-            // told what it meant.
-            var markerSize = new UiVec(MarkerWidth, MapLayout.MarkerHeight);
-            var marker = Ui.Solid($"MapNode{index}Marker", FightHudPalette.PanelViolet,
-                    Place.At(0f, size.Y * 0.5f + MapLayout.MarkerGap), UiSize.Fixed(markerSize))
-                .AllowOverflow("the you-are-here tag sits ABOVE its node so the node keeps saying what KIND of room it is")
-                .Inactive();
-            foreach (var edge in Ui.Rim($"MapNode{index}Marker", markerSize, FightHudPalette.BorderGold))
-            {
-                marker.Children.Add(edge);
-            }
-            marker.Children.Add(Ui.Label($"MapNode{index}MarkerText", UiStrings.MapYouAreHere, markerSize, 13,
-                FightHudPalette.GoldLight, Place.At(0f, 0f)).Styled(TypographyRole.TacticalData));
 
             // Strength as pips along the tile's top edge, inside it.
             var pips = new List<UiNode>();
@@ -613,33 +603,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 NodePips.Add(pip);
             }
 
-            // The prize chip, beside the tile; its size follows strength, set
-            // at runtime. A gold rim is the chip itself and the dark fill sits
-            // inside it by a fixed inset, so resizing the chip resizes both.
-            var chipText = Ui.Label($"MapNode{index}ChipText", UiString.Runtime,
-                    new UiVec(MapLayout.MaxChipWidth - 6f, MapLayout.MaxChipHeight - 4f), 12,
-                    ChipTextHex, Place.Stretch(3f + MapLayout.ChipIconWidth, 3f, 2f, 2f))
-                .Styled(TypographyRole.TacticalData);
-            var chipFill = Ui.Solid($"MapNode{index}ChipFill", ChipFillHex,
-                    Place.Stretch(2f, 2f, 2f, 2f), UiSize.Fill)
-                .AsDecor();
-            chipFill.Children.Add(chipText);
-
-            // The prize's icon, before the text. Left-anchored at a fixed
-            // width and as tall as the chip (which follows strength), swapped
-            // per prize kind at runtime.
-            var chipIcon = Ui.Sprite($"MapNode{index}ChipIcon", ChipGoldKey,
-                    Place.Frac(UiVec.Zero, new UiVec(0f, 1f), 3f, -(3f + MapLayout.ChipIconWidth), 3f, 3f), UiSize.Fill)
-                .AsDecor();
-            chipFill.Children.Add(chipIcon);
-            NodeChipIcons.Add(chipIcon);
-            var chip = Ui.Solid($"MapNode{index}Chip", ChipRimHex,
-                    Place.At(size.X * 0.5f + MapLayout.ChipGap + MapLayout.MaxChipWidth * 0.5f, -20f),
-                    UiSize.Fixed(MapLayout.MaxChipWidth, MapLayout.MaxChipHeight))
+            // The prize icon beside the tile, no plate and no words; its size
+            // follows strength, set at runtime, and its sprite follows the kind.
+            var chip = Ui.Sprite($"MapNode{index}Chip", ChipGoldKey,
+                    Place.At(size.X * 0.5f + MapLayout.ChipGap + MapLayout.MaxChipHeight * 0.5f, -20f),
+                    UiSize.Fixed(MapLayout.MaxChipHeight, MapLayout.MaxChipHeight))
                 .AsDecor()
                 .AllowOverflow("the chip stands beside its tile so the icon stays readable")
                 .Inactive();
-            chip.Children.Add(chipFill);
 
             // The fog over the whole tile when a focused choice would close
             // this room off.
@@ -669,17 +640,25 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .AllowOverflow("the glow ring reaches past the tile (MapLayout.GlowPad) so it reads as light around the room")
                 .Inactive());
 
+            // The ambient ring: on every room that can be entered, softly
+            // pulsing. The HoverRim above is the stronger, steady state for
+            // the room under the pointer or the focus.
+            var glow = Ui.Sprite($"MapNode{index}Glow", GlowRingKey,
+                    Place.Stretch(-MapLayout.GlowPad, -MapLayout.GlowPad, -MapLayout.GlowPad, -MapLayout.GlowPad),
+                    UiSize.Fill)
+                .Coloured(GlowHex)
+                .AsDecor()
+                .AllowOverflow("the glow ring reaches past the tile (MapLayout.GlowPad) so it reads as light around the room")
+                .Inactive();
+
+            button.Children.Add(glow);
             foreach (var pip in pips) button.Children.Add(pip);
             button.Children.Add(veil);
-            button.Children.Add(label);
-            button.Children.Add(marker);
             button.Children.Add(chip);
 
             NodeButtons.Add(button);
-            NodeLabels.Add(label);
-            NodeMarkers.Add(marker);
+            NodeGlows.Add(glow);
             NodeChips.Add(chip);
-            NodeChipTexts.Add(chipText);
             NodeVeils.Add(veil);
 
             // Hidden until a realm says otherwise: most of the pool is empty in

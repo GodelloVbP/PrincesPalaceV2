@@ -161,8 +161,7 @@ namespace PrincesPalace.PlayModeTests
 
             // The node's GameObject name is its pool slot (RealmPaths.ButtonName).
             string entryName = RealmPaths.ButtonName(entryNode);
-            AssertSelectedName(entryName,
-                "the current node's first reachable choice is the declared entry");
+            yield return FocusMapRoom(entryName);
 
             yield return PressSubmit(); // OnNodePressed -> RunOrchestrator.ArriveAt -> Arrival.Fight -> Navigation.Go(Fight)
             yield return WaitForScene("Fight", 10f,

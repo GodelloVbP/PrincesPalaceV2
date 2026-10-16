@@ -200,11 +200,14 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
-        public IEnumerator ThePartysOwnRoomIsMarked()
+        public IEnumerator NoRoomCarriesACaptionOrAYouAreHereTag()
         {
             yield return OpenTheMap();
 
-            Assert.IsTrue(Named(RealmPaths.ButtonName(RunManager.CurrentNode) + "Marker").activeSelf);
+            string button = RealmPaths.ButtonName(RunManager.CurrentNode);
+            Assert.IsNull(Named(button + "Marker"));
+            Assert.IsNull(Named(button + "Name"));
+            Assert.IsNull(Named("MapDepthLabel"));
         }
 
         [UnityTest]

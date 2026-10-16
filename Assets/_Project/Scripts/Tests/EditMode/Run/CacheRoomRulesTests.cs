@@ -81,12 +81,6 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void TheCardSaysCache()
-        {
-            Assert.AreEqual("CACHE", MapNodeCard.Caption(RoomType.Cache));
-        }
-
-        [Test]
         public void ACacheWithoutItsEventClearsAsAnEmptyRoom()
         {
             Assert.AreEqual(RoomResolution.Kind.Empty, RoomResolution.Resolve(RoomType.Cache, null).Result);

@@ -189,8 +189,7 @@ namespace PrincesPalace.PlayModeTests
 
             AssertTopIsNotFight("the Map should not carry Fight's own non-selecting context");
             var selected = UnityEngine.EventSystems.EventSystem.current.currentSelectedGameObject;
-            Assert.IsNotNull(selected, "landing on the Map should leave something selected");
-            StringAssert.StartsWith("MapNode", selected.name, "the Map's own entry is a node");
+            Assert.IsNull(selected, "landing on the Map should leave nothing selected");
         }
 
         [UnityTest]

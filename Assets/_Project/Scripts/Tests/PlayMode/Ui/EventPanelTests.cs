@@ -337,14 +337,14 @@ namespace PrincesPalace.PlayModeTests
             // nothing else, so it still shows the purse from before Shawn's
             // coins until the panel hands the map its Finished.
             var mapGold = GameObject.Find("MapGoldLabel").GetComponent<TMP_Text>();
-            Assert.AreEqual("100 GOLD", mapGold.text, "fixture: the map has not repainted while the event is up");
+            Assert.AreEqual("100", mapGold.text, "fixture: the map has not repainted while the event is up");
 
             yield return Click(rows[0]);
 
             Assert.IsFalse(_panel.IsOpen, "Leave should close the panel");
             Assert.IsFalse(RunOrchestrator.EventIsOpen);
             CollectionAssert.Contains(RunManager.Run.clearedNodeIds, _eventNode.Id, "Leave clears the room");
-            Assert.AreEqual("110 GOLD", mapGold.text, "Leave did not hand control back to MapController.Refresh");
+            Assert.AreEqual("110", mapGold.text, "Leave did not hand control back to MapController.Refresh");
         }
 
         // ---- input ------------------------------------------------------------------------

@@ -98,7 +98,7 @@ namespace PrincesPalace.PlayModeTests
                 $"fixture: seed {seed} should put a plain Fight room at choice {targetSlot}");
 
             string entryName = RealmPaths.ButtonName(choices[0]);
-            AssertSelectedName(entryName, "the current node's first reachable choice is the declared entry");
+            yield return FocusMapRoom(entryName);
 
             // GENUINE AIMING: Right steps choice to choice in screen order,
             // left to right (MapGamepadNavigationTests' own pinned rule) --

@@ -88,6 +88,10 @@ namespace PrincesPalace
             int seed = LinkSeeds(RunManager.Map).TryGetValue(LinkKey(current.Id, target.Id), out var s) ? s : 1;
             float duration = MapWalk.DurationFor(from, to);
 
+            // A camera the player scrolled away comes back to the party's room
+            // first, so the walk happens in view.
+            yield return PanTo(from.Y);
+
             // Flipped by SCALE rather than by a mirrored sprite: the alternative
             // is a second art file per character. A step to a pocket on the
             // left faces left, and the next step down faces right again.

@@ -301,18 +301,13 @@ namespace PrincesPalace.Domain.UiKit
         // The top band: the floor, then the realm's name and the rooms walked.
         // Every floor without a designed realm (P8) is the default realm, and
         // its name is the descent itself.
-        public static readonly UiString MapTitle = UiString.Define("map.title", "FLOOR {0}", "FLOOR 99");
-        // Worst-case samples, like every other template: without one the label
-        // renders its raw "{0}" at rest, which is what the resting screenshot
-        // showed -- and E1 has nothing to measure the box against.
-        // Rooms walked this run (RunSnapshot.roomsWalked), not the step: a
-        // pocket adds rooms without moving the difficulty clock.
-        public static readonly UiString MapDepth =
-            UiString.Define("map.depth", "{0}  ·  ROOM {1}", "THE DESCENT  ·  ROOM 999");
-        public static readonly UiString MapGold =
-            UiString.Define("map.gold", "{0} GOLD", "99999 GOLD");
+        public static readonly UiString MapTitle =
+            UiString.Define("map.title", "FLOOR {0}  ·  ROOM {1}", "FLOOR 99  ·  ROOM 999");
+        // The coin is drawn beside the amount, so the word is gone. Banked
+        // gold keeps its word: there is no icon for it.
+        public static readonly UiString MapGold = UiString.Define("map.gold", "{0}", "99999");
         public static readonly UiString MapGoldBanked =
-            UiString.Define("map.gold_banked", "{0} GOLD  ·  {1} BANKED", "99999 GOLD  ·  99999 BANKED");
+            UiString.Define("map.gold_banked", "{0}  ·  {1} BANKED", "99999  ·  99999 BANKED");
         // The map's hint that somebody wants looking at (plan C20): what waits,
         // from CharacterAttention, and the key that opens the menu on it. Only
         // the reasons that hold are named, so the sample is all three.
@@ -331,35 +326,16 @@ namespace PrincesPalace.Domain.UiKit
         // peek at rooms that do not exist yet.
         public static readonly UiString MapFog = UiString.Define("map.fog", "THE WOOD\nCONTINUES");
 
-        // The "you are here" tag over the party's room, and the same words as
-        // the refusal when that room is pressed.
-        public static readonly UiString MapYouAreHere = UiString.Define("map.here", "YOU ARE HERE");
-
-        // The prize chip on a node.
-        public static readonly UiString MapChipGold =
-            UiString.Define("map.chip.gold", "{0} G", "99999 G");
-        public static readonly UiString MapChipPotion =
-            UiString.Define("map.chip.potion", "POTION");
-        public static readonly UiString MapChipPotions =
-            UiString.Define("map.chip.potions", "{0} POTIONS", "9 POTIONS");
-        public static readonly UiString MapChipGear = UiString.Define("map.chip.gear", "GEAR");
-        public static readonly UiString MapChipBook = UiString.Define("map.chip.book", "BOOK");
-        public static readonly UiString MapChipRelic = UiString.Define("map.chip.relic", "RELIC");
         public static readonly UiString MapOverview =
-            UiString.Define("map.overview", "OVERVIEW  ·  LOOK ONLY  ·  Y TO RETURN");
+            UiString.Define("map.overview", "OVERVIEW  ·  LOOK ONLY  ·  {0} TO RETURN",
+                "OVERVIEW  ·  LOOK ONLY  ·  SPACE TO RETURN");
         public static readonly UiString MapOverviewHint =
-            UiString.Define("map.overview.hint", "Y  ·  OVERVIEW", "OVERVIEW  ·  LOOK ONLY  ·  Y TO RETURN");
+            UiString.Define("map.overview.hint", "{0}  ·  OVERVIEW", "SPACE  ·  OVERVIEW");
         // A chip paid at settlement, on the Reckoning's notices.
         public static readonly UiString PrizePaidGold =
             UiString.Define("prize.paid.gold", "Prize: {0} gold.", "Prize: 99999 gold.");
         public static readonly UiString PrizePaidItem =
             UiString.Define("prize.paid.item", "Prize: {0}.", "Prize: Health Potion.");
-
-        // Why a press on a room went nowhere, shown on that room's caption.
-        public static readonly UiString MapRefuseCleared = UiString.Define("map.refuse.cleared", "ALREADY CLEARED");
-        public static readonly UiString MapRefuseAhead = UiString.Define("map.refuse.ahead", "TOO FAR AHEAD");
-        public static readonly UiString MapRefuseClosed = UiString.Define("map.refuse.closed", "NO PATH");
-        public static readonly UiString MapRefuseWalking = UiString.Define("map.refuse.walking", "ON THE MOVE");
 
         // What the room the party just walked into did.
         //

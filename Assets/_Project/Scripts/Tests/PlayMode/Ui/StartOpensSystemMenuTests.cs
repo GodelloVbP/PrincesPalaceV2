@@ -237,8 +237,8 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(entry, "seed 4242 should still offer spine room 1 first");
 
             Assert.IsFalse(_menu.IsOpen, "the menu should start closed on the map");
-            Assert.AreEqual(entry, EventSystem.current.currentSelectedGameObject,
-                "the map's own entry should be selected as soon as it loads");
+            Assert.IsNull(EventSystem.current.currentSelectedGameObject,
+                "the map chooses no room for the player when it loads");
 
             // B FIRST, and it must do nothing: the map is a root, so its
             // Cancel is deliberately empty now. Asserted BEFORE the Start
@@ -261,11 +261,10 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.IsFalse(_menu.IsOpen, "a second Start should close the menu it just opened");
 
-            // The map's remembered node IS restored now, provably: closing
-            // the menu must land back on the map's own entry, not the menu's
-            // last-selected tab and not nothing.
-            Assert.AreEqual(entry, EventSystem.current.currentSelectedGameObject,
-                "closing the menu should restore the map's own entry, not leak the menu's last tab or leave nothing selected");
+            // The map chooses no room for the player, so closing the menu
+            // leaves nothing selected: not the menu's last-selected tab.
+            Assert.IsNull(EventSystem.current.currentSelectedGameObject,
+                "closing the menu should leave the map with nothing focused, not leak the menu's last tab");
         }
     }
 }

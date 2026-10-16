@@ -350,16 +350,23 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ChipsGrowOneStepPerPip()
         {
-            Assert.AreEqual(82f, MapLayout.ChipWidthFor(1), 0.001f);
-            Assert.AreEqual(92f, MapLayout.ChipWidthFor(2), 0.001f);
-            Assert.AreEqual(102f, MapLayout.ChipWidthFor(3), 0.001f);
             Assert.AreEqual(24f, MapLayout.ChipHeightFor(1), 0.001f);
+            Assert.AreEqual(28f, MapLayout.ChipHeightFor(2), 0.001f);
             Assert.AreEqual(32f, MapLayout.ChipHeightFor(3), 0.001f);
             Assert.AreEqual(102f, MapLayout.MaxChipWidth, 0.001f);
 
             // A node with no frozen strength reads as the smallest, as the
             // prize payout does.
-            Assert.AreEqual(82f, MapLayout.ChipWidthFor(0), 0.001f);
+            Assert.AreEqual(24f, MapLayout.ChipHeightFor(0), 0.001f);
+        }
+
+        [Test]
+        public void TheGlowPulsesBetweenItsTwoAlphas()
+        {
+            Assert.AreEqual(0.12f, MapLayout.GlowAlpha(0f), 0.0001f);
+            Assert.AreEqual(0.25f, MapLayout.GlowAlpha(0.5f), 0.0001f);
+            Assert.AreEqual(0.38f, MapLayout.GlowAlpha(1f), 0.0001f);
+            Assert.AreEqual(0.38f, MapLayout.GlowAlpha(7f), 0.0001f, "progress is clamped");
         }
 
         [Test]
