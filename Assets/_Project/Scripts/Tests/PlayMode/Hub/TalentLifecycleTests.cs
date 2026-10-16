@@ -248,12 +248,10 @@ namespace PrincesPalace.PlayModeTests
         // frame budget turned out to be half of a 1.12s beat.
         private static IEnumerator Watch(float seconds)
         {
-            float watched = 0f;
-            while (watched < seconds)
-            {
-                watched += Time.unscaledDeltaTime;
-                yield return null;
-            }
+            TalentController.DeltaOverride = () => 1f / 60f;
+            int frames = Mathf.CeilToInt(seconds * 60f);
+            for (int i = 0; i < frames; i++) yield return null;
+            TalentController.DeltaOverride = null;
         }
 
         private static Button ButtonNamed(TalentController talents, string name)

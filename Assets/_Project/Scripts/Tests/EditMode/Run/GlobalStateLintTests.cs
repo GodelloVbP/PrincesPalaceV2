@@ -84,6 +84,10 @@ namespace PrincesPalace.Domain.Tests
                 @"TalentController\.MotionSpeedMultiplier\s*=",
                 @"TalentController\.MotionSpeedMultiplier\s*=\s*1f"),
 
+            ("TalentController.DeltaOverride",
+                @"TalentController\.DeltaOverride\s*=",
+                @"TalentController\.DeltaOverride\s*=\s*null"),
+
             ("HubController.MotionSpeedMultiplier",
                 @"HubController\.MotionSpeedMultiplier\s*=",
                 @"HubController\.MotionSpeedMultiplier\s*=\s*1f"),

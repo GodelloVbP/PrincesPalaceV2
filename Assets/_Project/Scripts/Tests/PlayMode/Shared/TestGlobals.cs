@@ -112,6 +112,7 @@ namespace PrincesPalace.PlayModeTests
             ReckoningController.DeltaOverride = null;
             RewardTrackController.SpeedMultiplier = 1f;
             TalentController.MotionSpeedMultiplier = 1f;
+            TalentController.DeltaOverride = null;
             HubController.MotionSpeedMultiplier = 1f;
             FightController.BreathSpeedMultiplier = 1f;
             SpellPerformancePlayer.ClockOverride = null;

@@ -32,6 +32,12 @@ namespace PrincesPalace
         // suite times those. 1 outside a test, so play is unchanged.
         public static float MotionSpeedMultiplier = 1f;
 
+        // A FIXED STEP FOR A TEST THAT SAMPLES THE BEAT'S SHAPE. Replaces the
+        // wall-clock frame delta, so one stalled frame on a loaded machine
+        // cannot swallow a 1.12s beat between two samples. Same shape as
+        // ReckoningController.DeltaOverride. Null in play.
+        public static System.Func<float> DeltaOverride;
+
         private int _kindlingSlot = -1;
         private int _kindlingPath = -1;
         private float _kindlingElapsed;
@@ -91,7 +97,7 @@ namespace PrincesPalace
         private void Update()
         {
             float time = Time.unscaledTime;
-            float delta = Time.unscaledDeltaTime * MotionSpeedMultiplier;
+            float delta = (DeltaOverride != null ? DeltaOverride() : Time.unscaledDeltaTime) * MotionSpeedMultiplier;
 
             DriveSlide(delta);
             DrivePushIn(delta);

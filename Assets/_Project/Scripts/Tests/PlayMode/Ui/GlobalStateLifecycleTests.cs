@@ -104,6 +104,10 @@ namespace PrincesPalace.PlayModeTests
                 () => TalentController.MotionSpeedMultiplier = 37f,
                 () => TalentController.MotionSpeedMultiplier, 1f),
 
+            ("TalentController.DeltaOverride",
+                () => TalentController.DeltaOverride = () => 0f,
+                () => TalentController.DeltaOverride, null),
+
             ("HubController.MotionSpeedMultiplier",
                 () => HubController.MotionSpeedMultiplier = 37f,
                 () => HubController.MotionSpeedMultiplier, 1f),

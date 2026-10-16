@@ -98,14 +98,17 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
             Press(talents, "InvestButton");
 
+            // FIXED 1/60 STEPS: the beat advances exactly one slice per sampled
+            // frame, so a stalled frame cannot skip the peak.
+            TalentController.DeltaOverride = () => 1f / 60f;
             var scales = new System.Collections.Generic.List<float>();
-            float watched = 0f;
-            while (watched < ConstellationLayout.KindleSeconds + 0.25f)
+            int frames = Mathf.CeilToInt((ConstellationLayout.KindleSeconds + 0.25f) * 60f);
+            for (int i = 0; i < frames; i++)
             {
                 scales.Add(glow.localScale.x);
-                watched += Time.unscaledDeltaTime;
                 yield return null;
             }
+            TalentController.DeltaOverride = null;
 
             Assert.Less(scales[0], 0.3f,
                 "the glow's first sampled frame was not small, so kindling still switches it on " +

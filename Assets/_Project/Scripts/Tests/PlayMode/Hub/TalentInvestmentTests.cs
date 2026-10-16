@@ -550,13 +550,17 @@ namespace PrincesPalace.PlayModeTests
             // a 1.12s beat -- which reported the overshoot as never settling
             // when it had simply not finished yet.
             var scales = new System.Collections.Generic.List<float>();
-            float watched = 0f;
-            while (watched < ConstellationLayout.KindleSeconds + 0.25f)
+            // FIXED 1/60 STEPS: the beat advances exactly one slice per sampled
+            // frame, so a stalled frame on a loaded gate cannot jump the whole
+            // 1.12s beat between two samples and hide the peak.
+            TalentController.DeltaOverride = () => 1f / 60f;
+            int frames = Mathf.CeilToInt((ConstellationLayout.KindleSeconds + 0.25f) * 60f);
+            for (int i = 0; i < frames; i++)
             {
                 scales.Add(rect.localScale.x);
-                watched += Time.unscaledDeltaTime;
                 yield return null;
             }
+            TalentController.DeltaOverride = null;
 
             Assert.Greater(scales.Max(), 1.02f,
                 "the stone never went past its own size, so kindling reads as it switching on " +
