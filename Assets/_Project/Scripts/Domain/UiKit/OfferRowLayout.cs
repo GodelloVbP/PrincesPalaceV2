@@ -146,9 +146,20 @@ namespace PrincesPalace.Domain.UiKit
         // Delta line: the number takes the left, the chevron the right edge.
         public const float ChevronSize = 28f;
 
-        public static float DeltaLabelWidth(int visibleCount) => LabelWidth(visibleCount) - ChevronSize - 8f;
+        // The stat's glyph sits at the line's left edge and the number follows it,
+        // left-aligned.
+        public const float DeltaGlyphGap = 4f;
 
-        public static float DeltaLabelX(int visibleCount) => -(ChevronSize + 8f) * 0.5f;
+        private static float DeltaLineWidth(int visibleCount) => LabelWidth(visibleCount) - ChevronSize - 8f;
+
+        public static float DeltaGlyphX(int visibleCount) =>
+            -(ChevronSize + 8f) * 0.5f - DeltaLineWidth(visibleCount) * 0.5f + RewardArt.GlyphSize * 0.5f;
+
+        public static float DeltaLabelWidth(int visibleCount) =>
+            DeltaLineWidth(visibleCount) - RewardArt.GlyphSize - DeltaGlyphGap;
+
+        public static float DeltaLabelX(int visibleCount) =>
+            -(ChevronSize + 8f) * 0.5f + (RewardArt.GlyphSize + DeltaGlyphGap) * 0.5f;
 
         public static float ChevronX(int visibleCount) => LabelWidth(visibleCount) * 0.5f - ChevronSize * 0.5f;
 

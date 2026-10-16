@@ -226,8 +226,8 @@ namespace PrincesPalace.PlayModeTests
             int goldBefore = Run.gold;
             yield return Show(pages);
 
-            var label = Part<Button>("ReckoningHone0").GetComponentInChildren<TMP_Text>();
-            StringAssert.EndsWith("g", label.text, "the coin stack shows the amount");
+            Assert.AreEqual("glyph_coins", Part<Image>("ReckoningHone0Glyph").sprite.name, "the whetstone is a coin stack");
+            string price = Part<TMP_Text>("ReckoningHone0Count").text;
 
             Click("ReckoningHone0");
             yield return Settle();
@@ -236,8 +236,10 @@ namespace PrincesPalace.PlayModeTests
             Assert.Greater(card.GoldPaid, 0);
             Assert.AreEqual(goldBefore + card.GoldPaid, Run.gold, "the price is credited once");
             Assert.AreEqual(ItemUpgrade.MaxPlus, SlotHoning.PlusOf(Run.slotHoning, card.RecipientId, card.Slot));
-            Assert.AreEqual(UiStrings.ReckoningCoinsMark.Format(card.GoldPaid), Part<TMP_Text>("ReckoningOffer0Delta").text,
-                "a sold card leaves its coin mark");
+            Assert.AreEqual(price, card.GoldPaid.ToString(), "the stack showed the amount the sale paid");
+            Assert.AreEqual(card.GoldPaid.ToString(), Part<TMP_Text>("ReckoningOffer0Delta").text,
+                "a sold card leaves its price");
+            Assert.AreEqual("glyph_coins", Part<Image>("ReckoningOffer0DeltaGlyph").sprite.name, "beside the coin mark");
         }
 
         // ---- leave ---------------------------------------------------------------------
@@ -253,9 +255,10 @@ namespace PrincesPalace.PlayModeTests
             Click("ReckoningOffer0");
             yield return Settle();
             Assert.AreEqual(2, page.ChoicesLeft);
-            Assert.AreEqual(UiStrings.ReckoningLeaveHones.Format(2),
-                Part<Button>("ReckoningLeaveButton").GetComponentInChildren<TMP_Text>().text,
-                "two unused choices, two whetstones");
+            Assert.AreEqual("glyph_whetstone", Part<Image>("ReckoningLeaveHoneGlyph").sprite.name);
+            Assert.AreEqual("2", Part<TMP_Text>("ReckoningLeaveHoneCount").text, "two unused choices, two whetstones");
+            Assert.IsFalse(Part<Image>("ReckoningLeaveCoinGlyph").enabled, "no coins to pay");
+            Assert.AreEqual("glyph_door", Part<Image>("ReckoningLeaveDoorGlyph").sprite.name, "the door leads its face");
 
             yield return Focus("ReckoningLeaveButton");
 
@@ -272,6 +275,8 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(UiStrings.ReckoningForward.Format(),
                 Part<Button>("ReckoningLeaveButton").GetComponentInChildren<TMP_Text>().text,
                 "a spent page's door is the way forward");
+            Assert.IsFalse(Part<Image>("ReckoningLeaveHoneGlyph").enabled, "and carries no payment glyphs");
+            Assert.IsFalse(Part<Image>("ReckoningLeaveDoorGlyph").enabled, "nor the door");
 
             var unspent = Part<Image>("ReckoningOffer1Icon");
             Assert.AreEqual(0.45f, unspent.color.a, 0.001f, "cards nobody chose are dimmed");
@@ -287,8 +292,9 @@ namespace PrincesPalace.PlayModeTests
 
             var preview = RewardPages.PreviewLeave(SaveSlotManager.CurrentSave, page);
             Assert.Greater(preview.Gold, 0, "fixture: an unused relic choice pays");
-            Assert.AreEqual(UiStrings.ReckoningCoinsMark.Format(preview.Gold),
-                Part<Button>("ReckoningLeaveButton").GetComponentInChildren<TMP_Text>().text);
+            Assert.AreEqual("glyph_coins", Part<Image>("ReckoningLeaveCoinGlyph").sprite.name);
+            Assert.AreEqual(preview.Gold.ToString(), Part<TMP_Text>("ReckoningLeaveCoinCount").text);
+            Assert.IsFalse(Part<Image>("ReckoningLeaveHoneGlyph").enabled, "a relic page hones nothing");
 
             int goldBefore = Run.gold;
             Click("ReckoningLeaveButton");

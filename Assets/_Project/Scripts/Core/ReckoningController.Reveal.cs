@@ -110,6 +110,7 @@ namespace PrincesPalace
             }
 
             _reveal = RevealSchedule.For(cards, _page.Choices, _preset, _page.SourceClass);
+            PaintCache();
             _revealClock = 0f;
             _fired = 0;
             _choosableFired = false;
@@ -427,8 +428,7 @@ namespace PrincesPalace
 
             var group = CardGroup(i);
             if (group != null) group.alpha = alpha;
-            if (offerBacks != null && i < offerBacks.Length && offerBacks[i] != null)
-                offerBacks[i].gameObject.SetActive(!faceUp);
+            ShowBack(i, !faceUp);
         }
 
         private void RestCard(int i, bool home)
@@ -443,8 +443,7 @@ namespace PrincesPalace
 
             var group = offerButtons[i] == null ? null : offerButtons[i].GetComponent<CanvasGroup>();
             if (group != null) group.alpha = 1f;
-            if (offerBacks != null && i < offerBacks.Length && offerBacks[i] != null)
-                offerBacks[i].gameObject.SetActive(false);
+            ShowBack(i, false);
         }
 
         // Attached at runtime, as BlurGroup is: a fade that belongs to one

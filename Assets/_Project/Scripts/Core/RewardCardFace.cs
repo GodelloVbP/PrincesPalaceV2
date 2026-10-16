@@ -33,16 +33,18 @@ namespace PrincesPalace
         // The wearer (gear). Empty on a relic.
         public string WearerId = "";
 
-        // The headline stat as glyph (or word) plus a signed number, and the
-        // chevron's side. HasDelta is false for a relic, an inert card and a
-        // card that is no longer open.
+        // The headline stat as a RewardArt glyph id plus a signed number, and
+        // the chevron's side. HasDelta is false for a relic, an inert card and
+        // a card that is no longer open; the glyph id is null when no stat moves.
         public bool HasDelta;
+        public string DeltaGlyphId;
         public string DeltaText = "";
         public int DeltaSign;
 
-        // A relic's rules text, or why a gear card is chained. A gear card's
-        // affixes are the focus detail's alone: an affix line on the face
-        // would repeat the tooltip and give one card a block its neighbours lack.
+        // A relic's rules text. A gear card's affixes and an inert card's
+        // requirement are the focus detail's alone: a line on the face would
+        // repeat the tooltip and give one card a block its neighbours lack,
+        // and the chain already shows that a card is inert.
         public string Feature = "";
 
         // What the wearer has in the card's slot now: the icon key, or null for
@@ -95,7 +97,6 @@ namespace PrincesPalace
             face.BandPlus = recipient == null ? 0 : ContentDatabase.HoningOf(recipient, card.Slot);
             face.WearerId = card.RecipientId ?? "";
             face.Inert = card.Inert;
-            face.Feature = card.Inert ? UiStrings.ReckoningInert.Format() : "";
 
             // What the card would change is a question about an OPEN card: once
             // it is taken the recipient already wears it, and a delta against
@@ -260,21 +261,9 @@ namespace PrincesPalace
             if (!GearEvaluator.LargestDelta(recipient, card.Copy, card.Slot, out int axis, out int delta)) return;
 
             face.DeltaSign = delta > 0 ? 1 : delta < 0 ? -1 : 0;
-            string signed = (delta > 0 ? "+" : "") + delta;
-            switch (axis)
-            {
-                case 0: face.DeltaText = Glyphed("physical", signed); break;
-                case 1: face.DeltaText = UiStrings.ReckoningDeltaHealth.Format(signed); break;
-                case 2: face.DeltaText = UiStrings.ReckoningDeltaDefence.Format(signed); break;
-                case 3: face.DeltaText = UiStrings.ReckoningDeltaSpeed.Format(signed); break;
-                default: face.DeltaText = Glyphed("mana", signed); break;
-            }
+            face.DeltaGlyphId = RewardArt.DeltaGlyphId(axis);
+            face.DeltaText = (delta > 0 ? "+" : "") + delta;
         }
-
-        // The description icon set's inline sprite for a token, then the number.
-        private static string Glyphed(string token, string signed) =>
-            UiStrings.ReckoningDeltaGlyph.Format(
-                DescriptionMarkup.Expand("{" + token + "}", DescriptionRenderCaps.Full), signed);
 
         // Every affix of the copy, one line each, scaled at the copy's tier.
         private static List<string> AllAffixLines(ItemInstance copy, Character viewer)

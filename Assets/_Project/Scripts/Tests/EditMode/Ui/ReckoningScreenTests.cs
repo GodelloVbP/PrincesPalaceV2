@@ -221,6 +221,58 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
+        public void TheCardBackAndTheChainAreTheProcessedArt_AndTheFaceHidesBehindTheBack()
+        {
+            var card = Walk(Tree()).Single(n => n.Name == "ReckoningOffer0");
+            var parts = Walk(card).ToDictionary(n => n.Name, n => n);
+
+            Assert.AreEqual("Assets/_Project/Art/UI/Reckoning/Processed/reward_card_back.png",
+                parts["ReckoningOffer0Back"].SpriteKey);
+            Assert.IsTrue(parts["ReckoningOffer0Back"].PreserveAspect, "the back keeps its own aspect");
+            Assert.AreEqual("Assets/_Project/Art/UI/Reckoning/Processed/reward_chain.png",
+                parts["ReckoningOffer0Chain"].SpriteKey);
+            Assert.IsTrue(parts["ReckoningOffer0Chain"].PreserveAspect);
+
+            // The face is one node, a sibling of the back, so one switch hides it all.
+            CollectionAssert.Contains(card.Children.Select(c => c.Name).ToList(), "ReckoningOffer0Face");
+            Assert.IsTrue(Walk(parts["ReckoningOffer0Face"]).Any(n => n.Name == "ReckoningOffer0Chain"));
+            Assert.IsFalse(Walk(parts["ReckoningOffer0Face"]).Any(n => n.Name == "ReckoningOffer0Back"));
+        }
+
+        [Test]
+        public void TheCacheArtIsASwappableSlot_NotAGlowDisc()
+        {
+            var screen = ReckoningScreen.Build();
+
+            Assert.IsNull(screen.CacheArt.Node.SpriteKey, "the controller picks the bundle or tin by page class");
+            Assert.IsTrue(screen.CacheArt.Node.PreserveAspect);
+        }
+
+        [Test]
+        public void TheStatGlyphSitsLeftOfTheNumber_AndTheWhetstoneAndDoorCarryGlyphSlots()
+        {
+            var screen = ReckoningScreen.Build();
+            var names = Walk(screen.Root).Select(n => n.Name).ToList();
+
+            foreach (string slot in new[] { "ReckoningOffer0DeltaGlyph", "ReckoningHone0Glyph", "ReckoningHone0Count",
+                "ReckoningLeaveDoorGlyph", "ReckoningLeaveHoneGlyph", "ReckoningLeaveHoneCount",
+                "ReckoningLeaveCoinGlyph", "ReckoningLeaveCoinCount" })
+            {
+                CollectionAssert.Contains(names, slot);
+            }
+
+            Assert.AreEqual(5, screen.OfferDeltaGlyphs.Count);
+            Assert.AreEqual(5, screen.OfferFaces.Count);
+            Assert.AreEqual(5, screen.HoneGlyphs.Count);
+            for (int count = 1; count <= OfferRowLayout.MaxCards; count++)
+            {
+                Assert.Less(OfferRowLayout.DeltaGlyphX(count) + RewardArt.GlyphSize * 0.5f + OfferRowLayout.DeltaGlyphGap,
+                    OfferRowLayout.DeltaLabelX(count) - OfferRowLayout.DeltaLabelWidth(count) * 0.5f + 0.01f,
+                    $"the glyph overlaps the number at {count} cards");
+            }
+        }
+
+        [Test]
         public void TheGhostIsLeftOfTheItemAndSmallerThanIt()
         {
             // 55% size, behind and to the left (C5). The ghost gate reads the

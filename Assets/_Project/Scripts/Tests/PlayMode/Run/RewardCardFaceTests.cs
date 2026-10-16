@@ -172,12 +172,13 @@ namespace PrincesPalace.PlayModeTests
             var up = RewardCardFace.OfGear(save, Card(ItemInstance.Of("sword", 5)));
             Assert.IsTrue(up.HasDelta);
             Assert.AreEqual(1, up.DeltaSign);
-            StringAssert.EndsWith(" +37", up.DeltaText);
+            Assert.AreEqual("+37", up.DeltaText);
+            Assert.AreEqual("glyph_sword", up.DeltaGlyphId, "a weapon swap moves damage");
 
             sheep.equipment.Set(EquipmentSlot.Weapon1, "sword", tier: 5);
             var down = RewardCardFace.OfGear(save, Card(ItemInstance.Of("sword", 0)));
             Assert.AreEqual(-1, down.DeltaSign);
-            StringAssert.EndsWith(" -37", down.DeltaText);
+            Assert.AreEqual("-37", down.DeltaText);
         }
 
         [Test]
@@ -190,10 +191,11 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(flat.HasDelta);
             Assert.AreEqual(0, flat.DeltaSign);
             Assert.AreEqual("", flat.DeltaText);
+            Assert.IsNull(flat.DeltaGlyphId, "no stat moves, so no stat glyph");
         }
 
         [Test]
-        public void AnInertCardHasNoDeltaAndSaysWhy()
+        public void AnInertCardHasNoDeltaAndNoWordsOnItsFace_TheTooltipSaysWhy()
         {
             ArmedSheep(out var save);
 
@@ -201,7 +203,9 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.IsTrue(face.Inert);
             Assert.IsFalse(face.HasDelta);
-            Assert.AreEqual(UiStrings.ReckoningInert.Format(), face.Feature);
+            Assert.AreEqual("", face.Feature, "the chain shows it; the face carries no note");
+            StringAssert.Contains(UiStrings.ReckoningInert.Format(),
+                RewardCardFace.DetailOfGear(save, Card(ItemInstance.Of("sword", 5), inert: true)).Body);
         }
 
         // ---- the focus detail ------------------------------------------------------

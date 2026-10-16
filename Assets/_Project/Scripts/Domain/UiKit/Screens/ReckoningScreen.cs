@@ -216,6 +216,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> OfferBandTiers = new List<NodeRef>();
         public List<NodeRef> OfferBandPluses = new List<NodeRef>();
         public List<NodeRef> OfferChevrons = new List<NodeRef>();
+        public List<NodeRef> OfferDeltaGlyphs = new List<NodeRef>();
 
         // The spark that flies into a card's slot band on a hone or a leave.
         public List<NodeRef> OfferSparks = new List<NodeRef>();
@@ -230,8 +231,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef ChipGear;
         public NodeRef ChipRelic;
         public NodeRef Cache;
+        public NodeRef CacheArt;
         public NodeRef CacheSeam;
         public List<NodeRef> OfferBacks = new List<NodeRef>();
+        public List<NodeRef> OfferFaces = new List<NodeRef>();
         public List<NodeRef> Embers = new List<NodeRef>();
 
         // The shared focus detail, shown under the focused face-up card.
@@ -240,8 +243,17 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef CardTipBody;
 
         // "Hone instead", one per gear card, and the way off the page.
+        // Each carries its face as glyph + count (RewardArt glyphs, swapped by
+        // the controller); the door's face is up to three of those groups.
         public List<NodeRef> HoneButtons = new List<NodeRef>();
+        public List<NodeRef> HoneGlyphs = new List<NodeRef>();
+        public List<NodeRef> HoneCounts = new List<NodeRef>();
         public NodeRef LeaveButton;
+        public NodeRef LeaveDoorGlyph;
+        public NodeRef LeaveHoneGlyph;
+        public NodeRef LeaveHoneCount;
+        public NodeRef LeaveCoinGlyph;
+        public NodeRef LeaveCoinCount;
 
         // Pulled in to 280 so a 520-wide column clears the painted border:
         // 280 +/- 260 lands at 540, inside ContentHalfWidth.
@@ -394,9 +406,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.ChipGear = chipGear;
             screen.ChipRelic = chipRelic;
 
-            var cacheArt = Ui.Sprite("ReckoningCacheArt", "proc:radial_glow", Place.Stretch(), UiSize.Fill)
-                .Coloured("#C9A25AE6")
+            // The bundle or tin for the page's class; the controller swaps the
+            // sprite (RewardArt.CacheId) and seats the seam's light on it.
+            var cacheArt = Ui.Sprite("ReckoningCacheArt", null, Place.Stretch(), UiSize.Fill)
                 .AsDecor();
+            cacheArt.PreserveAspect = true;
+            screen.CacheArt = cacheArt;
             var cacheSeam = Ui.Solid("ReckoningCacheSeam", "#FFD98A00", new UiVec(CacheWidth * 0.7f, 6f), Place.At(0f, 0f))
                 .AsDecor();
             screen.CacheSeam = cacheSeam;
@@ -417,10 +432,28 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // carries on. Sized and seated like the summary's Continue so the
             // two read as one control moving along.
             var leaveSize = Ui.PlateNominalSizeFor(260f, 60f);
-            var leave = Ui.Button("ReckoningLeaveButton", UiStrings.ReckoningLeaveMark, leaveSize, 18,
+            var leave = Ui.Button("ReckoningLeaveButton", UiString.Runtime, leaveSize, 18,
                     Place.At(0f, ContentBottom + leaveSize.Y * 0.5f + 1f))
                 .Themed(ButtonTheme.Gold)
                 .Quiet();
+            // The door, then what leaving pays (whetstones, coins): glyph groups
+            // the controller seats. At rest they sit apart so the audit sees no
+            // overlap.
+            var leaveDoorGlyph = GlyphPart("ReckoningLeaveDoorGlyph", -112f);
+            var leaveHoneGlyph = GlyphPart("ReckoningLeaveHoneGlyph", -64f);
+            var leaveHoneCount = CountPart("ReckoningLeaveHoneCount", -30f, 40f);
+            var leaveCoinGlyph = GlyphPart("ReckoningLeaveCoinGlyph", 8f);
+            var leaveCoinCount = CountPart("ReckoningLeaveCoinCount", 56f, 60f);
+            screen.LeaveDoorGlyph = leaveDoorGlyph;
+            screen.LeaveHoneGlyph = leaveHoneGlyph;
+            screen.LeaveHoneCount = leaveHoneCount;
+            screen.LeaveCoinGlyph = leaveCoinGlyph;
+            screen.LeaveCoinCount = leaveCoinCount;
+            leave.Children.Add(leaveDoorGlyph);
+            leave.Children.Add(leaveHoneGlyph);
+            leave.Children.Add(leaveHoneCount);
+            leave.Children.Add(leaveCoinGlyph);
+            leave.Children.Add(leaveCoinCount);
             screen.LeaveButton = leave;
             offerChildren.Add(leave);
 
@@ -1093,11 +1126,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     Place.At(0f, IconCentre), UiSize.Fixed(iconWidth, IconBoxHeight))
                 .AsDecor();
 
-            // Placeholder for the chain sheet: a grey ring over an inert card's art.
-            var chain = Ui.Sprite($"ReckoningOffer{index}Chain", "proc:ring_outline",
+            // An inert card's art is greyed and the chain lies diagonally over
+            // it; the words are the tooltip's alone.
+            var chain = Ui.Sprite($"ReckoningOffer{index}Chain", RewardArt.ChainKey,
                     Place.At(0f, IconCentre), UiSize.Fixed(iconWidth, IconBoxHeight))
                 .Coloured("#FFFFFF00")
                 .AsDecor();
+            chain.PreserveAspect = true;
 
             var lostDisc = Ui.Sprite($"ReckoningOffer{index}LostDisc", "proc:solid_circle",
                     Place.At(OfferRowLayout.LostBadgeX(count),
@@ -1140,13 +1175,19 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .AsDecor()
                 .Styled(TypographyRole.Body);
 
-            // The number takes the left, the chevron the right; the chevron's
-            // shape (up, down, flat) carries the sign.
+            // The stat's glyph and its number take the left, the chevron the
+            // right; the chevron's shape (up, down, flat) carries the sign.
             var delta = Ui.Label($"ReckoningOffer{index}Delta", UiString.Runtime,
                     new UiVec(OfferRowLayout.DeltaLabelWidth(count), DeltaBand), 20, "#F2DB9E",
                     Place.At(OfferRowLayout.DeltaLabelX(count), DeltaCentre))
+                .TextAligned(UiTextAlign.Left)
                 .AsDecor()
                 .Styled(TypographyRole.TacticalData);
+            var deltaGlyph = Ui.Sprite($"ReckoningOffer{index}DeltaGlyph", null,
+                    Place.At(OfferRowLayout.DeltaGlyphX(count), DeltaCentre),
+                    UiSize.Fixed(RewardArt.GlyphSize, RewardArt.GlyphSize))
+                .AsDecor();
+            deltaGlyph.PreserveAspect = true;
             var chevron = Ui.Label($"ReckoningOffer{index}Chevron", UiString.Runtime,
                     new UiVec(OfferRowLayout.ChevronSize, DeltaBand), 24, "#9A93A8",
                     Place.At(OfferRowLayout.ChevronX(count), DeltaCentre))
@@ -1179,29 +1220,22 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .NoChrome()
                 .Quiet();
 
-            button.Children.Add(plinth);
-            button.Children.Add(halo);
-            button.Children.Add(burst);
-            button.Children.Add(ghost);
-            button.Children.Add(icon);
-            button.Children.Add(chain);
-            button.Children.Add(lostDisc);
-            button.Children.Add(lostMark);
-            button.Children.Add(wearerDisc);
-            button.Children.Add(wearerPortrait);
-            button.Children.Add(band);
-            button.Children.Add(bandTier);
-            button.Children.Add(bandPlus);
-            button.Children.Add(name);
-            button.Children.Add(delta);
-            button.Children.Add(chevron);
-            button.Children.Add(feature);
-            button.Children.Add(spark);
+            // The face is one node so the controller can hide all of it while
+            // the back shows: the back art keeps its own aspect and is narrower
+            // than the card, so it cannot cover the face by size.
+            var face = Ui.Panel($"ReckoningOffer{index}Face", Place.Stretch(), UiSize.Fill, new List<UiNode>
+            {
+                plinth, halo, burst, ghost, icon, chain, lostDisc, lostMark, wearerDisc, wearerPortrait,
+                band, bandTier, bandPlus, name, delta, deltaGlyph, chevron, feature, spark,
+            });
+            button.Children.Add(face);
+            OfferFaces.Add(face);
 
-            // The card back, LAST so it covers the face until the card flips.
-            var back = Ui.Solid($"ReckoningOffer{index}Back", "#3B2A5CFF", Place.Stretch(), UiSize.Fill)
+            // The card back, LAST, shown in the face's place until the card flips.
+            var back = Ui.Sprite($"ReckoningOffer{index}Back", RewardArt.CardBackKey, Place.Stretch(), UiSize.Fill)
                 .AsDecor()
                 .Inactive();
+            back.PreserveAspect = true;
             button.Children.Add(back);
             OfferBacks.Add(back);
 
@@ -1221,6 +1255,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             OfferBandPluses.Add(bandPlus);
             OfferNames.Add(name);
             OfferDeltas.Add(delta);
+            OfferDeltaGlyphs.Add(deltaGlyph);
             OfferChevrons.Add(chevron);
             OfferFeatures.Add(feature);
             OfferSparks.Add(spark);
@@ -1236,11 +1271,36 @@ namespace PrincesPalace.Domain.UiKit.Screens
             float x = OfferRowLayout.CardX(index, OfferRowLayout.MaxCards);
             float y = CardBottom - HoneGap - size.Y * 0.5f;
 
-            var button = Ui.Button($"ReckoningHone{index}", UiStrings.ReckoningHoneMark, size, 14, Place.At(x, y))
+            var button = Ui.Button($"ReckoningHone{index}", UiString.Runtime, size, 14, Place.At(x, y))
                 .Themed(ButtonTheme.Violet)
                 .Quiet();
+
+            // The whetstone, or the coins and the card's price when every shown
+            // slot is spent; the controller swaps the glyph and seats the pair.
+            var glyph = GlyphPart($"ReckoningHone{index}Glyph", -30f);
+            var count = CountPart($"ReckoningHone{index}Count", 20f, 60f);
+            button.Children.Add(glyph);
+            button.Children.Add(count);
             HoneButtons.Add(button);
+            HoneGlyphs.Add(glyph);
+            HoneCounts.Add(count);
             return button;
         }
+
+        // A glyph slot on a control's face: square, art swapped at runtime.
+        private static UiNode GlyphPart(string name, float x)
+        {
+            var glyph = Ui.Sprite(name, null, Place.At(x, 0f), UiSize.Fixed(RewardArt.GlyphSize, RewardArt.GlyphSize))
+                .AsDecor();
+            glyph.PreserveAspect = true;
+            return glyph;
+        }
+
+        // The number beside a glyph.
+        private static UiNode CountPart(string name, float x, float width) =>
+            Ui.Label(name, UiString.Runtime, new UiVec(width, 28f), 24, "#F2DB9E", Place.At(x, 0f))
+                .TextAligned(UiTextAlign.Left)
+                .AsDecor()
+                .Styled(TypographyRole.TacticalData);
     }
 }

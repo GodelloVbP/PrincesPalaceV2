@@ -616,17 +616,11 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("reckoning.no_change", "NO STAT CHANGE");
         public static readonly UiString ReckoningInert =
             UiString.Define("reckoning.inert", "Inert until its requirements are met.");
-        public static readonly UiString ReckoningDeltaHealth =
-            UiString.Define("reckoning.delta_health", "{0} HP", "+999 HP");
-        public static readonly UiString ReckoningDeltaDefence =
-            UiString.Define("reckoning.delta_defence", "{0} DEF", "+999 DEF");
-        public static readonly UiString ReckoningDeltaSpeed =
-            UiString.Define("reckoning.delta_speed", "{0} SPEED", "+999 SPEED");
 
-        // A stat with a glyph in the description icon set: the glyph's markup
-        // tag, then the signed number.
-        public static readonly UiString ReckoningDeltaGlyph =
-            UiString.Define("reckoning.delta_glyph", "{0} {1}", "[] +999");
+        // The number beside a glyph (RewardArt): a stat delta, a price, a
+        // whetstone or coin count.
+        public static readonly UiString ReckoningCount =
+            UiString.Define("reckoning.count", "{0}", "+999");
 
         // The slot band: tier numeral on the left, the slot's honing on the right.
         public static readonly UiString ReckoningBandTier =
@@ -652,16 +646,10 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString ReckoningTipUnreached =
             UiString.Define("reckoning.tip_unreached", "not reached: {0}", "not reached: Bjorn, Odette, Shawn");
 
-        // The choice controls' faces (docs/PLAN_REWARD_SCREENS.md C6). PLACEHOLDER
-        // text for the whetstone, coin stack and door glyphs until their art lands.
+        // The choice controls' faces (docs/PLAN_REWARD_SCREENS.md C6): glyphs
+        // and counts (RewardArt); the forward arrow is the one text mark left.
         public static readonly UiString ReckoningBandHoneNext =
             UiString.Define("reckoning.band_hone_next", "+{0}>+{1}", "+9>+10");
-        public static readonly UiString ReckoningHoneMark = UiString.Define("reckoning.hone_mark", "+1");
-        public static readonly UiString ReckoningCoinsMark =
-            UiString.Define("reckoning.coins_mark", "{0}g", "99999g");
-        public static readonly UiString ReckoningLeaveHones =
-            UiString.Define("reckoning.leave_hones", "+1 x{0}", "+1 x9");
-        public static readonly UiString ReckoningLeaveMark = UiString.Define("reckoning.leave_mark", "EXIT");
         public static readonly UiString ReckoningForward = UiString.Define("reckoning.forward", ">>");
 
         // --- the defeat screen ---------------------------------------------------

@@ -783,6 +783,7 @@ namespace PrincesPalace
                 // convenience.
                 SetWidth(RectAt(offerIcons, i), iconWidth);
                 SetWidth(RectAt(offerChains, i), iconWidth);
+                Seat(RectAt(offerDeltaGlyphs, i), OfferRowLayout.DeltaGlyphX(count), null);
                 SetSquare(RectAt(offerHalos, i), OfferRowLayout.HaloDiameter(count));
                 SetSquare(RectAt(offerBursts, i), OfferRowLayout.BurstDiameter(count));
 
@@ -1008,7 +1009,8 @@ namespace PrincesPalace
             bool visible = card.Outcome == CardOutcome.Open || card.Outcome == CardOutcome.Honed;
             if (icon != null)
             {
-                // An inert card is grey with a chain over it.
+                // An inert card is grey with a chain over it (the chain is dark
+                // iron already, so it is not tinted).
                 var tint = face.Inert ? InertTint : Color.white;
                 if (card.Outcome == CardOutcome.Honed) tint.a = DustAlpha;
                 else if (!open) tint.a = DimAlpha;
@@ -1017,7 +1019,7 @@ namespace PrincesPalace
                 if (!visible) icon.enabled = false;
             }
 
-            if (offerChains[i] != null) offerChains[i].color = face.Inert && visible ? InertTint : Color.clear;
+            if (offerChains[i] != null) offerChains[i].color = face.Inert && visible ? Color.white : Color.clear;
         }
 
         private static readonly Color InertTint = new Color(0.5f, 0.5f, 0.55f, 1f);
@@ -1162,8 +1164,9 @@ namespace PrincesPalace
         private void PaintDelta(int i, RewardCardFace face, PendingCard card)
         {
             SetText(offerDeltas, i, card.Outcome == CardOutcome.Paid
-                ? UiStrings.ReckoningCoinsMark.Format(card.GoldPaid)
+                ? UiStrings.ReckoningCount.Format(card.GoldPaid)
                 : face.HasDelta ? face.DeltaText : "");
+            PaintDeltaGlyph(i, face, card);
 
             var chevron = i < offerChevrons.Length ? offerChevrons[i] : null;
             if (chevron == null) return;
@@ -1299,22 +1302,15 @@ namespace PrincesPalace
             new UiRect(new UiVec(rect.anchoredPosition.x, rect.anchoredPosition.y),
                 new UiVec(rect.sizeDelta.x, rect.sizeDelta.y));
 
-        // The whetstone under a card: a placeholder mark, or the card's price
+        // The whetstone under a card, or the coin stack with the card's price
         // when every shown slot is spent and the choice pays gold instead.
         private void PaintHone(int i, PendingCard card)
         {
             if (!HoneShown(i)) return;
 
-            var label = honeButtons[i].GetComponentInChildren<TMP_Text>(includeInactive: true);
             var save = SaveSlotManager.CurrentSave;
-            if (RewardPages.HoneInsteadFor(save, _page, i) == RewardPages.HoneInsteadResult.Gold)
-            {
-                label.Set(UiStrings.ReckoningCoinsMark, RewardPages.SalePrice(card.Copy, _page.Step));
-            }
-            else
-            {
-                label.Set(UiStrings.ReckoningHoneMark);
-            }
+            bool gold = RewardPages.HoneInsteadFor(save, _page, i) == RewardPages.HoneInsteadResult.Gold;
+            PaintHoneFace(i, gold, gold ? RewardPages.SalePrice(card.Copy, _page.Step) : 0);
         }
 
         // Whether card `i` offers "hone instead": a gear page's open card whose
@@ -1326,8 +1322,8 @@ namespace PrincesPalace
             && RewardPages.HoneInsteadFor(SaveSlotManager.CurrentSave, _page, i) != RewardPages.HoneInsteadResult.Refused;
 
         // The door's face is what leaving pays now (RewardPages.PreviewLeave, the
-        // same numbers Leave pays), as placeholder marks for the whetstones and
-        // the coin stack; once nothing is left to choose it is the way forward.
+        // same numbers Leave pays): the door, then a whetstone count and a coin
+        // count; once nothing is left to choose it is the way forward.
         private void PaintLeave()
         {
             var label = leaveButton == null ? null : leaveButton.GetComponentInChildren<TMP_Text>(includeInactive: true);
@@ -1336,17 +1332,13 @@ namespace PrincesPalace
             if (_page.ChoicesLeft == 0)
             {
                 label.Set(UiStrings.ReckoningForward);
+                PaintDoorFace(0, 0, forward: true);
                 return;
             }
 
+            label.SetContent("");
             var preview = RewardPages.PreviewLeave(SaveSlotManager.CurrentSave, _page);
-            int hones = preview.Hones.Sum(h => h.Count);
-            var parts = new List<string>();
-            if (hones > 0) parts.Add(UiStrings.ReckoningLeaveHones.Format(hones));
-            if (preview.Gold > 0) parts.Add(UiStrings.ReckoningCoinsMark.Format(preview.Gold));
-
-            if (parts.Count == 0) label.Set(UiStrings.ReckoningLeaveMark);
-            else label.SetContent(string.Join("  ", parts));
+            PaintDoorFace(preview.Hones.Sum(h => h.Count), preview.Gold, forward: false);
         }
 
         private static void SetText(TMP_Text[] labels, int index, string value)

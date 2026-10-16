@@ -1480,6 +1480,18 @@ public static class ScreenRegistry
 
         controller.offerRects = screen.OfferButtons.Select(result.Rect).ToArray();
 
+        // The reward art the controller swaps at runtime: the caches by page
+        // class and every glyph. The card back and the chain are keyed into
+        // the tree and need no entry.
+        controller.rewardArt = RewardArt.TableIds
+            .Select(id => new IconEntry(id, SceneBuilder.LoadSpriteByKey(RewardArt.PathOf(id))))
+            .ToArray();
+
+        // NO CountBindings for offerBurstRects, offerRects or rewardArt: each is
+        // Select'd from one source list (the screen's OfferBursts, OfferButtons,
+        // and RewardArt.TableIds, which RewardArtTests pins by count), so a
+        // count would compare a list with itself.
+
         return controller;
     }
 
