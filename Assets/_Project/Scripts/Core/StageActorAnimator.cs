@@ -194,9 +194,11 @@ namespace PrincesPalace
         // the other exists or what range it works in.
         private float _stretch;
 
-        // The run-up's squash and sag, kept apart from _stretch: a lunge or
-        // recoil finishing its arc writes _stretch back to zero, and the sag
-        // of a defeated figure must outlast that.
+        // The run-up's squash and sag: the fraction of height lost, 0 standing.
+        // Kept apart from _stretch because a lunge or recoil finishing its arc
+        // writes _stretch back to zero, and the sag of a defeated figure must
+        // outlast that. Height only: the width is left alone, so a figure
+        // squashed to 0.62 reads as lower, not as smeared.
         private float _pose;
         private float _breath;
 
@@ -366,9 +368,8 @@ namespace PrincesPalace
         // an exception.
         private Vector3 UndeformedScale()
         {
-            float total = _stretch + _pose;
-            float x = (1f + total) * (1f - _breath * BreathVolumeRatio);
-            float y = (1f - total * VolumeRatio) * (1f + _breath);
+            float x = (1f + _stretch) * (1f - _breath * BreathVolumeRatio);
+            float y = (1f - _stretch * VolumeRatio) * (1f - _pose) * (1f + _breath);
 
             return new Vector3(
                 Mathf.Abs(x) < 0.01f ? _rect.localScale.x : _rect.localScale.x / x,
@@ -844,7 +845,7 @@ namespace PrincesPalace
             if (_rect == null || !isActiveAndEnabled) return;
 
             if (_posing != null) StopCoroutine(_posing);
-            _posing = StartCoroutine(Squashing((1f - yScale) / VolumeRatio, holdSeconds, returnSeconds));
+            _posing = StartCoroutine(Squashing(1f - yScale, holdSeconds, returnSeconds));
         }
 
         private void ApplyPose(float amount)
@@ -882,7 +883,7 @@ namespace PrincesPalace
             if (_rect == null || !isActiveAndEnabled) return;
 
             if (_posing != null) StopCoroutine(_posing);
-            _posing = StartCoroutine(Collapsing((1f - yScale) / VolumeRatio, tiltDegrees, seconds));
+            _posing = StartCoroutine(Collapsing(1f - yScale, tiltDegrees, seconds));
         }
 
         private IEnumerator Collapsing(float stretch, float tiltDegrees, float seconds)
@@ -1333,8 +1334,8 @@ namespace PrincesPalace
 
             // The swing: wider and shorter, or the inverse when Punch feeds it
             // a negative amount.
-            float x = 1f + _stretch + _pose;
-            float y = 1f - (_stretch + _pose) * VolumeRatio;
+            float x = 1f + _stretch;
+            float y = (1f - _stretch * VolumeRatio) * (1f - _pose);
 
             // The breath: taller, and a little of that taken back out of the
             // width. Never negative -- see BreathCurve, which only ever grows

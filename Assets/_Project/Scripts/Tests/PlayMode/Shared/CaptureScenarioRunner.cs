@@ -427,6 +427,9 @@ namespace PrincesPalace.PlayModeTests
             foreach (var foe in built.Session.Encounter.Enemies) foe.CurrentHealth = 1;
 
             yield return BindAndSettle(built, fightClass);
+
+            // So the film ends on the Reckoning's wipe, not the fixture's Continue.
+            Fight.SetBelongsToRunForTest(true);
         }
 
         // Loads the Fight scene fresh and leaves the controller and beat player

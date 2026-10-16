@@ -1184,6 +1184,10 @@ namespace PrincesPalace
         // (docs/PLAN_BUGS_QA.md C1).
         internal bool BelongsToRun;
 
+        // For a capture fixture with no run behind it that still wants the
+        // hand-off to the Reckoning (the fight-end film).
+        public void SetBelongsToRunForTest(bool belongs) => BelongsToRun = belongs;
+
         [SerializeField] internal ReckoningController reckoning;
         [SerializeField] internal DefeatController defeat;
 
