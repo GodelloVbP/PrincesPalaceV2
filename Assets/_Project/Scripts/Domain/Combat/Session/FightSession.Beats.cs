@@ -432,6 +432,20 @@ namespace PrincesPalace.Domain.Combat.Session
         // victory stance, which is settled once the last enemy is already down
         // and its beat closed. Same retro-attach rule AppendMessage follows, and
         // for the same reason: it belongs to the moment it describes.
+        private CombatBeat LatestBeat => _recordingBeat ?? (_beats.Count > 0 ? _beats[_beats.Count - 1] : null);
+
+        // The retro-attach rule above, for the one fact about the whole fight:
+        // the last beat is the one that ended it. Called once, from
+        // ResolveVictory, so exactly one beat of a fight ever carries it.
+        private void MarkLatestBeatEndsFight()
+        {
+            var beat = LatestBeat;
+            if (beat == null) return;
+
+            beat.EndsFight = true;
+            beat.FightClass = EncounterClass;
+        }
+
         private void PoseOnLatestBeat(CombatantState combatant, string stance)
         {
             if (combatant == null) return;

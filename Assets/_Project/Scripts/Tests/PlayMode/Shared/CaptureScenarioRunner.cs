@@ -401,6 +401,31 @@ namespace PrincesPalace.PlayModeTests
             yield return BindAndSettle(built);
         }
 
+        // A fight one blow from victory, for the run-up film (docs/PLAN_REWARD_SCREENS.md
+        // C0): Shawn against one `enemyId` left on a single health point, bound as a
+        // fight of `fightClass`. The class sizes the final-blow stop (HitStop.FinalBlowSeconds).
+        public IEnumerator StandOneBlowFromVictory(string enemyId, EncounterClass fightClass, float speed)
+        {
+            string hero = HeroId();
+            Assert.IsNotNull(hero, "no characters in content");
+
+            yield return LoadFight(speed);
+
+            var built = FightEncounterAdapter.Build(
+                new List<string> { hero },
+                new List<string> { enemyId },
+                new Domain.Rng.SeededRandom(Seed),
+                isBoss: fightClass == EncounterClass.Boss,
+                isElite: fightClass == EncounterClass.Elite,
+                depthStep: 0);
+
+            Assert.IsNotNull(built?.Session, "'" + enemyId + "' could not be built into an encounter");
+
+            foreach (var foe in built.Session.Encounter.Enemies) foe.CurrentHealth = 1;
+
+            yield return BindAndSettle(built, fightClass);
+        }
+
         // Loads the Fight scene fresh and leaves the controller and beat player
         // found, with the placeholder fight's beat flushed.
         private IEnumerator LoadFight(float speed)
@@ -453,10 +478,11 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
         }
 
-        private IEnumerator BindAndSettle(FightEncounterAdapter.BuiltFight built)
+        private IEnumerator BindAndSettle(FightEncounterAdapter.BuiltFight built,
+                                          EncounterClass fightClass = EncounterClass.Normal)
         {
             built.Session.Begin();
-            Fight.Bind(built.Session, EncounterClass.Normal, null, DarknessPresentation(Darkness));
+            Fight.Bind(built.Session, fightClass, null, DarknessPresentation(Darkness));
             Fight.BindPartyArt(built.Party, built.PartyArt);
             yield return null;
             yield return null;
@@ -1040,6 +1066,63 @@ namespace PrincesPalace.PlayModeTests
             Assert.Less(frame, cap, "'" + enemyId + "' was still playing after " + MaxAttackSeconds + "s");
 
             File.WriteAllText(sink.TimingPath, TimingJson("attack", enemyId, forcedSkill, Fps, frame, speed));
+
+            outcome.Frames = frame;
+        }
+
+        // THE KILLING BLOW AND EVERYTHING AFTER IT, through the buttons a hand
+        // would press: Verb0 and the front enemy's plate. Recording runs from the
+        // press until the fight is over and the run-up has handed over (the
+        // Reckoning's wipe starts there; a fixture with no run lands on Continue),
+        // plus a short tail.
+        public IEnumerator RecordFightEnd(CaptureSink sink, float speed, string fightClass, CaptureOutcome outcome)
+        {
+            var fight = Fight;
+
+            int settle = 0;
+            while ((fight.IsBusy || Beats.IsPlaying || !fight.SessionForTest.IsPlayerTurn) && settle < 600)
+            {
+                settle++;
+                yield return null;
+            }
+
+            Assert.Less(settle, 600, "the fight never reached the player's turn");
+
+            var verb = fight.GetComponentsInChildren<Button>(includeInactive: true)
+                .FirstOrDefault(b => b.name == "Verb0");
+            Assert.IsNotNull(verb, "the fight has no attack verb button");
+            verb.onClick.Invoke();
+            yield return null;
+
+            var plate = fight.GetComponentsInChildren<Button>(includeInactive: true)
+                .FirstOrDefault(b => b.name == "EnemyPlate0" && b.gameObject.activeInHierarchy);
+            Assert.IsNotNull(plate, "the attack verb opened no enemy plate to pick");
+            plate.onClick.Invoke();
+
+            int frame = 0;
+            int doneFrames = 0;
+            int tailFrames = Mathf.CeilToInt(2f * FrameEndMargin * Fps);
+            int cap = Mathf.CeilToInt(MaxAttackSeconds * Fps);
+            bool started = false;
+
+            while (frame < cap)
+            {
+                started |= fight.IsBusy || Beats.IsPlaying;
+
+                Render(Canvas, sink.FramePath(frame));
+                yield return null;
+                frame++;
+
+                bool done = started && fight.SessionForTest.IsOver && !fight.IsBusy && !Beats.IsPlaying && !fight.RunUpActive;
+                doneFrames = done ? doneFrames + 1 : 0;
+                if (doneFrames >= tailFrames) break;
+            }
+
+            Assert.IsTrue(started, "the " + fightClass + " fight never played after the press");
+            Assert.IsTrue(fight.SessionForTest.PlayerWon, "the blow did not win the " + fightClass + " fight");
+            Assert.Less(frame, cap, "the " + fightClass + " fight end was still playing after " + MaxAttackSeconds + "s");
+
+            File.WriteAllText(sink.TimingPath, TimingJson("fightend", fightClass, null, Fps, frame, speed));
 
             outcome.Frames = frame;
         }

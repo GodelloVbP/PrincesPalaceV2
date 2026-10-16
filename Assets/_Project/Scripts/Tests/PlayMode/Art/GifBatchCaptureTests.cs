@@ -7,6 +7,7 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using PrincesPalace.Domain.Combat.Session;
+using PrincesPalace.Domain.Rewards;
 using Debug = UnityEngine.Debug;
 
 namespace PrincesPalace.PlayModeTests
@@ -230,6 +231,11 @@ namespace PrincesPalace.PlayModeTests
                     yield return runner.RecordAttackRound(sink, s.speed, s.id, s.skill, outcome);
                     break;
 
+                case "fightend":
+                    yield return runner.StandOneBlowFromVictory(s.vs, FightClassOf(s.id), s.speed);
+                    yield return runner.RecordFightEnd(sink, s.speed, s.id, outcome);
+                    break;
+
                 case "status":
                     yield return runner.StandTheFightUp(s.vs, copies, s.speed, null, null, s.id);
                     yield return runner.RecordSeconds(sink, s.speed, "status", s.id, s.seconds, outcome);
@@ -243,6 +249,17 @@ namespace PrincesPalace.PlayModeTests
             result.frames = outcome.Frames;
             result.litFrames = outcome.LitFrames;
             result.presentationOnly = outcome.PresentationOnly;
+        }
+
+        // gif.py's fightend ids (FIGHT_END_CLASSES) are the fight class of the killing blow.
+        private static EncounterClass FightClassOf(string id)
+        {
+            switch (id)
+            {
+                case "boss": return EncounterClass.Boss;
+                case "elite": return EncounterClass.Elite;
+                default: return EncounterClass.Normal;
+            }
         }
 
         private const string PreviewFightFormationFull = PrincesPalace.PreviewFight.FormationFull;

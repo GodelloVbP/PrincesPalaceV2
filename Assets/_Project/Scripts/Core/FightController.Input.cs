@@ -1405,7 +1405,7 @@ namespace PrincesPalace
 
         private void RescueAStrandedTurn()
         {
-            if (!_isBusy || _session == null || _darknessEnding || _leaderEnding) return;
+            if (!_isBusy || _session == null || _darknessEnding || _leaderEnding || _runUpEnding) return;
             if (beatPlayer == null || beatPlayer.IsPlaying) return;
 
             if (!_reportedStrandedTurn)
@@ -1480,6 +1480,7 @@ namespace PrincesPalace
             // A darkened fight closes its darkness first and re-enters here.
             if (BeginDarknessEnding()) return;
             if (BeginLeaderFallEnding()) return;
+            if (BeginRunUp()) return;
 
             _isBusy = false;
 
@@ -1760,6 +1761,12 @@ namespace PrincesPalace
 
         void IFightNavigationTarget.ConfirmFocus()
         {
+            if (_runUpEnding)
+            {
+                SkipRunUp();
+                return;
+            }
+
             if (_session == null || _isBusy) return;
 
             // INSPECT IS A LOOK, NOT A CHOICE. There is no verb pending, so
@@ -1793,6 +1800,12 @@ namespace PrincesPalace
 
         void IFightNavigationTarget.OnBackPressed()
         {
+            if (_runUpEnding)
+            {
+                SkipRunUp();
+                return;
+            }
+
             if (_session == null || _isBusy) return;
 
             // Every level B steps out of sounds like the Back button; B at

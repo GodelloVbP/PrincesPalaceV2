@@ -66,6 +66,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef RoundCounter;
         public NodeRef RoundCounterPlate;
 
+        // The run-up's light (docs/PLAN_REWARD_SCREENS.md C0): a warm wash
+        // behind the party, and a dim over the enemy half. Hidden until a won
+        // fight's run-up raises them.
+        public NodeRef VictoryWash;
+        public NodeRef EnemyDim;
+
         public NodeRef InitiativeTracker;
         public List<NodeRef> InitiativeIcons = new List<NodeRef>();
         public List<NodeRef> InitiativeRings = new List<NodeRef>();
@@ -419,6 +425,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // HUD canvas: the field goes dark, the people standing in it do not.
             children.Add(s.BuildRoundDarkness());
 
+            // Behind the figures like the darkness above, over the party's
+            // half of the painting.
+            children.Add(s.BuildVictoryWash());
+
             // BEHIND BOTH RACKS, which is the entire reason it is declared here
             // and not beside the per-target pool three hundred lines down. uGUI
             // draws later siblings on top, so a fault opening in the floor has
@@ -448,6 +458,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
             hud.Add(s.BuildPartySeatMarkers());
             hud.Add(partyStage);
             hud.Add(enemyStage);
+
+            // Over the enemy figures and under every plate and verb.
+            hud.Add(s.BuildEnemyDim());
             hud.Add(s.BuildPartySeatFigures());
 
             // A CHILD OF THE STAGE PANEL, appended after BuildStage returns
@@ -1328,6 +1341,30 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .Inactive();
             RoundDarkness = darkness;
             return darkness;
+        }
+
+        // Amber on the party's half (the party stands left of centre),
+        // 960 x 720 so it stays inside the frame. Its opacity is runtime
+        // (FightController.RunUp); the colour is the sting's warm light.
+        private UiNode BuildVictoryWash()
+        {
+            var wash = Ui.Sprite("VictoryWash", ScrimCentreKey, Place.At(-480f, -60f), UiSize.Fixed(960f, 720f))
+                .Coloured("#FFB347FF")
+                .AsDecor()
+                .Inactive();
+            VictoryWash = wash;
+            return wash;
+        }
+
+        // The right half of the frame in the scrim's violet black, so the
+        // enemy side recedes while the party's lights up.
+        private UiNode BuildEnemyDim()
+        {
+            var dim = Ui.Solid("EnemyDim", "#0B0718FF", Place.Stretch(left: 960f), UiSize.Fill)
+                .AsDecor()
+                .Inactive();
+            EnemyDim = dim;
+            return dim;
         }
 
         // ---- the dialogue bark (the combat log's home) ------------------------

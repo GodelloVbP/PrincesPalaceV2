@@ -73,7 +73,7 @@ result is void once a file relevant to it changes.
 | A new skill row | `preview.ps1 -Spell <id> [-Element <DamageType>] [-Versus <ids>]`; a `REFUSED` line names the unsupported effect (`PreviewStage.Supported`) |
 | A new character row | `preview.ps1 -Character <id>` |
 | Delivered stance stills | `python tools/slice_actor_sheet.py ...`; checklist: `docs/ART_PIPELINE.md` sec. 5a |
-| A GIF of a spell, enemy attack, relic or status | `gif.ps1 <spell\|attack\|relic\|status> <id>` (own `-Capture` project copy, one Unity boot per request; `-Determinism` boots twice and compares); design and contracts: `docs/PLAN_GIF_CAPTURE.md` |
+| A GIF of a spell, enemy attack, relic, status or fight end | `gif.ps1 <spell\|attack\|relic\|status\|fightend> <id>` (`fightend normal\|elite\|boss`: one blow from victory) (own `-Capture` project copy, one Unity boot per request; `-Determinism` boots twice and compares); design and contracts: `docs/PLAN_GIF_CAPTURE.md` |
 | Where PlayMode time goes | `test-profile-PlayMode*.csv` in the runner copy (`PlayModeTestProfiler.cs`); scene loads: `$env:PP_BENCHMARK='1'; test.ps1 SceneLoadBenchmarkTests` |
 | Balance report (not a gate) | `bot.ps1 -Runs 200 [-Shards 4]` → `reports/bot/<timestamp>/`; metrics: `docs/BOT_SUMMARY_SCHEMA.md` |
 

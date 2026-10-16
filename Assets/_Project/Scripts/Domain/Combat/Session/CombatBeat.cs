@@ -714,6 +714,14 @@ namespace PrincesPalace.Domain.Combat.Session
         // floors, which is what the shared rule already computes.
         public float FormHitStopSeconds;
 
+        // THE BEAT THAT ENDS A WON FIGHT, and only that one. Presentation-only,
+        // like the victory stance retro-attached to it: the view stops harder
+        // on it (HitStop.FinalBlowSeconds) and runs the run-up after it. Set
+        // by FightSession.ResolveVictory; FightClass is the class the stop is
+        // sized by and means nothing while this is false.
+        public bool EndsFight;
+        public PrincesPalace.Domain.Rewards.EncounterClass FightClass;
+
         // Vitals as they stood BEFORE this beat's action. Only a spell beat
         // needs it: the bolt takes most of a second to arrive, and dropping the
         // target's HP the instant the beat opens shows the damage before the

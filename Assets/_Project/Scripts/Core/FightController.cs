@@ -665,6 +665,7 @@ namespace PrincesPalace
             // Once-per-fight voice lines are once per FIGHT, so the spent list
             // has to be cleared when a new one starts.
             _spokeVictory = false;
+            ResetRunUp();
             CharacterVoice.ClearSpentLines();
 
             foreach (var line in _session.DrainImmediateMessages()) PushLogLine(line);

@@ -97,6 +97,26 @@ namespace PrincesPalace.Domain.Combat.Session
             return weight < 0f ? 0f : (weight > 1f ? 1f : weight);
         }
 
+        // THE STOP ON THE BLOW THAT ENDS A WON FIGHT, by fight class. It
+        // replaces the blow's own weighted stop rather than adding to it, and
+        // it is the one stop allowed past MaxSeconds: the biggest event of the
+        // fight gets the longest freeze, a boss's most of all (Sakurai's boss
+        // stop). Authored at the default battle speed; the beat player scales
+        // it like every other stop.
+        public const float FinalBlowNormalSeconds = 0.22f;
+        public const float FinalBlowEliteSeconds = 0.26f;
+        public const float FinalBlowBossSeconds = 0.34f;
+
+        public static float FinalBlowSeconds(PrincesPalace.Domain.Rewards.EncounterClass fightClass)
+        {
+            switch (fightClass)
+            {
+                case PrincesPalace.Domain.Rewards.EncounterClass.Boss: return FinalBlowBossSeconds;
+                case PrincesPalace.Domain.Rewards.EncounterClass.Elite: return FinalBlowEliteSeconds;
+                default: return FinalBlowNormalSeconds;
+            }
+        }
+
         // Through Response, not off raw weight, so the freeze grows on the
         // same curve the shake and the squash do.
         public static float SecondsFor(float weight)

@@ -279,6 +279,9 @@ namespace PrincesPalace.Domain.Combat.Session
             if (_victoryResolved || !_encounter.PlayerWon) return;
             _victoryResolved = true;
 
+            // A fight ended by survival has no final blow to stop on.
+            if (EndReason != FightEndReason.Survived) MarkLatestBeatEndsFight();
+
             foreach (var survivor in _encounter.LivingPlayerParty.ToList())
             {
                 // Retro-attached to the last beat, like every other line a turn

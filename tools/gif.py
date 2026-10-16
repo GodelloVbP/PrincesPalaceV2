@@ -42,7 +42,8 @@ STATUS_SOURCE = os.path.join(ROOT, "Assets", "_Project", "Scripts", "Domain", "C
 RUNS = os.path.join(TOOLS, "screenshots", "gif", "runs")
 LATEST = os.path.join(TOOLS, "screenshots", "gif", "latest.json")
 
-UNITY_KINDS = ("spell", "attack", "relic", "status")   # one GifBatchCaptureTests boot
+UNITY_KINDS = ("spell", "attack", "relic", "status", "fightend")   # one GifBatchCaptureTests boot
+FIGHT_END_CLASSES = ("normal", "elite", "boss")        # fightend ids: the fight class of the killing blow
 PY_KINDS = ("stance", "sheet")                         # no Unity at all
 KINDS = UNITY_KINDS + PY_KINDS + ("still",)            # still: a PlayMode capture class
 FORMATIONS = ("lone", "full")
@@ -314,6 +315,7 @@ def known_ids():
         "relic": [r["id"] for r in relics if r.get("vfx")],
         "allRelics": [r["id"] for r in relics],
         "status": status_names(),
+        "fightend": list(FIGHT_END_CLASSES),
     }
 
 
@@ -438,7 +440,10 @@ def refusals(scenario, ids=None):
     elif kind == "status":
         if sid not in ids["status"]:
             out.append("status '%s' is not a StatusEffectType: %s" % (sid, ", ".join(ids["status"])))
-    if kind in ("spell", "relic", "status"):
+    elif kind == "fightend":
+        if sid not in ids.get("fightend", FIGHT_END_CLASSES):
+            out.append("fight class '%s' is not one of %s" % (sid, ", ".join(FIGHT_END_CLASSES)))
+    if kind in ("spell", "relic", "status", "fightend"):
         for foe in csv_list(scenario["vs"]):
             if foe not in ids["enemies"]:
                 out.append("vs '%s' is not in enemies.json" % foe)
@@ -1023,7 +1028,7 @@ def coverage_table(scenarios, outcomes, ids=None, skipped=(), gaps=(), manifest=
 
     lines.append("  known but not covered:")
     pools = {"spell": ids.get("playerSpell", ids["spell"]), "attack": ids["attack"], "relic": ids["relic"],
-             "status": ids["status"], "stance": ids.get("stance", []), "sheet": ids.get("sheet", [])}
+             "status": ids["status"], "fightend": ids.get("fightend", []), "stance": ids.get("stance", []), "sheet": ids.get("sheet", [])}
     for kind, pool in pools.items():
         have = {s["id"] for s in scenarios if s["kind"] == kind}
         missing = [i for i in pool if i not in have]

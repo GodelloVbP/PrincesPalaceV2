@@ -71,6 +71,23 @@ namespace PrincesPalace
         // Mid-fade right now.
         public bool Fading => _running != null;
 
+        // This fade's authored hold and fade at 1x pace (Slowness folded in),
+        // for the run-up's schedule; the wait itself still runs on Scaled.
+        internal float AuthoredHoldSeconds => HoldSeconds * Slowness;
+        internal float AuthoredFadeSeconds => FadeSeconds * Slowness;
+
+        // A press during the run-up: the fade is over now, and what waits on
+        // it (the survivors closing up) hears it finished.
+        internal void CompleteNow()
+        {
+            if (_running == null) return;
+
+            StopCoroutine(_running);
+            _running = null;
+            SetFraction(0f);
+            Finished?.Invoke();
+        }
+
         // Told when that moment arrives, so the survivors can close up on the
         // frame the body finishes fading rather than on the next beat that
         // happens to repaint. Assigned by FightController per fight; a fade

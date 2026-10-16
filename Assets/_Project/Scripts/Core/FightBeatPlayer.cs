@@ -92,7 +92,9 @@ namespace PrincesPalace
         // authored, so a skill that deals nothing can still land -- see
         // CombatBeat.Shake.
         public static float ShakeStrength(CombatBeat beat) =>
-            beat == null ? 0f : Mathf.Max(Strength(beat), Mathf.Clamp01(beat.Shake));
+            beat == null ? 0f
+            : beat.EndsFight ? 1f
+            : Mathf.Max(Strength(beat), Mathf.Clamp01(beat.Shake));
 
         // AND THE FLOOR A WORN FORM PUTS UNDER IT, the twin of ShakeStrength's
         // above. Read here rather than at the two call sites so the wind-up a
@@ -102,6 +104,10 @@ namespace PrincesPalace
         public static float HitStopFor(CombatBeat beat)
         {
             if (beat == null) return 0f;
+
+            // The blow that ends the fight stops for its class's own time, not
+            // for its weight: the biggest event gets the biggest freeze.
+            if (beat.EndsFight) return HitStop.FinalBlowSeconds(beat.FightClass);
 
             float own = HitStop.SecondsFor(Weight(beat));
             return beat.FormHitStopSeconds > own ? beat.FormHitStopSeconds : own;
@@ -168,6 +174,11 @@ namespace PrincesPalace
         private const float CueStallSeconds = 0.25f;
 
         public bool IsPlaying { get; private set; }
+
+        // Wall seconds the last playback's final-blow stop held for; zero when
+        // no beat of it ended the fight. FightController starts the run-up
+        // clock here, so the cap counts from final contact.
+        public float FinalStopWall { get; private set; }
 
         // A read-only view of the pool, for the tests that assert it comes back
         // whole. Read-only rather than exposing the field: nothing outside this
@@ -407,6 +418,7 @@ namespace PrincesPalace
             Supersede();
 
             _onFinished = onFinished;
+            FinalStopWall = 0f;
             IsPlaying = true;
             _running = StartCoroutine(PlayBeats(beats, _playback));
         }
@@ -1182,6 +1194,7 @@ namespace PrincesPalace
             // job underneath.
             float stop = HitStopFor(beat);
             if (stop > 0f) yield return new WaitForSeconds(Scaled(stop));
+            if (beat.EndsFight) FinalStopWall = Scaled(stop);
 
             // THE PULL (see the PreFormation note at the top of the beat): the
             // chains land, hold while they snap taut, and only then is he
@@ -1234,6 +1247,23 @@ namespace PrincesPalace
                 : staticCharge ? chargeOutSeconds
                 : StillPoseSeconds + boughtWindup;
             spent += pullHold + costHold;
+
+            // THE KILLING BLOW HAS NO SETTLE AND NO GAP: the fall begins the
+            // moment the stop ends, and FightController's run-up carries the
+            // rest (the survivors' victory stills stay up for it). Padding
+            // the beat here would push the death fade, and with it the sting
+            // and the Reckoning, a beat's hold later than the blow.
+            if (beat.EndsFight)
+            {
+                FadeTheFallen?.Invoke(beat);
+                foreach (var pair in beat.Stances)
+                {
+                    if (pair.Value != FightSession.Stances.Victory) SetStance?.Invoke(pair.Key, FightSession.Stances.Idle);
+                }
+
+                yield break;
+            }
+
             yield return new WaitForSeconds(Scaled(SettleAfter(spent + stop)));
 
             // Back to idle before the next beat opens, so a pose belongs to
