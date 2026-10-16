@@ -77,6 +77,134 @@
       "peakDb": -1.8
     },
     {
+      "path": "Sfx/Reckoning/book_land",
+      "gainDb": 2.0,
+      "gain": 1.2589,
+      "metric": "rms",
+      "measuredDb": -27.1,
+      "peakDb": -3.0
+    },
+    {
+      "path": "Sfx/Reckoning/boss_peak",
+      "gainDb": 2.0,
+      "gain": 1.2589,
+      "metric": "rms",
+      "measuredDb": -21.3,
+      "peakDb": -3.0
+    },
+    {
+      "path": "Sfx/Reckoning/card_deal",
+      "gainDb": 1.6,
+      "gain": 1.2023,
+      "metric": "rms",
+      "measuredDb": -19.6,
+      "peakDb": -2.9
+    },
+    {
+      "path": "Sfx/Reckoning/card_flip",
+      "gainDb": 1.96,
+      "gain": 1.2531,
+      "metric": "rms",
+      "measuredDb": -28.3,
+      "peakDb": -3.0
+    },
+    {
+      "path": "Sfx/Reckoning/chevron_note",
+      "gainDb": -1.0,
+      "gain": 0.8913,
+      "metric": "rms",
+      "measuredDb": -17.0,
+      "peakDb": -3.0
+    },
+    {
+      "path": "Sfx/Reckoning/coin_tick",
+      "gainDb": 2.0,
+      "gain": 1.2589,
+      "metric": "rms",
+      "measuredDb": -28.6,
+      "peakDb": -3.0
+    },
+    {
+      "path": "Sfx/Reckoning/ember_light",
+      "gainDb": -0.3,
+      "gain": 0.9661,
+      "metric": "rms",
+      "measuredDb": -17.7,
+      "peakDb": -2.9
+    },
+    {
+      "path": "Sfx/Reckoning/ember_snuff",
+      "gainDb": 0.9,
+      "gain": 1.1092,
+      "metric": "rms",
+      "measuredDb": -18.9,
+      "peakDb": -2.9
+    },
+    {
+      "path": "Sfx/Reckoning/endured",
+      "gainDb": 1.6,
+      "gain": 1.2023,
+      "metric": "rms",
+      "measuredDb": -19.6,
+      "peakDb": -3.0
+    },
+    {
+      "path": "Sfx/Reckoning/fell",
+      "gainDb": 2.0,
+      "gain": 1.2589,
+      "metric": "rms",
+      "measuredDb": -20.1,
+      "peakDb": -3.0
+    },
+    {
+      "path": "Sfx/Reckoning/hone_scrape",
+      "gainDb": 1.97,
+      "gain": 1.2546,
+      "metric": "rms",
+      "measuredDb": -30.7,
+      "peakDb": -3.0
+    },
+    {
+      "path": "Sfx/Reckoning/legendary_bell",
+      "gainDb": -2.8,
+      "gain": 0.7244,
+      "metric": "rms",
+      "measuredDb": -15.2,
+      "peakDb": -3.0
+    },
+    {
+      "path": "Sfx/Reckoning/level_bell",
+      "gainDb": -3.2,
+      "gain": 0.6918,
+      "metric": "rms",
+      "measuredDb": -14.8,
+      "peakDb": -3.0
+    },
+    {
+      "path": "Sfx/Reckoning/potion_land",
+      "gainDb": 1.81,
+      "gain": 1.2317,
+      "metric": "rms",
+      "measuredDb": -25.3,
+      "peakDb": -2.8
+    },
+    {
+      "path": "Sfx/Reckoning/take",
+      "gainDb": -0.9,
+      "gain": 0.9016,
+      "metric": "rms",
+      "measuredDb": -17.1,
+      "peakDb": -3.0
+    },
+    {
+      "path": "Sfx/Reckoning/xp_hum",
+      "gainDb": 2.0,
+      "gain": 1.2589,
+      "metric": "rms",
+      "measuredDb": -21.4,
+      "peakDb": -3.0
+    },
+    {
       "path": "Sfx/Shawn/damage_10_shawn",
       "gainDb": -2.5,
       "gain": 0.7499,

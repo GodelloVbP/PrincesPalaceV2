@@ -46,11 +46,10 @@ namespace PrincesPalace
         // The fight-won sting, layered with the character's own victory line.
         VictorySting,
 
-        // The Reckoning's moments (docs/PLAN_REWARD_SCREENS.md C11). PLACEHOLDERS:
-        // each maps to an existing clip so callers have a name and the suite
-        // stays green; the sound pass replaces the paths in R6 with the
-        // owner's own clips and nothing else changes. None borrows the
-        // button click or the refusal buzz (ReckoningSoundTests).
+        // The Reckoning's moments (docs/PLAN_REWARD_SCREENS.md C11). Clips are
+        // cut by tools/make_reckoning_cues.py into Sfx/Reckoning/; CacheOpen
+        // plays OpenPack's clip. None may use the button click or the refusal
+        // buzz (ReckoningSoundTests).
         CardDeal,
         CacheOpen,
         CardFlip,
@@ -99,23 +98,23 @@ namespace PrincesPalace
                 case Sound.Swipe1: return "Audio/Sfx/swipe_1";
                 case Sound.Swipe2: return "Audio/Sfx/swipe_2";
                 case Sound.VictorySting: return "Audio/Sfx/victory_sting";
-                case Sound.CardDeal: return "Audio/Sfx/swipe_1";
+                case Sound.CardDeal: return "Audio/Sfx/Reckoning/card_deal";
                 case Sound.CacheOpen: return "Audio/Sfx/open_the_pack";
-                case Sound.CardFlip: return "Audio/Sfx/swipe_2";
-                case Sound.LegendaryBell: return "Audio/Sfx/victory_sting";
-                case Sound.CoinTick: return "Audio/Sfx/status_ward_2";
-                case Sound.PotionLand: return "Audio/Sfx/status_ward_1";
-                case Sound.BookLand: return "Audio/Sfx/melee_thud_placeholder";
-                case Sound.Take: return "Audio/Sfx/status_ward_2";
-                case Sound.HoneScrape: return "Audio/Sfx/melee_whoosh_placeholder";
-                case Sound.EmberSnuff: return "Audio/Sfx/status_regen_2";
-                case Sound.XpHum: return "Audio/Sfx/status_regen_3";
-                case Sound.LevelBell: return "Audio/Sfx/status_regen_1";
-                case Sound.Fell: return "Audio/Sfx/melee_thud_placeholder";
-                case Sound.Endured: return "Audio/Sfx/status_ward_3";
-                case Sound.EmberLight: return "Audio/Sfx/status_regen_3";
-                case Sound.ChevronNote: return "Audio/Sfx/status_ward_1";
-                case Sound.BossPeak: return "Audio/Sfx/victory_sting";
+                case Sound.CardFlip: return "Audio/Sfx/Reckoning/card_flip";
+                case Sound.LegendaryBell: return "Audio/Sfx/Reckoning/legendary_bell";
+                case Sound.CoinTick: return "Audio/Sfx/Reckoning/coin_tick";
+                case Sound.PotionLand: return "Audio/Sfx/Reckoning/potion_land";
+                case Sound.BookLand: return "Audio/Sfx/Reckoning/book_land";
+                case Sound.Take: return "Audio/Sfx/Reckoning/take";
+                case Sound.HoneScrape: return "Audio/Sfx/Reckoning/hone_scrape";
+                case Sound.EmberSnuff: return "Audio/Sfx/Reckoning/ember_snuff";
+                case Sound.XpHum: return "Audio/Sfx/Reckoning/xp_hum";
+                case Sound.LevelBell: return "Audio/Sfx/Reckoning/level_bell";
+                case Sound.Fell: return "Audio/Sfx/Reckoning/fell";
+                case Sound.Endured: return "Audio/Sfx/Reckoning/endured";
+                case Sound.EmberLight: return "Audio/Sfx/Reckoning/ember_light";
+                case Sound.ChevronNote: return "Audio/Sfx/Reckoning/chevron_note";
+                case Sound.BossPeak: return "Audio/Sfx/Reckoning/boss_peak";
                 default: return null;
             }
         }

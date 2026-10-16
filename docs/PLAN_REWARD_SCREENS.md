@@ -668,21 +668,28 @@ sound. Gate: `ButtonCueTests` gains a Reckoning case (a quiet control's
 refused Submit is silent, as `Submit_OnAQuietButton_IsSilent_EvenWhenRefused`
 pins for the general case).
 
-| Moment | Sound | Source |
+| Moment | Sound | Clip (`Sfx/Reckoning/` unless noted; recipe `tools/make_reckoning_cues.py`) |
 |---|---|---|
-| Card deal (no cache) | cloth rustle | new |
-| Ember lights | breath | new |
-| Up-chevron pop | rising note ladder, pre-pitched | new |
-| Cache open | `OpenPack` if it fits the palette, else a cloth-and-knot untie | exists / new |
-| Card flip | one clip, pitched per step | new |
-| Top-tier landing | low bell | new |
-| Boss peak | short musical sting | new |
-| Coin count | soft tick | new |
-| Potion / book land | glass clink / paper thump | new |
-| Take | soft clink on the ladder's root | new |
-| Hone | whetstone scrape | new |
-| Experience fill / level up | hum / bell | new |
-| Fell / Endured | low string note / drone | new |
+| Card deal (no cache) | cloth rustle | `card_deal` (FilmCow cloth mask removed 4) |
+| Ember lights | breath | `ember_light` (FilmCow air duster 3, low-passed). **Needed**: a real breath on an ember; this is filtered air |
+| Up-chevron pop | rising note ladder, pre-pitched | `chevron_note` (Skyward Hero UI 11, root near 620 Hz) |
+| Cache open | `OpenPack` | `Sfx/open_the_pack`, unedited |
+| Card flip | one clip, pitched per step | `card_flip` (rubberduck book_01, CC0) |
+| Top-tier landing | low bell | `legendary_bell` (the `toll` bell, trimmed, 0.8 s tail) |
+| Boss peak | short musical sting | `boss_peak` (Skyward Hero UI 40, 1.6 s) |
+| Coin count | soft tick | `coin_tick` (rubberduck item_coins_01, CC0) |
+| Potion / book land | glass clink / paper thump | `potion_land` (FilmCow glass clink 2); `book_land` (FilmCow book pick up 3). **Needed**: a dull paper-bound thump; the pick-up is a proxy |
+| Take | soft clink on the ladder's root | `take` (Skyward Hero UI 24, root near 620 Hz) |
+| Hone | whetstone scrape | `hone_scrape` (rubberduck stones_02, CC0). **Needed**: steel drawn along a whetstone; this is stone on stone |
+| Experience fill / level up | hum / bell | `xp_hum` (Skyward Hero UI 25); `level_bell` (FilmCow ding 3) |
+| Fell / Endured | low string note / drone | `fell` (Skyward Hero UI 26), `endured` (Skyward Hero UI 31). **Needed**: a bowed low string for Fell; this is a synth pad |
+
+Chosen from the metrics (onset, spectrum, length), not auditioned: R6 had no
+ears. Judge by playing them, then replace a source in the script's `CUES`.
+Potion / book land, experience fill / level up and Fell / Endured have their
+clip but no trigger yet: their moments (the haul strip, the board, the outcome
+form) are R5's, so the R6 "fires once" gate holds for them when R5 wires
+them (`ReckoningSoundTests` already pins their clips).
 
 R4 ships a **placeholder layer** (`OpenPack` and one flip clip pitched per
 step through the pool, `RevealSchedule.LadderPitch`), so the reveal is never

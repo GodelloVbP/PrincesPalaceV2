@@ -185,6 +185,75 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(3, Enumerable.Range(0, 3).Count(e => Part<Image>($"ReckoningEmber{e}").color.a > 0.5f));
         }
 
+        // R6 gate (C11), reveal half. A plain page (no card earns the cache;
+        // the first node whose roll is plain, since the roll is the game's) deals
+        // each card once with a rustle and has no cache cue; a boss page opens
+        // the cache once, flips five cards, and rings the bell and peaks together
+        // once per top-tier burst. Neither touches a button cue.
+        [UnityTest]
+        public IEnumerator APlainPage_PlayedOut_DealsEachCardOnce_WithNoCacheCue()
+        {
+            var heard = new List<Sound>();
+            for (int node = 1; node <= 12; node++)
+            {
+                var pages = ReckoningPageFixtures.Settle(new List<EncounterClass> { EncounterClass.Normal }, nodeId: node);
+                yield return Show(pages, 40f, () => { heard.Clear(); SoundController.Observer = s => heard.Add(s); });
+                yield return ReckoningRevealWait.UntilChoosable(_reckoning);
+                if (heard.Contains(Sound.CacheOpen)) continue;
+
+                Assert.AreEqual(pages[0].Cards.Count, heard.Count(s => s == Sound.CardDeal), string.Join(",", heard));
+                Assert.AreEqual(0, heard.Count(s => s == Sound.CardFlip || s == Sound.BossPeak));
+                CollectionAssert.DoesNotContain(heard, Sound.ButtonClick);
+                CollectionAssert.DoesNotContain(heard, Sound.ClickFail);
+                yield break;
+            }
+
+            Assert.Fail("twelve nodes in a row rolled a cache page; the plain page was never heard");
+        }
+
+        [UnityTest]
+        public IEnumerator ATopTierBossPage_PlayedOut_OpensOnce_AndPeaksWithEachBell()
+        {
+            var heard = new List<Sound>();
+            var pages = ReckoningPageFixtures.CacheTopTierPages();
+            yield return Show(pages, 40f, () => SoundController.Observer = s => heard.Add(s));
+            yield return ReckoningRevealWait.UntilChoosable(_reckoning);
+
+            Assert.AreEqual(1, heard.Count(s => s == Sound.CacheOpen));
+            Assert.AreEqual(5, heard.Count(s => s == Sound.CardFlip));
+            Assert.GreaterOrEqual(heard.Count(s => s == Sound.LegendaryBell), 1, "the forced Legendary rings");
+            Assert.AreEqual(heard.Count(s => s == Sound.LegendaryBell), heard.Count(s => s == Sound.BossPeak),
+                "a boss page's peak rides every bell");
+            Assert.AreEqual(0, heard.Count(s => s == Sound.CardDeal), "a cache page deals nothing");
+            CollectionAssert.DoesNotContain(heard, Sound.ButtonClick);
+            CollectionAssert.DoesNotContain(heard, Sound.ClickFail);
+        }
+
+        // R6 gate, choice half: a take, a hone and a leave each sound once and
+        // no Reckoning control plays the button click or the refusal buzz.
+        [UnityTest]
+        public IEnumerator TakeHoneAndLeave_EachSoundOnce_AndNeverAButtonCue()
+        {
+            var heard = new List<Sound>();
+            var pages = ReckoningPageFixtures.BossAndTwoAnchors();
+            yield return Show(pages, 40f);
+            yield return ReckoningRevealWait.UntilChoosable(_reckoning);
+            SoundController.Observer = s => heard.Add(s);
+
+            Click("ReckoningOffer0");
+            yield return Frames(6);
+            Click("ReckoningHone1");
+            yield return Frames(6);
+            Click("ReckoningLeaveButton");
+            yield return Frames(6);
+
+            Assert.AreEqual(1, heard.Count(s => s == Sound.Take));
+            Assert.AreEqual(1, heard.Count(s => s == Sound.HoneScrape));
+            Assert.AreEqual(1, heard.Count(s => s == Sound.EmberSnuff));
+            CollectionAssert.DoesNotContain(heard, Sound.ButtonClick);
+            CollectionAssert.DoesNotContain(heard, Sound.ClickFail);
+        }
+
         // A page shown again in the same session opens face-up, silently.
         [UnityTest]
         public IEnumerator APageAlreadyRevealed_OpensFaceUpWithNoBeat()
