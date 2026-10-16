@@ -220,7 +220,12 @@ namespace PrincesPalace
         // or that wakes a piece already worn but dormant -- comes back through
         // the same resolver every other read goes through, with no hand-written
         // "what depends on what" anywhere.
-        public static ItemComparison Compare(Character character, ItemInstance candidate)
+        //
+        // preferredSlot names the hand or slot the swap targets when the caller
+        // already knows it (a reward card names its slot); null is the pack
+        // click's ResolveTargetSlot.
+        public static ItemComparison Compare(Character character, ItemInstance candidate,
+            EquipmentSlot? preferredSlot = null)
         {
             if (character?.equipment == null || candidate == null)
             {
@@ -231,8 +236,9 @@ namespace PrincesPalace
             var beforeScores = ContentDatabase.EffectiveAbilityScores(character);
             var beforeLive = LiveSlots(character);
 
-            var targetSlot = character.equipment.ResolveTargetSlot(ContentDatabase.DefinitionOf(candidate).equipSlot);
-            var clone = SimulateEquip(character, candidate);
+            var targetSlot = preferredSlot ?? character.equipment.ResolveTargetSlot(ContentDatabase.DefinitionOf(candidate).equipSlot);
+            var clone = SimulateEquip(character, candidate, preferredSlot);
+            if (clone == null) return ItemComparison.None;
 
             var afterStats = ContentDatabase.EffectiveStats(clone);
             var afterScores = ContentDatabase.EffectiveAbilityScores(clone);

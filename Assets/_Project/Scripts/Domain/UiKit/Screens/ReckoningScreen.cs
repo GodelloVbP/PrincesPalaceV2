@@ -163,7 +163,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef NoticeLabel;
         public NodeRef ContinueButton;
         public NodeRef ContinueGlow;
-        public NodeRef LootHeading;
 
         // The plaque's title: THE RECKONING on a paid fight, the ending's name
         // (VICTORY, ENDURED, FELL) on the outcome form.
@@ -204,7 +203,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> OfferNames = new List<NodeRef>();
         public List<NodeRef> OfferDeltas = new List<NodeRef>();
         public List<NodeRef> OfferFeatures = new List<NodeRef>();
-        public List<NodeRef> OfferActions = new List<NodeRef>();
 
         // The card face's other parts (docs/PLAN_REWARD_SCREENS.md C5).
         public List<NodeRef> OfferPlinths = new List<NodeRef>();
@@ -219,17 +217,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> OfferBandPluses = new List<NodeRef>();
         public List<NodeRef> OfferChevrons = new List<NodeRef>();
 
+        // The spark that flies into a card's slot band on a hone or a leave.
+        public List<NodeRef> OfferSparks = new List<NodeRef>();
+
         // The shared focus detail, shown beside the focused face-up card.
         public NodeRef CardTip;
         public NodeRef CardTipTitle;
         public NodeRef CardTipBody;
 
-        // "Hone instead", one per gear card; the Favor line under the heading;
-        // the ledger of what the page did (displaced copies, hones, what
-        // leaving paid); and the way off the page.
+        // "Hone instead", one per gear card, and the way off the page.
         public List<NodeRef> HoneButtons = new List<NodeRef>();
-        public NodeRef FavorLabel;
-        public NodeRef LedgerLabel;
         public NodeRef LeaveButton;
 
         // Pulled in to 280 so a 520-wide column clears the painted border:
@@ -330,23 +327,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var screen = new ReckoningScreen();
 
             // ---- phase one: the choice ---------------------------------
-            // Captured as LootHeading: it is the same node it always was, just
-            // moved onto the phase that owns the choice.
-            var lootHeading = Ui.Label("ReckoningOfferHeading", UiStrings.ReckoningChoicesLeft,
-                    new UiVec(900f, 44f), 24, "#F2DB9E", Place.At(0f, 262f))
-                .AsDecor()
-                .Styled(TypographyRole.FunctionalHeading);
-            screen.LootHeading = lootHeading;
-
-            // Squad Favor and what it moves on this page's ladders. Gear pages
-            // only: a relic page is drawn by rarity weight, which Favor does
-            // not touch.
-            var favor = Ui.Label("ReckoningOfferFavor", UiStrings.ReckoningFavor,
-                    new UiVec(OfferRowLayout.RowBudget, 24f), 14, "#B8A8D9", Place.At(0f, 226f))
-                .AsDecor();
-            screen.FavorLabel = favor;
-
-            var offerChildren = new List<UiNode> { lootHeading, favor };
+            // No heading, Favor line or ledger: the cards, the whetstones and
+            // the door say what the page is and what became of it.
+            var offerChildren = new List<UiNode>();
 
             // OfferRowLayout.MaxCards cards, edge to edge -- the tree is
             // emitted once for every save, and a page shows k + 2 of them.
@@ -362,19 +345,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 offerChildren.Add(screen.BuildHone(i));
             }
 
-            var ledger = Ui.Label("ReckoningOfferLedger", UiString.Runtime,
-                    new UiVec(LedgerWidth, LedgerHeight), 15, "#D9CCF2", Place.At(0f, LedgerCentreY))
-                .AsDecor();
-            screen.LedgerLabel = ledger;
-            offerChildren.Add(ledger);
-
             // Leave, and when nothing is left to choose, the same button
             // carries on. Sized and seated like the summary's Continue so the
             // two read as one control moving along.
             var leaveSize = Ui.PlateNominalSizeFor(260f, 60f);
-            var leave = Ui.Button("ReckoningLeaveButton", UiStrings.ReckoningLeavePage, leaveSize, 18,
+            var leave = Ui.Button("ReckoningLeaveButton", UiStrings.ReckoningLeaveMark, leaveSize, 18,
                     Place.At(0f, ContentBottom + leaveSize.Y * 0.5f + 1f))
-                .Themed(ButtonTheme.Gold);
+                .Themed(ButtonTheme.Gold)
+                .Quiet();
             screen.LeaveButton = leave;
             offerChildren.Add(leave);
 
@@ -452,6 +430,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var gained = RelicChipTree.Build("ReckoningGained", Place.At(0f, gainedY), GainedStripWidth,
                 Place.At(0f, 0f));
             screen.TakeGained(gained);
+            foreach (var chip in gained.Chips) chip.Node.Quiet();
             summaryChildren.Add(gained.Strip);
             var continueGlow = Ui.Sprite("ReckoningContinueGlow", EmberKey,
                     Place.At(160f, continueY), UiSize.Fixed(720f, 88f))
@@ -478,7 +457,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // that exactly.
             var continueButton = Ui.Button("ReckoningContinueButton", UiStrings.Continue,
                     continueSize, 20, Place.At(0f, continueY))
-                .Themed(ButtonTheme.Gold);
+                .Themed(ButtonTheme.Gold)
+                .Quiet();
 
             // THE EXEMPTION SITS HERE NOW, on one button, rather than on the
             // three full-size pages it crosses.
@@ -719,8 +699,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 "ReckoningRelicPageLabel", UiStrings.RelicPage, Place.At(415f, RelicHeadingY),
                 new UiVec(100f, 34f), 20, "#B8A8D9");
             pager.Label.AsDecor().Styled(TypographyRole.Body).Inactive();
-            pager.Prev.Styled(TypographyRole.Body).Inactive();
-            pager.Next.Styled(TypographyRole.Body).Inactive();
+            pager.Prev.Styled(TypographyRole.Body).Inactive().Quiet();
+            pager.Next.Styled(TypographyRole.Body).Inactive().Quiet();
             RelicPageLabel = pager.Label;
             RelicPrevPageButton = pager.Prev;
             RelicNextPageButton = pager.Next;
@@ -922,7 +902,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const float NameBand = 52f;
         private const float DeltaBand = 32f;
         private const float FeatureBand = 62f;
-        private const float ActionBand = 24f;
 
         private const float IconTop = CardTop;
         private const float IconBottom = IconTop - IconBand;
@@ -930,8 +909,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const float NameTop = BandTop - BandBand;
         private const float DeltaTop = NameTop - NameBand;
         private const float FeatureTop = DeltaTop - DeltaBand;
-        private const float ActionTop = FeatureTop - FeatureBand;
-        private const float CardBottom = ActionTop - ActionBand;
+        private const float CardBottom = FeatureTop - FeatureBand;
         private const float CardHeight = CardTop - CardBottom;
         private const float CardCentreY = (CardTop + CardBottom) * 0.5f;
 
@@ -945,7 +923,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const float BandCentre = BandTop - BandBand * 0.5f - CardCentreY;
         private const float NameCentre = NameTop - NameBand * 0.5f - CardCentreY;
         private const float DeltaCentre = DeltaTop - DeltaBand * 0.5f - CardCentreY;
-        private const float ActionCentre = ActionTop - ActionBand * 0.5f - CardCentreY;
         public const float FeatureCentre = FeatureTop - FeatureBand * 0.5f - CardCentreY;
         public const float FeatureHeight = FeatureBand;
 
@@ -960,14 +937,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public const float CardTipMinBody = 60f;
         public const float CardTipMaxHeight = 420f;
 
-        // Under each gear card: "hone instead", and the ledger and the way out
-        // below them. All in the offer phase's own coordinates.
+        // Under each gear card: "hone instead". In the offer phase's own coordinates.
+        public const float SparkSize = 28f;
         private const float HoneWidth = 172f;
         private const float HoneGap = 8f;
-        private const float LedgerHeight = 44f;
-        private const float LedgerWidth = 960f;
-        private static float HoneHeight => Ui.PlateNominalSizeFor(HoneWidth, 40f).Y;
-        private static float LedgerCentreY => CardBottom - HoneGap - HoneHeight - 14f - LedgerHeight * 0.5f;
 
         // One card of the page. A button, because taking is a click on the card
         // itself, and a CARD across the width rather than a row in a list: the
@@ -1096,8 +1069,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     new UiVec(labelWidth, FeatureBand), 13, "#D9CCF2", Place.At(0f, FeatureCentre))
                 .TextAligned(UiTextAlign.TopLeft)
                 .AsDecor();
-            var action = Ui.Label($"ReckoningOffer{index}Action", UiString.Runtime, new UiVec(labelWidth, ActionBand), 16,
-                    "#F2DB9E", Place.At(0f, ActionCentre))
+            var spark = Ui.Sprite($"ReckoningOffer{index}Spark", "proc:radial_glow",
+                    Place.At(0f, BandCentre), UiSize.Fixed(SparkSize, SparkSize))
+                .Coloured("#FFE9A800")
                 .AsDecor();
 
             // NO PLATE. The card is its burst, its icon and its lines -- the
@@ -1115,7 +1089,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // precisely the mistake the note above records fixing.
             var button = Ui.Button($"ReckoningOffer{index}", UiString.Runtime,
                     new UiVec(cardWidth, CardHeight), 14, Place.At(x, CardCentreY))
-                .NoChrome();
+                .NoChrome()
+                .Quiet();
 
             button.Children.Add(plinth);
             button.Children.Add(halo);
@@ -1134,7 +1109,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             button.Children.Add(delta);
             button.Children.Add(chevron);
             button.Children.Add(feature);
-            button.Children.Add(action);
+            button.Children.Add(spark);
 
             OfferButtons.Add(button);
             OfferPlinths.Add(plinth);
@@ -1154,7 +1129,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             OfferDeltas.Add(delta);
             OfferChevrons.Add(chevron);
             OfferFeatures.Add(feature);
-            OfferActions.Add(action);
+            OfferSparks.Add(spark);
             return button;
         }
 
@@ -1167,8 +1142,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
             float x = OfferRowLayout.CardX(index, OfferRowLayout.MaxCards);
             float y = CardBottom - HoneGap - size.Y * 0.5f;
 
-            var button = Ui.Button($"ReckoningHone{index}", UiStrings.ReckoningHoneInstead, size, 14, Place.At(x, y))
-                .Themed(ButtonTheme.Violet);
+            var button = Ui.Button($"ReckoningHone{index}", UiStrings.ReckoningHoneMark, size, 14, Place.At(x, y))
+                .Themed(ButtonTheme.Violet)
+                .Quiet();
             HoneButtons.Add(button);
             return button;
         }

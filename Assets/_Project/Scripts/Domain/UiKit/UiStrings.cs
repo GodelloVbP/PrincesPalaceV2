@@ -584,8 +584,6 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("reckoning.downed", "DID NOT FIGHT");
         public static readonly UiString ReckoningOfferMeta =
             UiString.Define("reckoning.offer_meta", "{0}  -  TIER {1}", "Legendary  -  TIER 10");
-        public static readonly UiString ReckoningTaken =
-            UiString.Define("reckoning.taken", "TAKEN");
 
         // The three tabs. Named for what they hold rather than numbered, and
         // spelled out here rather than derived from an enum name -- "TALLY"
@@ -608,36 +606,6 @@ namespace PrincesPalace.Domain.UiKit
                 "999999 dealt  (999999 phys / 999999 other)      999999 taken      999999 healed");
         public static readonly UiString ReckoningKills =
             UiString.Define("reckoning.kills", "{0} felled", "999 felled");
-
-        // --- the Reckoning's reward pages (docs/PLAN_ITEMS.md 1.2) ----------------
-        //
-        // The page's class word comes from its highest chip; the header adds
-        // how many choices it still grants.
-        public static readonly UiString ReckoningPageGear =
-            UiString.Define("reckoning.page_gear", "GEAR PAGE");
-        public static readonly UiString ReckoningPageGearAnchor =
-            UiString.Define("reckoning.page_gear_anchor", "ANCHOR GEAR PAGE");
-        public static readonly UiString ReckoningPageGearBoss =
-            UiString.Define("reckoning.page_gear_boss", "BOSS GEAR PAGE");
-        public static readonly UiString ReckoningPageRelic =
-            UiString.Define("reckoning.page_relic", "RELIC PAGE");
-        public static readonly UiString ReckoningPageRelicAnchor =
-            UiString.Define("reckoning.page_relic_anchor", "ANCHOR RELIC PAGE");
-        public static readonly UiString ReckoningPageRelicBoss =
-            UiString.Define("reckoning.page_relic_boss", "BOSS RELIC PAGE");
-        public static readonly UiString ReckoningChoicesLeft =
-            UiString.Define("reckoning.choices_left", "{0}  -  {1} CHOICES LEFT", "BOSS RELIC PAGE  -  9 CHOICES LEFT");
-        public static readonly UiString ReckoningChoiceLeft =
-            UiString.Define("reckoning.choice_left", "{0}  -  1 CHOICE LEFT", "BOSS RELIC PAGE  -  1 CHOICE LEFT");
-        public static readonly UiString ReckoningPageDone =
-            UiString.Define("reckoning.page_done", "{0}  -  DONE", "BOSS RELIC PAGE  -  DONE");
-
-        // Squad Favor and what it moves on this page's two ladders, in points
-        // of per-rung chance (RarityTable.TierFavorPerPoint, GearPage.
-        // QualityFavorPerPoint, each against its cap).
-        public static readonly UiString ReckoningFavor =
-            UiString.Define("reckoning.favor", "PRINCE'S FAVOR {0}  -  TIER CLIMB +{1}%  -  QUALITY CLIMB +{2}%",
-                "PRINCE'S FAVOR 99  -  TIER CLIMB +45%  -  QUALITY CLIMB +55%");
 
         // The gear card's face.
         public static readonly UiString ReckoningFor =
@@ -686,32 +654,17 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString ReckoningTipUnreached =
             UiString.Define("reckoning.tip_unreached", "not reached: {0}", "not reached: Bjorn, Odette, Shawn");
 
-        // What a card says it will do, then what became of it.
-        public static readonly UiString ReckoningTake = UiString.Define("reckoning.take", "TAKE");
-        public static readonly UiString ReckoningHoned = UiString.Define("reckoning.honed", "HONED");
-        public static readonly UiString ReckoningPaid =
-            UiString.Define("reckoning.paid", "SOLD +{0}", "SOLD +99999");
-        public static readonly UiString ReckoningHoneInstead =
-            UiString.Define("reckoning.hone_instead", "HONE INSTEAD");
-        public static readonly UiString ReckoningSellInstead =
-            UiString.Define("reckoning.sell_instead", "SELL FOR {0}", "SELL FOR 99999");
-        public static readonly UiString ReckoningLeavePage =
-            UiString.Define("reckoning.leave_page", "LEAVE PAGE");
-
-        // The ledger under the cards: copies the page displaced, hones it
-        // gave, and what leaving paid for the choices left unused.
-        public static readonly UiString ReckoningLedgerDisplaced =
-            UiString.Define("reckoning.ledger_displaced", "Now in your bag: {0}",
-                "Now in your bag: Gilded Ironbound Hauberk, Gilded Ironbound Hauberk");
-        public static readonly UiString ReckoningLedgerHoned =
-            UiString.Define("reckoning.ledger_honed", "Honed +1: {0}",
-                "Honed +1: Bjorn the Bear Weapon 2, Bjorn the Bear Weapon 2");
-        public static readonly UiString ReckoningLedgerLeft =
-            UiString.Define("reckoning.ledger_left", "Left unused: {0}", "Left unused: honed 9 slots, paid 99999 gold");
-        public static readonly UiString ReckoningLeftHones =
-            UiString.Define("reckoning.left_hones", "honed {0}", "honed 9");
-        public static readonly UiString ReckoningLeftGold =
-            UiString.Define("reckoning.left_gold", "paid {0} gold", "paid 99999 gold");
+        // The choice controls' faces (docs/PLAN_REWARD_SCREENS.md C6). PLACEHOLDER
+        // text for the whetstone, coin stack and door glyphs until their art lands.
+        public static readonly UiString ReckoningBandHoneNext =
+            UiString.Define("reckoning.band_hone_next", "+{0}>+{1}", "+9>+10");
+        public static readonly UiString ReckoningHoneMark = UiString.Define("reckoning.hone_mark", "+1");
+        public static readonly UiString ReckoningCoinsMark =
+            UiString.Define("reckoning.coins_mark", "{0}g", "99999g");
+        public static readonly UiString ReckoningLeaveHones =
+            UiString.Define("reckoning.leave_hones", "+1 x{0}", "+1 x9");
+        public static readonly UiString ReckoningLeaveMark = UiString.Define("reckoning.leave_mark", "EXIT");
+        public static readonly UiString ReckoningForward = UiString.Define("reckoning.forward", ">>");
 
         // --- the defeat screen ---------------------------------------------------
         //

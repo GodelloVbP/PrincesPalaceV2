@@ -11,6 +11,7 @@ using PrincesPalace;
 using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Equipment;
 using PrincesPalace.Domain.Rewards;
+using PrincesPalace.Domain.UiKit;
 using PrincesPalace.Domain.UiKit.Screens;
 
 namespace PrincesPalace.PlayModeTests
@@ -287,8 +288,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(card.Displaced, "the page did not record the copy it displaced");
             Assert.IsTrue(Save.stockpiledItems.Any(e => e.itemId == incumbent.ItemId && e.tier == 0),
                 "the displaced copy is not in the bag");
-            StringAssert.Contains(RarityColors.NameOf(incumbent),
-                Named("ReckoningOfferLedger").GetComponent<TMP_Text>().text);
+            Assert.AreEqual(RarityColors.NameOf(incumbent), RarityColors.NameOf(card.Displaced));
         }
 
         [UnityTest]
@@ -337,7 +337,7 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
 
             Assert.AreEqual(5, Enumerable.Range(0, 5).Count(i => Named($"ReckoningOffer{i}").activeSelf));
-            StringAssert.Contains("3 CHOICES LEFT", Named("ReckoningOfferHeading").GetComponent<TMP_Text>().text);
+            Assert.AreEqual(3, boss[0].ChoicesLeft, "fixture: three gear chips are three choices");
         }
 
         [UnityTest]
@@ -371,7 +371,9 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(1, pages[0].UnusedHones, "the unused choice should have honed the first card's slot");
             Assert.AreEqual(1, SlotHoning.PlusOf(RunManager.Run.slotHoning, card.RecipientId, card.Slot));
             Assert.IsTrue(Named("ReckoningOfferPhase").activeSelf, "the page shows what leaving paid before moving on");
-            StringAssert.Contains("Left unused", Named("ReckoningOfferLedger").GetComponent<TMP_Text>().text);
+            Assert.AreEqual(UiStrings.ReckoningForward.Format(),
+                Named("ReckoningLeaveButton").GetComponentInChildren<TMP_Text>().text,
+                "a spent page's door is the way forward");
 
             Named("ReckoningLeaveButton").GetComponent<Button>().onClick.Invoke();
             yield return null;
@@ -393,7 +395,7 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
             Named("ReckoningLeaveButton").GetComponent<Button>().onClick.Invoke();
             yield return null;
-            StringAssert.Contains("RELIC PAGE", Named("ReckoningOfferHeading").GetComponent<TMP_Text>().text);
+            Assert.AreSame(relicPage, _reckoning.CurrentPage);
             Assert.IsFalse(Named("ReckoningHone0").activeSelf, "a relic card has nothing to hone");
 
             var card = relicPage.Cards[0];

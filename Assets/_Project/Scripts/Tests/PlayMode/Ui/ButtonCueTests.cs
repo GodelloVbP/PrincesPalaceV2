@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using NUnit.Framework;
+using PrincesPalace.Domain.Rewards;
 using PrincesPalace.Domain.UiKit;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -229,6 +230,72 @@ namespace PrincesPalace.PlayModeTests
             _input.ClearOneFrameFlags();
 
             CollectionAssert.AreEqual(expected == Sound.None ? new Sound[0] : new[] { expected }, _played);
+        }
+
+        // ---- the Reckoning ---------------------------------------------------------
+
+        private IEnumerator OpenReckoning()
+        {
+            _root = Path.Combine(Path.GetTempPath(), "pp-cue-" + System.Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(_root);
+            SaveSystem.RootOverride = _root;
+            SaveSlotManager.CurrentSlot = 0;
+            SaveSlotManager.Forget();
+            Navigation.LoadOverride = _ => { };
+
+            yield return SharedScene.Ensure("Fight");
+            _input = NavSceneReuse.TakeOverInput();
+
+            var pages = ReckoningPageFixtures.OneGearPage();
+            var reckoning = Object.FindAnyObjectByType<ReckoningController>(FindObjectsInactive.Include);
+            Assert.IsNotNull(reckoning);
+            if (reckoning.gameObject.activeSelf) reckoning.gameObject.SetActive(false);
+            NavSceneReuse.ForgetFocusMemory();
+            reckoning.Show(new CombatReward { GoldGained = 10 }, pages);
+            reckoning.Dismissed = () => { };
+            yield return null;
+            yield return null;
+            _played.Clear();
+        }
+
+        // Sound belongs to the Reckoning's own named cues (docs/PLAN_REWARD_SCREENS.md
+        // C11): none of its controls clicks, and a refused one does not fail.
+        [UnityTest]
+        public IEnumerator Reckoning_EveryControlIsQuiet()
+        {
+            yield return OpenReckoning();
+
+            var buttons = Resources.FindObjectsOfTypeAll<Button>()
+                .Where(b => b.gameObject.scene.IsValid() && b.name.StartsWith("Reckoning")).ToList();
+            Assert.GreaterOrEqual(buttons.Count, 10, "the cards, whetstones, door, tabs and Continue");
+
+            foreach (var button in buttons)
+            {
+                var press = button.GetComponent<ButtonPressAnimator>();
+                var themed = button.GetComponent<ThemedButtonState>();
+                Assert.IsTrue(press != null || themed != null, $"{button.name} has no press cue component");
+                Assert.AreEqual(Sound.None, press != null ? press.clickSound : themed.clickSound,
+                    $"{button.name} would click");
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator Reckoning_PadSubmitOnTheDoorPlaysNoClick()
+        {
+            yield return OpenReckoning();
+
+            var door = Resources.FindObjectsOfTypeAll<Button>()
+                .First(b => b.name == "ReckoningLeaveButton" && b.gameObject.scene.IsValid());
+            EventSystem.current.SetSelectedGameObject(door.gameObject);
+            yield return null;
+            _played.Clear();
+
+            _input.SubmitDown = true;
+            yield return null;
+            _input.ClearOneFrameFlags();
+
+            CollectionAssert.DoesNotContain(_played, Sound.ButtonClick);
+            CollectionAssert.DoesNotContain(_played, Sound.ClickFail);
         }
 
         [UnityTest]

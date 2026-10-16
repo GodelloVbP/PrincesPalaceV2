@@ -185,7 +185,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(5, screen.OfferDeltas.Count);
             Assert.AreEqual(5, screen.OfferChevrons.Count);
             Assert.AreEqual(5, screen.OfferFeatures.Count);
-            Assert.AreEqual(5, screen.OfferActions.Count);
+            Assert.AreEqual(5, screen.OfferSparks.Count);
             Assert.AreEqual(5, screen.OfferPlinths.Count);
             Assert.AreEqual(5, screen.OfferGhosts.Count);
             Assert.AreEqual(5, screen.OfferChains.Count);
@@ -208,13 +208,13 @@ namespace PrincesPalace.Domain.Tests
             var card = Walk(Tree()).Single(n => n.Name == "ReckoningOffer0");
             var names = Walk(card).Select(n => n.Name).ToList();
 
-            foreach (string gone in new[] { "Meta", "Recipient", "Loses" })
+            foreach (string gone in new[] { "Meta", "Recipient", "Loses", "Action" })
             {
                 CollectionAssert.DoesNotContain(names, "ReckoningOffer0" + gone);
             }
 
             foreach (string part in new[] { "Plinth", "Ghost", "Icon", "LostDisc", "LostMark", "WearerDisc",
-                "WearerPortrait", "Band", "BandTier", "BandPlus", "Name", "Delta", "Chevron", "Feature", "Action" })
+                "WearerPortrait", "Band", "BandTier", "BandPlus", "Name", "Delta", "Chevron", "Feature", "Spark" })
             {
                 CollectionAssert.Contains(names, "ReckoningOffer0" + part);
             }

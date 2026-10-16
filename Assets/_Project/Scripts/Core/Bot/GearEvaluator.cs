@@ -84,6 +84,11 @@ namespace PrincesPalace
         // null-means-unarmed reading FightEncounterAdapter.ToCombatant takes
         // (`EquippedWeaponPower(character) ?? stats.attack`), rather than
         // scoring an unarmed character at zero damage.
+        // The same number for a caller that has only the character: the
+        // reward card's and the dossier's compare read it as the Attack row.
+        public static int CombatDamage(Character character) =>
+            character == null ? 0 : CombatDamageOf(character, ContentDatabase.EffectiveStats(character));
+
         private static int CombatDamageOf(Character character, StatBlock stats)
         {
             int? power = ContentDatabase.EquippedWeaponPower(character);

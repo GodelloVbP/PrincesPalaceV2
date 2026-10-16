@@ -34,7 +34,6 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text goldLabel;
         [SerializeField] internal TMP_Text noticeLabel;
         [SerializeField] internal Button continueButton;
-        [SerializeField] internal GameObject lootHeading;
 
         [SerializeField] internal GameObject[] rowGroups;
         [SerializeField] internal TMP_Text[] rowNames;
@@ -48,7 +47,6 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text[] offerDeltas;
         [SerializeField] internal TMP_Text[] offerChevrons;
         [SerializeField] internal TMP_Text[] offerFeatures;
-        [SerializeField] internal TMP_Text[] offerActions;
 
         // The card face's other parts (docs/PLAN_REWARD_SCREENS.md C5), one per card.
         [SerializeField] internal Image[] offerPlinths;
@@ -62,17 +60,17 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text[] offerBandTiers;
         [SerializeField] internal TMP_Text[] offerBandPluses;
 
+        // The spark that flies into a card's slot band on a hone or a leave.
+        [SerializeField] internal Image[] offerSparks;
+
         // The focus detail shared by every card.
         [SerializeField] internal GameObject cardTip;
         [SerializeField] internal TMP_Text cardTipTitle;
         [SerializeField] internal TMP_Text cardTipBody;
 
-        // "Hone instead" under each gear card, the page's Favor line and
-        // ledger, and the button that leaves the page (or carries on once
-        // nothing is left to choose).
+        // "Hone instead" under each gear card, and the control that leaves the
+        // page (or carries on once nothing is left to choose).
         [SerializeField] internal Button[] honeButtons;
-        [SerializeField] internal TMP_Text favorLabel;
-        [SerializeField] internal TMP_Text ledgerLabel;
         [SerializeField] internal Button leaveButton;
 
         [SerializeField] internal Image[] offerHalos;
@@ -249,6 +247,22 @@ namespace PrincesPalace
         private int[] _rowOrder;
         private int[] _rowOf;
         private int _tipIndex = -1;
+        private bool _tipHone;
+
+        // What the focused whetstone and door would do to the bands; the faces
+        // the last paint built, so a focus move repaints bands alone.
+        private int _honeFocus = -1;
+        private bool _leaveFocus;
+        private RewardCardFace[] _faces = new RewardCardFace[0];
+
+        // Per card: the flights that own its animated parts, and where those
+        // parts rest.
+        private int[] _flying = new int[0];
+        private readonly List<Coroutine> _flights = new List<Coroutine>();
+        private readonly HashSet<RectTransform> _nudging = new HashSet<RectTransform>();
+        private Vector2[] _iconHome = new Vector2[0];
+        private Vector2[] _sparkHome = new Vector2[0];
+        private float[] _ghostHomeY = new float[0];
 
         // Pushed in Show() once Wire()/Paint() have settled which cards are
         // on screen, reconfigured when the choice resolves into the summary,
@@ -282,18 +296,32 @@ namespace PrincesPalace
                 UnityEngine.EventSystems.EventSystem.current?.SetSelectedGameObject(continueButton.gameObject);
             Gained.Wire(_tooltips);
 
+            _flying = new int[offerButtons.Length];
+            _iconHome = HomesOf(offerIcons);
+            _sparkHome = HomesOf(offerSparks);
+            _ghostHomeY = HomesOf(offerGhosts).Select(h => h.y).ToArray();
+
+            // The whetstones and the door share the cards' focus plumbing: the
+            // band previews follow the stick and the pointer through one router.
             for (int i = 0; honeButtons != null && i < honeButtons.Length; i++)
             {
                 int index = i;
-                honeButtons[i].onClick.AddListener(() => HoneInstead(index));
+                honeButtons[i].onClick.AddListener(() => Act(Choice.Hone, index));
+                _tooltips.Register(honeButtons[i], entered => ShowHoneTip(index, entered));
+                WireHover(honeButtons[i].gameObject, index);
             }
 
-            if (leaveButton != null) leaveButton.onClick.AddListener(LeaveOrAdvance);
+            if (leaveButton != null)
+            {
+                leaveButton.onClick.AddListener(() => Act(Choice.Leave, -1));
+                _tooltips.Register(leaveButton, ShowLeaveFocus);
+                WireHover(leaveButton.gameObject, 0);
+            }
 
             for (int i = 0; i < offerButtons.Length; i++)
             {
                 int index = i;
-                offerButtons[i].onClick.AddListener(() => Take(index));
+                offerButtons[i].onClick.AddListener(() => Act(Choice.Take, index));
 
                 // The focus detail, by the stick (selection) and the pointer
                 // through one router.
@@ -303,6 +331,16 @@ namespace PrincesPalace
                 hover.Index = index;
                 hover.Changed = (_, entered) => _tooltips.Pointer(node, entered);
             }
+        }
+
+        private static Vector2[] HomesOf(Graphic[] parts) =>
+            (parts ?? new Graphic[0]).Select(p => p == null ? Vector2.zero : p.rectTransform.anchoredPosition).ToArray();
+
+        private void WireHover(GameObject node, int index)
+        {
+            var hover = node.GetComponent<HoverIndex>() ?? node.AddComponent<HoverIndex>();
+            hover.Index = index;
+            hover.Changed = (_, entered) => _tooltips.Pointer(node, entered);
         }
 
         // ---- navigation (docs/GAMEPAD_NAVIGATION_PLAN.md) ------------------------
@@ -504,6 +542,8 @@ namespace PrincesPalace
         private void OnDisable()
         {
             _tooltips.Detach();
+            CancelFlights();
+            _nudging.Clear();
 
             if (_navContext == null) return;
 
@@ -527,6 +567,9 @@ namespace PrincesPalace
 
             gameObject.SetActive(true);
             Wire();
+            CancelFlights();
+            _honeFocus = -1;
+            _leaveFocus = false;
             Paint();
 
             if (_animation != null) StopCoroutine(_animation);
@@ -697,7 +740,6 @@ namespace PrincesPalace
 
                 SetWidth(RectAt(offerNames, i), labelWidth);
                 SetWidth(RectAt(offerFeatures, i), labelWidth);
-                SetWidth(RectAt(offerActions, i), labelWidth);
 
                 Seat(RectAt(offerDeltas, i), OfferRowLayout.DeltaLabelX(count), OfferRowLayout.DeltaLabelWidth(count));
                 Seat(RectAt(offerChevrons, i), OfferRowLayout.ChevronX(count), null);
@@ -822,9 +864,6 @@ namespace PrincesPalace
         private void PaintOffers()
         {
             bool any = _page != null && _page.Cards.Count > 0;
-            if (lootHeading != null) lootHeading.SetActive(any);
-            if (favorLabel != null) favorLabel.gameObject.SetShown(any && _page.Kind == RewardPageKind.Gear);
-            if (ledgerLabel != null) ledgerLabel.gameObject.SetShown(any);
             if (leaveButton != null) leaveButton.gameObject.SetShown(any);
 
             int count = any ? Mathf.Min(_page.Cards.Count, offerButtons.Length) : 0;
@@ -841,6 +880,7 @@ namespace PrincesPalace
 
             var save = SaveSlotManager.CurrentSave;
             bool narrow = OfferRowLayout.IsNarrow(count);
+            _faces = new RewardCardFace[offerButtons.Length];
             for (int i = 0; i < offerButtons.Length; i++)
             {
                 bool present = i < count;
@@ -855,6 +895,8 @@ namespace PrincesPalace
                 var card = _page.Cards[i];
                 bool open = card.Outcome == CardOutcome.Open && _page.ChoicesLeft > 0;
                 var face = card.IsGear ? RewardCardFace.OfGear(save, card) : RewardCardFace.OfRelic(card);
+                _faces[i] = face;
+                if (!Flying(i)) ResetFlightParts(i);
 
                 // Graceful degradation: a card naming content that no longer
                 // exists shows what it can rather than taking the screen down.
@@ -869,22 +911,19 @@ namespace PrincesPalace
                 // a glow behind an object, and at full strength it competes
                 // with the object it exists to frame.
                 var glow = HexColour(face.Hex);
-                if (offerNames[i] != null) offerNames[i].color = glow;
-
-                if (card.IsGear)
+                if (offerNames[i] != null)
                 {
-                    ItemIcons.Apply(offerIcons[i], icons, ItemIcons.KeyOf(card.Copy));
-                }
-                else
-                {
-                    ItemIcons.Apply(offerIcons[i], relicArt, card.RelicId);
+                    var nameColour = glow;
+                    nameColour.a = open ? 1f : 0.55f;
+                    offerNames[i].color = nameColour;
                 }
 
-                // An inert card is grey with a chain over it.
-                if (offerIcons[i] != null) offerIcons[i].color = face.Inert ? InertTint : Color.white;
-                if (offerChains[i] != null) offerChains[i].color = face.Inert ? InertTint : Color.clear;
+                if (!Flying(i)) PaintIcon(i, card, face, open);
 
-                glow.a = open ? 0.42f : 0.18f;
+                // A card that was taken, honed or sold has left its glow behind;
+                // one that was never chosen keeps a faint one.
+                bool spent = card.Outcome != CardOutcome.Open;
+                glow.a = open ? 0.42f : spent ? 0f : 0.18f;
                 offerBursts[i].color = glow;
 
                 // The halo carries the SAME colour at lower alpha. It is the
@@ -898,18 +937,16 @@ namespace PrincesPalace
                 if (offerHalos != null && i < offerHalos.Length && offerHalos[i] != null)
                 {
                     var soft = glow;
-                    soft.a = open ? 0.30f : 0.12f;
+                    soft.a = open ? 0.30f : spent ? 0f : 0.12f;
                     offerHalos[i].color = soft;
                     offerHalos[i].rectTransform.localScale = Vector3.one;
                 }
 
                 PaintPlinth(i, face, count, open);
-                PaintGhost(i, face);
+                if (!Flying(i)) PaintGhost(i, face);
                 PaintWearer(i, face);
-                PaintBand(i, face);
-                PaintDelta(i, face);
-
-                PaintAction(i, card, open);
+                PaintBand(i, face, card);
+                PaintDelta(i, face, card);
                 PaintHone(i, card);
 
                 // Every card stays visible once the page is spent, and none of
@@ -919,11 +956,35 @@ namespace PrincesPalace
                 offerButtons[i].interactable = open;
             }
 
-            PaintPageChrome();
+            PaintLeave();
 
             // The page repainted under a held focus (a take changes the worn
             // item): the detail follows it.
-            if (_tipIndex >= 0) ShowCardTip(_tipIndex, true);
+            if (_tipIndex >= 0) ShowTip(_tipIndex, true, _tipHone);
+        }
+
+        // The item on its plinth. What became of it is the card's state: a taken
+        // card's plinth is empty, a honed one is dust, a sold one leaves a coin
+        // mark (PaintDelta), and one nobody chose is dimmed.
+        private void PaintIcon(int i, PendingCard card, RewardCardFace face, bool open)
+        {
+            if (card.IsGear) ItemIcons.Apply(offerIcons[i], icons, ItemIcons.KeyOf(card.Copy));
+            else ItemIcons.Apply(offerIcons[i], relicArt, card.RelicId);
+
+            var icon = offerIcons[i];
+            bool visible = card.Outcome == CardOutcome.Open || card.Outcome == CardOutcome.Honed;
+            if (icon != null)
+            {
+                // An inert card is grey with a chain over it.
+                var tint = face.Inert ? InertTint : Color.white;
+                if (card.Outcome == CardOutcome.Honed) tint.a = DustAlpha;
+                else if (!open) tint.a = DimAlpha;
+                icon.color = tint;
+                icon.rectTransform.localScale = card.Outcome == CardOutcome.Honed ? Vector3.one * DustScale : Vector3.one;
+                if (!visible) icon.enabled = false;
+            }
+
+            if (offerChains[i] != null) offerChains[i].color = face.Inert && visible ? InertTint : Color.clear;
         }
 
         private static readonly Color InertTint = new Color(0.5f, 0.5f, 0.55f, 1f);
@@ -995,10 +1056,18 @@ namespace PrincesPalace
         }
 
         // The slot band: the tier numeral and the SLOT's honing, which stays
-        // lit across a swap because it belongs to the slot.
-        private void PaintBand(int i, RewardCardFace face)
+        // lit across a swap because it belongs to the slot. A taken card keeps
+        // its band warm; a pending hone or leave shows +N>+N+k on it.
+        private void PaintBand(int i, RewardCardFace face, PendingCard card)
         {
-            if (i < offerBands.Length && offerBands[i] != null) offerBands[i].gameObject.SetActive(face.HasBand);
+            var band = i < offerBands.Length ? offerBands[i] : null;
+            if (band != null)
+            {
+                band.gameObject.SetActive(face.HasBand);
+                band.color = WaitingHones(card) > 0 ? BandSpark
+                    : card.Outcome == CardOutcome.Taken ? BandTaken
+                    : BandRest;
+            }
 
             var tier = i < offerBandTiers.Length ? offerBandTiers[i] : null;
             if (tier != null)
@@ -1011,18 +1080,57 @@ namespace PrincesPalace
             if (plus != null)
             {
                 plus.gameObject.SetActive(face.HasBand);
-                if (face.HasBand)
-                {
-                    plus.Set(UiStrings.ReckoningBandHone, face.BandPlus);
-                    plus.color = face.BandPlus > 0 ? BandLit : BandDim;
-                }
+                if (!face.HasBand) return;
+
+                int extra = WaitingHones(card);
+                if (extra > 0) plus.Set(UiStrings.ReckoningBandHoneNext, face.BandPlus, face.BandPlus + extra);
+                else plus.Set(UiStrings.ReckoningBandHone, face.BandPlus);
+                plus.color = extra > 0 || face.BandPlus > 0 ? BandLit : BandDim;
+            }
+        }
+
+        // The +1s a focused control would put on this card's slot: one for the
+        // whetstone under any card on the slot, what leaving would pay for the
+        // door. Zero for a relic, a spent page and a slot that cannot be honed.
+        private int WaitingHones(PendingCard card)
+        {
+            if (_page == null || card == null || !card.IsGear) return 0;
+
+            var save = SaveSlotManager.CurrentSave;
+            if (_honeFocus >= 0 && _honeFocus < _page.Cards.Count
+                && RewardPages.HoneInsteadFor(save, _page, _honeFocus) == RewardPages.HoneInsteadResult.Hone)
+            {
+                var focused = _page.Cards[_honeFocus];
+                if (focused.RecipientId == card.RecipientId && focused.Slot == card.Slot) return 1;
+            }
+
+            if (_leaveFocus && _page.ChoicesLeft > 0)
+            {
+                return RewardPages.PreviewLeave(save, _page).HonesFor(card.RecipientId, card.Slot);
+            }
+
+            return 0;
+        }
+
+        // Bands only, from the faces the last paint built: a focus moving over
+        // the whetstones and the door must not re-run every card's compare.
+        private void RepaintBands()
+        {
+            if (_page == null || _faces == null) return;
+
+            for (int i = 0; i < _faces.Length && i < _page.Cards.Count; i++)
+            {
+                if (_faces[i] != null) PaintBand(i, _faces[i], _page.Cards[i]);
             }
         }
 
         // The headline stat, signed, and the chevron whose shape carries the sign.
-        private void PaintDelta(int i, RewardCardFace face)
+        // A sold card leaves its price here, as the coin mark.
+        private void PaintDelta(int i, RewardCardFace face, PendingCard card)
         {
-            SetText(offerDeltas, i, face.HasDelta ? face.DeltaText : "");
+            SetText(offerDeltas, i, card.Outcome == CardOutcome.Paid
+                ? UiStrings.ReckoningCoinsMark.Format(card.GoldPaid)
+                : face.HasDelta ? face.DeltaText : "");
 
             var chevron = i < offerChevrons.Length ? offerChevrons[i] : null;
             if (chevron == null) return;
@@ -1040,23 +1148,46 @@ namespace PrincesPalace
         // ---- the focus detail ---------------------------------------------------------
         //
         // One shared box over the offer phase, shown for the focused (or
-        // hovered) card through the same router the chips use, so the stick
-        // and the mouse share one arbitration.
-        private void ShowCardTip(int index, bool entered)
+        // hovered) card, or for the whetstone under it, through the same router
+        // the chips use, so the stick and the mouse share one arbitration.
+        private void ShowCardTip(int index, bool entered) => ShowTip(index, entered, false);
+
+        // The whetstone's focus: the slot band reads +N>+N+1 and the box shows
+        // the worn item's stats now -> next. The coin case has nothing to preview.
+        private void ShowHoneTip(int index, bool entered)
+        {
+            if (entered) _honeFocus = index;
+            else if (_honeFocus == index) _honeFocus = -1;
+
+            bool previews = entered && _page != null && index >= 0 && index < _page.Cards.Count
+                && RewardPages.HoneInsteadFor(SaveSlotManager.CurrentSave, _page, index) == RewardPages.HoneInsteadResult.Hone;
+            ShowTip(index, previews, true);
+            RepaintBands();
+        }
+
+        private void ShowLeaveFocus(bool entered)
+        {
+            _leaveFocus = entered;
+            RepaintBands();
+        }
+
+        private void ShowTip(int index, bool entered, bool hone)
         {
             if (cardTip == null) return;
 
             if (!entered || _page == null || index < 0 || index >= _page.Cards.Count
                 || index >= offerButtons.Length || !offerButtons[index].gameObject.activeInHierarchy)
             {
-                if (!entered && index == _tipIndex) HideCardTip();
+                if (!entered && index == _tipIndex && hone == _tipHone) HideCardTip();
                 return;
             }
 
             _tipIndex = index;
+            _tipHone = hone;
             var card = _page.Cards[index];
             var save = SaveSlotManager.CurrentSave;
-            var detail = card.IsGear ? RewardCardFace.DetailOfGear(save, card) : RewardCardFace.DetailOfRelic(save, card);
+            var detail = hone ? RewardCardFace.DetailOfHone(save, card)
+                : card.IsGear ? RewardCardFace.DetailOfGear(save, card) : RewardCardFace.DetailOfRelic(save, card);
 
             if (cardTipTitle != null)
             {
@@ -1074,6 +1205,7 @@ namespace PrincesPalace
         private void HideCardTip()
         {
             _tipIndex = -1;
+            _tipHone = false;
             if (cardTip != null) cardTip.SetActive(false);
         }
 
@@ -1110,27 +1242,8 @@ namespace PrincesPalace
             box.anchoredPosition = new Vector2(at.X, at.Y);
         }
 
-        // The caption at the foot of a card: what it will do, then what became
-        // of it.
-        private void PaintAction(int i, PendingCard card, bool open)
-        {
-            if (i >= offerActions.Length || offerActions[i] == null) return;
-
-            switch (card.Outcome)
-            {
-                case CardOutcome.Taken: offerActions[i].Set(UiStrings.ReckoningTaken); break;
-                case CardOutcome.Honed: offerActions[i].Set(UiStrings.ReckoningHoned); break;
-                case CardOutcome.Paid: offerActions[i].Set(UiStrings.ReckoningPaid, card.GoldPaid); break;
-
-                // An unspent card on a spent page was never taken or honed: its
-                // caption is blank rather than a lie.
-                default:
-                    if (open) offerActions[i].Set(UiStrings.ReckoningTake);
-                    else offerActions[i].SetContent("");
-                    break;
-            }
-        }
-
+        // The whetstone under a card: a placeholder mark, or the card's price
+        // when every shown slot is spent and the choice pays gold instead.
         private void PaintHone(int i, PendingCard card)
         {
             if (!HoneShown(i)) return;
@@ -1139,11 +1252,11 @@ namespace PrincesPalace
             var save = SaveSlotManager.CurrentSave;
             if (RewardPages.HoneInsteadFor(save, _page, i) == RewardPages.HoneInsteadResult.Gold)
             {
-                label.Set(UiStrings.ReckoningSellInstead, RewardPages.SalePrice(card.Copy, _page.Step));
+                label.Set(UiStrings.ReckoningCoinsMark, RewardPages.SalePrice(card.Copy, _page.Step));
             }
             else
             {
-                label.Set(UiStrings.ReckoningHoneInstead);
+                label.Set(UiStrings.ReckoningHoneMark);
             }
         }
 
@@ -1155,77 +1268,28 @@ namespace PrincesPalace
             && i < _page.Cards.Count && _page.Kind == RewardPageKind.Gear
             && RewardPages.HoneInsteadFor(SaveSlotManager.CurrentSave, _page, i) != RewardPages.HoneInsteadResult.Refused;
 
-        // The heading, the Favor line, the ledger and the page's button.
-        private void PaintPageChrome()
+        // The door's face is what leaving pays now (RewardPages.PreviewLeave, the
+        // same numbers Leave pays), as placeholder marks for the whetstones and
+        // the coin stack; once nothing is left to choose it is the way forward.
+        private void PaintLeave()
         {
-            if (_page == null) return;
+            var label = leaveButton == null ? null : leaveButton.GetComponentInChildren<TMP_Text>(includeInactive: true);
+            if (_page == null || label == null) return;
 
-            var heading = lootHeading == null ? null : lootHeading.GetComponent<TMP_Text>();
-            var pageName = PageName(_page);
-            if (heading != null)
+            if (_page.ChoicesLeft == 0)
             {
-                string name = pageName.Format();
-                if (_page.ChoicesLeft == 0) heading.Set(UiStrings.ReckoningPageDone, name);
-                else if (_page.ChoicesLeft == 1) heading.Set(UiStrings.ReckoningChoiceLeft, name);
-                else heading.Set(UiStrings.ReckoningChoicesLeft, name, _page.ChoicesLeft);
+                label.Set(UiStrings.ReckoningForward);
+                return;
             }
 
-            if (favorLabel != null && _page.Kind == RewardPageKind.Gear)
-            {
-                int favor = ItemOfferRoll.CurrentSquadFavor();
-                GearPage.FavorEffect(ContentDatabase.GetRewardSource(_page.SourceId), favor,
-                    out int tierPoints, out int qualityPoints);
-                favorLabel.Set(UiStrings.ReckoningFavor, favor, tierPoints, qualityPoints);
-            }
-
-            if (ledgerLabel != null) ledgerLabel.SetContent(LedgerText(_page));
-
-            var leaveLabel = leaveButton == null ? null : leaveButton.GetComponentInChildren<TMP_Text>(includeInactive: true);
-            if (leaveLabel != null)
-            {
-                leaveLabel.Set(_page.ChoicesLeft > 0 ? UiStrings.ReckoningLeavePage : UiStrings.Continue);
-            }
-        }
-
-        private static UiString PageName(PendingPage page)
-        {
-            bool gear = page.Kind == RewardPageKind.Gear;
-            switch (page.SourceClass)
-            {
-                case EncounterClass.Boss: return gear ? UiStrings.ReckoningPageGearBoss : UiStrings.ReckoningPageRelicBoss;
-                case EncounterClass.Elite: return gear ? UiStrings.ReckoningPageGearAnchor : UiStrings.ReckoningPageRelicAnchor;
-                default: return gear ? UiStrings.ReckoningPageGear : UiStrings.ReckoningPageRelic;
-            }
-        }
-
-        // What the page did, in one paragraph: the copies it displaced into the
-        // bag, the slots it honed, and what leaving paid for the choices left
-        // unused.
-        private static string LedgerText(PendingPage page)
-        {
+            var preview = RewardPages.PreviewLeave(SaveSlotManager.CurrentSave, _page);
+            int hones = preview.Hones.Sum(h => h.Count);
             var parts = new List<string>();
+            if (hones > 0) parts.Add(UiStrings.ReckoningLeaveHones.Format(hones));
+            if (preview.Gold > 0) parts.Add(UiStrings.ReckoningCoinsMark.Format(preview.Gold));
 
-            var displaced = page.Cards
-                .Where(c => c.IsGear && c.Outcome == CardOutcome.Taken && c.Displaced != null)
-                .Select(c => RarityColors.NameOf(c.Displaced))
-                .ToList();
-            if (displaced.Count > 0) parts.Add(UiStrings.ReckoningLedgerDisplaced.Format(string.Join(", ", displaced)));
-
-            var honed = page.Cards
-                .Where(c => c.IsGear && c.Outcome == CardOutcome.Honed)
-                .Select(c => RewardApplier.DisplayNameFor(c.RecipientId) + " " + UiStrings.EquipmentSlotName(c.Slot).Format())
-                .ToList();
-            if (honed.Count > 0) parts.Add(UiStrings.ReckoningLedgerHoned.Format(string.Join(", ", honed)));
-
-            if (page.Closed && (page.UnusedHones > 0 || page.UnusedGold > 0))
-            {
-                var left = new List<string>();
-                if (page.UnusedHones > 0) left.Add(UiStrings.ReckoningLeftHones.Format(page.UnusedHones));
-                if (page.UnusedGold > 0) left.Add(UiStrings.ReckoningLeftGold.Format(page.UnusedGold));
-                parts.Add(UiStrings.ReckoningLedgerLeft.Format(string.Join(", ", left)));
-            }
-
-            return string.Join("  -  ", parts);
+            if (parts.Count == 0) label.Set(UiStrings.ReckoningLeaveMark);
+            else label.SetContent(string.Join("  ", parts));
         }
 
         private static void SetText(TMP_Text[] labels, int index, string value)
@@ -1254,9 +1318,43 @@ namespace PrincesPalace
 
         // ---- the decisions ------------------------------------------------------------
 
-        // A gear card equips on its recipient, a relic joins the run. The page
-        // stays on screen until the player moves on, so the displaced copy and
-        // the spent cards are readable.
+        private enum Choice
+        {
+            Take,
+            Hone,
+            Leave,
+        }
+
+        // THE ONE GATE (docs/PLAN_REWARD_SCREENS.md C10, review B1): take, hone
+        // instead and leave all arrive here, from the mouse and from Submit.
+        // While a reveal beat runs (BeatRunning, set by the reveal), a press
+        // completes the beat through SkipBeat, nudges the pressed control and
+        // returns without touching RewardPages: nothing can pay or close a page
+        // the player has not seen.
+        public System.Func<bool> BeatRunning;
+        public System.Action SkipBeat;
+
+        private void Act(Choice choice, int index)
+        {
+            if (BeatRunning != null && BeatRunning())
+            {
+                SkipBeat?.Invoke();
+                Nudge(choice, index);
+                return;
+            }
+
+            switch (choice)
+            {
+                case Choice.Take: Take(index); break;
+                case Choice.Hone: HoneInstead(index); break;
+                default: LeaveOrAdvance(); break;
+            }
+        }
+
+        // A gear card equips on its recipient (the copy it displaced goes to
+        // the bag: EquipMove puts exactly one back per slot), a relic joins the
+        // run. The page stays on screen until the player moves on, so the spent
+        // cards are readable.
         private void Take(int index)
         {
             var save = SaveSlotManager.CurrentSave;
@@ -1271,20 +1369,38 @@ namespace PrincesPalace
                 _reward.ChosenItemName = RarityColors.NameOf(card.Copy);
             }
 
+            SoundController.Play(Sound.Take);
+            StartFlight(FlyTake(index, card.IsGear), index);
             AfterChoice();
         }
 
+        // Hone the slot, or sell the card when every shown slot is spent. The
+        // honing belongs to the slot, so the spark lands on the band of every
+        // card that shares it.
         private void HoneInstead(int index)
         {
             var save = SaveSlotManager.CurrentSave;
             if (save == null || !RewardPages.CanTake(_page, index)) return;
+
+            var card = _page.Cards[index];
+            var before = RewardPages.HoneInsteadFor(save, _page, index);
+            if (before == RewardPages.HoneInsteadResult.Refused) return;
+
+            var claimed = before == RewardPages.HoneInsteadResult.Hone
+                ? CardsOnSlot(card.RecipientId, card.Slot)
+                : new List<int> { index };
+            if (!claimed.Contains(index)) claimed.Add(index);
+
             if (RewardPages.HoneInstead(save, _page, index) == RewardPages.HoneInsteadResult.Refused) return;
 
+            bool coins = before == RewardPages.HoneInsteadResult.Gold;
+            SoundController.Play(coins ? Sound.CoinTick : Sound.HoneScrape);
+            StartFlight(FlyHone(index, claimed, coins), claimed.ToArray());
             AfterChoice();
         }
 
         // Leaving pays every unused choice and closes the page, which then
-        // shows what it paid; once nothing is left to choose the same button
+        // shows what it paid; once nothing is left to choose the same control
         // moves on to the next page, or to the summary after the last.
         private void LeaveOrAdvance()
         {
@@ -1292,10 +1408,27 @@ namespace PrincesPalace
 
             if (_page.ChoicesLeft > 0)
             {
-                RewardPages.Leave(SaveSlotManager.CurrentSave, _page);
+                var save = SaveSlotManager.CurrentSave;
+                var preview = RewardPages.PreviewLeave(save, _page);
+                var targets = new List<int>();
+                for (int i = 0; i < _page.Cards.Count && i < offerButtons.Length; i++)
+                {
+                    var card = _page.Cards[i];
+                    if (card.IsGear && preview.HonesFor(card.RecipientId, card.Slot) > 0) targets.Add(i);
+                }
+
+                RewardPages.Leave(save, _page);
+                SoundController.Play(Sound.EmberSnuff);
+                if (preview.Gold > 0) SoundController.Play(Sound.CoinTick);
+                StartFlight(FlyLeave(targets, preview.Gold > 0), targets.ToArray());
                 AfterChoice();
                 return;
             }
+
+            CancelFlights();
+            HideCardTip();
+            _honeFocus = -1;
+            _leaveFocus = false;
 
             _page = _pages.FirstOrDefault(p => p != null && p.ChoicesLeft > 0);
             if (_page != null)
@@ -1336,6 +1469,252 @@ namespace PrincesPalace
             // Reselect NOW: the card the stick stood on no longer answers, and
             // the dispatcher's next-frame rule would leave a frame unfocused.
             SelectEntry();
+        }
+
+        // Every card on the page that wears this slot, in page order.
+        private List<int> CardsOnSlot(string recipientId, EquipmentSlot slot)
+        {
+            var cards = new List<int>();
+            for (int i = 0; i < _page.Cards.Count && i < offerButtons.Length; i++)
+            {
+                var card = _page.Cards[i];
+                if (card.IsGear && card.RecipientId == recipientId && card.Slot == slot) cards.Add(i);
+            }
+
+            return cards;
+        }
+
+        // ---- the choices' motion ------------------------------------------------------
+        //
+        // Plain tweens on placeholders (no art or real sound yet). State changes
+        // the moment RewardPages answers; a flight only owns a card's animated
+        // parts (item, ghost, spark) until it lands, and the repaint that ends it
+        // draws the resting state, so a cancelled flight leaves nothing behind.
+
+        private const float FlightSeconds = 0.26f;
+        private const float PunchSeconds = 0.16f;
+        private const float NudgePixels = 4f;
+        private const float DustAlpha = 0.25f;
+        private const float DustScale = 0.6f;
+        private const float DimAlpha = 0.45f;
+        private static readonly Color SparkColour = new Color(1f, 0.91f, 0.66f, 1f);
+        private static readonly Color32 BandRest = new Color32(29, 18, 38, 230);
+        private static readonly Color32 BandSpark = new Color32(107, 79, 31, 230);
+        private static readonly Color32 BandTaken = new Color32(64, 48, 22, 230);
+
+        private bool Flying(int i) => _flying != null && i >= 0 && i < _flying.Length && _flying[i] > 0;
+
+        private IEnumerator Tween(float seconds, System.Action<float> apply)
+        {
+            for (float t = 0f; t < seconds; t += Time.unscaledDeltaTime * SpeedMultiplier)
+            {
+                apply(Easing.SmoothStep(t / seconds));
+                yield return null;
+            }
+
+            apply(1f);
+        }
+
+        private void StartFlight(IEnumerator body, params int[] cards)
+        {
+            if (!isActiveAndEnabled) return;
+
+            foreach (int c in cards)
+            {
+                if (c >= 0 && c < _flying.Length) _flying[c]++;
+            }
+
+            _flights.Add(StartCoroutine(Flight(body, cards)));
+        }
+
+        private IEnumerator Flight(IEnumerator body, int[] cards)
+        {
+            while (body.MoveNext()) yield return body.Current;
+
+            foreach (int c in cards)
+            {
+                if (c >= 0 && c < _flying.Length && _flying[c] > 0) _flying[c]--;
+            }
+
+            PaintOffers();
+        }
+
+        private void CancelFlights()
+        {
+            foreach (var flight in _flights)
+            {
+                if (flight != null) StopCoroutine(flight);
+            }
+
+            _flights.Clear();
+            if (_flying != null) System.Array.Clear(_flying, 0, _flying.Length);
+        }
+
+        // The animated parts back at rest: item at home, ghost on its shelf, the
+        // spark invisible, the honing numeral at full size.
+        private void ResetFlightParts(int i)
+        {
+            if (i < offerIcons.Length && offerIcons[i] != null && i < _iconHome.Length)
+            {
+                offerIcons[i].rectTransform.anchoredPosition = _iconHome[i];
+                offerIcons[i].rectTransform.localScale = Vector3.one;
+            }
+
+            if (i < offerGhosts.Length && offerGhosts[i] != null && i < _ghostHomeY.Length)
+            {
+                var rect = offerGhosts[i].rectTransform;
+                rect.anchoredPosition = new Vector2(rect.anchoredPosition.x, _ghostHomeY[i]);
+            }
+
+            if (offerSparks != null && i < offerSparks.Length && offerSparks[i] != null && i < _sparkHome.Length)
+            {
+                offerSparks[i].rectTransform.anchoredPosition = _sparkHome[i];
+                offerSparks[i].color = Color.clear;
+            }
+
+            if (i < offerBandPluses.Length && offerBandPluses[i] != null) offerBandPluses[i].rectTransform.localScale = Vector3.one;
+        }
+
+        // The item lifts off its plinth to the wearer's medallion (a relic just
+        // rises), the replaced item drifts off, and the band flashes: the honing
+        // came with the slot.
+        private IEnumerator FlyTake(int i, bool gear)
+        {
+            var icon = offerIcons[i];
+            var rect = icon.rectTransform;
+            var start = rect.position;
+            var scale = rect.localScale;
+            var end = gear && offerWearerDiscs[i] != null
+                ? offerWearerDiscs[i].transform.position
+                : start + rect.TransformVector(Vector3.up * 60f);
+
+            var ghost = offerGhosts[i];
+            var ghostRect = ghost.rectTransform;
+            var ghostStart = ghostRect.anchoredPosition;
+            float ghostAlpha = ghost.color.a;
+
+            yield return Tween(FlightSeconds, k =>
+            {
+                rect.position = Vector3.Lerp(start, end, k);
+                rect.localScale = Vector3.Lerp(scale, scale * 0.3f, k);
+                var tint = icon.color;
+                tint.a = 1f - k * k;
+                icon.color = tint;
+
+                ghostRect.anchoredPosition = ghostStart + new Vector2(24f * k, -18f * k);
+                var faded = ghost.color;
+                faded.a = ghostAlpha * (1f - k);
+                ghost.color = faded;
+            });
+
+            var band = offerBands[i];
+            yield return Tween(PunchSeconds, k => band.color = Color32.Lerp(BandSpark, BandTaken, k));
+        }
+
+        // The spark runs from the whetstone to the band of every card on the
+        // slot while the item crumbles to dust; for a sale the coin rises.
+        private IEnumerator FlyHone(int i, List<int> claimed, bool coins)
+        {
+            var icon = offerIcons[i];
+            var scale = icon.rectTransform.localScale;
+            float alpha = icon.color.a;
+            var origin = honeButtons[i].transform.position;
+            var targets = new List<Vector3>();
+            foreach (int j in claimed)
+            {
+                targets.Add(coins ? origin + honeButtons[i].transform.TransformVector(Vector3.up * 80f)
+                                  : offerBands[j].transform.position);
+            }
+
+            yield return Tween(FlightSeconds, k =>
+            {
+                var tint = icon.color;
+                tint.a = Mathf.Lerp(alpha, coins ? 0f : DustAlpha, k);
+                icon.color = tint;
+                icon.rectTransform.localScale = Vector3.Lerp(scale, scale * (coins ? 0.4f : DustScale), k);
+                MoveSparks(claimed, origin, targets, k);
+            });
+
+            yield return PunchBands(coins ? new List<int>() : claimed);
+            FadeSparks(claimed, 0f);
+        }
+
+        // Every target band gets a spark from the door, and the unused choices'
+        // coins make the door itself jump.
+        private IEnumerator FlyLeave(List<int> targets, bool coins)
+        {
+            var origin = leaveButton.transform.position;
+            var ends = targets.Select(j => offerBands[j].transform.position).ToList();
+
+            yield return Tween(FlightSeconds, k =>
+            {
+                MoveSparks(targets, origin, ends, k);
+                if (coins) leaveButton.transform.localScale = Vector3.one * (1f + 0.1f * Mathf.Sin(k * Mathf.PI));
+            });
+
+            leaveButton.transform.localScale = Vector3.one;
+            yield return PunchBands(targets);
+            FadeSparks(targets, 0f);
+        }
+
+        private void MoveSparks(List<int> cards, Vector3 origin, List<Vector3> ends, float k)
+        {
+            for (int n = 0; n < cards.Count; n++)
+            {
+                var spark = offerSparks[cards[n]];
+                if (spark == null) continue;
+
+                spark.rectTransform.position = Vector3.Lerp(origin, ends[n], k);
+                var tint = SparkColour;
+                tint.a = 1f - 0.4f * k;
+                spark.color = tint;
+            }
+        }
+
+        private void FadeSparks(List<int> cards, float alpha)
+        {
+            foreach (int j in cards)
+            {
+                if (offerSparks[j] == null) continue;
+
+                var tint = offerSparks[j].color;
+                tint.a = alpha;
+                offerSparks[j].color = tint;
+            }
+        }
+
+        // The honing numeral ticks: a short punch as the spark lands.
+        private IEnumerator PunchBands(List<int> cards)
+        {
+            yield return Tween(PunchSeconds, k =>
+            {
+                float size = 1f + 0.3f * Mathf.Sin(k * Mathf.PI);
+                foreach (int j in cards)
+                {
+                    if (offerBandPluses[j] != null) offerBandPluses[j].rectTransform.localScale = Vector3.one * size;
+                }
+            });
+        }
+
+        // A refused press moves the control 4 px and back.
+        private void Nudge(Choice choice, int index)
+        {
+            if (!isActiveAndEnabled) return;
+
+            var control = choice == Choice.Take ? (index >= 0 && index < offerButtons.Length ? offerButtons[index] : null)
+                : choice == Choice.Hone ? (honeButtons != null && index >= 0 && index < honeButtons.Length ? honeButtons[index] : null)
+                : leaveButton;
+            if (control == null || !(control.transform is RectTransform rect) || !_nudging.Add(rect)) return;
+
+            StartCoroutine(NudgeRoutine(rect));
+        }
+
+        private IEnumerator NudgeRoutine(RectTransform rect)
+        {
+            var home = rect.anchoredPosition;
+            yield return Tween(PunchSeconds, k => rect.anchoredPosition = home + Vector2.right * (NudgePixels * Mathf.Sin(k * Mathf.PI)));
+            rect.anchoredPosition = home;
+            _nudging.Remove(rect);
         }
 
         private void SelectEntry() =>

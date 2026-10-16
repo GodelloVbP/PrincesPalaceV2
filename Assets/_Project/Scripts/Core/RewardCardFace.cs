@@ -162,7 +162,7 @@ namespace PrincesPalace
                 var definition = ContentDatabase.GetCharacter(recipient.definitionId);
                 bool signature = definition?.Data != null && definition.Data.HasSignatureResource;
                 var rows = ItemCompareRows.Build(recipient, copy, ContentDatabase.EffectiveAbilityScores(recipient),
-                    pool?.CapacityRule ?? PoolCapacityRule.WisdomDerived, signature).Rows;
+                    pool?.CapacityRule ?? PoolCapacityRule.WisdomDerived, signature, card.Slot).Rows;
 
                 foreach (var r in rows)
                 {
@@ -170,13 +170,7 @@ namespace PrincesPalace
                         SheetStats.DisplayText(r.Stat, r.Now), SheetStats.DisplayText(r.Stat, r.Next), r.Delta));
                 }
 
-                // A weapon's power is not one of the sheet's derived stats, so its
-                // swap has no row; the card's own headline says it instead.
-                if (rows.Count == 0)
-                {
-                    string headline = OfGear(save, card).DeltaText;
-                    lines.Add(headline.Length > 0 ? headline : UiStrings.ReckoningNoChange.Format());
-                }
+                if (rows.Count == 0) lines.Add(UiStrings.ReckoningNoChange.Format());
             }
 
             lines.AddRange(AllAffixLines(copy, recipient));
@@ -184,6 +178,47 @@ namespace PrincesPalace
             if (lost.Length > 0) lines.Add(UiStrings.ReckoningLoses.Format(lost));
 
             return new Detail(RarityColors.NameOf(copy), string.Join("\n", lines));
+        }
+
+        // "Hone instead" focus detail: the wearer's slot at +1, with every stat
+        // the honing moves read now -> next through a scoped HoningPreview
+        // (nothing is written). An empty slot has nothing to hone.
+        public static Detail DetailOfHone(SaveData save, PendingCard card)
+        {
+            var recipient = save?.roster?.FirstOrDefault(c => c != null && c.definitionId == card?.RecipientId);
+            if (recipient == null) return new Detail("", "");
+
+            var worn = recipient.equipment == null || recipient.equipment.IsEmpty(card.Slot)
+                ? null
+                : recipient.equipment.GetInstance(card.Slot);
+            int plus = ContentDatabase.HoningOf(recipient, card.Slot);
+            var lines = new List<string>
+            {
+                UiStrings.ReckoningForSlot.Format(
+                    UiStrings.ReckoningFor.Format(RewardApplier.DisplayNameFor(card.RecipientId)).ToUpperInvariant(),
+                    UiStrings.EquipmentSlotName(card.Slot).Format()),
+                UiStrings.ReckoningBandHoneNext.Format(plus, plus + 1),
+            };
+
+            if (worn != null)
+            {
+                var pool = ContentDatabase.PrimaryPoolOf(recipient.definitionId);
+                var definition = ContentDatabase.GetCharacter(recipient.definitionId);
+                bool signature = definition?.Data != null && definition.Data.HasSignatureResource;
+                var rows = ItemCompareRows.HoneRows(recipient, card.Slot,
+                    pool?.CapacityRule ?? PoolCapacityRule.WisdomDerived, signature);
+
+                foreach (var r in rows)
+                {
+                    lines.Add(SheetStats.LabelFor(r.Stat).Format() + "  " + LoadoutCompare.DeltaText(
+                        SheetStats.DisplayText(r.Stat, r.Now), SheetStats.DisplayText(r.Stat, r.Next), r.Delta));
+                }
+
+                if (rows.Count == 0) lines.Add(UiStrings.ReckoningNoChange.Format());
+            }
+
+            return new Detail(worn == null ? UiStrings.EquipmentSlotName(card.Slot).Format() : RarityColors.NameOf(worn),
+                string.Join("\n", lines));
         }
 
         // Relics: who gains, who already has the mechanic, who it never reaches

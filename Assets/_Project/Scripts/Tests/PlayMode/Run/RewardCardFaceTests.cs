@@ -220,14 +220,68 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [Test]
-        public void AWeaponSwapsDetailFallsBackToTheHeadlineNumber()
+        public void AWeaponSwapsDetailListsAttackAsARowNowToNext()
         {
-            ArmedSheep(out var save);
+            var sheep = ArmedSheep(out var save);
+            int now = GearEvaluator.CombatDamage(sheep);
 
             var detail = RewardCardFace.DetailOfGear(save, Card(ItemInstance.Of("sword", 5)));
 
             StringAssert.DoesNotContain(UiStrings.ReckoningNoChange.Format(), detail.Body);
-            StringAssert.Contains("+", detail.Body);
+            StringAssert.Contains(UiStrings.StatAttack.Format() + "  " + now + " →", detail.Body);
+        }
+
+        // The dossier builds its compare column from the same rows, so a weapon
+        // swap moves Attack there too: a stronger sword is a positive row, a
+        // weaker one a negative, and the row's numbers are the combat damage
+        // before and after (the swing's real input, not the flat Attack stat).
+        [Test]
+        public void AWeaponCompareHasARealAttackRowForBetterAndWorse()
+        {
+            var sheep = ArmedSheep(out _);
+            var scores = ContentDatabase.EffectiveAbilityScores(sheep);
+            int now = GearEvaluator.CombatDamage(sheep);
+
+            var better = ItemCompareRows.Build(sheep, ItemInstance.Of("sword", 5), scores,
+                PoolCapacityRule.WisdomDerived, false, EquipmentSlot.Weapon1).Rows.First(r => r.Stat == SheetStat.Attack);
+            Assert.AreEqual(now, better.Now);
+            Assert.Greater(better.Delta, 0);
+
+            sheep.equipment.Set(EquipmentSlot.Weapon1, "sword", tier: 5);
+            int strong = GearEvaluator.CombatDamage(sheep);
+            var worse = ItemCompareRows.Build(sheep, ItemInstance.Of("sword", 0), scores,
+                PoolCapacityRule.WisdomDerived, false, EquipmentSlot.Weapon1).Rows.First(r => r.Stat == SheetStat.Attack);
+            Assert.AreEqual(strong, worse.Now);
+            Assert.Less(worse.Delta, 0);
+        }
+
+        // The dossier asks without a slot (the pack click's target): an empty
+        // hand taking a sword is a real Attack row there too.
+        [Test]
+        public void TheDossiersSlotlessWeaponCompareHasAnAttackRowForAnEmptyHand()
+        {
+            var sheep = ArmedSheep(out _);
+            sheep.equipment.Put(EquipmentSlot.Weapon1, null);
+            int unarmed = GearEvaluator.CombatDamage(sheep);
+
+            var row = ItemCompareRows.Build(sheep, ItemInstance.Of("sword", 5),
+                ContentDatabase.EffectiveAbilityScores(sheep), PoolCapacityRule.WisdomDerived, false)
+                .Rows.First(r => r.Stat == SheetStat.Attack);
+
+            Assert.AreEqual(unarmed, row.Now);
+            Assert.Greater(row.Delta, 0);
+        }
+
+        [Test]
+        public void ArmourThatChangesNoDamageHasNoAttackRow()
+        {
+            var sheep = ArmedSheep(out _);
+            var helm = ContentDatabase.Offerable.First(i => i.equipSlot == EquipmentSlot.Head);
+
+            var rows = ItemCompareRows.Build(sheep, ItemInstance.Of(helm.id, 5),
+                ContentDatabase.EffectiveAbilityScores(sheep), PoolCapacityRule.WisdomDerived, false).Rows;
+
+            Assert.IsFalse(rows.Any(r => r.Stat == SheetStat.Attack));
         }
 
         [Test]

@@ -92,9 +92,8 @@ namespace PrincesPalace.PlayModeTests
             yield return Open(pages);
 
             // ---- page 1: gear, take one --------------------------------------------------
-            StringAssert.Contains("BOSS GEAR PAGE", Text("ReckoningOfferHeading"));
-            StringAssert.Contains("3 CHOICES LEFT", Text("ReckoningOfferHeading"));
-            StringAssert.Contains("PRINCE'S FAVOR", Text("ReckoningOfferFavor"));
+            Assert.AreSame(gear, _reckoning.CurrentPage);
+            Assert.AreEqual(3, gear.ChoicesLeft);
             Assert.AreEqual(5, Enumerable.Range(0, 5).Count(i => Named($"ReckoningOffer{i}").activeSelf));
 
             var taken = gear.Cards[0];
@@ -105,7 +104,7 @@ namespace PrincesPalace.PlayModeTests
             var recipient = SaveSlotManager.CurrentSave.roster.First(c => c.definitionId == taken.RecipientId);
             Assert.AreEqual(taken.Copy.ItemId, recipient.equipment.GetInstance(taken.Slot).ItemId,
                 "the taken card is worn by its recipient");
-            StringAssert.Contains("2 CHOICES LEFT", Text("ReckoningOfferHeading"));
+            Assert.AreEqual(2, gear.ChoicesLeft);
 
             // ---- re-enter: the pages survive in memory ------------------------------------
             _reckoning.gameObject.SetActive(false);
@@ -114,8 +113,8 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
 
             Assert.AreSame(gear, _reckoning.CurrentPage, "re-entering resumes at the first page with choices left");
-            StringAssert.Contains("2 CHOICES LEFT", Text("ReckoningOfferHeading"));
-            StringAssert.Contains("TAKEN", Text("ReckoningOffer0Action"));
+            Assert.AreEqual(2, gear.ChoicesLeft);
+            Assert.AreEqual(CardOutcome.Taken, taken.Outcome);
             Assert.IsFalse(Named("ReckoningOffer0").GetComponent<Button>().interactable, "a spent card stays spent");
 
             // ---- leave page 1 with two choices unused -------------------------------------
@@ -125,15 +124,13 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(gear.Closed);
             Assert.AreEqual(2, gear.UnusedHones, "each unused choice hones the first card's slot");
             Assert.AreEqual(2, SlotHoning.PlusOf(run.slotHoning, taken.RecipientId, taken.Slot));
-            StringAssert.Contains("honed 2", Text("ReckoningOfferLedger"));
 
             // ---- page 2: relics, take one, leave two --------------------------------------
             Press("ReckoningLeaveButton");
             yield return null;
 
             Assert.AreSame(relic, _reckoning.CurrentPage);
-            StringAssert.Contains("BOSS RELIC PAGE", Text("ReckoningOfferHeading"));
-            StringAssert.Contains("3 CHOICES LEFT", Text("ReckoningOfferHeading"));
+            Assert.AreEqual(3, relic.ChoicesLeft);
 
             var chosen = relic.Cards[0];
             Press("ReckoningOffer0");
@@ -149,7 +146,6 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(0, relic.UnusedGold % 2, "the same amount for each unused choice");
             Assert.AreEqual(goldBeforeLeaving + relic.UnusedGold, run.gold, "leaving credits exactly what it paid");
             Assert.AreEqual(goldBefore + relic.UnusedGold, run.gold, "and nothing else paid in between");
-            StringAssert.Contains("paid", Text("ReckoningOfferLedger"));
 
             // ---- both pages spent: on to the summary ---------------------------------------
             Press("ReckoningLeaveButton");
