@@ -45,10 +45,27 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual("Assets/_Project/Art/UI/Reckoning/Processed/reward_chain.png", RewardArt.ChainKey);
         }
 
-        [Test]
-        public void TheTableHoldsTheSixCachesAndThirteenGlyphs_EachWithItsFile()
+        [TestCase(1, "reward_plinth_common")]
+        [TestCase(2, "reward_plinth_uncommon")]
+        [TestCase(3, "reward_plinth_rare")]
+        [TestCase(4, "reward_plinth_toptier")]
+        public void ThePlinthIsTheQualityStep(int step, string expected)
         {
-            Assert.AreEqual(19, RewardArt.TableIds.Count);
+            Assert.AreEqual(expected, RewardArt.PlinthId(step));
+        }
+
+        [TestCase(1, "glyph_up")]
+        [TestCase(-3, "glyph_down")]
+        [TestCase(0, "glyph_level")]
+        public void TheSignGlyph_FollowsTheDeltasSign(int sign, string expected)
+        {
+            Assert.AreEqual(expected, RewardArt.SignGlyphId(sign));
+        }
+
+        [Test]
+        public void TheTableHoldsTheCachesGlyphsAndPlinths_EachWithItsFile()
+        {
+            Assert.AreEqual(26, RewardArt.TableIds.Count);
 
             var dir = new DirectoryInfo(Directory.GetCurrentDirectory());
             while (dir != null && !Directory.Exists(Path.Combine(dir.FullName, "Assets", "_Project", "Scripts")))

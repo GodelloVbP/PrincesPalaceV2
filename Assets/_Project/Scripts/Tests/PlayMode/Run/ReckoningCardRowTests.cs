@@ -161,7 +161,11 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(Part<TMP_Text>("ReckoningOffer0BandTier").gameObject.activeSelf);
             StringAssert.StartsWith("T", Part<TMP_Text>("ReckoningOffer0BandTier").text);
             StringAssert.StartsWith("+", Part<TMP_Text>("ReckoningOffer0BandPlus").text);
-            Assert.IsTrue(Part<TMP_Text>("ReckoningOffer0Chevron").gameObject.activeSelf);
+            Assert.IsTrue(Part<Image>("ReckoningOffer0Chevron").gameObject.activeSelf);
+            Assert.IsNotNull(Part<Image>("ReckoningOffer0Chevron").sprite, "the sign is the glyph art");
+            int step = RewardCardFace.OfGear(SaveSlotManager.CurrentSave, pages[0].Cards[0]).PlinthStep;
+            Assert.AreEqual(PrincesPalace.Domain.UiKit.RewardArt.PlinthId(step), Part<Image>("ReckoningOffer0Plinth").sprite.name,
+                "the plinth is the quality's own art");
             StringAssert.DoesNotContain("+", Part<TMP_Text>("ReckoningOffer0Name").text, "honing is on the band");
 
             var relicPage = pages.First(p => p.Kind == RewardPageKind.Relic);
@@ -169,7 +173,7 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
 
             Assert.IsFalse(Part<TMP_Text>("ReckoningOffer0BandTier").gameObject.activeSelf);
-            Assert.IsFalse(Part<TMP_Text>("ReckoningOffer0Chevron").gameObject.activeSelf);
+            Assert.IsFalse(Part<Image>("ReckoningOffer0Chevron").gameObject.activeSelf);
             Assert.IsFalse(Part<Image>("ReckoningOffer0WearerDisc").gameObject.activeSelf);
         }
 

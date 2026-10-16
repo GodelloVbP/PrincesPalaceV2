@@ -804,6 +804,33 @@ public static class ProceduralSpriteBaker
         // nearly half brightness, which is why one tint and one ramp can say
         // both ends of it.
         BakeGradient("card_ground", 128, ny => (Mathf.Lerp(0.5f, 1f, ny), 1f));
+
+        // A REWARD CARD'S SHADOW ON THE CLOTH: a rounded rectangle, solid
+        // inside 70% of each half-extent and feathered to nothing at the
+        // edge, so stretched to a card it lifts the card off the spread
+        // rather than reading as an oval stain under it.
+        BakeGlow("card_shadow", (nx, ny) =>
+            1f - Smoothstep(Mathf.Clamp01(RoundedRectDistance(nx, ny, 0.7f, 0.1f) / 0.3f)));
+
+        // ITS RIM: a soft hairline just inside the card's edge, faint and
+        // lighter than the cloth, so the card's outline separates from the
+        // weave behind it.
+        BakeGlow("card_rim", (nx, ny) =>
+        {
+            float d = RoundedRectDistance(nx, ny, 0.94f, 0.08f);
+            return Mathf.Exp(-(d * d) / (0.025f * 0.025f));
+        });
+    }
+
+    // Signed distance from (nx, ny) to a rounded rectangle centred on the
+    // origin with half-extent `half` on both axes and corner radius `radius`,
+    // in the bake's normalised -1..1 space: negative inside.
+    private static float RoundedRectDistance(float nx, float ny, float half, float radius)
+    {
+        float qx = Mathf.Abs(nx) - (half - radius);
+        float qy = Mathf.Abs(ny) - (half - radius);
+        float outside = Mathf.Sqrt(Mathf.Max(qx, 0f) * Mathf.Max(qx, 0f) + Mathf.Max(qy, 0f) * Mathf.Max(qy, 0f));
+        return outside + Mathf.Min(Mathf.Max(qx, qy), 0f) - radius;
     }
 
     // THE CHECK, as one shape with two customers.

@@ -45,7 +45,7 @@ namespace PrincesPalace
         [SerializeField] internal Button[] offerButtons;
         [SerializeField] internal TMP_Text[] offerNames;
         [SerializeField] internal TMP_Text[] offerDeltas;
-        [SerializeField] internal TMP_Text[] offerChevrons;
+        [SerializeField] internal Image[] offerChevrons;
         [SerializeField] internal TMP_Text[] offerFeatures;
 
         // The card face's other parts (docs/PLAN_REWARD_SCREENS.md C5), one per card.
@@ -971,9 +971,9 @@ namespace PrincesPalace
                     offerHalos[i].rectTransform.localScale = Vector3.one;
                 }
 
-                PaintUnderGlow(i, glow, face.PlinthStep, open, spent);
+                PaintCardGround(i, glow, face.PlinthStep, open, spent);
 
-                PaintPlinth(i, face, count, open);
+                PaintPlinth(i, face, open);
                 if (!Flying(i)) PaintGhost(i, face);
                 PaintWearer(i, face);
                 PaintBand(i, face, card);
@@ -1021,9 +1021,6 @@ namespace PrincesPalace
         }
 
         private static readonly Color InertTint = new Color(0.5f, 0.5f, 0.55f, 1f);
-        private static readonly Color Up = new Color(0.44f, 0.75f, 0.45f, 1f);
-        private static readonly Color Down = new Color(0.9f, 0.35f, 0.32f, 1f);
-        private static readonly Color Flat = new Color(0.6f, 0.58f, 0.66f, 1f);
         private static readonly Color BandLit = new Color(0.95f, 0.82f, 0.45f, 1f);
         private static readonly Color BandDim = new Color(0.54f, 0.48f, 0.65f, 1f);
 
@@ -1039,19 +1036,14 @@ namespace PrincesPalace
 
         // The plinth is the quality's primary channel: its width steps with
         // the quality (1..4), tinted by the quality colour.
-        private void PaintPlinth(int i, RewardCardFace face, int count, bool open)
+        private void PaintPlinth(int i, RewardCardFace face, bool open)
         {
             var plinth = i < offerPlinths.Length ? offerPlinths[i] : null;
             if (plinth == null) return;
 
-            var rect = plinth.rectTransform;
-            var size = rect.sizeDelta;
-            size.x = OfferRowLayout.PlinthWidth(count, face.PlinthStep);
-            rect.sizeDelta = size;
-
-            var tint = HexColour(face.Hex);
-            tint.a = open ? 0.55f : 0.25f;
-            plinth.color = tint;
+            // The quality's own plinth art; a spent card's stands dimmed.
+            ItemIcons.Apply(plinth, rewardArt, RewardArt.PlinthId(face.PlinthStep));
+            plinth.color = new Color(1f, 1f, 1f, open ? 1f : 0.55f);
         }
 
         // What the wearer has now, behind and to the left. An affix the worn
@@ -1168,11 +1160,7 @@ namespace PrincesPalace
             chevron.gameObject.SetActive(face.HasDelta);
             if (!face.HasDelta) return;
 
-            if (face.DeltaSign > 0) chevron.Set(UiStrings.ReckoningChevronUp);
-            else if (face.DeltaSign < 0) chevron.Set(UiStrings.ReckoningChevronDown);
-            else chevron.Set(UiStrings.ReckoningChevronFlat);
-
-            chevron.color = face.DeltaSign > 0 ? Up : face.DeltaSign < 0 ? Down : Flat;
+            ItemIcons.Apply(chevron, rewardArt, RewardArt.SignGlyphId(face.DeltaSign));
         }
 
         // ---- the focus detail ---------------------------------------------------------

@@ -38,6 +38,8 @@ namespace PrincesPalace
         [SerializeField] internal Image[] offerFlashes;
         [SerializeField] internal Image[] offerRings;
         [SerializeField] internal Image[] revealMotes;
+        [SerializeField] internal Image[] offerShadows;
+        [SerializeField] internal Image[] offerRims;
 
         // The fight's two stage racks (ScreenRegistry wires the same shakers
         // the fight's blows kick): a top-tier landing kicks them too.
@@ -80,7 +82,7 @@ namespace PrincesPalace
         private SpellEmitter[] _landEmitters = new SpellEmitter[0];
         private SpellEmitter[] _buildEmitters = new SpellEmitter[0];
 
-        // Each card's under-glow at rest (PaintUnderGlow), by page index.
+        // Each card's under-glow at rest (PaintCardGround), by page index.
         private Color[] _underRest = new Color[0];
 
         private StageShake _panelShake;
@@ -706,9 +708,24 @@ namespace PrincesPalace
             HideMotes(0);
         }
 
-        // The face and the back move together: offset from home, and scaled.
+        // The face and the back move together, with the card's shadow and
+        // rim: offset from home, and scaled.
         private void PoseCard(int i, Vector2 offset, Vector3 scale)
         {
+            var shadow = Part(offerShadows, i);
+            if (shadow != null)
+            {
+                shadow.rectTransform.anchoredPosition = offset + new Vector2(0f, -ReckoningScreen.CardShadowDrop);
+                shadow.rectTransform.localScale = scale;
+            }
+
+            var rim = Part(offerRims, i);
+            if (rim != null)
+            {
+                rim.rectTransform.anchoredPosition = offset;
+                rim.rectTransform.localScale = scale;
+            }
+
             if (offerFaces != null && i < offerFaces.Length && offerFaces[i] != null)
             {
                 var face = (RectTransform)offerFaces[i].transform;
@@ -724,18 +741,47 @@ namespace PrincesPalace
             }
         }
 
-        // The quality's colour under card `i`, at rest: the face paint calls
-        // this with the open/spent state the halo reads, so the row keeps
-        // reading by rarity after it lands (C4). A running reveal draws the
-        // glow itself and settles onto this.
-        private void PaintUnderGlow(int i, Color colour, int tier, bool open, bool spent)
+        // What card `i` stands on, at rest: the face paint calls this with
+        // the open/spent state the halo reads. The quality's colour glows
+        // under it, so the row keeps reading by rarity after it lands (C4; a
+        // running reveal draws the glow itself and settles onto this), and
+        // its shadow and rim are seated on the card back's drawn shape.
+        private void PaintCardGround(int i, Color colour, int tier, bool open, bool spent)
         {
             if (_underRest.Length != offerButtons.Length) _underRest = new Color[offerButtons.Length];
             if (i < 0 || i >= _underRest.Length) return;
 
+            SeatCardParts(i);
+
             float rest = RevealFeel.RestGlow(tier);
             _underRest[i] = WithAlpha(colour, open ? rest : spent ? 0f : rest * 0.5f);
             if (_revealRoutine == null) RestUnderGlow(i);
+        }
+
+        // The tree is emitted at the five-card row; a shorter row's wider
+        // card takes its light, shadow and rim at its own size. The back keeps
+        // its aspect inside the card's box, so the shadow and the rim take the
+        // back's fitted size, not the box's.
+        private void SeatCardParts(int i)
+        {
+            var card = RectAt(offerRects, i);
+            if (card == null) return;
+
+            float boxW = card.rect.width;
+            float w = Mathf.Min(boxW, card.rect.height * RewardArt.CardBackAspect);
+            var size = new Vector2(w, w / RewardArt.CardBackAspect);
+            Size(Part(offerRims, i), size);
+            Size(Part(offerShadows, i), size * ReckoningScreen.CardShadowSpread);
+            Size(Part(offerUnderGlows, i), new Vector2(boxW * ReckoningScreen.UnderGlowWidth,
+                card.rect.height * ReckoningScreen.UnderGlowHeight));
+            Size(Part(offerRays, i), Vector2.one * boxW * ReckoningScreen.RaysSpan);
+            Size(Part(offerFlashes, i), Vector2.one * boxW * ReckoningScreen.FlashSpan);
+            Size(Part(offerRings, i), Vector2.one * boxW * ReckoningScreen.RingSpan);
+        }
+
+        private static void Size(Image image, Vector2 size)
+        {
+            if (image != null) image.rectTransform.sizeDelta = size;
         }
 
         private void RestUnderGlow(int i)

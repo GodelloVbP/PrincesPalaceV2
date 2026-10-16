@@ -16,6 +16,9 @@ namespace PrincesPalace.Domain.UiKit
         public const string CardBackKey = Dir + "reward_card_back.png";
         public const string ChainKey = Dir + "reward_chain.png";
 
+        // The back's drawn shape, width over height (492x768).
+        public const float CardBackAspect = 492f / 768f;
+
         public const string CacheSmall = "reward_cache_small";
         public const string CacheMedium = "reward_cache_medium";
         public const string CacheLarge = "reward_cache_large";
@@ -40,12 +43,25 @@ namespace PrincesPalace.Domain.UiKit
         public const string Skull = "glyph_skull";
         public const string Potion = "glyph_potion";
 
+        // The delta line's sign: the up-chevron, the down-chevron, the level bar.
+        public const string Up = "glyph_up";
+        public const string Down = "glyph_down";
+        public const string Level = "glyph_level";
+
+        // The plinth under a card's item, by quality step (C5): one 600x499
+        // canvas per step, bottom-aligned, so the art carries the size.
+        public const string PlinthCommon = "reward_plinth_common";
+        public const string PlinthUncommon = "reward_plinth_uncommon";
+        public const string PlinthRare = "reward_plinth_rare";
+        public const string PlinthTopTier = "reward_plinth_toptier";
+        public const float PlinthAspect = 600f / 499f;
         // Every id the Reckoning's table holds.
         public static readonly IReadOnlyList<string> TableIds = new[]
         {
             CacheSmall, CacheMedium, CacheLarge, RelicSmall, RelicMedium, RelicLarge,
             Whetstone, Coins, Door, Sword, Shield, Mana, Heart, Feather,
             HeartCracked, ShieldCracked, Leaf, Skull, Potion,
+            Up, Down, Level, PlinthCommon, PlinthUncommon, PlinthRare, PlinthTopTier,
         };
 
         // Glyphs are drawn square at this size on every face.
@@ -64,6 +80,21 @@ namespace PrincesPalace.Domain.UiKit
                 default: return relicPage ? RelicSmall : CacheSmall;
             }
         }
+
+        // The plinth for a quality step, 1 (Common) to 4 (top tier).
+        public static string PlinthId(int step)
+        {
+            switch (step)
+            {
+                case 2: return PlinthUncommon;
+                case 3: return PlinthRare;
+                case 4: return PlinthTopTier;
+                default: return PlinthCommon;
+            }
+        }
+
+        // The delta line's sign glyph: up, down, or level for no change.
+        public static string SignGlyphId(int sign) => sign > 0 ? Up : sign < 0 ? Down : Level;
 
         // The headline stat's glyph, by GearEvaluator.LargestDelta's axis:
         // 0 damage, 1 health, 2 defence, 3 speed, anything else mana. Null

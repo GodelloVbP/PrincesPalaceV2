@@ -110,12 +110,13 @@ namespace PrincesPalace.Domain.UiKit
         // card count so the tree (built at MaxCards) and the controller (laying
         // out k + 2) share one set of numbers.
 
-        // The plinth's width: a step-1 flagstone is the narrowest, a step-4 gold
-        // cloth fills the card. Width is a quality channel that survives greyscale.
-        public static float PlinthWidth(int visibleCount, int step) =>
-            CardWidth(visibleCount) * (0.6f + 0.1f * System.Math.Max(1, System.Math.Min(4, step)));
-
-        public const float PlinthHeight = 54f;
+        // The plinth's box: one size at every count and quality, because each
+        // quality's art (RewardArt.PlinthId) is drawn on the same 600x499
+        // canvas at its own size; a step-1 flagstone fills its lower half, the
+        // step-4 cloth all of it. Size stays a quality channel that survives
+        // greyscale. Kept to the art zone so the item stands on it.
+        public const float PlinthWidth = 150f;
+        public const float PlinthHeight = PlinthWidth / RewardArt.PlinthAspect;
 
         // The slot band is a fixed fraction of the card, not of the plinth, so
         // the numeral and the +N stay where the eye looks for them.

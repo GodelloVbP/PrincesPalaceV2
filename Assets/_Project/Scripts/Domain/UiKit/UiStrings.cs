@@ -628,11 +628,6 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString ReckoningBandHone =
             UiString.Define("reckoning.band_hone", "+{0}", "+10");
 
-        // The delta's shape: up, down, flat. Shape alone carries the sign.
-        public static readonly UiString ReckoningChevronUp = UiString.Define("reckoning.chevron_up", "^");
-        public static readonly UiString ReckoningChevronDown = UiString.Define("reckoning.chevron_down", "v");
-        public static readonly UiString ReckoningChevronFlat = UiString.Define("reckoning.chevron_flat", "=");
-
 
         // The relic card's face.
         public static readonly UiString ReckoningAddsNothing =

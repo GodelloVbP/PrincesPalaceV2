@@ -1087,6 +1087,17 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> OfferRays = new List<NodeRef>();
         public List<NodeRef> OfferFlashes = new List<NodeRef>();
         public List<NodeRef> OfferRings = new List<NodeRef>();
+        public List<NodeRef> OfferShadows = new List<NodeRef>();
+        public List<NodeRef> OfferRims = new List<NodeRef>();
+        public const float CardShadowDrop = 8f;
+        public const float CardShadowSpread = 1.12f;
+
+        // The light's sizes, as fractions of the card's box.
+        public const float UnderGlowWidth = 1.3f;
+        public const float UnderGlowHeight = 1.15f;
+        public const float RaysSpan = 1.6f;
+        public const float FlashSpan = 0.8f;
+        public const float RingSpan = 0.7f;
 
         // The reveal's particle pool, shared by every card on the row.
         public List<NodeRef> RevealMotes = new List<NodeRef>();
@@ -1112,14 +1123,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // burst, the worn item's ghost, the new item, then the marks that
             // sit on them.
             //
-            // The plinth is the item's quality as a silhouette (width by step,
-            // set at runtime) and a placeholder disc until the plinth sheet
-            // lands; the halo and burst repeat the colour behind the item.
-            var plinth = Ui.Sprite($"ReckoningOffer{index}Plinth", "proc:radial_glow",
-                    Place.At(0f, PlinthCentre),
-                    UiSize.Fixed(OfferRowLayout.PlinthWidth(count, 4), OfferRowLayout.PlinthHeight))
-                .Coloured("#FFFFFF00")
+            // The plinth is the item's quality as a silhouette: its own art
+            // per quality step (RewardArt.PlinthId, swapped at runtime), each
+            // on the same canvas at its own size. The halo and burst repeat
+            // the colour behind the item.
+            var plinth = Ui.Sprite($"ReckoningOffer{index}Plinth", RewardArt.PathOf(RewardArt.PlinthCommon),
+                    Place.At(0f, PlinthCentre), UiSize.Fixed(OfferRowLayout.PlinthWidth, OfferRowLayout.PlinthHeight))
                 .AsDecor();
+            plinth.PreserveAspect = true;
 
             // TWO layers behind the icon, because one was not readable.
             //
@@ -1200,10 +1211,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     UiSize.Fixed(RewardArt.GlyphSize, RewardArt.GlyphSize))
                 .AsDecor();
             deltaGlyph.PreserveAspect = true;
-            var chevron = Ui.Label($"ReckoningOffer{index}Chevron", UiString.Runtime,
-                    new UiVec(OfferRowLayout.ChevronSize, DeltaBand), 24, "#9A93A8",
-                    Place.At(OfferRowLayout.ChevronX(count), DeltaCentre))
+            var chevron = Ui.Sprite($"ReckoningOffer{index}Chevron", RewardArt.PathOf(RewardArt.Level),
+                    Place.At(OfferRowLayout.ChevronX(count), DeltaCentre),
+                    UiSize.Fixed(OfferRowLayout.ChevronSize, OfferRowLayout.ChevronSize))
                 .AsDecor();
+            chevron.PreserveAspect = true;
 
             var feature = Ui.Label($"ReckoningOffer{index}Feature", UiString.Runtime,
                     new UiVec(labelWidth, FeatureBand), 13, "#D9CCF2", Place.At(0f, FeatureCentre))
@@ -1237,30 +1249,45 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // back, never the button.
             const string spills = "the reveal's light spills past the card on purpose - that bleed is the quality read";
             var underGlow = Ui.Sprite($"ReckoningOffer{index}UnderGlow", "proc:radial_glow", Place.At(0f, 0f),
-                    UiSize.Fixed(cardWidth * 1.3f, CardHeight * 1.15f))
+                    UiSize.Fixed(cardWidth * UnderGlowWidth, CardHeight * UnderGlowHeight))
                 .Coloured("#FFFFFF00")
                 .AsDecor()
                 .AllowOverflow(spills);
             var rays = Ui.Sprite($"ReckoningOffer{index}Rays", BurstKey, Place.At(0f, 0f),
-                    UiSize.Fixed(cardWidth * 1.6f, cardWidth * 1.6f))
+                    UiSize.Fixed(cardWidth * RaysSpan, cardWidth * RaysSpan))
                 .Coloured("#FFFFFF00")
                 .AsDecor()
                 .AllowOverflow(spills);
             var flash = Ui.Sprite($"ReckoningOffer{index}Flash", "proc:radial_glow", Place.At(0f, 0f),
-                    UiSize.Fixed(cardWidth * 0.8f, cardWidth * 0.8f))
+                    UiSize.Fixed(cardWidth * FlashSpan, cardWidth * FlashSpan))
                 .Coloured("#FFFFFF00")
                 .AsDecor()
                 .AllowOverflow(spills);
             var ring = Ui.Sprite($"ReckoningOffer{index}Ring", "proc:ring_hairline", Place.At(0f, 0f),
-                    UiSize.Fixed(cardWidth * 0.7f, cardWidth * 0.7f))
+                    UiSize.Fixed(cardWidth * RingSpan, cardWidth * RingSpan))
                 .Coloured("#FFFFFF00")
                 .AsDecor()
                 .AllowOverflow(spills);
+            // The card on the cloth: a soft drop shadow under it and a faint
+            // lighter rim over it, both turned with the face and back and
+            // seated by the controller on the card back's own drawn shape.
+            var shadow = Ui.Sprite($"ReckoningOffer{index}Shadow", "proc:card_shadow", Place.At(0f, -CardShadowDrop),
+                    UiSize.Fixed(cardWidth * CardShadowSpread, cardWidth / RewardArt.CardBackAspect * CardShadowSpread))
+                .Coloured("#00000073")
+                .AsDecor()
+                .AllowOverflow("a shadow reaches past the card it falls from");
+            var rim = Ui.Sprite($"ReckoningOffer{index}Rim", "proc:card_rim", Place.At(0f, 0f),
+                    UiSize.Fixed(cardWidth, cardWidth / RewardArt.CardBackAspect))
+                .Coloured("#FFF2D94D")
+                .AsDecor();
             button.Children.Add(underGlow);
+            button.Children.Add(shadow);
             button.Children.Add(rays);
             button.Children.Add(flash);
             button.Children.Add(ring);
             OfferUnderGlows.Add(underGlow);
+            OfferShadows.Add(shadow);
+            OfferRims.Add(rim);
             OfferRays.Add(rays);
             OfferFlashes.Add(flash);
             OfferRings.Add(ring);
@@ -1283,6 +1310,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             back.PreserveAspect = true;
             button.Children.Add(back);
             OfferBacks.Add(back);
+            button.Children.Add(rim);
 
             OfferButtons.Add(button);
             OfferPlinths.Add(plinth);

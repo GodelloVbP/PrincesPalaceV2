@@ -186,15 +186,14 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsEmpty(OfferRowLayout.RowOrder(null, Squad));
         }
 
-        // A three-card row's card is 340.19 wide; the plinth is 0.7, 0.8, 0.9
-        // and 1.0 of it.
-        [TestCase(1, 238.13f)]
-        [TestCase(2, 272.15f)]
-        [TestCase(3, 306.17f)]
-        [TestCase(4, 340.19f)]
-        public void ThePlinthWidensWithTheQualityStep(int step, float width)
+        // One plinth box at every count; the art's 600x499 canvas carries the
+        // quality's size, and the box stays inside the 190 px art zone.
+        [Test]
+        public void ThePlinthBox_IsTheArtsAspect_AtOneSize()
         {
-            Assert.AreEqual(width, OfferRowLayout.PlinthWidth(3, step), 0.01f);
+            Assert.AreEqual(150f, OfferRowLayout.PlinthWidth, 0.01f);
+            Assert.AreEqual(124.75f, OfferRowLayout.PlinthHeight, 0.01f);
+            Assert.LessOrEqual(OfferRowLayout.PlinthWidth, OfferRowLayout.CardWidth(OfferRowLayout.MaxCards));
         }
 
         [Test]
