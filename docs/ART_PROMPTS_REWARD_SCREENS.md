@@ -187,6 +187,100 @@ anywhere on the chain.
 
 ---
 
+## Round 2: regenerations after review
+
+The first sheets were reviewed at game size. A3, A5 and A1's cloth row are
+kept as they are. These four replace the parts that missed the brief.
+
+### A1b. Relic tins: generate now
+
+Output: `reward_caches_relic.png`. Keyed green. Replaces row 2 of
+`reward_caches.png`, which read as stone blocks and a treasure chest.
+
+Attach:
+- `Assets/_Project/Art/UI/Reckoning/reward_caches.png` (match row 1's style, outline and scale)
+- `Assets/_Project/Art/Enemies/Giant_rat_sheet.png`
+
+```
+2D game art for a dark-fantasy roguelike's reward screen, matching the
+attached references exactly: the same flat cel shading, bold dark outlines
+and scale as the cloth bundles in the top row of the first attached sheet.
+Worn and handmade, tender rather than grim. No text, letters, numbers, UI,
+frames or watermark.
+
+A sheet of 3 objects in a 3x1 row of equal square cells, highest resolution
+you can make, each centred with generous empty margin. They are small boxes
+a proud cat has kept his treasures in, NOT treasure chests: low, flat,
+rounded tins like old sweet or tobacco tins, wider than they are tall.
+Left to right:
+1. a small dented tin, scuffed thin metal with a soft blue-grey sheen, one
+   small clasp;
+2. the same tin larger, with brass corner caps and a red wax seal with a
+   paw print across the lid's edge;
+3. the same tin largest, blackened iron with worn gold trim, a red wax seal
+   shaped like a small crown across the lid's edge.
+Each tin has a clearly visible thin dark gap between the lid and the base,
+all the way round, with nothing drawn inside it. No domed lids, no straps,
+no chest shapes. Bold silhouettes that read at 96 pixels.
+
+Flat solid pure green #00FF00 background, no shadow on it, no gradient, no
+green anywhere inside the objects.
+```
+
+### A1c. Cloth bundles with a seam (optional)
+
+Output: `reward_caches_gear.png`. Keyed green. Only if you want the light to
+leak from an opening instead of from the knot; otherwise the kept row 1
+stays.
+
+Attach:
+- `Assets/_Project/Art/UI/Reckoning/reward_caches.png` (redraw row 1 only)
+
+```
+Redraw the three cloth bundles from the top row of the attached sheet,
+exactly the same style, colours, sizes, cords, seals and iron bands, in a
+3x1 row of equal square cells, highest resolution you can make, each
+centred with generous margin. One change only: each bundle has a visible
+thin dark gap where two folds of cloth meet across its front, as if it
+could be opened there, with nothing drawn inside the gap. No text, letters,
+numbers, UI, frames or watermark.
+
+Flat solid pure green #00FF00 background, no shadow on it, no gradient, no
+green anywhere inside the objects.
+```
+
+### A4b. Icon fixes and the three stat icons: generate now
+
+Output: `reward_glyphs_2.png`. Keyed magenta. Replaces the satchel and the
+whetstone in `reward_glyphs.png`, and adds damage, defence and mana in the
+same style, so the stat row no longer mixes flat disc icons with painted
+ones.
+
+Attach:
+- `Assets/_Project/Art/UI/Reckoning/reward_glyphs.png` (match these icons' style, outline weight and size exactly)
+
+```
+2D game icons matching the attached sheet exactly: the same chunky flat cel
+shading, the same bold dark outline weight, the same size in the cell. No
+text, letters, numbers, UI, frames or watermark.
+
+A sheet of 5 small icons in a 5x1 row of equal square cells, highest
+resolution you can make, each centred with generous margin. Very bold and
+simple, so each reads at 24 pixels:
+1. a small round glass potion flask with a cork, filled with red liquid;
+2. a sharpening stone: a curved grey stone held at an angle, with a large
+   bright gold spark flying off its edge;
+3. a short sword pointing up, steel blade, wrapped grip;
+4. a round wooden shield with an iron rim and a boss in the centre, whole
+   and uncracked;
+5. a single blue droplet with a small highlight.
+
+Flat solid pure magenta #FF00FF background, no shadow on it, no gradient,
+no magenta anywhere inside the icons.
+```
+
+---
+
 ## Checks before Claude wires them
 
 - Every sheet has the number of cells it asks for, one object per cell, and
