@@ -40,7 +40,9 @@ namespace PrincesPalace
         public string DeltaText = "";
         public int DeltaSign;
 
-        // One rules line: the strongest affix (gear), or the relic's text.
+        // A relic's rules text, or why a gear card is chained. A gear card's
+        // affixes are the focus detail's alone: an affix line on the face
+        // would repeat the tooltip and give one card a block its neighbours lack.
         public string Feature = "";
 
         // What the wearer has in the card's slot now: the icon key, or null for
@@ -93,7 +95,7 @@ namespace PrincesPalace
             face.BandPlus = recipient == null ? 0 : ContentDatabase.HoningOf(recipient, card.Slot);
             face.WearerId = card.RecipientId ?? "";
             face.Inert = card.Inert;
-            face.Feature = card.Inert ? UiStrings.ReckoningInert.Format() : StrongestAffixLine(copy, recipient);
+            face.Feature = card.Inert ? UiStrings.ReckoningInert.Format() : "";
 
             // What the card would change is a question about an OPEN card: once
             // it is taken the recipient already wears it, and a delta against
@@ -273,31 +275,6 @@ namespace PrincesPalace
         private static string Glyphed(string token, string signed) =>
             UiStrings.ReckoningDeltaGlyph.Format(
                 DescriptionMarkup.Expand("{" + token + "}", DescriptionRenderCaps.Full), signed);
-
-        // The affix with the largest scaled magnitude; the first rolled one on
-        // a tie. Empty for a copy with none.
-        private static string StrongestAffixLine(ItemInstance copy, Character viewer)
-        {
-            if (copy.ModifierIds == null || copy.ModifierIds.Count == 0) return "";
-
-            var scaled = ContentDatabase.ModifierEffectsForItem(copy.Tier, copy.ModifierIds);
-            if (scaled.Count == 0) return "";
-
-            var strongest = scaled[0];
-            foreach (var pair in scaled)
-            {
-                if (System.Math.Abs(pair.Effect.Magnitude) > System.Math.Abs(strongest.Effect.Magnitude)) strongest = pair;
-            }
-
-            var effects = scaled
-                .Where(pair => pair.Modifier.id == strongest.Modifier.id)
-                .Select(pair => new ModifierAffixLines.AffixEffect(
-                    pair.Modifier.id, pair.Modifier.Data.DisplayName, pair.Effect))
-                .ToList();
-
-            var lines = ModifierAffixLines.LinePairs(effects, viewer == null ? null : ContentDatabase.PrimaryPoolOf(viewer.definitionId));
-            return lines == null || lines.Count == 0 ? "" : lines[0].Line;
-        }
 
         // Every affix of the copy, one line each, scaled at the copy's tier.
         private static List<string> AllAffixLines(ItemInstance copy, Character viewer)

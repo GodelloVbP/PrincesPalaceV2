@@ -1,0 +1,6 @@
+{
+  "name": "reckoning_reveal",
+  "description": "The R4 feel gate (docs/PLAN_REWARD_SCREENS.md section 6): the Reckoning's reveal on the three R0 pages, no cache, a cache with a top-tier upgrade, and the five-card row with ghosts, each from the wipe's first frame to the settled row.",
+  "scenarios": [{"kind": "reveal", "id": "nocache"}, {"kind": "reveal", "id": "cachetop"}, {"kind": "reveal", "id": "ghosts"}],
+  "notCovered": []
+}

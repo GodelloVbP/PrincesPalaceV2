@@ -24,7 +24,7 @@ namespace PrincesPalace
     // The expand and the bar fills are presentation only. If the coroutine
     // never finished, every number would still be correct; it would just
     // arrive instantly.
-    public class ReckoningController : MonoBehaviour
+    public partial class ReckoningController : MonoBehaviour
     {
         // The MASK, not the frame. Opening this uncovers a painted panel that
         // never changes size; the frame itself is deliberately not held here,
@@ -149,7 +149,7 @@ namespace PrincesPalace
         // back out. That is a squash, and it is what made the screen read
         // cheap. Opening a RectMask2D's WIDTH reveals fixed-size content
         // instead of deforming it.
-        private const float WipeSeconds = 0.34f;
+        private const float WipeSeconds = RevealSchedule.WipeSeconds;
 
         // THE PHASE CHANGE ADVANCES: the summary comes IN FROM THE RIGHT and
         // the choice leaves to the left, both travelling the same way.
@@ -222,6 +222,21 @@ namespace PrincesPalace
         private PendingPage _page;
         private bool _wired;
         private Coroutine _animation;
+
+        // THE SPEED RULE (docs/PLAN_REWARD_SCREENS.md C10): every authored
+        // duration here becomes wall time through ReckoningTime, at the battle
+        // speed read when the overlay opens, and every clock below runs at
+        // Tick, so the test seam speeds all of them at once.
+        private float _preset = Domain.Combat.Session.BattleSpeed.DefaultDisplay;
+
+        private float W(float authored) => ReckoningTime.Wall(authored, _preset);
+
+        private static float Tick => (DeltaOverride != null ? DeltaOverride() : Time.unscaledDeltaTime) * SpeedMultiplier;
+
+        // A FILM'S CLOCK: a capture renders each frame for longer than a frame
+        // lasts, so a recording hands every frame its fixed 1/fps here instead
+        // of the wall clock (tools/gif.ps1 reveal). Null in play.
+        public static System.Func<float> DeltaOverride;
 
         // THE TEST SEAM, same shape as FightBeatPlayer.BeatSpeedMultiplier and
         // FightController.BreathSpeedMultiplier -- this driver has neither of
@@ -327,10 +342,11 @@ namespace PrincesPalace
                 // through one router.
                 var node = offerButtons[i].gameObject;
                 _tooltips.Register(offerButtons[i], entered => ShowCardTip(index, entered));
-                var hover = node.GetComponent<HoverIndex>() ?? node.AddComponent<HoverIndex>();
-                hover.Index = index;
-                hover.Changed = (_, entered) => _tooltips.Pointer(node, entered);
+                WireHover(node, index);
             }
+
+            if (cache != null) cache.onClick.AddListener(SkipReveal);
+            if (catcher != null) catcher.onClick.AddListener(SkipReveal);
         }
 
         private static Vector2[] HomesOf(Graphic[] parts) =>
@@ -419,6 +435,15 @@ namespace PrincesPalace
                 // resolves to null and the dispatcher's own reselection rule
                 // then clears the selection every single frame.
                 entry = (First(cards) ?? leave)?.gameObject;
+
+                // While the cache stands it is the entry (C10); the face-down
+                // cards stay declared, so a player who moves to one keeps it.
+                if (_cacheUp && cache != null)
+                {
+                    entry = cache.gameObject;
+                    selectables[cache.name] = cache.gameObject;
+                }
+
                 Declare(selectables, cards);
                 Declare(selectables, hones);
                 if (leave != null) selectables[leave.name] = leave.gameObject;
@@ -543,6 +568,7 @@ namespace PrincesPalace
         {
             _tooltips.Detach();
             CancelFlights();
+            StopReveal();
             _nudging.Clear();
 
             if (_navContext == null) return;
@@ -568,8 +594,13 @@ namespace PrincesPalace
             gameObject.SetActive(true);
             Wire();
             CancelFlights();
+            StopReveal();
+            _preset = GameSettings.BattleSpeed;
+            BeatRunning = RevealBlocks;
+            SkipBeat = SkipReveal;
             _honeFocus = -1;
             _leaveFocus = false;
+            HideCardTip();
             Paint();
 
             if (_animation != null) StopCoroutine(_animation);
@@ -590,6 +621,7 @@ namespace PrincesPalace
             summaryPhase.gameObject.SetActive(!choosing);
             summaryPhase.anchoredPosition = Vector2.zero;
             _choosing = choosing;
+            PaintEmbers();
 
             // THE OUTCOME FORM HAS NO SPOILS TAB: nothing was paid, so the
             // page would be empty. It is hidden, the shown tabs close up, and
@@ -613,12 +645,12 @@ namespace PrincesPalace
             // Selected NOW rather than left to the dispatcher's next-frame
             // reselection rule, so the screen never draws a frame with the
             // choice up and nothing focused.
-            UnityEngine.EventSystems.EventSystem.current?.SetSelectedGameObject(
-                NavigationInputModule.SelectionFor(_navContext));
+            SelectEntry();
 
             if (isActiveAndEnabled)
             {
                 _animation = StartCoroutine(PlayIn());
+                if (choosing) BeginReveal();
 
                 // Straight to the summary means the bars start with it; the
                 // choosing path starts them when the sweep lands.
@@ -957,6 +989,7 @@ namespace PrincesPalace
             }
 
             PaintLeave();
+            PaintEmbers();
 
             // The page repainted under a held focus (a take changes the worn
             // item): the detail follows it.
@@ -1175,6 +1208,11 @@ namespace PrincesPalace
         {
             if (cardTip == null) return;
 
+            // No detail while a beat runs (a face-down card has nothing to
+            // describe); the focus the player moves during a beat gets its
+            // detail when the row lands.
+            if (entered && !TipAllowed(index, hone)) return;
+
             if (!entered || _page == null || index < 0 || index >= _page.Cards.Count
                 || index >= offerButtons.Length || !offerButtons[index].gameObject.activeInHierarchy)
             {
@@ -1198,7 +1236,7 @@ namespace PrincesPalace
             if (cardTipBody != null) cardTipBody.SetContent(detail.Body);
 
             FitCardTip();
-            PlaceCardTip(index);
+            PlaceCardTip(index, hone);
             cardTip.SetActive(true);
         }
 
@@ -1226,21 +1264,40 @@ namespace PrincesPalace
             box.sizeDelta = new Vector2(ReckoningScreen.CardTipWidth, height);
         }
 
-        // Beside the card if a side has room, else over or under it, never
-        // outside the painted interior (TooltipPlacement.Beside).
-        private void PlaceCardTip(int index)
+        // Under the row, never over another card: every other card on the page
+        // is a keep-out (TooltipPlacement.Beside), and a whetstone's detail
+        // also keeps off the whetstone it describes.
+        private void PlaceCardTip(int index, bool hone)
         {
             var box = cardTip.transform as RectTransform;
             var card = RectAt(offerRects, index);
             if (box == null || card == null) return;
 
+            var keepOut = new List<UiRect>();
+            for (int i = 0; i < offerRects.Length && _page != null && i < _page.Cards.Count; i++)
+            {
+                var other = offerRects[i];
+                if (i == index || other == null || !other.gameObject.activeInHierarchy) continue;
+                keepOut.Add(RectOf(other));
+            }
+
+            if (hone && honeButtons != null && index < honeButtons.Length && honeButtons[index] != null)
+            {
+                keepOut.Add(RectOf((RectTransform)honeButtons[index].transform));
+            }
+
             var at = TooltipPlacement.Beside(
                 card.anchoredPosition.x, card.anchoredPosition.y, card.sizeDelta.x, card.sizeDelta.y,
                 box.sizeDelta.x, box.sizeDelta.y,
                 -ReckoningScreen.ContentHalfWidth, ReckoningScreen.ContentHalfWidth,
-                ReckoningScreen.ContentBottom, ReckoningScreen.ContentTop);
+                ReckoningScreen.ContentBottom, ReckoningScreen.ContentTop,
+                ReckoningScreen.CardTipGap, keepOut);
             box.anchoredPosition = new Vector2(at.X, at.Y);
         }
+
+        private static UiRect RectOf(RectTransform rect) =>
+            new UiRect(new UiVec(rect.anchoredPosition.x, rect.anchoredPosition.y),
+                new UiVec(rect.sizeDelta.x, rect.sizeDelta.y));
 
         // The whetstone under a card: a placeholder mark, or the card's price
         // when every shown slot is spent and the choice pays gold instead.
@@ -1343,6 +1400,8 @@ namespace PrincesPalace
                 return;
             }
 
+            EndLinger();
+
             switch (choice)
             {
                 case Choice.Take: Take(index); break;
@@ -1436,6 +1495,7 @@ namespace PrincesPalace
                 PaintOffers();
                 RefreshNavigation();
                 SelectEntry();
+                if (isActiveAndEnabled) BeginReveal();
                 return;
             }
 
@@ -1506,9 +1566,10 @@ namespace PrincesPalace
 
         private IEnumerator Tween(float seconds, System.Action<float> apply)
         {
-            for (float t = 0f; t < seconds; t += Time.unscaledDeltaTime * SpeedMultiplier)
+            float wall = W(seconds);
+            for (float t = 0f; t < wall; t += Tick)
             {
-                apply(Easing.SmoothStep(t / seconds));
+                apply(Easing.SmoothStep(t / wall));
                 yield return null;
             }
 
@@ -1717,9 +1778,16 @@ namespace PrincesPalace
             _nudging.Remove(rect);
         }
 
-        private void SelectEntry() =>
-            UnityEngine.EventSystems.EventSystem.current?.SetSelectedGameObject(
-                NavigationInputModule.SelectionFor(_navContext));
+        // The screen's own focus is quiet: it opens no detail until the
+        // player moves or hovers (TooltipFocus.Quiet), so a page never opens
+        // with a box over its cards.
+        private void SelectEntry()
+        {
+            var entry = NavigationInputModule.SelectionFor(_navContext);
+            _tooltips.Quiet(entry);
+            _entrySelected = entry;
+            UnityEngine.EventSystems.EventSystem.current?.SetSelectedGameObject(entry);
+        }
 
         public bool HasTakenAnItem =>
             _pages.Any(p => p != null && p.Cards.Any(c => c.IsGear && c.Outcome == CardOutcome.Taken));
@@ -1914,18 +1982,20 @@ namespace PrincesPalace
             if (frameGlow != null) SetAlpha(frameGlow, 0f);
 
             float elapsed = 0f;
-            float longest = Mathf.Max(WipeSeconds, GloomSeconds);
+            float wipe = W(WipeSeconds);
+            float gloom = W(GloomSeconds);
+            float longest = Mathf.Max(wipe, gloom);
 
             while (elapsed < longest)
             {
-                elapsed += Time.unscaledDeltaTime * SpeedMultiplier;
+                elapsed += Tick;
 
-                float k = Easing.SmoothStep(Mathf.Clamp01(elapsed / WipeSeconds));
+                float k = Easing.SmoothStep(Mathf.Clamp01(elapsed / wipe));
                 SetWipeWidth(ReckoningScreen.PanelWidth * k);
                 frameWipe.anchoredPosition =
                     new Vector2(frameWipe.anchoredPosition.x, Mathf.Lerp(LiftFrom, 0f, k));
 
-                float g = Easing.SmoothStep(Mathf.Clamp01(elapsed / GloomSeconds));
+                float g = Easing.SmoothStep(Mathf.Clamp01(elapsed / gloom));
                 if (dimmer != null) SetAlpha(dimmer, gloomTarget * g);
                 if (frameGlow != null) SetAlpha(frameGlow, glowTarget * g);
 
@@ -1971,9 +2041,10 @@ namespace PrincesPalace
             summaryPhase.gameObject.SetActive(true);
             summaryPhase.anchoredPosition = new Vector2(width, 0f);
 
-            for (float t = 0f; t < SweepSeconds; t += Time.unscaledDeltaTime * SpeedMultiplier)
+            float sweep = W(SweepSeconds);
+            for (float t = 0f; t < sweep; t += Tick)
             {
-                float k = Easing.OutCubic(Mathf.Clamp01(t / SweepSeconds));
+                float k = Easing.OutCubic(Mathf.Clamp01(t / sweep));
 
                 offerPhase.anchoredPosition = new Vector2(Mathf.Lerp(0f, -width, k), 0f);
                 summaryPhase.anchoredPosition = new Vector2(Mathf.Lerp(width, 0f, k), 0f);
@@ -2025,7 +2096,8 @@ namespace PrincesPalace
             // replaces.
             if (delay > 0f)
             {
-                for (float t = 0f; t < delay; t += Time.unscaledDeltaTime * SpeedMultiplier) yield return null;
+                float wait = W(delay);
+                for (float t = 0f; t < wait; t += Tick) yield return null;
             }
 
             // NO LEVEL-UP: one fill, start to finish.
@@ -2074,9 +2146,9 @@ namespace PrincesPalace
         {
             // Each pass gets an equal share of the budget, so a two-level fight
             // is not three times as long to watch as a one-level fight.
-            float seconds = BarSeconds * (countTo - countFrom);
+            float seconds = W(BarSeconds * (countTo - countFrom));
 
-            for (float t = 0f; t < seconds; t += Time.unscaledDeltaTime * SpeedMultiplier)
+            for (float t = 0f; t < seconds; t += Tick)
             {
                 float k = Easing.SmoothStep(Mathf.Clamp01(t / seconds));
                 SetSpan(rowBarFills[index], from, Mathf.Lerp(from, to, k));
@@ -2098,7 +2170,8 @@ namespace PrincesPalace
             fill.color = Color.white;
 
             // Manual timer, same reason as FillBar's delay above.
-            for (float t = 0f; t < FlashSeconds; t += Time.unscaledDeltaTime * SpeedMultiplier) yield return null;
+            float flash = W(FlashSeconds);
+            for (float t = 0f; t < flash; t += Tick) yield return null;
 
             fill.color = resting;
         }

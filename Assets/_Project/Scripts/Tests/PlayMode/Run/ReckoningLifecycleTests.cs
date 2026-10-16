@@ -255,6 +255,7 @@ namespace PrincesPalace.PlayModeTests
 
             _reckoning.Show(Reward(), Offers());
             yield return null;
+            yield return ReckoningRevealWait.UntilChoosable(_reckoning);
         }
 
         // EVERYTHING THE SAVE HOLDS, bag and worn slots together. Taking a

@@ -111,7 +111,7 @@ namespace PrincesPalace.PlayModeTests
                 Assert.IsTrue(face.HasBand);
                 Assert.AreEqual(4, face.BandTier);
                 Assert.AreEqual(3, face.BandPlus);
-                Assert.AreEqual(ContentDatabase.NameOf(copy), face.Name, "honing is the slot's, not the item's");
+                Assert.AreEqual("Tempered Sword", face.Name, "honing is the slot's, not the item's");
                 StringAssert.DoesNotContain("+3", face.Name);
             }
         }
@@ -139,7 +139,7 @@ namespace PrincesPalace.PlayModeTests
             var sheep = ArmedSheep(out var save);
 
             var worn = RewardCardFace.OfGear(save, Card(ItemInstance.Of("sword", 4)));
-            Assert.AreEqual(ItemIcons.KeyOf(sheep.equipment.GetInstance(EquipmentSlot.Weapon1)), worn.GhostKey);
+            Assert.AreEqual("Assets/_Project/Art/Items/longswords/level_1.png", worn.GhostKey, "the worn tier-0 sword's own icon");
             Assert.IsNotNull(worn.GhostKey);
 
             var helm = ContentDatabase.Offerable.First(i => i.equipSlot == EquipmentSlot.Head);
@@ -172,12 +172,12 @@ namespace PrincesPalace.PlayModeTests
             var up = RewardCardFace.OfGear(save, Card(ItemInstance.Of("sword", 5)));
             Assert.IsTrue(up.HasDelta);
             Assert.AreEqual(1, up.DeltaSign);
-            StringAssert.Contains("+", up.DeltaText);
+            StringAssert.EndsWith(" +37", up.DeltaText);
 
             sheep.equipment.Set(EquipmentSlot.Weapon1, "sword", tier: 5);
             var down = RewardCardFace.OfGear(save, Card(ItemInstance.Of("sword", 0)));
             Assert.AreEqual(-1, down.DeltaSign);
-            StringAssert.Contains("-", down.DeltaText);
+            StringAssert.EndsWith(" -37", down.DeltaText);
         }
 
         [Test]

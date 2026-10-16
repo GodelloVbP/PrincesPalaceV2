@@ -92,6 +92,10 @@ namespace PrincesPalace.PlayModeTests
                 () => ReckoningController.SpeedMultiplier = 37f,
                 () => ReckoningController.SpeedMultiplier, 1f),
 
+            ("ReckoningController.DeltaOverride",
+                () => ReckoningController.DeltaOverride = () => 0f,
+                () => ReckoningController.DeltaOverride, null),
+
             ("RewardTrackController.SpeedMultiplier",
                 () => RewardTrackController.SpeedMultiplier = 37f,
                 () => RewardTrackController.SpeedMultiplier, 1f),

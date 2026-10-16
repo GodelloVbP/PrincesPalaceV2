@@ -155,5 +155,40 @@ namespace PrincesPalace.Domain.Tests
         {
             Assert.IsFalse(_focus.ForceClose().Any);
         }
+
+        // ---- the screen's own focus (Quiet) ------------------------------------
+
+        [Test]
+        public void TheScreensOwnSelection_ShowsNothing()
+        {
+            _focus.Quiet(_a);
+            var change = _focus.Selection(_a, selected: true);
+
+            Assert.IsFalse(change.Any, "a screen opening on its entry opens no tooltip");
+            Assert.IsNull(_focus.Shown);
+        }
+
+        [Test]
+        public void WhileTheSelectionIsQuiet_ThePointerShowsWhatItIsOver()
+        {
+            _focus.Quiet(_a);
+            _focus.Selection(_a, selected: true);
+
+            Assert.AreSame(_b, _focus.Pointer(_b, entered: true).Enter);
+            Assert.AreSame(_a, _focus.Pointer(_a, entered: true).Enter, "hovering the quiet node itself shows it");
+        }
+
+        [Test]
+        public void ThePlayerMovingTheSelection_EndsTheQuiet_EvenBackOntoTheSameNode()
+        {
+            _focus.Quiet(_a);
+            _focus.Selection(_a, selected: true);
+
+            _focus.Selection(_a, selected: false);
+            Assert.AreSame(_b, _focus.Selection(_b, selected: true).Enter);
+
+            _focus.Selection(_b, selected: false);
+            Assert.AreSame(_a, _focus.Selection(_a, selected: true).Enter, "the quiet was spent by the move");
+        }
     }
 }

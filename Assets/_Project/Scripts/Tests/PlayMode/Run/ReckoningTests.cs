@@ -156,6 +156,7 @@ namespace PrincesPalace.PlayModeTests
             // exist yet (.claude/rules/tests.md).
             yield return null;
             yield return null;
+            yield return ReckoningRevealWait.UntilChoosable(_reckoning);
         }
 
         // ---- what it shows ---------------------------------------------------------
@@ -395,6 +396,7 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
             Named("ReckoningLeaveButton").GetComponent<Button>().onClick.Invoke();
             yield return null;
+            yield return ReckoningRevealWait.UntilChoosable(_reckoning);
             Assert.AreSame(relicPage, _reckoning.CurrentPage);
             Assert.IsFalse(Named("ReckoningHone0").activeSelf, "a relic card has nothing to hone");
 

@@ -91,6 +91,7 @@ namespace PrincesPalace.PlayModeTests
 
             _reckoning.Show(Reward(), offers);
             yield return null;
+            yield return ReckoningRevealWait.UntilChoosable(_reckoning);
         }
 
         private IEnumerator ShowTheChoice() => ShowTheReckoning(Offers());

@@ -220,7 +220,21 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // The spark that flies into a card's slot band on a hone or a leave.
         public List<NodeRef> OfferSparks = new List<NodeRef>();
 
-        // The shared focus detail, shown beside the focused face-up card.
+        // THE REVEAL'S PARTS (docs/PLAN_REWARD_SCREENS.md C2-C4, C10): the map
+        // chip that flies in and becomes the page, the cache it unfolds into
+        // on a page that earns one, a card back per card, one ember per
+        // choice above the row, and the transparent catcher under everything
+        // that turns a click on empty space into a skip. All placeholders
+        // (proc discs and the map's chips) until A1/A3 land.
+        public NodeRef Catcher;
+        public NodeRef ChipGear;
+        public NodeRef ChipRelic;
+        public NodeRef Cache;
+        public NodeRef CacheSeam;
+        public List<NodeRef> OfferBacks = new List<NodeRef>();
+        public List<NodeRef> Embers = new List<NodeRef>();
+
+        // The shared focus detail, shown under the focused face-up card.
         public NodeRef CardTip;
         public NodeRef CardTipTitle;
         public NodeRef CardTipBody;
@@ -331,6 +345,17 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // the door say what the page is and what became of it.
             var offerChildren = new List<UiNode>();
 
+            // FIRST, so every control draws and catches clicks over it; it only
+            // answers while a reveal beat runs (the controller shows it then).
+            var catcher = Ui.Button("ReckoningCatcher", UiString.Runtime, Place.Stretch(), UiSize.Fill)
+                .NoChrome()
+                .NoHoverBox("the catcher is the whole row's empty space; nothing is focused on it")
+                .Quiet()
+                .Inactive()
+                .AllowOverlap("the catcher lies under the whole row so a click anywhere during a beat skips it");
+            screen.Catcher = catcher;
+            offerChildren.Add(catcher);
+
             // OfferRowLayout.MaxCards cards, edge to edge -- the tree is
             // emitted once for every save, and a page shows k + 2 of them.
             // OfferRowLayout and ReckoningController.LayOutOfferRow re-centre
@@ -344,6 +369,49 @@ namespace PrincesPalace.Domain.UiKit.Screens
             {
                 offerChildren.Add(screen.BuildHone(i));
             }
+
+            for (int i = 0; i < MaxChoices; i++)
+            {
+                var ember = Ui.Sprite($"ReckoningEmber{i}", "proc:radial_glow",
+                        Place.At(EmberX(i, MaxChoices), EmberY), UiSize.Fixed(EmberSize, EmberSize))
+                    .Coloured("#FFB45A00")
+                    .AsDecor();
+                screen.Embers.Add(ember);
+                offerChildren.Add(ember);
+            }
+
+            // The chip and the cache share the row's centre with the cards they
+            // become, never at the same moment.
+            const string cardsShareIt = "the cache stands where the cards will be dealt, never at the same time";
+            var chipGear = Ui.Sprite("ReckoningChipGear", ChipGearKey, Place.At(0f, CardCentreY),
+                    UiSize.Fixed(ChipSize, ChipSize))
+                .AsDecor()
+                .Inactive();
+            var chipRelic = Ui.Sprite("ReckoningChipRelic", ChipRelicKey, Place.At(0f, CardCentreY),
+                    UiSize.Fixed(ChipSize, ChipSize))
+                .AsDecor()
+                .Inactive();
+            screen.ChipGear = chipGear;
+            screen.ChipRelic = chipRelic;
+
+            var cacheArt = Ui.Sprite("ReckoningCacheArt", "proc:radial_glow", Place.Stretch(), UiSize.Fill)
+                .Coloured("#C9A25AE6")
+                .AsDecor();
+            var cacheSeam = Ui.Solid("ReckoningCacheSeam", "#FFD98A00", new UiVec(CacheWidth * 0.7f, 6f), Place.At(0f, 0f))
+                .AsDecor();
+            screen.CacheSeam = cacheSeam;
+            var cache = Ui.Button("ReckoningCache", UiString.Runtime, new UiVec(CacheWidth, CacheHeight), 14,
+                    Place.At(0f, CardCentreY))
+                .NoChrome()
+                .Quiet()
+                .Inactive()
+                .AllowOverlap(cardsShareIt);
+            cache.Children.Add(cacheArt);
+            cache.Children.Add(cacheSeam);
+            screen.Cache = cache;
+            offerChildren.Add(chipGear);
+            offerChildren.Add(chipRelic);
+            offerChildren.Add(cache);
 
             // Leave, and when nothing is left to choose, the same button
             // carries on. Sized and seated like the summary's Continue so the
@@ -911,7 +979,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const float FeatureTop = DeltaTop - DeltaBand;
         private const float CardBottom = FeatureTop - FeatureBand;
         private const float CardHeight = CardTop - CardBottom;
-        private const float CardCentreY = (CardTop + CardBottom) * 0.5f;
+        public const float CardCentreY = (CardTop + CardBottom) * 0.5f;
 
         // Band centres relative to the CARD's centre, which is what a child's
         // Place is measured from.
@@ -931,11 +999,30 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public const float RelicFeatureCentre = DeltaTop - RelicFeatureHeight * 0.5f - CardCentreY;
 
         // The focus detail's box; its height is refitted to the text at runtime.
-        public const float CardTipWidth = 340f;
-        public const float CardTipHeight = 220f;
+        // It sits UNDER the row, never beside a card: beside, it covered the
+        // neighbouring cards. Wide so the text runs to few lines, and no taller
+        // than the band between the cards' bottom edge and the painted border.
+        public const float CardTipWidth = 560f;
+        public const float CardTipHeight = 200f;
         public const float CardTipTitleHeight = 30f;
         public const float CardTipMinBody = 60f;
-        public const float CardTipMaxHeight = 420f;
+        public const float CardTipGap = 14f;
+        public const float CardTipMaxHeight = CardBottom - CardTipGap - ContentBottom;
+
+        // The reveal's placeholders: k <= MaxCards - 2 embers in a row above
+        // the cards, the map chip and the cache at the row's centre.
+        public const int MaxChoices = OfferRowLayout.MaxCards - 2;
+        public const float EmberSize = 26f;
+        public const float EmberPitch = 40f;
+        public const float EmberY = CardTop + 30f;
+        public const float ChipSize = 96f;
+        public const float CacheWidth = 260f;
+        public const float CacheHeight = 190f;
+        public const string ChipGearKey = "Assets/_Project/Art/Backgrounds/Processed/map_chip_gear.png";
+        public const string ChipRelicKey = "Assets/_Project/Art/Backgrounds/Processed/map_chip_relic.png";
+
+        // Ember i of `count`, centred on the row.
+        public static float EmberX(int index, int count) => (index - (count - 1) * 0.5f) * EmberPitch;
 
         // Under each gear card: "hone instead". In the offer phase's own coordinates.
         public const float SparkSize = 28f;
@@ -1110,6 +1197,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
             button.Children.Add(chevron);
             button.Children.Add(feature);
             button.Children.Add(spark);
+
+            // The card back, LAST so it covers the face until the card flips.
+            var back = Ui.Solid($"ReckoningOffer{index}Back", "#3B2A5CFF", Place.Stretch(), UiSize.Fill)
+                .AsDecor()
+                .Inactive();
+            button.Children.Add(back);
+            OfferBacks.Add(back);
 
             OfferButtons.Add(button);
             OfferPlinths.Add(plinth);

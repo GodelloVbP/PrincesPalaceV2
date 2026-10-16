@@ -78,6 +78,10 @@ namespace PrincesPalace
 
         private void Selection(GameObject node, bool selected) => Apply(_focus.Selection(node, selected));
 
+        // The screen's own selection of `node` opens no tooltip until the
+        // player moves it (TooltipFocus.Quiet). Call before selecting it.
+        public void Quiet(GameObject node) => Apply(_focus.Quiet(node));
+
         public void Attach(NavContextStack stack)
         {
             Detach();

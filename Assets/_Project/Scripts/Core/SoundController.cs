@@ -163,13 +163,17 @@ namespace PrincesPalace
         // above is untouched.
         //
         // A shot takes an idle source. When all are busy the pool grows up to
-        // PitchPoolMax; past that the oldest shot is cut, which at eight
-        // simultaneous pitched cues is inaudible next to the rest. An idle
+        // PitchPoolMax; past that the shot that started longest ago is cut
+        // (by start order, not a rotating index, so a shot that just started
+        // is never the one lost). An idle
         // source is put back to pitch 1 so a leftover pitch never leaks into
         // the next user of it.
         public const int PitchPoolMax = 8;
         private readonly List<AudioSource> _pitchPool = new List<AudioSource>();
-        private int _pitchOldest;
+
+        // Per pooled source, the order its current shot started in.
+        private readonly List<long> _pitchStarted = new List<long>();
+        private long _pitchShots;
 
         // Plays a sound at the given pitch (1 = as recorded, 2 = an octave up).
         // Volume, correction and the Observer behave exactly as Play(Sound).
@@ -191,6 +195,7 @@ namespace PrincesPalace
             }
 
             var source = _instance.AcquirePitchSource();
+            _instance._pitchStarted[_instance._pitchPool.IndexOf(source)] = ++_instance._pitchShots;
             source.pitch = Mathf.Clamp(pitch, 0.1f, 3f);
             source.clip = clip;
             source.volume = Mathf.Clamp01(GameSettings.SoundVolume * AudioLevels.GainFor(SoundLibrary.PathOf(sound)));
@@ -258,13 +263,18 @@ namespace PrincesPalace
                 s.playOnAwake = false;
                 s.spatialBlend = 0f;
                 _pitchPool.Add(s);
+                _pitchStarted.Add(0);
                 return s;
             }
 
-            var oldest = _pitchPool[_pitchOldest];
-            _pitchOldest = (_pitchOldest + 1) % _pitchPool.Count;
-            oldest.Stop();
-            return oldest;
+            int oldest = 0;
+            for (int i = 1; i < _pitchPool.Count; i++)
+            {
+                if (_pitchStarted[i] < _pitchStarted[oldest]) oldest = i;
+            }
+
+            _pitchPool[oldest].Stop();
+            return _pitchPool[oldest];
         }
 
         // ---- the one looping channel --------------------------------------------

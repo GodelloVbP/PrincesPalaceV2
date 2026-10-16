@@ -236,6 +236,10 @@ namespace PrincesPalace.PlayModeTests
                     yield return runner.RecordFightEnd(sink, s.speed, s.id, outcome);
                     break;
 
+                case "reveal":
+                    yield return ReckoningRevealFilm.Record(s.id, s.width, s.height, sink, outcome);
+                    break;
+
                 case "status":
                     yield return runner.StandTheFightUp(s.vs, copies, s.speed, null, null, s.id);
                     yield return runner.RecordSeconds(sink, s.speed, "status", s.id, s.seconds, outcome);

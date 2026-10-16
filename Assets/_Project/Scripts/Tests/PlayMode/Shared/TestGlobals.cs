@@ -109,6 +109,7 @@ namespace PrincesPalace.PlayModeTests
             FightBeatPlayer.PlayerSpeedSource = () => 1f;
             FightBeatPlayer.AdoptPlayerSpeed();
             ReckoningController.SpeedMultiplier = 1f;
+            ReckoningController.DeltaOverride = null;
             RewardTrackController.SpeedMultiplier = 1f;
             TalentController.MotionSpeedMultiplier = 1f;
             HubController.MotionSpeedMultiplier = 1f;

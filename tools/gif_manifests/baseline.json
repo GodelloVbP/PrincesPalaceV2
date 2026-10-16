@@ -8,7 +8,7 @@
   "statuses": "all",
   "stances": "all",
   "sheets": "all",
-  "scenarios": [{"kind": "fightend", "id": "normal"}, {"kind": "fightend", "id": "elite"}, {"kind": "fightend", "id": "boss"}],
+  "scenarios": [{"kind": "fightend", "id": "normal"}, {"kind": "fightend", "id": "elite"}, {"kind": "fightend", "id": "boss"}, {"kind": "reveal", "id": "nocache"}, {"kind": "reveal", "id": "cachetop"}, {"kind": "reveal", "id": "ghosts"}],
   "stills": [
     {"class": "MainMenuCaptureTests", "files": ["main_menu_no_save.png", "main_menu_with_save.png", "settings_modal.png"]},
     {"class": "MapCaptureTests", "files": ["MapWithALeg.png", "MapMidWalk.png"]},

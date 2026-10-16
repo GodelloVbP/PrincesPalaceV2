@@ -255,6 +255,7 @@ namespace PrincesPalace.PlayModeTests
             reckoning.Dismissed = () => { };
             yield return null;
             yield return null;
+            yield return ReckoningRevealWait.UntilChoosable(reckoning);
             _played.Clear();
         }
 

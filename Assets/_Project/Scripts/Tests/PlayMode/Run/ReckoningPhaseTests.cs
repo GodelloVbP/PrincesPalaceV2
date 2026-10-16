@@ -61,9 +61,11 @@ namespace PrincesPalace.PlayModeTests
         private void Click(string name) => Named(name).GetComponent<Button>().onClick.Invoke();
 
         // Taking is one press; the page then waits to be moved on, and the
-        // same button that leaves a page carries on once nothing is left.
-        private void TakeAndMoveOn()
+        // same button that leaves a page carries on once nothing is left. The
+        // press waits for the reveal, which would otherwise only skip it.
+        private IEnumerator TakeAndMoveOn()
         {
+            yield return ReckoningRevealWait.UntilChoosable(_reckoning);
             Click("ReckoningOffer0");
             Click("ReckoningLeaveButton");
         }
@@ -224,7 +226,7 @@ namespace PrincesPalace.PlayModeTests
         {
             yield return OpenIt(Offers());
 
-            TakeAndMoveOn();
+            yield return TakeAndMoveOn();
 
             yield return WaitForTheSweepToLand();
 
@@ -239,7 +241,7 @@ namespace PrincesPalace.PlayModeTests
         {
             yield return OpenIt(Offers());
 
-            TakeAndMoveOn();
+            yield return TakeAndMoveOn();
             yield return WaitForTheSweepToLand();
 
             var summary = Named("ReckoningSummaryPhase").GetComponent<RectTransform>();
@@ -258,7 +260,7 @@ namespace PrincesPalace.PlayModeTests
             yield return OpenIt(Offers());
 
             var offer = Named("ReckoningOfferPhase").GetComponent<RectTransform>();
-            TakeAndMoveOn();
+            yield return TakeAndMoveOn();
             yield return WaitForTheSweepToLand();
 
             Assert.Less(offer.anchoredPosition.x, 0f,
@@ -275,7 +277,7 @@ namespace PrincesPalace.PlayModeTests
         {
             yield return OpenIt(Offers());
 
-            TakeAndMoveOn();
+            yield return TakeAndMoveOn();
             yield return WaitForTheSweepToLand();
 
             var summary = Named("ReckoningSummaryPhase");
@@ -299,7 +301,7 @@ namespace PrincesPalace.PlayModeTests
             // something still sliding, and neither gets read.
             yield return OpenIt(Offers());
 
-            TakeAndMoveOn();
+            yield return TakeAndMoveOn();
 
             // MUST land the sweep first. Paint() writes each row's FINAL
             // gain text the moment Show() runs -- a preview, sitting there
@@ -420,7 +422,7 @@ namespace PrincesPalace.PlayModeTests
             // audit, the sprite would still be there, and the screen would
             // simply go dead.
             yield return OpenIt(Offers());
-            TakeAndMoveOn();
+            yield return TakeAndMoveOn();
             yield return WaitForTheSweepToLand();
 
             var glow = Named("ReckoningContinueGlow").GetComponent<RectTransform>();

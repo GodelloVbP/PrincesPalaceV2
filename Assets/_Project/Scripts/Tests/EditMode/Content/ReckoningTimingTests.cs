@@ -327,7 +327,9 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ChevronNotes_RiseOneStepPerUpCard_AndADowngradeIsSilent()
         {
-            var s = At(1f, 1, Uncommon, Common, RareLive, RareDown, TopLive);
+            var up = new RevealCard(2, true, showsUp: true);
+            var rareUp = new RevealCard(3, true, showsUp: true);
+            var s = At(1f, 1, up, Common, rareUp, RareDown, new RevealCard(4, true, showsUp: true));
             var chevrons = Of(s, RevealBeatKind.Chevron);
             CollectionAssert.AreEqual(new[] { 0, 2, 4 }, chevrons.Select(b => b.Card).ToArray());
             CollectionAssert.AreEqual(new[] { 1, 2, 3 }, chevrons.Select(b => b.PitchStep).ToArray());
@@ -376,17 +378,16 @@ namespace PrincesPalace.Domain.Tests
         {
             var top = At(1f, 1, RareLive, Common, TopLive);
             var skipped = top.SkippedAt(0.5f);
+            Assert.IsTrue(skipped.Skipped);
             Assert.AreEqual(0.5f, skipped.ChoosableAt, Tolerance, "choosable now");
-            Assert.AreEqual(0.12f, skipped.FlareSeconds, Tolerance);
-            Assert.AreEqual(0f, skipped.LingerSeconds, Tolerance, "a press ends the linger");
-            Assert.IsTrue(skipped.CacheOpen);
-            Assert.IsTrue(skipped.AllFaceUp);
+            Assert.AreEqual(0.12f, skipped.SkipFlareSeconds, Tolerance);
+            Assert.IsEmpty(Of(skipped, RevealBeatKind.Linger), "a press ends the linger");
+            Assert.IsTrue(skipped.HasCache);
 
             var plain = At(1f, 1, RareLive, Common, Common).SkippedAt(0.5f);
-            Assert.AreEqual(0f, plain.FlareSeconds, Tolerance);
-            Assert.AreEqual(0f, plain.LingerSeconds, Tolerance);
+            Assert.AreEqual(0f, plain.SkipFlareSeconds, Tolerance);
 
-            Assert.AreEqual(0.06f, At(2f, 1, RareLive, Common, TopLive).SkippedAt(0.2f).FlareSeconds, Tolerance);
+            Assert.AreEqual(0.06f, At(2f, 1, RareLive, Common, TopLive).SkippedAt(0.2f).SkipFlareSeconds, Tolerance);
         }
 
         [Test]
@@ -394,14 +395,15 @@ namespace PrincesPalace.Domain.Tests
         {
             var s = At(1f, 1, RareLive, Common, TopLive);
             var late = s.SkippedAt(2f);
+            Assert.IsFalse(late.Skipped);
             Assert.AreEqual(1.40f, late.ChoosableAt, Tolerance);
-            Assert.AreEqual(0f, late.FlareSeconds, Tolerance);
+            Assert.AreEqual(0f, late.SkipFlareSeconds, Tolerance);
         }
 
         [Test]
         public void Skip_OnANoCachePage_HasNoCacheToOpen()
         {
-            Assert.IsFalse(At(1f, 1, Common, Common, Common).SkippedAt(0.4f).CacheOpen);
+            Assert.IsFalse(At(1f, 1, Common, Common, Common).SkippedAt(0.4f).HasCache);
         }
 
         // Cap

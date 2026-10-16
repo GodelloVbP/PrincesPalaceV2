@@ -43,6 +43,7 @@ param(
 #   tools/gif.ps1 relic toll_of_the_flock
 #   tools/gif.ps1 status Poison [-Seconds 2]
 #   tools/gif.ps1 fightend <normal|elite|boss> [-Vs rat] [-Speed 1]   (one blow from victory: the final-blow stop, the fall and the run-up to the Reckoning's wipe, docs/PLAN_REWARD_SCREENS.md C0)
+#   tools/gif.ps1 reveal <nocache|cachetop|ghosts>   (the Reckoning's reveal on one R0 page, from the wipe to the settled row, docs/PLAN_REWARD_SCREENS.md C3-C4)
 #   tools/gif.ps1 stance Enemies/beetle     (key-pose stills, 400 ms each; no Unity)
 #   tools/gif.ps1 sheet blackglass_spear    (Resources/Spells frames at the layer's fps; no Unity)
 #   tools/gif.ps1 still MainMenuCaptureTests/main_menu_no_save.png
@@ -126,7 +127,7 @@ if ($Prune -ge 0) {
     exit 0
 }
 if (-not $Manifest -and (-not $Kind -or -not $Id)) {
-    Write-Host "Usage: tools/gif.ps1 <spell|attack|relic|status|fightend|stance|sheet|still> <id> [-Vs <enemy>] [-Formation lone|full] [-Speed <x>]"
+    Write-Host "Usage: tools/gif.ps1 <spell|attack|relic|status|fightend|reveal|stance|sheet|still> <id> [-Vs <enemy>] [-Formation lone|full] [-Speed <x>]"
     Write-Host "                     [-PreStatus <type>] [-Skill <id>] [-Crop subject|stage|full] [-Seconds <s>] [-Determinism] [-KeepFrames] [-NoPreview]"
     Write-Host "                     [-Aspect 4:3] [-Repeat <n>] [-Darkness <0..1>] [-Out <folder> [-Name <prefix>]]"
     Write-Host "                     [-Party shawn,odette,bjorn] [-Target <ally|enemy slot>]"

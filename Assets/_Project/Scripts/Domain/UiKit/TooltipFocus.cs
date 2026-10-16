@@ -27,6 +27,11 @@ namespace PrincesPalace.Domain.UiKit
     //     is elsewhere or nowhere
     //   A context is pushed above, or the    -> force close (ForceClose),
     //     screen's own context is popped        whatever owned it.
+    //   The screen selects a node itself     -> nothing for that selection
+    //     and marks it quiet (Quiet)            (the pointer still shows what
+    //                                           it is over), until the
+    //                                           selection moves: the player
+    //                                           has not asked about it yet.
     //
     // Pure C# and engine-free (docs/CODE_STANDARDS.md "Layering"): a node is
     // an opaque handle this class only ever compares by REFERENCE and hands
@@ -40,6 +45,7 @@ namespace PrincesPalace.Domain.UiKit
         private object _hovered;
         private object _selected;
         private object _shown;
+        private object _quiet;
 
         // Which node's tooltip is up, or null. Exposed for a test and for a
         // caller that wants to re-ask its own show path for the same node
@@ -67,9 +73,23 @@ namespace PrincesPalace.Domain.UiKit
         // OnSeatSelectionChanged already had to defend against.
         public TooltipFocusChange Selection(object node, bool selected)
         {
-            if (selected) _selected = node;
+            if (selected)
+            {
+                _selected = node;
+                if (!ReferenceEquals(node, _quiet)) _quiet = null;
+            }
             else if (ReferenceEquals(_selected, node)) _selected = null;
 
+            return Settle();
+        }
+
+        // The screen is about to select `node` by itself (a screen opening on
+        // its entry): that selection shows nothing until the player moves it.
+        // A Reckoning page opening with its first card's detail drawn over the
+        // next cards is the case this exists for.
+        public TooltipFocusChange Quiet(object node)
+        {
+            _quiet = node;
             return Settle();
         }
 
@@ -83,6 +103,7 @@ namespace PrincesPalace.Domain.UiKit
         {
             _hovered = null;
             _selected = null;
+            _quiet = null;
 
             var leaving = _shown;
             _shown = null;
@@ -95,7 +116,8 @@ namespace PrincesPalace.Domain.UiKit
         // cannot drift out of step with them.
         private TooltipFocusChange Settle()
         {
-            var wanted = _selected ?? _hovered;
+            var selected = ReferenceEquals(_selected, _quiet) ? null : _selected;
+            var wanted = selected ?? _hovered;
             if (ReferenceEquals(wanted, _shown)) return TooltipFocusChange.None;
 
             var leaving = _shown;

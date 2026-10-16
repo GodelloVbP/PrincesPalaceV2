@@ -1,3 +1,4 @@
+using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -44,7 +45,28 @@ namespace PrincesPalace.PlayModeTests
             // Update runs on the controller each frame; let one frame pass.
             Assert.AreEqual(0, SoundController.PitchSourcesPlaying);
             SoundController.RestoreIdlePitches();
-            CollectionAssert.AreEqual(new[] { 1f }, SoundController.PitchSourcePitches());
+            CollectionAssert.AreEqual(new[] { 1f }, SoundController.PitchSourcePitches().Distinct().ToArray(),
+                "every idle source, however many the pool has grown to");
+        }
+
+        // A full pool cuts the shot that started first, whatever source it
+        // sits on, and keeps every later one.
+        [Test]
+        public void AFullPool_CutsTheOldestShot()
+        {
+            SoundController.StopPitched();
+            for (int i = 1; i <= SoundController.PitchPoolMax; i++) SoundController.Play(Sound.CardFlip, 1f + 0.125f * i);
+            SoundController.Play(Sound.CardFlip, 2.5f);
+
+            var pitches = SoundController.PitchSourcePitches();
+            Assert.AreEqual(8, pitches.Length);
+            CollectionAssert.DoesNotContain(pitches, 1.125f);
+            CollectionAssert.Contains(pitches, 1.25f);
+            CollectionAssert.Contains(pitches, 2f);
+            CollectionAssert.Contains(pitches, 2.5f);
+
+            SoundController.Play(Sound.CardFlip, 2.75f);
+            CollectionAssert.DoesNotContain(SoundController.PitchSourcePitches(), 1.25f, "then the next oldest");
         }
 
         [Test]

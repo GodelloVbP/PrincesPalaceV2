@@ -2,13 +2,11 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using PrincesPalace;
-using PrincesPalace.Content;
 using PrincesPalace.Domain.Rewards;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.UiKit;
@@ -91,16 +89,7 @@ namespace PrincesPalace.PlayModeTests
             // width, which reads as a broken panel rather than as an
             // unfinished animation.
             yield return new WaitForSecondsRealtime(2.5f);
-
-            var canvas = Object.FindObjectsByType<Canvas>(FindObjectsInactive.Exclude)
-                .FirstOrDefault(c => c.isRootCanvas);
-            Assert.IsNotNull(canvas);
-
-            Directory.CreateDirectory(OutputDir);
-            string path = Path.Combine(OutputDir, "Reckoning_choice.png");
-            CanvasCapture.RenderToFile(canvas, path);
-            Assert.IsTrue(File.Exists(path));
-            Debug.Log($"[ReckoningCapture] wrote {path}");
+            yield return ShootPage("Reckoning_choice.png");
         }
 
         // A boss and two anchors settled together: the gear page with five
@@ -123,7 +112,7 @@ namespace PrincesPalace.PlayModeTests
             var pages = ReckoningPageFixtures.BossAndTwoAnchors();
             _reckoning.Show(Reward(), pages);
             yield return new WaitForSecondsRealtime(2.5f);
-            yield return Shoot("Reckoning_boss_gear.png");
+            yield return ShootPage("Reckoning_boss_gear.png");
 
             Press("ReckoningOffer1");
             yield return new WaitForSecondsRealtime(0.5f);
@@ -177,14 +166,6 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(_reckoning, "the Reckoning was never wired into the fight scene");
         }
 
-        // The run is started here rather than inside Settle so a fixture can
-        // set run state (legendary pity) before the page rolls.
-        private static void StartFixtureRun()
-        {
-            LogAssert.Expect(LogType.Log, new Regex(@"\[RealmOpening\]"));
-            RunManager.StartRun(ReckoningPageFixtures.Seed);
-        }
-
         private static CombatReward PartyReward()
         {
             var reward = Reward();
@@ -193,81 +174,47 @@ namespace PrincesPalace.PlayModeTests
             return reward;
         }
 
-        // A normal fight's page: three cards, none above the ordinary ladder.
+        // A PAGE SHOT SHOWS THE ROW AS IT IS, not the screen's focus: no
+        // marker on the first card and no detail over the others, so the row
+        // itself can be judged (the ghost gate).
+        private IEnumerator ShootPage(string file)
+        {
+            UnityEngine.EventSystems.EventSystem.current?.SetSelectedGameObject(null);
+            yield return null;
+            yield return Shoot(file);
+        }
+
         [UnityTest]
         public IEnumerator CaptureTheNoCachePage()
         {
             if (!CanvasCapture.IsSupported) Assert.Ignore(NoGraphics);
 
             yield return OpenFight();
-            StartFixtureRun();
-            _reckoning.Show(Reward(), ReckoningPageFixtures.OneGearPage());
+            _reckoning.Show(Reward(), ReckoningPageFixtures.NoCachePage());
             yield return new WaitForSecondsRealtime(2.5f);
-            yield return Shoot("Reckoning_nocache_page.png");
+            yield return ShootPage("Reckoning_nocache_page.png");
         }
 
-        // Pity one page short of its cap forces a Legendary on the boss gear
-        // page, the top-tier gear a cache will hold.
         [UnityTest]
         public IEnumerator CaptureTheCachePageWithATopTierUpgrade()
         {
             if (!CanvasCapture.IsSupported) Assert.Ignore(NoGraphics);
 
             yield return OpenFight();
-            StartFixtureRun();
-            RunManager.Run.legendaryPity = GearPage.LegendaryPityPages - 1;
-            _reckoning.Show(Reward(), ReckoningPageFixtures.BossAndTwoAnchors());
+            _reckoning.Show(Reward(), ReckoningPageFixtures.CacheTopTierPages());
             yield return new WaitForSecondsRealtime(2.5f);
-            yield return Shoot("Reckoning_cache_toptier_page.png");
+            yield return ShootPage("Reckoning_cache_toptier_page.png");
         }
 
-        // The boss gear page is the five-card row. A ghost is the item the
-        // wearer already wears in the card's slot (docs/PLAN_REWARD_SCREENS.md
-        // C5), so cards 0-3 get their wearer+slot filled and card 4's slot is
-        // emptied: the row shows ghost present and ghost absent. No card is
-        // marked inert; the inert case is left to the live-upgrade fixtures R1/R2
-        // add.
         [UnityTest]
         public IEnumerator CaptureTheFiveCardRowWithGhosts()
         {
             if (!CanvasCapture.IsSupported) Assert.Ignore(NoGraphics);
 
             yield return OpenFight();
-            StartFixtureRun();
-            var pages = ReckoningPageFixtures.BossAndTwoAnchors();
-            var cards = pages[0].Cards;
-            Assert.AreEqual(5, cards.Count, "the boss gear page is no longer five cards");
-
-            // A second, ordinary page supplies the worn items (any item that
-            // fits the slot); rolled after the boss page, which it must not
-            // disturb, and discarded from the run's pending pages after.
-            var wornSource = ReckoningPageFixtures.Settle(
-                new List<EncounterClass> { EncounterClass.Normal, EncounterClass.Normal, EncounterClass.Normal },
-                nodeId: 3)[0].Cards;
-            RunManager.Run.pendingPages = pages.ToList();
-
-            var save = SaveSlotManager.CurrentSave;
-            for (int i = 0; i < cards.Count; i++)
-            {
-                var who = save.roster.First(c => c != null && c.definitionId == cards[i].RecipientId);
-                if (i == cards.Count - 1)
-                {
-                    EquipmentOps.Unequip(MenuContext.Descent, save, who, cards[i].Slot);
-                    Assert.IsNull(who.equipment.GetInstance(cards[i].Slot), "the no-ghost slot is not empty");
-                    continue;
-                }
-
-                var worn = wornSource.FirstOrDefault(c => c.IsGear && c.RecipientId == cards[i].RecipientId &&
-                                                          c.Slot == cards[i].Slot) ?? cards[i];
-                var definition = ContentDatabase.DefinitionOf(worn.Copy);
-                InventoryOps.Add(save.stockpiledItems, worn.Copy, 1);
-                Assert.IsTrue(EquipmentOps.Equip(MenuContext.Descent, save, who, worn.Copy, definition.equipSlot,
-                    definition.IsEquippable, cards[i].Slot), $"could not wear card {i}'s slot");
-            }
-
-            _reckoning.Show(Reward(), pages);
+            _reckoning.Show(Reward(), ReckoningPageFixtures.FiveGhostsPages());
             yield return new WaitForSecondsRealtime(2.5f);
-            yield return Shoot("Reckoning_five_ghosts_page.png");
+            yield return ShootPage("Reckoning_five_ghosts_page.png");
         }
 
         // The full party after one pick: today's spoils/tally pages stand in
@@ -278,7 +225,7 @@ namespace PrincesPalace.PlayModeTests
             if (!CanvasCapture.IsSupported) Assert.Ignore(NoGraphics);
 
             yield return OpenFight();
-            StartFixtureRun();
+            ReckoningPageFixtures.StartRun();
             _reckoning.Show(PartyReward(), ReckoningPageFixtures.OneGearPage());
             yield return new WaitForSecondsRealtime(1f);
             Press("ReckoningOffer0");

@@ -72,6 +72,10 @@ namespace PrincesPalace.Domain.Tests
                 @"ReckoningController\.SpeedMultiplier\s*=",
                 @"ReckoningController\.SpeedMultiplier\s*=\s*1f"),
 
+            ("ReckoningController.DeltaOverride",
+                @"ReckoningController\.DeltaOverride\s*=",
+                @"ReckoningController\.DeltaOverride\s*=\s*null"),
+
             ("RewardTrackController.SpeedMultiplier",
                 @"RewardTrackController\.SpeedMultiplier\s*=",
                 @"RewardTrackController\.SpeedMultiplier\s*=\s*1f"),

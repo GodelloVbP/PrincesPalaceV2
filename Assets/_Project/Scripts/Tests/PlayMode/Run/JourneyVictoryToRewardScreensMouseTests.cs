@@ -143,6 +143,8 @@ namespace PrincesPalace.PlayModeTests
                 return (offer != null && offer.activeInHierarchy) ||
                        (continueButton != null && continueButton.activeInHierarchy);
             }, 5f, "a won fight should have opened the Reckoning");
+            yield return ReckoningRevealWait.UntilChoosable(
+                Object.FindAnyObjectByType<ReckoningController>(FindObjectsInactive.Include));
             yield return null;
             TakeOverInput();
             // A fresh scene's own layout can still be mid-settle the frame it

@@ -186,13 +186,15 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsEmpty(OfferRowLayout.RowOrder(null, Squad));
         }
 
-        [TestCase(1, 0.7f)]
-        [TestCase(2, 0.8f)]
-        [TestCase(3, 0.9f)]
-        [TestCase(4, 1.0f)]
-        public void ThePlinthWidensWithTheQualityStep(int step, float fraction)
+        // A three-card row's card is 340.19 wide; the plinth is 0.7, 0.8, 0.9
+        // and 1.0 of it.
+        [TestCase(1, 238.13f)]
+        [TestCase(2, 272.15f)]
+        [TestCase(3, 306.17f)]
+        [TestCase(4, 340.19f)]
+        public void ThePlinthWidensWithTheQualityStep(int step, float width)
         {
-            Assert.AreEqual(OfferRowLayout.CardWidth(3) * fraction, OfferRowLayout.PlinthWidth(3, step), 0.01f);
+            Assert.AreEqual(width, OfferRowLayout.PlinthWidth(3, step), 0.01f);
         }
 
         [Test]

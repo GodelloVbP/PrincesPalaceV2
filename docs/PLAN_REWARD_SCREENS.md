@@ -674,7 +674,7 @@ pins for the general case).
 | Ember lights | breath | new |
 | Up-chevron pop | rising note ladder, pre-pitched | new |
 | Cache open | `OpenPack` if it fits the palette, else a cloth-and-knot untie | exists / new |
-| Card flip | four pre-pitched clips | new |
+| Card flip | one clip, pitched per step | new |
 | Top-tier landing | low bell | new |
 | Boss peak | short musical sting | new |
 | Coin count | soft tick | new |
@@ -684,8 +684,9 @@ pins for the general case).
 | Experience fill / level up | hum / bell | new |
 | Fell / Endured | low string note / drone | new |
 
-R4 ships a **placeholder layer** (`OpenPack` and one flip clip at four
-pitches rendered offline), so the reveal is never judged silent (M9).
+R4 ships a **placeholder layer** (`OpenPack` and one flip clip pitched per
+step through the pool, `RevealSchedule.LadderPitch`), so the reveal is never
+judged silent (M9).
 
 ### C12. The settlement record (on `CombatReward`, additive)
 

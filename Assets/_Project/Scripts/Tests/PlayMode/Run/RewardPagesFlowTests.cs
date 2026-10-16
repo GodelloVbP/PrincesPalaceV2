@@ -74,6 +74,7 @@ namespace PrincesPalace.PlayModeTests
             _reckoning.Show(Reward(), pages);
             yield return null;
             yield return null;
+            yield return ReckoningRevealWait.UntilChoosable(_reckoning);
         }
 
         [UnityTest]
@@ -128,6 +129,7 @@ namespace PrincesPalace.PlayModeTests
             // ---- page 2: relics, take one, leave two --------------------------------------
             Press("ReckoningLeaveButton");
             yield return null;
+            yield return ReckoningRevealWait.UntilChoosable(_reckoning);
 
             Assert.AreSame(relic, _reckoning.CurrentPage);
             Assert.AreEqual(3, relic.ChoicesLeft);

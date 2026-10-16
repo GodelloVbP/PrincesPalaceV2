@@ -7,7 +7,7 @@
   "statuses": ["Poison"],
   "stances": ["Enemies/beetle", "Characters/sheep"],
   "sheets": ["blackglass_spear", "frost_flare"],
-  "scenarios": [{"kind": "fightend", "id": "normal"}],
+  "scenarios": [{"kind": "fightend", "id": "normal"}, {"kind": "reveal", "id": "nocache"}],
   "stills": [
     {"class": "MainMenuCaptureTests", "files": ["main_menu_no_save.png"]},
     {"class": "ShopCaptureTests", "files": ["Shop.png"]},

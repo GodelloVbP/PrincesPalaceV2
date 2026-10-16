@@ -82,6 +82,7 @@ namespace PrincesPalace.PlayModeTests
             _reckoning.Show(Reward(), pages);
             yield return null;
             yield return null;
+            yield return ReckoningRevealWait.UntilChoosable(_reckoning);
         }
 
         private static T Part<T>(string name) where T : Component =>
