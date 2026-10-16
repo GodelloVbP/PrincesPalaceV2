@@ -1,6 +1,6 @@
 # Plan: the gear reward and the Reckoning
 
-Status: rev 3 (final for owner review), 2026-10-16. Plan only; nothing here
+Status: rev 4 (rev 3 plus a sourced research round), 2026-10-16. Plan only; nothing here
 is built. Two review rounds, each with one reviewer reading the code and one
 reading only the plan (§10).
 
@@ -74,41 +74,114 @@ on screen; the focus arrow as the only selector; no hover scaling
 
 ## 2. What the research says
 
-Per-game notes in §11. Search was thin and found no GDC talk on loot
-reveal; play-memory observations are marked [from memory]. Principles used:
+Second research round (2026-10-16), sourced claims only. Every rev-3
+"from memory" observation was either sourced below or dropped (§11). Where a
+source is a fan write-up or commentary rather than the developer, it says
+so. Search found no GDC talk about the moment of reveal itself; the closest
+primary material is a postmortem on loot (Diablo III) and a peer-reviewed
+study of rarity and arousal.
 
-1. **Tell before reveal, one bit at a time.** Light or sound says *how
-   good* before you see *what* (Hearthstone rarity border on face-down
-   cards, https://hearthstone.wiki.gg/wiki/Card_Pack; gacha streak colour,
-   https://hostedgg.com/blog/gacha-pull-reveal-color-culture; Diablo IV
-   legendary light and sound,
-   https://www.dexerto.com/diablo/diablo-4-legendary-loot-overload-2867981/).
-   A tell that names the exact top result turns the reveal into a countdown
-   to a known answer.
-2. **Rarity is a material, not a label** (Hades colour tiers,
-   https://primagames.com/gaming/hades-guide-olympian-god-boons-skills/2;
-   Balatro editions as a card shader [from memory]).
-3. **Sound scales with rarity; the floor is quiet** (Diablo IV overload,
-   same source).
-4. **Layered feedback**: motion, number, particles and audio together
-   (https://blakecrosley.com/guides/design/balatro).
-5. **Show the delta against what you wear** (Borderlands compare arrows
-   [from memory]).
-6. **Declining is visible and priced** (StS skip,
-   https://slay-the-spire.fandom.com/wiki/Card_Rewards).
-7. **Ceremony follows value and never gates the choice**; any input ends it
-   (Vampire Survivors chest, praised short and called too long, Space ends
-   it: https://mechanicsofmagic.com/?p=31948,
-   https://steamcommunity.com/app/1794680/discussions/0/3392911947302462433/).
-8. **Rising pitch across a sequence, a held beat before the top item**
-   (https://outof.games/news/9179-from-loot-boxes-to-bonus-rounds-how-games-build-anticipation-before-the-reward/).
-9. **Short impact, fast decay** (Vlambeer "Art of Screenshake"; Jonasson
-   and Purho "Juice It or Lose It", GDC Europe 2012; summary
-   https://rpgplayground.com/research-making-a-juicy-game/).
-10. **The choice is the climax**: the take carries the weight (Hades, StS
-    [from memory]).
-11. **Show what changed, not everything you have** (Darkest Dungeon's flat
-    grid and two-sided trinket text as the counter-example [from memory]).
+**Findings**
+
+- **F1. Not knowing yet prolongs the pleasure.** People told they had won
+  one of two prizes stayed in a good mood longer than people told which
+  prize, or told they had won both; forecasters predicted the opposite
+  (Kurtz, Wilson and Gilbert 2007, *J. Exp. Soc. Psych.* 43(6),
+  https://dtg.sites.fas.harvard.edu/KURTZWILSON&GILBERT(2007).pdf). Applied
+  to Destiny's engrams by Jamie Madigan
+  (https://www.gamedeveloper.com/design/psychology-and-destiny-s-loot-system).
+- **F2. Show the kind and the tier, hold back the identity.** Destiny
+  engrams show rarity colour and item type at the drop, and the specific
+  item only on decoding (https://www.destinypedia.com/Engram). Hearthstone
+  deals five cards face-down; hovering one shows its rarity border before
+  the flip, and the player flips each card
+  (https://hearthstone.wiki.gg/wiki/Card_Pack). Genshin's wish shows the
+  star's colour before the character (commentary,
+  https://hostedgg.com/blog/gacha-pull-reveal-color-culture).
+- **F3. Rarer rewards produce larger arousal and longer pauses after.**
+  Rarer loot box items drew larger skin-conductance and press-force
+  responses, longer post-reinforcement pauses, and a stronger urge to open
+  more (Larche et al. 2021, *J. Gambling Studies* 37:141-163,
+  https://link.springer.com/content/pdf/10.1007/s10899-019-09913-5.pdf;
+  vicarious viewing; a 2024 study and Brady and Prentice 2021 found weaker
+  or no effects:
+  https://www.sciencedirect.com/science/article/pii/S2451958824001787).
+  The pause is the player taking it in, so the rare moment should not be
+  hurried away; the urge is the reason this screen never sells, re-rolls or
+  fakes a near miss.
+- **F4. A rare ceremony that runs a few seconds can be the best part.**
+  Vampire Survivors' chest pauses play while rewards cycle and a gold
+  counter ticks under rising music; three- and five-item jackpots are rare
+  and louder; a player told it could be skipped asked why anyone would
+  (https://mechanicsofmagic.com/2024/05/22/critical-play-vampire-survivors/).
+  Galante built it around a slot game's chest jingle whose animation did
+  not match its sound: "a super rewarding and over-the-top treasure chest
+  animation that matches a catchy little sound"
+  (https://www.androidpolice.com/vampire-survivors-developer-interview/;
+  https://www.thexboxhub.com/the-treasure-chest-trick-behind-vampire-survivors/).
+- **F5. A ceremony on every reward becomes a tax.** Players ask to skip or
+  batch repeated reward animations (Rocket League,
+  https://steamcommunity.com/app/252950/discussions/0/4521135641322138209/;
+  Tiny Rogues, cute the first time and unwanted after every boss,
+  https://steamcommunity.com/app/2088570/discussions/0/4030223299347013580;
+  RPG victory screens, https://www.resetera.com/threads/victory-results-screens-in-rpgs-are-annoying-please-let-players-completely-disable-them-to-speed-things-up-devs.556687/).
+  One project's spec answers with tap-anywhere-to-end-state for anything over
+  320 ms and a Calm/Brisk speed toggle
+  (https://github.com/jarrodjohnson-gif/emberisle/issues/539; a project
+  document, not a study).
+- **F6. Drop fewer, drop better; quality must mean power; compare at a
+  glance.** Diablo III's postmortem (Mosqueira, GDC 2015, as reported by a
+  fan write-up): launch players were confused when blues beat rares and
+  rares beat legendaries; the fix was "drop fewer, drop better, make
+  legendaries legendary", comparison arrows and highlighted legendary
+  affixes, and a legendary pity timer; players optimise fast, so item
+  evaluation has to be fast
+  (https://www.purediablo.com/josh-mosqueira-diablo-3-presentation-gdc-2015).
+- **F7. Too much loud loot drowns the signal.** Diablo IV legendaries drop
+  "with a distinct sound and an orange glow"; once they are common, players
+  call the clutter unacceptable without a filter
+  (https://www.dexerto.com/diablo/diablo-4-legendary-loot-overload-2867981/).
+- **F8. Declining is a first-class choice.** Slay the Spire's card reward
+  offers a pick or Skip; elites skew rarer, bosses are all rare, and a
+  rare-pity offset rises with each common
+  (https://slay-the-spire.fandom.com/wiki/Card_Rewards). Balatro packs:
+  "The player is not required to select an option, and can choose to skip at
+  any point" (https://balatrowiki.org/w/Booster_Packs).
+- **F9. Show the next reward before the player commits.** Hades puts a
+  symbol over every door previewing the next room's reward
+  (https://www.inverse.com/gaming/hades-symbol-meaning-guide-hera-dionysus-apollo-ares-aphrodite).
+  Boon rarity is a colour tier, Common to Heroic
+  (https://primagames.com/gaming/hades-guide-olympian-god-boons-skills/2).
+- **F10. Scale the effect to the event; layer channels.** Nijman's "Art of
+  Screenshake" (INDIGO 2013) and Jonasson and Purho's "Juice It or Lose It"
+  (2012) stack small effects and keep them small for routine actions, large
+  for real events; critics note heavy constant shake nauseates and hides
+  the action (summaries:
+  https://github.com/dr-jam/GameplayProgramming/blob/master/Juice.md,
+  https://rpgplayground.com/research-making-a-juicy-game/). A Balatro
+  analysis reads every scoring event as several channels at once
+  (https://blakecrosley.com/guides/design/balatro; commentary).
+- **F11. Pack reveals are storyboarded to hit beats.** Hearthstone's art
+  director describes each pack's opening as storyboarded to land the beats
+  the team wants (TouchArcade interview with Ben Thompson, 2017,
+  https://toucharcade.com/2017/04/04/designing-hearthstone-card-packs-animations-iterations-ungoro-and-more-with-art-director-ben-thompson/;
+  read via search excerpt, the page refused a direct fetch).
+
+**Principles this plan uses, with their evidence**
+
+1. **Tell the kind and the tier, hold back the identity** (F1, F2). The
+   cache says "Rare or better inside", never which card.
+2. **Rarity is a material, not a label** (F2, F9), and **quality must
+   track power where the game controls it** (F6).
+3. **Ceremony scales with rarity, and the floor is quiet** (F3, F7, F10).
+4. **Let the rare moment breathe, but never gate the choice on it** (F3,
+   F4, F5).
+5. **Everything skips to its end state; speed is a setting** (F5).
+6. **Compare at a glance against what you wear** (F6).
+7. **Declining is visible and priced** (F8).
+8. **The prize promised before the fight is the prize that arrives** (F9).
+9. **No dark patterns**: nothing for sale, no re-roll, no fake near miss;
+   the pages are rolled at settlement (F3).
 
 **Project constraints over genre habit:** no hover scaling (so no hover
 tilt); the focus arrow is the selector, a halo means quality only
@@ -187,7 +260,14 @@ tell:
 4. On landing: Uncommon a cloth puff; Rare a shimmer; Legendary the burst
    at full size for 0.3 s, a 0.12 s screen-edge flare in its colour, a low
    bell. Common: a flat tap.
+   **A Legendary lingers without blocking** (F3, F4): for 1.2 s after the
+   row is choosable its halo stays at full strength, warm motes rise off its
+   plinth and the bell decays. Input works throughout; a take or a press
+   ends the linger at once. The rare moment gets its breath; the choice
+   never waits for it.
 5. Focus goes to the first card in row order. Nothing marks a "best" card.
+6. **No near miss** (F3): a card never shows a higher quality than it has,
+   not for a frame. The flip shows the card's own quality on the way over.
 
 **Wall time to choosable, at 1x:**
 
@@ -227,6 +307,13 @@ stat the swap moves most *relative to what the wearer has now* (a +6 speed
 on a 40-speed member beats +9 health on 400; `GearEvaluator.cs:178-212`).
 No stat moves but affixes change: the flat bar with the affix's icon. Inert:
 no delta.
+
+**Quality and delta can disagree, and both stay true** (F6): a Common card
+can out-delta a Legendary for its wearer. Diablo III found blues beating
+rares confused players. This screen shows the plinth (what the item is) and
+the chevron (what it does for this wearer) side by side and never dims a
+high-quality card for a low delta; how often the two disagree is the item
+plan's tuning, not this screen's.
 
 **Focus detail** (arrow on the card, or pointer on it, only once the card
 is face-up): the shared tooltip (`TooltipFocusRouter`) shows every stat that
@@ -569,7 +656,9 @@ numbers must not move.
    state a picture carries worst), or keep all three.
 3. **Battle speed.** The Reckoning will follow the battle-speed preset
    (today it ignores it). At the default 1x it runs at the authored times
-   above; a player at 2x gets it twice as fast. Confirm.
+   above; a player at 2x gets it twice as fast. The evidence leans yes:
+   repeated reward animations are what players ask to speed up (F5), and a
+   speed setting is the answer one shipped spec gives. Confirm.
 4. **Held relics and the tally.** The board drops the held-relic list (it
    stays on the RUN pane, one press away) and folds the tally into glyph
    numbers under each portrait (the physical/other split on focus). Keep
@@ -582,8 +671,13 @@ tooltip; no pad shortcut to the door; sound sourcing follows the sound pass
 
 ## 8. Rejected alternatives
 
-- **Slot-machine reel** (Vampire Survivors): the choice is k of k + 2, not a
-  jackpot, and the genre's complaint is length.
+- **Slot-machine reel** (Vampire Survivors): its players love it (F4), but
+  a reel suits a haul you keep whole; this screen asks for a choice between
+  k + 2 readable cards, and a cycling reel hides them. The linger on a
+  Legendary (C4.4) takes the part that works: a rare moment allowed to run.
+- **Player-driven flips** (Hearthstone, F2): each flip is one more press on
+  every page of every fight (F5); the cache already gives the one tell, and
+  the row flips itself.
 - **Drops on the fight stage** (Diablo beams): stage-layer work in
   `FightController` for one beat; the haul carries the same promise kept.
 - **Card frames per quality**: the plate behind cards was removed on
@@ -654,20 +748,40 @@ Chip and Gamepad navigation), `OfferRowLayoutTests`, `MenuTypeLintTests`,
   board navigation; placeholder policy; R0 uses `ReckoningCaptureTests`;
   sound palette; owner calls rewritten (relics/tally and battle speed added,
   tone and sourcing decided).
+- rev 4, sourced research round (no review round: no structural change).
+  §2 rewritten as findings F1-F11 with sources; §11 lists every dropped
+  unsourced observation. Changes and what drove them: the Legendary
+  lingers 1.2 s without blocking (F3 Larche et al., F4 Vampire Survivors);
+  no-near-miss rule (F3); a quality-versus-delta note on the card (F6
+  Diablo III postmortem); the reel's rejection reason corrected (F4
+  contradicted "the complaint is length"); player-driven flips rejected
+  with a reason (F2, F5); owner call 3 gains its evidence (F5). The
+  one-bit cache tell, no cache below Rare and the skip contract are
+  confirmed, not changed (F1, F2, F5).
 
 ## 11. Research notes, per game
 
-[from memory] = not sourced; check in play before it drives a decision.
+Sourced in §2 (finding numbers). Rev-3 observations that found no source
+are listed as dropped; none of them is load-bearing in the plan any more.
 
-| Game | Reveal and anticipation | Rarity signal | Choice framing | Pace and skip |
-|---|---|---|---|---|
-| Hades | You see whose boon a door holds before entering; the god speaks, then three cards [from memory] | Colour per tier, Common to Heroic (primagames, §2) | 3 cards, icon + one changed number [from memory] | Instant once chosen [from memory] |
-| Slay the Spire | Reward list of rows taken in any order [from memory] | Rare odds by fight class, pity offset (fandom wiki, §2) | Pick 1 of 3 or Skip as a first-class button | Click rows; close when done |
-| Balatro | Pack fans out face-up [from memory] | Edition is a shader on the card [from memory] | Pick 1 of N or skip | Layered feedback, rising notes (blakecrosley, §2) |
-| Diablo IV / PoE | Light and sound at the item before reading | Orange glow + unique sound; overload complaint (dexerto, §2) | Compare in tooltip [from memory] | Player-tuned filters (PoE) [from memory] |
-| Hearthstone | Five face-down cards; hover shows rarity border before the flip (hearthstone.wiki.gg, §2) | Border colour, legendary flare and sound | None: all kept | "Open all" for repeat openers [from memory] |
-| Gacha (Genshin) | Streak colour before identity (hostedgg, §2) | Cool low, gold top | None | Skip top-right [from memory] |
-| Vampire Survivors | Reel spins while gold ticks, music builds (mechanicsofmagic, §2) | Item count 1/3/5 by Luck | None | Space/right-click ends it (Steam, §2) |
-| Borderlands | Chest beam tinted by tier [from memory] | Colour + louder legendary tone [from memory] | Green/red compare arrows [from memory] | - |
-| Darkest Dungeon | Flat loot grid [from memory] | Colour only | Dense two-sided trinket text: counter-example | - |
-| Inscryption | Cards laid on a table, picked by hand [from memory] | - | The physical object is the reward | - |
+| Game | What the source shows | Finding |
+|---|---|---|
+| Destiny | Rarity colour and item type at the drop, identity on decoding; the wait argued to raise satisfaction | F1, F2 |
+| Hearthstone | Five face-down cards, rarity border on hover before each player-driven flip; openings storyboarded to beats | F2, F11 |
+| Genshin / gacha | Star colour before the character (commentary) | F2 |
+| Vampire Survivors | A few seconds of cycling rewards, ticking gold and building music; rare jackpots louder; a player calls it the best part | F4 |
+| Diablo III | Drop fewer, drop better; quality must mean power; comparison arrows; pity timer | F6 |
+| Diablo IV | Distinct sound and orange glow for legendaries; overload complaint | F7 |
+| Slay the Spire | Pick or Skip; rarer by fight class; rare pity offset | F8 |
+| Balatro | Pick from 3-5 or skip at any point; layered feedback (commentary) | F8, F10 |
+| Hades | Door symbols preview the next reward; colour tiers for boon rarity | F9 |
+| Rocket League, Tiny Rogues, RPG victory screens | Repeated reward animations draw skip requests | F5 |
+
+**Dropped, unsourced:** Hades "three cards with one changed number" and
+"instant once chosen"; Balatro editions as a card shader and its pack
+fan-out; Path of Exile filter beams; Hearthstone "open all"; gacha skip
+placement; Borderlands chest beams and compare arrows (replaced by Diablo
+III's sourced comparison arrows, F6); Dead Cells; Monster Train's reward
+screen (its postmortem slides and interviews cover pick-rate analytics,
+not presentation); Inscryption's table; Darkest Dungeon's loot grid;
+Peglin (only reviews and fan guides found).
