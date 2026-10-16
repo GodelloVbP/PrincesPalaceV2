@@ -1,0 +1,245 @@
+{
+  "_notes": [
+    "Reward-screen art (docs/PLAN_REWARD_SCREENS.md section 5), replayed by tools/process_reward_art.py. Keying is key_green_screen.key_out; opaque_below/transparent_above move its soft band per sheet.",
+    "card_back: trim_wisps opens the alpha with a disc of that radius, so thread ends thinner than the disc vanish while the card body (and its corners, to within the disc) stays.",
+    "chain: grade pulls saturation and value down so the pink-mauve stone reads as dark iron over greyed art.",
+    "caches: cell cuts sit in the empty columns between bundles (the large one starts at x=1019, so an even third cut shaves a sliver into its neighbour).",
+    "Skipped on purpose, being regenerated: caches row 2 (relic tins), glyphs satchel (r1c0) and whetstone (r0c2).",
+    "Round 2: reward_caches_relic.png replaces caches row 2; reward_glyphs_2.png adds potion, whetstone, sword, shield, mana. Rects sit in the empty columns between objects; square pads each icon to a square canvas."
+  ],
+  "sheets": [
+    {
+      "sheet": "reward_card_back.png",
+      "key": "green",
+      "opaque_below": 30,
+      "transparent_above": 90,
+      "trim_wisps": 36,
+      "cells": [
+        {
+          "name": "reward_card_back",
+          "rect": [
+            0,
+            0,
+            1024,
+            1536
+          ]
+        }
+      ],
+      "pad": 8,
+      "long_edge": 768
+    },
+    {
+      "sheet": "reward_chain.png",
+      "key": "green",
+      "opaque_below": 30,
+      "transparent_above": 90,
+      "grade": {
+        "saturation": 0.22,
+        "value": 0.62,
+        "cool": 0.06
+      },
+      "cells": [
+        {
+          "name": "reward_chain",
+          "rect": [
+            0,
+            0,
+            1536,
+            1024
+          ]
+        }
+      ],
+      "pad": 8,
+      "long_edge": 512
+    },
+    {
+      "sheet": "reward_caches.png",
+      "key": "green",
+      "opaque_below": 30,
+      "transparent_above": 90,
+      "shared_canvas": true,
+      "cells": [
+        {
+          "name": "reward_cache_small",
+          "rect": [
+            0,
+            0,
+            470,
+            512
+          ]
+        },
+        {
+          "name": "reward_cache_medium",
+          "rect": [
+            470,
+            0,
+            515,
+            512
+          ]
+        },
+        {
+          "name": "reward_cache_large",
+          "rect": [
+            985,
+            0,
+            551,
+            512
+          ]
+        }
+      ],
+      "pad": 8,
+      "long_edge": 384
+    },
+    {
+      "sheet": "reward_glyphs.png",
+      "key": "magenta",
+      "opaque_below": 30,
+      "transparent_above": 90,
+      "grid": [
+        5,
+        2
+      ],
+      "shared_canvas": true,
+      "cells": [
+        {
+          "name": "glyph_heart",
+          "col": 0,
+          "row": 0
+        },
+        {
+          "name": "glyph_feather",
+          "col": 1,
+          "row": 0
+        },
+        {
+          "name": "glyph_coins",
+          "col": 3,
+          "row": 0
+        },
+        {
+          "name": "glyph_door",
+          "col": 4,
+          "row": 0
+        },
+        {
+          "name": "glyph_heart_cracked",
+          "col": 1,
+          "row": 1
+        },
+        {
+          "name": "glyph_shield_cracked",
+          "col": 2,
+          "row": 1
+        },
+        {
+          "name": "glyph_leaf",
+          "col": 3,
+          "row": 1
+        },
+        {
+          "name": "glyph_skull",
+          "col": 4,
+          "row": 1
+        }
+      ],
+      "pad": 4,
+      "long_edge": 128,
+      "square": true
+    },
+    {
+      "sheet": "reward_caches_relic.png",
+      "key": "green",
+      "opaque_below": 30,
+      "transparent_above": 90,
+      "shared_canvas": true,
+      "cells": [
+        {
+          "name": "reward_relic_small",
+          "rect": [
+            0,
+            0,
+            625,
+            724
+          ]
+        },
+        {
+          "name": "reward_relic_medium",
+          "rect": [
+            625,
+            0,
+            712,
+            724
+          ]
+        },
+        {
+          "name": "reward_relic_large",
+          "rect": [
+            1337,
+            0,
+            835,
+            724
+          ]
+        }
+      ],
+      "pad": 8,
+      "long_edge": 384
+    },
+    {
+      "sheet": "reward_glyphs_2.png",
+      "key": "magenta",
+      "opaque_below": 30,
+      "transparent_above": 90,
+      "shared_canvas": true,
+      "square": true,
+      "cells": [
+        {
+          "name": "glyph_potion",
+          "rect": [
+            0,
+            0,
+            376,
+            793
+          ]
+        },
+        {
+          "name": "glyph_whetstone",
+          "rect": [
+            376,
+            0,
+            448,
+            793
+          ]
+        },
+        {
+          "name": "glyph_sword",
+          "rect": [
+            824,
+            0,
+            333,
+            793
+          ]
+        },
+        {
+          "name": "glyph_shield",
+          "rect": [
+            1157,
+            0,
+            454,
+            793
+          ]
+        },
+        {
+          "name": "glyph_mana",
+          "rect": [
+            1611,
+            0,
+            372,
+            793
+          ]
+        }
+      ],
+      "pad": 4,
+      "long_edge": 128
+    }
+  ]
+}

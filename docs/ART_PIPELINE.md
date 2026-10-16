@@ -96,6 +96,17 @@ on a plain Texture silently returns `null`, and the affected slot just
 renders nothing with no error anywhere. Only a `.meta` that's actually wrong
 gets touched, so re-running the tool doesn't force a project-wide reimport.
 
+### Reward-screen art: `process_reward_art.py`
+
+`py tools/process_reward_art.py [--only reward_chain.png]` replays
+`Art/UI/Reckoning/reward_recipe.json`: `key_out` per sheet with its own soft
+band (`opaque_below`/`transparent_above`), then optionally `trim_wisps` (opening
+by a disc: thread ends thinner than the disc past a silhouette vanish), `grade`
+(saturation/value/cool, for the chain's dark iron), cell cutting by `rect` or
+grid cell, tight crop, and one shared canvas per sheet. Outputs land in
+`Reckoning/Processed/`. Cut rects sit in the empty columns between objects, not
+at even thirds. Skipped sheets and why are in the recipe's `_notes`.
+
 ## 4. Actor stances (`Resources/<Enemies|Characters>/<id>/<stance>.png`)
 
 Every combat actor ships **one still drawing per stance** — idle, attack,

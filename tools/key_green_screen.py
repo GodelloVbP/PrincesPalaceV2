@@ -232,9 +232,11 @@ def key_out_green(image):
     return key_out(image, "green")
 
 
-def key_out(image, key="green"):
+def key_out(image, key="green", opaque_below=FULLY_OPAQUE_BELOW, transparent_above=FULLY_TRANSPARENT_ABOVE):
     """RGB on a flat backdrop (`key`: "green" or "magenta") -> RGBA, with a soft
-    edge and the spill suppressed.
+    edge and the spill suppressed. `opaque_below`/`transparent_above` move the
+    soft band for one sheet whose backdrop or edge fringe needs it; the defaults
+    are the module constants every kit uses.
 
     Magenta spill is pulled toward neutral by lowering both red and blue by the
     dominance, which leaves the red/blue balance of the pixel alone; a green
@@ -270,7 +272,7 @@ def key_out(image, key="green"):
     arr = np.asarray(rgba).astype(np.int32)
     r, g, b, input_alpha = arr[..., 0], arr[..., 1], arr[..., 2], arr[..., 3]
 
-    span = FULLY_TRANSPARENT_ABOVE - FULLY_OPAQUE_BELOW
+    span = transparent_above - opaque_below
     measure, spill_channels = KEY_COLOURS[key]
     dominance = measure(r, g, b)
 
@@ -278,8 +280,8 @@ def key_out(image, key="green"):
     # instead of turning into a hard jagged cut. Computed for every pixel
     # (including ones the two np.where calls below will overwrite) since
     # that is cheaper than masking the array twice.
-    ramp = 255 - np.trunc(255 * (dominance - FULLY_OPAQUE_BELOW) / span).astype(np.int32)
-    keyed_alpha = np.where(dominance <= FULLY_OPAQUE_BELOW, 255, ramp)
+    ramp = 255 - np.trunc(255 * (dominance - opaque_below) / span).astype(np.int32)
+    keyed_alpha = np.where(dominance <= opaque_below, 255, ramp)
 
     alpha = np.minimum(input_alpha, keyed_alpha)
 
@@ -294,7 +296,7 @@ def key_out(image, key="green"):
     for c in spill_channels:
         channels[c] = channels[c] - lowered
 
-    transparent = dominance >= FULLY_TRANSPARENT_ABOVE
+    transparent = dominance >= transparent_above
     out_r = np.where(transparent, 0, channels[0])
     out_g = np.where(transparent, 0, channels[1])
     out_b = np.where(transparent, 0, channels[2])

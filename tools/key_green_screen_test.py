@@ -72,5 +72,15 @@ class GreenKeyUnchangedTests(unittest.TestCase):
         self.assertTrue((out[..., 3][~keep] == 0).all())
 
 
+class KeyBandTests(unittest.TestCase):
+    def test_a_narrower_band_clears_a_dark_green_fringe_the_default_keeps(self):
+        px = np.zeros((1, 1, 3), np.uint8)
+        px[0, 0] = (30, 85, 30)  # dominance 55: inside the default soft band
+        default = np.asarray(kg.key_out(Image.fromarray(px)))[0, 0, 3]
+        tight = np.asarray(kg.key_out(Image.fromarray(px), "green", 10, 40))[0, 0, 3]
+        self.assertGreater(default, 0)
+        self.assertEqual(tight, 0)
+
+
 if __name__ == "__main__":
     unittest.main()
