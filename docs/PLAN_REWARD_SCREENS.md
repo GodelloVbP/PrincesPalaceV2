@@ -422,7 +422,14 @@ First sweep (fails at 32% beat over all pages, 15% on Normal pages): `docs/REWAR
 | Cache, 5 cards, no top tier | wipe 0.34 + 0.2 + 0.12 + 0.25 + (4 x 0.06 + 0.12) 0.36 | 1.27 s |
 | Cache, 5 cards, top-tier upgrade | the above + 0.25 | 1.52 s |
 
-**Cap: 1.6 s**, holding by construction: the factor never exceeds 1 (C10).
+**Cap: 1.6 s** at every preset: the factor never exceeds 1 (C10), so a
+preset never lengthens a page. That alone does not hold the cap for every
+page: two top-tier live upgrades in 4 cards run 1.71 s at 1x, and 7 cards
+with one hold run 1.64 s. `RevealSchedule` shortens a page that would pass
+it in this order: the open wait (to 0), then the flip stagger (floor
+0.02 s), then each hold (floor 0.10 s), then, past every floor, holds and
+stagger to 0. The wipe, seal, slide and the flips never shorten. The two
+pages above land at exactly 1.6 s.
 
 ### C5. The card face
 
