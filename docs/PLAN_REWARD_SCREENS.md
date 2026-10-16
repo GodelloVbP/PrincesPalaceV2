@@ -413,13 +413,16 @@ Sweep on db515a0b: beat 16.3% on non-boss pages (passes 1 in 5), 60.7% on boss p
 
 ### C4. The opening (cache pages only)
 
-1. The seal snaps (0.12 s), a breath of light.
-2. The *k* + 2 cards slide out face-down into the row (0.25 s).
-3. Cards flip **left to right in row order**, 0.06 s apart, each flip
-   0.12 s. A **Legendary live upgrade over a worn item below Legendary** holds a
-   0.25 s silent beat before its own flip; the cards after it wait (a boss
-   page keeps this rule; only its cache is unconditional; a relic: any
-   top-tier live relic). Each flip plays the flip clip at its
+1. The cache stands closed and hums through the open wait. A cache holding
+   a **Legendary live upgrade over a worn item below Legendary** stands one
+   0.25 s silent beat longer per such card (a boss page keeps this rule;
+   only its cache is unconditional; a relic: any top-tier live relic). The
+   anticipation is on the cache: face-down backs that sit still read as a
+   stall (feel gate, 2026-10-16).
+2. The seal snaps (0.12 s), a breath of light.
+3. The *k* + 2 cards slide out face-down into the row (0.25 s), and the
+   first flip starts as the slide ends. Cards flip **left to right in row
+   order**, 0.06 s apart, each flip 0.12 s. Each flip plays the flip clip at its
    quality's pitch step (one clip, pitched per step, C11). Quality here is `ContentDatabase.QualityOf`, the one source the plinth and name colour read.
 4. On landing: Uncommon a cloth puff; Rare a shimmer; top tier the burst at
    full size for 0.3 s, a 0.12 s screen-edge flare in its colour, a low
@@ -451,9 +454,10 @@ Sweep on db515a0b: beat 16.3% on non-boss pages (passes 1 in 5), 60.7% on boss p
 preset never lengthens a page. That alone does not hold the cap for every
 page: two top-tier live upgrades in 4 cards run 1.71 s at 1x, and 7 cards
 with one hold run 1.64 s. `RevealSchedule` shortens a page that would pass
-it in this order: the open wait (to 0), then the flip stagger (floor
-0.02 s), then each hold (floor 0.10 s), then, past every floor, holds and
-stagger to 0. The wipe, seal, slide and the flips never shorten. The two
+it in this order: the flip stagger (floor 0.02 s), then each hold (floor
+0.10 s), then the open wait (floor 0.10 s), then, past every floor, holds,
+stagger and wait to 0. The cache keeps its wait longest because it is
+what the player watches. The wipe, seal, slide and the flips never shorten. The two
 pages above land at exactly 1.6 s.
 
 ### C5. The card face

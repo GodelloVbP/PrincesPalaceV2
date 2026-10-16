@@ -24,6 +24,20 @@ namespace PrincesPalace
             return card.IsGear ? GearIsLive(save, card) : RelicIsLive(save, card);
         }
 
+        // The card as the reveal sees it (RevealSchedule): its quality step
+        // from the face (ContentDatabase.QualityOf, the one quality source),
+        // whether it is good news, what its wearer wears, and whether its face
+        // shows the up-chevron. `face` is the one the screen already built, or
+        // null to build it here.
+        public static RevealCard RevealCardOf(SaveData save, PendingCard card, RewardCardFace face = null)
+        {
+            if (face == null) face = card.IsGear ? RewardCardFace.OfGear(save, card) : RewardCardFace.OfRelic(card);
+            bool live = Of(save, card);
+            return card.IsGear
+                ? new RevealCard(face.PlinthStep, live, WornTier(save, card), false, face.HasDelta && face.DeltaSign > 0)
+                : RevealCard.Relic(face.PlinthStep, live);
+        }
+
         // The tier (1..4, Common..Legendary) of the item the card's recipient
         // wears in the card's slot now; 0 for an empty slot or a relic card.
         // The reveal's cache and held beat compare against it.

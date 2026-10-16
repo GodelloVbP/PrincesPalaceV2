@@ -93,14 +93,7 @@ namespace PrincesPalace
             {
                 int i = PageAt(r);
                 _revealRows[r] = i;
-                var card = _page.Cards[i];
-                var face = i < _faces.Length ? _faces[i] : null;
-                int tier = face?.PlinthStep ?? 1;
-                bool live = LiveUpgrade.Of(save, card);
-                cards.Add(card.IsGear
-                    ? new RevealCard(tier, live, LiveUpgrade.WornTier(save, card), false,
-                        face != null && face.HasDelta && face.DeltaSign > 0)
-                    : RevealCard.Relic(tier, live));
+                cards.Add(LiveUpgrade.RevealCardOf(save, _page.Cards[i], i < _faces.Length ? _faces[i] : null));
             }
 
             for (int i = 0; i < offerButtons.Length; i++)
@@ -277,8 +270,8 @@ namespace PrincesPalace
         }
 
         // A dealt card rustles; a cache card lands by its quality, and a
-        // top-tier live upgrade bursts, flares and rings the bell (the boss
-        // page's peak under it).
+        // top-tier live upgrade bursts, flares and rings the bell. The boss
+        // page's peak is the page's, once, under its first top-tier bell.
         private void Land(RevealBeat beat)
         {
             if (!_reveal.HasCache) SoundController.Play(Sound.CardDeal);
@@ -286,7 +279,8 @@ namespace PrincesPalace
 
             _burstRows.Add(beat.Card);
             SoundController.Play(Sound.LegendaryBell);
-            if (_page != null && _page.SourceClass == EncounterClass.Boss) SoundController.Play(Sound.BossPeak);
+            if (_burstRows.Count == 1 && _page != null && _page.SourceClass == EncounterClass.Boss)
+                SoundController.Play(Sound.BossPeak);
             StartFlare(_revealRows[beat.Card], RevealSchedule.FlareSeconds * ReckoningTime.Scale(_preset));
         }
 
@@ -324,7 +318,7 @@ namespace PrincesPalace
             if (_reveal == null) return;
 
             float t = _reveal.Skipped ? float.MaxValue : _revealClock;
-            RevealBeat? wipe = null, deal = null, wait = null, seal = null, slide = null;
+            RevealBeat? wipe = null, deal = null, seal = null, slide = null;
             var flips = new Dictionary<int, RevealBeat>();
             int embersLit = 0;
             foreach (var beat in _reveal.Beats)
@@ -333,7 +327,6 @@ namespace PrincesPalace
                 {
                     case RevealBeatKind.Wipe: wipe = beat; break;
                     case RevealBeatKind.Deal: deal = beat; break;
-                    case RevealBeatKind.OpenWait: wait = beat; break;
                     case RevealBeatKind.Seal: seal = beat; break;
                     case RevealBeatKind.Slide: slide = beat; break;
                     case RevealBeatKind.Flip: flips[beat.Card] = beat; break;
@@ -372,7 +365,9 @@ namespace PrincesPalace
                 cache.transform.localScale = Vector3.one * (1f + 0.3f * snap);
                 if (cacheSeam != null)
                 {
-                    float hum = wait.HasValue && t < wait.Value.End ? 0.45f + 0.25f * Mathf.Sin(t * 30f) : 0.5f;
+                    // It hums for as long as it stands closed: the open wait
+                    // and any held beat for a top tier inside.
+                    float hum = 0.45f + 0.25f * Mathf.Sin(t * 30f);
                     SetAlpha(cacheSeam, t >= seal.Value.Start ? 1f - snap * 0.5f : hum);
                 }
             }

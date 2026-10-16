@@ -62,7 +62,7 @@ namespace PrincesPalace.Domain.Rewards
         Seal,          // the seal snaps
         Slide,         // k + 2 cards slide out face-down
         Deal,          // no cache: the cards deal face-up; Card -1, spans the whole deal
-        Hold,          // silent beat before a top-tier live upgrade's own flip; Card is that card
+        Hold,          // the cache stands a silent beat longer for a top-tier live upgrade inside; Card is that card
         Flip,          // PitchStep is the flip clip
         Land,          // the card is face-up; Style says how it arrives
         Ember,         // a choice ember lights (rides the landing)
@@ -127,14 +127,14 @@ namespace PrincesPalace.Domain.Rewards
         // The gold count lands in at most this many soft ticks (C2).
         public const int MaxHaulTicks = 8;
 
-        // Wipe start to choosable, at every preset. A page of up to five cards
-        // fits unshortened; a longer one gives up its waits in the order of Fit.
+        // Wipe start to choosable, at every preset. A page that would pass it
+        // gives up its waits in the order of Fit.
         public const float CapSeconds = 1.6f;
 
-        // The floors Fit shortens to: the stagger and the hold keep a readable
-        // sliver, the open wait can go to nothing.
+        // The floors Fit shortens to first: each keeps a readable sliver.
         public const float MinStaggerSeconds = 0.02f;
         public const float MinHoldSeconds = 0.1f;
+        public const float MinOpenWaitSeconds = 0.1f;
 
         public readonly bool HasCache;
         public readonly bool HasTopLiveUpgrade;
@@ -220,22 +220,29 @@ namespace PrincesPalace.Domain.Rewards
                 float seal = W(SealSeconds), slide = W(SlideSeconds), flip = W(FlipSeconds);
                 if (wait > 0f) beats.Add(new RevealBeat(RevealBeatKind.OpenWait, t, wait));
                 t += wait;
+
+                // THE ANTICIPATION IS THE CACHE'S: a top-tier live upgrade
+                // inside keeps it standing (and humming) one silent beat
+                // longer, before the seal snaps. Face-down backs that sit still
+                // read as a stall, not as suspense.
+                for (int i = 0; i < n; i++)
+                {
+                    if (!HoldsFor(cards[i])) continue;
+                    beats.Add(new RevealBeat(RevealBeatKind.Hold, t, hold, i));
+                    t += hold;
+                }
+
                 beats.Add(new RevealBeat(RevealBeatKind.Seal, t, seal));
                 t += seal;
                 beats.Add(new RevealBeat(RevealBeatKind.Slide, t, slide));
                 t += slide;
 
-                // Flip i starts `stagger` after flip i-1 started; a top-tier
-                // live upgrade holds before its own flip and delays the rest.
+                // The slide ends on the first flip; flip i starts `stagger`
+                // after flip i-1 started.
                 float start = t;
                 for (int i = 0; i < n; i++)
                 {
                     if (i > 0) start += stagger;
-                    if (HoldsFor(cards[i]))
-                    {
-                        beats.Add(new RevealBeat(RevealBeatKind.Hold, start, hold, i));
-                        start += hold;
-                    }
                     beats.Add(new RevealBeat(RevealBeatKind.Flip, start, flip, i, cards[i].Tier));
                     landAt[i] = start + flip;
                 }
@@ -278,10 +285,12 @@ namespace PrincesPalace.Domain.Rewards
         }
 
         // SHORTENING ORDER when a cache page would pass the cap (two holds
-        // on four cards can, as can one hold on seven): the open wait goes first, then the flip
-        // stagger down to its floor, then each hold down to its floor, then
-        // holds and stagger to nothing. The wipe, seal, slide and the flips
-        // themselves never shorten.
+        // on four cards can, as can one hold on seven): the flip stagger down
+        // to its floor, then each hold, then the open wait, each to its
+        // floor; past every floor, holds, stagger and wait to nothing in that
+        // order. The cache keeps its open wait longest because it is what
+        // the player watches. The wipe, seal, slide and the flips themselves
+        // never shorten.
         private static void Fit(Func<float, float> w, int n, int holds, out float wait, out float stagger, out float hold)
         {
             float waitW = w(OpenWaitSeconds), staggerW = w(FlipStaggerSeconds), holdW = w(HoldSeconds);
@@ -289,37 +298,24 @@ namespace PrincesPalace.Domain.Rewards
             int gaps = Math.Max(0, n - 1);
 
             float over = fixedPart + waitW + gaps * staggerW + holds * holdW - CapSeconds;
-            if (over > 0f)
-            {
-                float cut = Math.Min(waitW, over);
-                waitW -= cut;
-                over -= cut;
-            }
-            if (over > 0f && gaps > 0)
-            {
-                float cut = Math.Min(staggerW - w(MinStaggerSeconds), over / gaps);
-                staggerW -= cut;
-                over -= cut * gaps;
-            }
-            if (over > 0f && holds > 0)
-            {
-                float cut = Math.Min(holdW - w(MinHoldSeconds), over / holds);
-                holdW -= cut;
-                over -= cut * holds;
-            }
-
-            // Past every floor (many holds on one page): the cap wins over
-            // the sliver, holds first, then the stagger.
-            if (over > 0f && holds > 0)
-            {
-                float cut = Math.Min(holdW, over / holds);
-                holdW -= cut;
-                over -= cut * holds;
-            }
-            if (over > 0f && gaps > 0) staggerW = Math.Max(0f, staggerW - over / gaps);
+            Shorten(ref staggerW, w(MinStaggerSeconds), gaps, ref over);
+            Shorten(ref holdW, w(MinHoldSeconds), holds, ref over);
+            Shorten(ref waitW, w(MinOpenWaitSeconds), 1, ref over);
+            Shorten(ref holdW, 0f, holds, ref over);
+            Shorten(ref staggerW, 0f, gaps, ref over);
+            Shorten(ref waitW, 0f, 1, ref over);
             wait = waitW;
             stagger = staggerW;
             hold = holdW;
+        }
+
+        // Takes up to `over` off `count` copies of `value`, never below `floor`.
+        private static void Shorten(ref float value, float floor, int count, ref float over)
+        {
+            if (over <= 0f || count <= 0 || value <= floor) return;
+            float cut = Math.Min(value - floor, over / count);
+            value -= cut;
+            over -= cut * count;
         }
 
         // Whether a beat is running at `t` (the controller's Act gate: while

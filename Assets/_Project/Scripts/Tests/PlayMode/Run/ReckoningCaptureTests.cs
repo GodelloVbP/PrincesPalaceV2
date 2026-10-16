@@ -176,11 +176,20 @@ namespace PrincesPalace.PlayModeTests
 
         // A PAGE SHOT SHOWS THE ROW AS IT IS, not the screen's focus: no
         // marker on the first card and no detail over the others, so the row
-        // itself can be judged (the ghost gate).
+        // itself can be judged (the ghost gate). Rendered in the same frame
+        // the focus is cleared: on the next one NavigationInputModule's
+        // reselection rule puts the pad's focus back on the entry card, which
+        // is right for play and wrong only for this picture. The marker is
+        // hidden by hand because it only follows the selection in LateUpdate.
         private IEnumerator ShootPage(string file)
         {
             UnityEngine.EventSystems.EventSystem.current?.SetSelectedGameObject(null);
-            yield return null;
+            foreach (var marker in Object.FindObjectsByType<FocusMarker>(FindObjectsInactive.Exclude))
+            {
+                var image = marker.GetComponent<UnityEngine.UI.Image>();
+                if (image != null) image.enabled = false;
+            }
+
             yield return Shoot(file);
         }
 

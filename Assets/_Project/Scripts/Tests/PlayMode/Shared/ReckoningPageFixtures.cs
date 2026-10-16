@@ -5,6 +5,7 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using PrincesPalace.Content;
+using PrincesPalace.Domain.Equipment;
 using PrincesPalace.Domain.Rewards;
 using PrincesPalace.Domain.UiKit;
 
@@ -63,12 +64,35 @@ namespace PrincesPalace.PlayModeTests
             RunManager.StartRun(Seed);
         }
 
-        // A normal fight's page: three cards, none above the ordinary ladder.
+        // A normal fight's page that earns no cache, the most common page: its
+        // three cards dealt face-up. A Rare+ card earns the cache when it is
+        // better than what its wearer wears, so each one's wearer is given the
+        // same copy (an equal quality never earns it); Commons and Uncommons
+        // never do and keep whatever they were rolled against.
         public static IReadOnlyList<PendingPage> NoCachePage()
         {
             StartRun();
-            return OneGearPage();
+            var pages = OneGearPage();
+            var save = SaveSlotManager.CurrentSave;
+            foreach (var card in pages[0].Cards)
+            {
+                if (!card.IsGear || LiveUpgrade.RevealCardOf(save, card).Tier < RevealSchedule.RareTier) continue;
+                WearerOf(save, card).equipment.Put(card.Slot,
+                    ItemInstance.Of(card.Copy.ItemId, card.Copy.Tier, card.Copy.ModifierIds));
+            }
+
+            Assert.IsFalse(RevealSchedule.CacheApplies(RevealCardsOf(save, pages[0]), pages[0].SourceClass),
+                "the no-cache fixture earns a cache");
+            return pages;
         }
+
+        // The page as the reveal sees it, in page order (the cache rule does
+        // not depend on the order).
+        public static List<RevealCard> RevealCardsOf(SaveData save, PendingPage page) =>
+            page.Cards.Select(c => LiveUpgrade.RevealCardOf(save, c)).ToList();
+
+        private static Character WearerOf(SaveData save, PendingCard card) =>
+            save.roster.First(c => c != null && c.definitionId == card.RecipientId);
 
         // Pity one page short of its cap forces a Legendary on the boss gear
         // page, the top-tier gear a cache will hold.
@@ -79,10 +103,11 @@ namespace PrincesPalace.PlayModeTests
             return BossAndTwoAnchors();
         }
 
-        // The boss gear page is the five-card row. A ghost is the item the
-        // wearer already wears in the card's slot (C5), so cards 0-3 get their
-        // wearer+slot filled and card 4's slot is emptied: the row shows ghost
-        // present and ghost absent.
+        // The boss gear page is the five-card row, every card with a ghost: the
+        // item its wearer already wears in the card's slot (C5). The worn items
+        // are put straight into the slots, so no equip rule can move or refuse
+        // one; each is a matching card from an ordinary page, else the card's
+        // own item one tier lower.
         public static IReadOnlyList<PendingPage> FiveGhostsPages()
         {
             StartRun();
@@ -90,33 +115,25 @@ namespace PrincesPalace.PlayModeTests
             var cards = pages[0].Cards;
             Assert.AreEqual(5, cards.Count, "the boss gear page is no longer five cards");
 
-            // A second, ordinary page supplies the worn items (any item that
-            // fits the slot); rolled after the boss page, which it must not
-            // disturb, and discarded from the run's pending pages after.
+            // Rolled after the boss page, which it must not disturb, and
+            // discarded from the run's pending pages after.
             var wornSource = Settle(
                 new List<EncounterClass> { EncounterClass.Normal, EncounterClass.Normal, EncounterClass.Normal },
                 nodeId: 3)[0].Cards;
             RunManager.Run.pendingPages = pages.ToList();
 
             var save = SaveSlotManager.CurrentSave;
-            for (int i = 0; i < cards.Count; i++)
+            foreach (var card in cards)
             {
-                var who = save.roster.First(c => c != null && c.definitionId == cards[i].RecipientId);
-                if (i == cards.Count - 1)
-                {
-                    EquipmentOps.Unequip(MenuContext.Descent, save, who, cards[i].Slot);
-                    Assert.IsNull(who.equipment.GetInstance(cards[i].Slot), "the no-ghost slot is not empty");
-                    continue;
-                }
-
-                var worn = wornSource.FirstOrDefault(c => c.IsGear && c.RecipientId == cards[i].RecipientId &&
-                                                          c.Slot == cards[i].Slot) ?? cards[i];
-                var definition = ContentDatabase.DefinitionOf(worn.Copy);
-                InventoryOps.Add(save.stockpiledItems, worn.Copy, 1);
-                Assert.IsTrue(EquipmentOps.Equip(MenuContext.Descent, save, who, worn.Copy, definition.equipSlot,
-                    definition.IsEquippable, cards[i].Slot), $"could not wear card {i}'s slot");
+                var match = wornSource.FirstOrDefault(c => c.IsGear && c.RecipientId == card.RecipientId && c.Slot == card.Slot);
+                var worn = match != null
+                    ? ItemInstance.Of(match.Copy.ItemId, match.Copy.Tier, match.Copy.ModifierIds)
+                    : ItemInstance.Of(card.Copy.ItemId, System.Math.Max(0, card.Copy.Tier - 1));
+                WearerOf(save, card).equipment.Put(card.Slot, worn);
             }
 
+            for (int i = 0; i < cards.Count; i++)
+                Assert.IsNotNull(WearerOf(save, cards[i]).equipment.GetInstance(cards[i].Slot), $"card {i}'s wearer wears nothing there");
             return pages;
         }
     }
