@@ -688,26 +688,28 @@ pins for the general case).
 
 | Moment | Sound | Clip (`Sfx/Reckoning/` unless noted; recipe `tools/make_reckoning_cues.py`) |
 |---|---|---|
-| Card deal (no cache) | cloth rustle | `card_deal` (FilmCow cloth mask removed 4) |
-| Ember lights | breath | `ember_light` (FilmCow air duster 3, low-passed). **Needed**: a real breath on an ember; this is filtered air |
+| Card deal (no cache) | card dealt | `card_deal` (Sonniss 344 Audio Casino Cards `Dealing 3`, onset at frame 0, 0.34 s) |
+| Ember lights | torch flare | `ember_light` (TomMusic `Light Torch 1`) |
 | Up-chevron pop | rising note ladder, pre-pitched | `chevron_note` (Skyward Hero UI 11, root near 620 Hz) |
-| Cache open | `OpenPack` | `Sfx/open_the_pack`, unedited |
-| Card flip | one clip, pitched per step | `card_flip` (rubberduck book_01, CC0) |
+| Cache open | cloth unfolds | `cloth_unfold` (FilmCow flag 7); `open_the_pack` stays for `OpenPack` |
+| Card flip | one clip, pitched per step | `card_flip` (FilmCow swoosh 6) |
 | Top-tier landing | low bell | `legendary_bell` (the `toll` bell, trimmed, 0.8 s tail) |
-| Top-tier build (`RevealRiser`) | riser under the 0.6 s tremble | `reveal_riser`. **Placeholder**: `court_of_whispers_cast`, trimmed to 0.7 s |
-| Rare landing (`RevealRing`) | the ring of light | `reveal_ring`. **Placeholder**: `status_ward_1` |
-| Top-tier landing (`RevealImpact`) | impact under the bell | `reveal_impact`. **Placeholder**: `crownfall_impact` |
-| Top-tier shake (`RevealRumble`) | low rumble of the 8 px kick | `reveal_rumble`. **Placeholder**: `boulder_slam_impact`, low-passed at 900 Hz |
+| Top-tier build (`RevealRiser`) | riser under the 0.6 s tremble | `reveal_riser` (Skyward Hero UI 25, 0.15 s in, 0.2 s out, 0.4 s noise-reverb tail) |
+| Rare landing (`RevealRing`) | the ring of light | `reveal_ring` (Vol.2 Crystal UI 2) |
+| Top-tier landing (`RevealImpact`) | impact under the bell | `reveal_impact` (Sonniss Federico Soler Booms Vol.2 214 + Vol.2 UI 27 sparkle at +0.12 s, mixed in the recipe) |
+| Top-tier shake (`RevealRumble`) | low rumble of the 8 px kick | `reveal_rumble` (Sonniss Jake Fielding Interior Thunder Rumble, 7.5 s window) |
 | Boss peak | short musical sting | `boss_peak` (Skyward Hero UI 40, 1.6 s) |
 | Coin count | soft tick | `coin_tick` (rubberduck item_coins_01, CC0) |
-| Potion / book land | glass clink / paper thump | `potion_land` (FilmCow glass clink 2); `book_land` (FilmCow book pick up 3). **Needed**: a dull paper-bound thump; the pick-up is a proxy |
-| Take | soft clink on the ladder's root | `take` (Skyward Hero UI 24, root near 620 Hz) |
-| Hone | whetstone scrape | `hone_scrape` (rubberduck stones_02, CC0). **Needed**: steel drawn along a whetstone; this is stone on stone |
+| Potion / book land | glass clink / paper thump | `potion_land` (FilmCow glass clink 2); `book_land` (FilmCow book throw 5, low-passed 3.2 kHz) |
+| Take | pick-up | `take` (FilmCow book pick up 5) |
+| Hone | whetstone scrape | `hone_scrape` (Sonniss David Dumais `SWING SCRAPE` long blade) |
 | Experience fill / level up | hum / bell | `xp_hum` (Skyward Hero UI 25); `level_bell` (FilmCow ding 3) |
-| Fell / Endured | low string note / drone | `fell` (Skyward Hero UI 26), `endured` (Skyward Hero UI 31). **Needed**: a bowed low string for Fell; this is a synth pad |
+| Fell / Endured | low string note / drone | `fell` (Sonniss The Noisery bowed metal screech), `endured` (Skyward Hero UI 31) |
 
-Chosen from the metrics (onset, spectrum, length), not auditioned: R6 had no
-ears. Judge by playing them, then replace a source in the script's `CUES`.
+The owner auditioned and picked the rows above except chevron note, boss peak,
+coin tick, potion land, experience fill, level bell, ember snuff, endured and the
+top-tier bell, which keep their R6 metric-chosen clips (replacements are being
+auditioned). To swap a source, edit the script's `CUES`.
 Potion / book land, experience fill / level up and Fell / Endured have their
 clip but no trigger yet: their moments (the haul strip, the board, the outcome
 form) are R5's, so the R6 "fires once" gate holds for them when R5 wires

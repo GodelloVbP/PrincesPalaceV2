@@ -47,9 +47,8 @@ namespace PrincesPalace
         VictorySting,
 
         // The Reckoning's moments (docs/PLAN_REWARD_SCREENS.md C11). Clips are
-        // cut by tools/make_reckoning_cues.py into Sfx/Reckoning/; CacheOpen
-        // plays OpenPack's clip. None may use the button click or the refusal
-        // buzz (ReckoningSoundTests).
+        // cut by tools/make_reckoning_cues.py into Sfx/Reckoning/. None may use the
+        // button click or the refusal buzz (ReckoningSoundTests).
         CardDeal,
         CacheOpen,
         CardFlip,
@@ -108,7 +107,7 @@ namespace PrincesPalace
                 case Sound.Swipe2: return "Audio/Sfx/swipe_2";
                 case Sound.VictorySting: return "Audio/Sfx/victory_sting";
                 case Sound.CardDeal: return "Audio/Sfx/Reckoning/card_deal";
-                case Sound.CacheOpen: return "Audio/Sfx/open_the_pack";
+                case Sound.CacheOpen: return "Audio/Sfx/Reckoning/cloth_unfold";
                 case Sound.CardFlip: return "Audio/Sfx/Reckoning/card_flip";
                 case Sound.LegendaryBell: return "Audio/Sfx/Reckoning/legendary_bell";
                 case Sound.CoinTick: return "Audio/Sfx/Reckoning/coin_tick";

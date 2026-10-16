@@ -146,13 +146,12 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(0, Heard(Sound.Fell) + Heard(Sound.Endured));
         }
 
-        // Cut by tools/make_reckoning_cues.py; only CacheOpen reuses a shipped clip.
+        // Cut by tools/make_reckoning_cues.py; every cue has its own clip there.
         [Test]
-        public void ReckoningCues_LiveInTheirOwnFolder_ExceptCacheOpen()
+        public void ReckoningCues_LiveInTheirOwnFolder()
         {
-            foreach (var cue in Reckoning.Where(c => c != Sound.CacheOpen))
+            foreach (var cue in Reckoning)
                 StringAssert.StartsWith("Audio/Sfx/Reckoning/", SoundLibrary.PathOf(cue), cue.ToString());
-            Assert.AreEqual("Audio/Sfx/open_the_pack", SoundLibrary.PathOf(Sound.CacheOpen));
         }
     }
 }

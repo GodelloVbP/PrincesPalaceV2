@@ -78,10 +78,10 @@
     },
     {
       "path": "Sfx/Reckoning/book_land",
-      "gainDb": 2.0,
-      "gain": 1.2589,
+      "gainDb": 1.99,
+      "gain": 1.2575,
       "metric": "rms",
-      "measuredDb": -27.1,
+      "measuredDb": -22.7,
       "peakDb": -3.0
     },
     {
@@ -94,18 +94,18 @@
     },
     {
       "path": "Sfx/Reckoning/card_deal",
-      "gainDb": 1.6,
-      "gain": 1.2023,
+      "gainDb": 1.79,
+      "gain": 1.2289,
       "metric": "rms",
-      "measuredDb": -19.6,
-      "peakDb": -2.9
+      "measuredDb": -25.9,
+      "peakDb": -2.8
     },
     {
       "path": "Sfx/Reckoning/card_flip",
-      "gainDb": 1.96,
-      "gain": 1.2531,
+      "gainDb": 1.99,
+      "gain": 1.2575,
       "metric": "rms",
-      "measuredDb": -28.3,
+      "measuredDb": -20.1,
       "peakDb": -3.0
     },
     {
@@ -114,6 +114,14 @@
       "gain": 0.8913,
       "metric": "rms",
       "measuredDb": -17.0,
+      "peakDb": -3.0
+    },
+    {
+      "path": "Sfx/Reckoning/cloth_unfold",
+      "gainDb": 2.0,
+      "gain": 1.2589,
+      "metric": "rms",
+      "measuredDb": -23.4,
       "peakDb": -3.0
     },
     {
@@ -126,10 +134,10 @@
     },
     {
       "path": "Sfx/Reckoning/ember_light",
-      "gainDb": -0.3,
-      "gain": 0.9661,
+      "gainDb": 1.9,
+      "gain": 1.2445,
       "metric": "rms",
-      "measuredDb": -17.7,
+      "measuredDb": -20.8,
       "peakDb": -2.9
     },
     {
@@ -150,19 +158,19 @@
     },
     {
       "path": "Sfx/Reckoning/fell",
-      "gainDb": 2.0,
-      "gain": 1.2589,
+      "gainDb": -3.5,
+      "gain": 0.6683,
       "metric": "rms",
-      "measuredDb": -20.1,
+      "measuredDb": -14.5,
       "peakDb": -3.0
     },
     {
       "path": "Sfx/Reckoning/hone_scrape",
-      "gainDb": 1.97,
-      "gain": 1.2546,
+      "gainDb": 1.08,
+      "gain": 1.1324,
       "metric": "rms",
-      "measuredDb": -30.7,
-      "peakDb": -3.0
+      "measuredDb": -20.0,
+      "peakDb": -2.1
     },
     {
       "path": "Sfx/Reckoning/legendary_bell",
@@ -190,43 +198,43 @@
     },
     {
       "path": "Sfx/Reckoning/reveal_impact",
-      "gainDb": -3.5,
-      "gain": 0.6683,
+      "gainDb": -4.7,
+      "gain": 0.5821,
       "metric": "rms",
-      "measuredDb": -14.5,
-      "peakDb": -3.0
+      "measuredDb": -13.3,
+      "peakDb": -2.9
     },
     {
       "path": "Sfx/Reckoning/reveal_ring",
-      "gainDb": -1.0,
-      "gain": 0.8913,
+      "gainDb": 0.8,
+      "gain": 1.0965,
       "metric": "rms",
-      "measuredDb": -17.0,
-      "peakDb": -3.0
+      "measuredDb": -18.8,
+      "peakDb": -2.8
     },
     {
       "path": "Sfx/Reckoning/reveal_riser",
-      "gainDb": -0.4,
-      "gain": 0.955,
+      "gainDb": 0.9,
+      "gain": 1.1092,
       "metric": "rms",
-      "measuredDb": -17.6,
+      "measuredDb": -18.9,
       "peakDb": -3.0
     },
     {
       "path": "Sfx/Reckoning/reveal_rumble",
-      "gainDb": 2.0,
-      "gain": 1.2589,
+      "gainDb": 0.6,
+      "gain": 1.0715,
       "metric": "rms",
-      "measuredDb": -22.9,
+      "measuredDb": -18.6,
       "peakDb": -3.0
     },
     {
       "path": "Sfx/Reckoning/take",
-      "gainDb": -0.9,
-      "gain": 0.9016,
+      "gainDb": 1.89,
+      "gain": 1.2431,
       "metric": "rms",
-      "measuredDb": -17.1,
-      "peakDb": -3.0
+      "measuredDb": -32.9,
+      "peakDb": -2.9
     },
     {
       "path": "Sfx/Reckoning/xp_hum",
