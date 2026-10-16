@@ -171,6 +171,30 @@ study of rarity and arousal.
   https://toucharcade.com/2017/04/04/designing-hearthstone-card-packs-animations-iterations-ungoro-and-more-with-art-director-ben-thompson/;
   read via search excerpt, the page refused a direct fetch).
 
+- **F12. Stop for big moments, and keep the effects moving.** Sakurai:
+  both sides freeze for the same time, longer for stronger hits, up to a
+  cap; slow motion is a separate tool; characters still move a hair during
+  the freeze (Famitsu column, translated,
+  https://sourcegaming.info/2015/11/11/thoughts-on-hitstop-sakurais-famitsu-column-vol-490-1/).
+  His YouTube series opens with "Stop for Big Moments!", where he names the
+  freeze on a boss's defeat a "boss stop" (Automaton report,
+  https://automaton-media.com/en/news/20220824-15208/; secondary, the video
+  itself was not fetched).
+- **F13. Freeze on the frame that reads best; finishers get a slower
+  beat.** Freeze the attack on its most representative frame; slow motion
+  before a finisher makes it clearer (Prince of Persia: Warrior Within, God
+  of War); a fight without the loser's reaction at the end feels less
+  natural (Soul Calibur 2) (Jiesang Song, Game Developer, 2005,
+  https://www.gamedeveloper.com/audio/improving-the-combat-impact-of-action-games).
+- **F14. The win is a pose and a fanfare.** Final Fantasy has ended battles
+  with a victory pose and a fanfare since the first game; from VII on each
+  character has their own pose, and X added voiced lines
+  (https://finalfantasy.fandom.com/wiki/Final_Fantasy_X_victory_poses,
+  https://finalfantasy.fandom.com/wiki/Victory_Theme; fan wikis). The
+  pacing complaint lives one step later: Darkest Dungeon players asked to
+  speed up the loot list after a battle, and Red Hook made "Next" finish it
+  (https://steamcommunity.com/app/262060/discussions/0/1843493219422589139/).
+
 **Principles this plan uses, with their evidence**
 
 1. **Tell the kind and the tier, hold back the identity** (F1, F2). The
@@ -186,6 +210,9 @@ study of rarity and arousal.
 8. **The prize promised before the fight is the prize that arrives** (F9).
 9. **No dark patterns**: nothing for sale, no re-roll, no fake near miss;
    the pages are rolled at settlement (F3).
+10. **The win lands before the reward opens**: a harder stop on the
+    final blow, the fall in view, the survivors' answer, the sting on the
+    kill, all capped and skippable (F12-F14, C0).
 
 **Project constraints over genre habit:** no hover scaling (so no hover
 tilt); the focus arrow is the selector, a halo means quality only
@@ -210,10 +237,77 @@ only plays back. "Wall time" counts from the moment the wipe starts.
 - **Rare+**: gear Rare or Legendary; relic Rare, UltraRare, Mythic or
   Godlike.
 
+### C0. The run-up: from the killing blow to the wipe
+
+Today the fight ends in one frame: the last beat plays with its ordinary
+hit-stop, the survivors' `victory` stance is already on it
+(`FightSession.ResolveVictory` retro-attaches it, `FightSession.Riders.cs:277-296`),
+and `OnPlaybackFinished` plays the sting, the voice lines and opens the
+Reckoning together (`FightController.Input.cs:1478-1510`). The last enemy's
+`StageDeathFade` (0.35 s hold, 0.6 s fade, `StageDeathFade.cs:27-28`) is
+only waited for in the darkness ending (`FightController.Rounds.cs:299`).
+C0 extends those pieces; it builds nothing parallel. Stills only: every
+motion is a tween on an existing still or a procedural effect.
+
+In order, for a won fight:
+
+1. **The final blow stops harder** (F12, F13). The beat that ends the fight
+   carries `EndsFight` (set by `FightSession` on that beat, presentation
+   only, like the retro-attached stance). `FightBeatPlayer`'s existing
+   hit-stop (`FightBeatPlayer.cs:1183-1184`, a coroutine wait on the actors,
+   never global `Time.timeScale`, per the game-feel override in CLAUDE.md)
+   uses `HitStop.FinalBlowSeconds(class)` instead of the blow's weight:
+   normal 0.22 s, elite 0.26 s, boss 0.34 s (Sakurai's "boss stop"), against
+   today's per-blow cap of 0.18 s (`HitStop.cs:50`). The stage's ambient
+   motion (motes, glows, the darkness) keeps moving through it (F12: effects
+   move during a freeze). `StageShake` fires at full strength on that
+   contact (opinion: the biggest event gets the biggest kick, F10).
+2. **The last enemy falls in view**: its existing `StageDeathFade` plays,
+   and the run-up waits for it (the darkness ending's `AnyEnemyFading` wait,
+   reused), within the cap.
+3. **The survivors answer** (F14): their `victory` stills are already on
+   the last beat; at the end of the final hit-stop each survivor lifts 8 px
+   and settles over 0.25 s (a tween on the still), staggered 0.08 s in squad
+   order. A survivor without a `victory` still keeps its idle, no lift.
+4. **The light turns** (opinion; the direction bible's "clearing eases",
+   [My read]): during the fade a warm wash (`proc:radial_glow`, amber,
+   0 -> 15% alpha over 0.4 s) rises behind the party and the enemy half of
+   the stage dims 10%.
+5. **The sting lands on the kill** (F14): `VictorySting` moves from
+   `OnPlaybackFinished` to the moment the last enemy's fade begins, after
+   its hold, so the music marks the kill registering; the voice lines follow
+   0.2 s later.
+6. **The wipe** (C1) starts when the last fade completes or at the cap,
+   whichever comes first. A fade still running at the cap finishes under the
+   gloom.
+
+**Cap and pace.** One pure model, `RunUpSchedule` (Domain, beside
+`RevealSchedule`), returns the timed events; EditMode tests pin them on
+literals. At 1x a normal fight's run-up, final contact to wipe start, is
+hit-stop 0.22 + fade hold 0.35 + fade 0.6 = 1.17 s; the **cap is 1.3 s** at
+any preset. Durations C0 adds go through `ReckoningTime`
+(`min(1, Default/preset)`, C10). The death fade keeps the fight's own
+`FightBeatPlayer.Scaled` pace; at 0.5x it would run longer, so the cap, not
+the fade, decides when the wipe starts.
+
+**Skip and input.** Any Submit, click or Cancel during the run-up jumps to
+the wipe: fades complete, the lift settles, the sting keeps playing (audio
+is never cut). The press is consumed and does not reach the Reckoning.
+There is no other input to delay: the fight's verbs are hidden once it is
+over (`FightController.Input.cs:1518-1524`). The worst case from final
+contact to a choosable reward row is the run-up cap plus the reveal cap,
+1.3 + 1.6 = 2.9 s at 1x, before any skip.
+
+**Precedence.** The existing endings stay first and keep their timing: a
+darkness ending (`BeginDarknessEnding`) and a leader-fall ending
+(`BeginLeaderFallEnding`) run as today, then C0's steps 5-6. An Endured
+fight (survived, no final blow) skips steps 1-3 and the sting; a Fell
+outcome with the run going on skips C0 entirely. Event fights follow the
+same rules with the normal-class final-blow stop.
+
 ### C1. Arrival
 
-1. The last blow; the victory sting and voice lines (unchanged,
-   `FightController.Input.cs:1490-1500`).
+1. The run-up (C0) ends; the wipe begins.
 2. The wipe opens (0.34 s). The frame's crest carries the **encounter
    medallion** of the room just cleared (the map's fight / elite / boss
    plate, `Art/Backgrounds/Processed/map_node_*.png`), from C12's recorded
@@ -630,107 +724,40 @@ First rule that applies wins.
 
 ## 5. Art needs
 
-References for every prompt: `Assets/_Project/Art/Enemies/Giant_rat_sheet.png`
-(outline and cel shading), `Assets/_Project/Art/Backgrounds/Processed/
-map_chip_gear.png` (the set they sit with) and one processed relic icon from
-`Assets/_Project/Art/Items/Relics/Processed/` (object scale). Sources go to
-`Art/UI/Reckoning/`, keyed into `Art/UI/Reckoning/Processed/` with a keyer
-recipe (`docs/ART_PIPELINE.md` §2-3). 512 px cells. Each sheet has a
-single-object fallback (same text, "one object, centred") if the generator
-will not hold the grid.
+**The prompts are in `docs/ART_PROMPTS_REWARD_SCREENS.md`**, one
+self-contained block per sheet (style inlined, references to attach,
+output filename, keying, and whether it can be generated now or waits for a
+gate). This section only lists what exists and what is gated.
 
-**Placeholders and the commissioning gate**: every phase ships and passes
-its gates before art lands: `proc:radial_glow` discs for plinths and the
-cache, a plain violet card back, `map_chip_*` and
-`Resources/Icons/Ability/*` icons for glyphs. The ghost needs no new art
-(it is the worn item's own icon). **A2 (plinths) is commissioned only after
-R2's ghost gate passes** (§6): a capture of the 5-card row with ghosts on
-placeholder plinths must read, or the ghost's size or the plinth's band
-changes first.
+| Sheet | File | Status |
+|---|---|---|
+| A1 Caches | `reward_caches.png` | generate now |
+| A2 Plinths | `reward_plinths.png` | **waits** for the R2 ghost gate (§6): a capture of the 5-card row with ghosts on placeholder plinths must read first |
+| A3 Card back | `reward_card_back.png` | generate now |
+| A4 Glyphs | `reward_glyphs.png` | generate now |
+| A5 Chain overlay | `reward_chain.png` | generate now |
+
+**No new art for C0 (the run-up)**: every real character already ships a
+`victory` still (`Resources/Characters/{sheep,sheep_black_ram,owl,bear,bear_berserk}/victory.png`),
+and the warm wash, flare and motes are procedural.
+
+**Placeholders**: every phase ships and passes its gates before art lands:
+`proc:radial_glow` discs for plinths and the cache, a plain violet card
+back, `map_chip_*` and `Resources/Icons/Ability/*` icons for glyphs. The
+ghost needs no new art (it is the worn item's own icon). Reused:
+`element_physical.png` (damage), `defense_physical.png` (defence),
+`resource_mana.png` (mana); the map's medallions and chips, which the
+Reckoning gets as its own `[SerializeField]` sprite table in `WireReckoning`
+(the Map scene bakes them by key today, `MapScreen.cs:38-42`).
+
+**Ingest**: results go to `Art/UI/Reckoning/`, keyed into
+`Art/UI/Reckoning/Processed/` with a keyer recipe (`docs/ART_PIPELINE.md`
+§2-3); A2 and A4 contain green and are keyed `"magenta"`.
 
 **Tone**: the caches are Prince's offerings: things he wraps for his souls
 the way a cat brings a gift, proud and tender. Cloth, knots, worn tin,
 stone. Not treasure chests, and no literal household objects (the direction
 bible rules those out).
-
-**Style block (first, every time):**
-
-```
-2D game art for a dark-fantasy roguelike's reward screen, matching the
-attached references: flat cel shading with bold dark outlines, a restrained
-grey-violet palette with warm gold accents, worn and handmade, tender rather
-than grim. No gore, nothing modern. No text, letters, numbers, UI, frames or
-watermark. Flat solid pure green #00FF00 background, no shadow on it, no
-green inside the objects.
-```
-
-For A2 and A4 (they contain green) end instead with: `Flat solid pure
-magenta #FF00FF background, no shadow on it, no magenta inside the
-objects.` and key them `"magenta"`.
-
-**A1. Caches** - `reward_caches.png`
-
-```
-A sheet of 6 objects in a 3x2 grid of equal square cells, centred, generous
-margin. They are a proud cat's offerings, wrapped for the souls he sends to
-fight. Row 1 (gear): a small bundle wrapped in frayed violet cloth, tied
-with one cord, a single paw print pressed into the knot; the same bundle
-larger with two cords and a wax seal; the same bundle largest, old iron
-bands over the cloth, a crown-shaped seal. Row 2 (relics): a small dented
-tin box; the same tin with brass corners and a seal; the same in dark iron
-with a crown seal. Every object has a thin dark seam along its opening with
-nothing drawn in it. Bold silhouettes that read at 96 pixels.
-```
-
-**A2. Plinths** - `reward_plinths.png` (magenta; after the R2 ghost gate)
-
-```
-A sheet of 4 low resting places for an object, in a 4x1 row of equal cells,
-seen from slightly above, each with a flat top, centred. Each has a
-DIFFERENT outline so they read in greyscale:
-1. a bare square flagstone;
-2. a rough folded cloth on a round stone, a band of moss at its edge;
-3. a cloth embroidered with blue thread on a taller hexagonal stone;
-4. a cloth woven with gold thread on a wide scalloped stone, a small lit
-   votive candle at one side.
-Same width, increasing height from 1 to 4. A smooth flat band across the
-front of each stone, left plain and wide enough for two short numbers (the
-game engraves them there).
-```
-
-**A3. Card back** - `reward_card_back.png`
-
-```
-One upright card back, 2:3 portrait, centred: dark violet cloth with a pale
-rubbing of a cat's paw print in the middle, a worn gold thread edge. Plain
-and quiet.
-```
-
-**A4. Glyphs** - `reward_glyphs.png` (magenta). Reuse first:
-`Resources/Icons/Ability/element_physical.png` (damage),
-`defense_physical.png` (defence), `resource_mana.png` (mana). Commission:
-
-```
-A sheet of 10 small icons in a 5x2 grid of equal square cells, centred, very
-bold and simple so each reads at 24 pixels, same outline weight as the
-references. Row 1: a red heart (health); a feather (speed); a whetstone
-with a spark (hone); a stack of three gold coins; a small wooden door ajar
-(leave). Row 2: a cloth satchel (haul strip); a cracked heart (fell in the
-fight); a cracked shield (damage taken); a green leaf (healed); a small
-skull (felled).
-```
-
-**A5. Chain overlay** - `reward_chain.png`
-
-```
-One short loop of dark iron chain lying diagonally, centred, simple.
-```
-
-Procedural: seam light, embers, flip shimmer, screen-edge flare and coin
-spill use `ProceduralSpriteBaker`'s `proc:radial_glow`, `proc:rarity_burst`,
-`proc:arrow_ember`. The map medallions and chips are baked into the Map
-scene by key today (`MapScreen.cs:38-42`), so the Reckoning gets its own
-`[SerializeField]` sprite table wired in `WireReckoning`.
 
 ## 6. Phases and gates
 
@@ -748,6 +775,7 @@ earlier, so every checkpoint renders.
 | Phase | Content | Gate beyond the commit gate |
 |---|---|---|
 | R0 | Art prompts A1, A3, A4, A5 to the owner (A2 waits for R2); capture fixtures in `ReckoningCaptureTests`: no-cache page, cache page with a top-tier upgrade, 5-card row with ghosts, board, outcome board | Fixtures compile and run headless as no-ops without graphics |
+| RU | The run-up (C0): `EndsFight` on the final beat, `HitStop.FinalBlowSeconds`, `RunUpSchedule`, the wait on the last fade, the lift, the warm wash, the sting moved; a fight-end capture fixture (one blow from victory) | EditMode on literals: `RunUpSchedule` order, per-class stop, cap at every preset, skip end state; `EndsFight` set on exactly one beat. PlayMode: the hit-stop never touches `Time.timeScale`; a press during the run-up is consumed and opens the Reckoning at its start; darkness and leader-fall endings unchanged. **Feel gate (owner stop/go):** a GIF of the fight-end fixture (`gif.ps1` has spell, attack, relic and status modes today, so RU adds a fight-end mode beside them) for a normal, an elite and a boss fight, watched before a verdict is relayed. Independent of R1-R7: it may land at any point after R0 |
 | R1 | C12 record on `CombatReward`; C13 `PreviewLeave` and `HoningPreview`; the shared compare builder; the live-upgrade predicate | Bot-neutrality test; a Gear chip's record pinned; `Leave` consumes `PreviewLeave` with today's results pinned; `HoningPreview` dispose and nesting; dossier compare tests unchanged; live-upgrade predicate on literals (positive delta, affix gain, inert, relic reach) |
 | R2 | Card face (C5) with placeholders, beside the old labels, then the old labels go; `RowOrder`; slot band; name loses `+N` | Tree audit at four aspects; face test per quality, count (3 and 5), wearer, ghost, empty slot, inert, relic mapping; `RowOrder` test; Right from a card goes to the next card in row order, Right from the last to the door; `MenuTypeLintTests` scopes. **Ghost gate (owner stop/go):** the 5-card capture with ghosts must read before A2 is commissioned |
 | R3 | Choice actions (C6) through `Act`: take, displaced, hone with preview, coin case, leave preview and payout, spent states, repaint after take; heading, Favor line, ledger and action strings removed; every control `.Quiet()` | PlayMode: take, hone, sell and leave drive the real `RewardPages` and leave the same save as before (pinned literals); a second card for the same slot repaints; leave sparks land on a taken card's band; `ButtonCueTests` Reckoning case |
@@ -756,7 +784,7 @@ earlier, so every checkpoint renders.
 | R6 | The full sound set (C11) replacing placeholders | Every C11 moment fires once in a PlayMode run of each fixture; no `ButtonClick` or `ClickFail` from a Reckoning control |
 | R7 | Art swap as each sheet arrives | `Art/` diff reviewed after `-BuildScenes` (`LoadSprite` flips importer settings) |
 
-Bot: R1 is the only phase near settlement, pinned neutral; `tools/bot.ps1`
+Bot: R1 is the only phase near settlement, pinned neutral; RU changes only presentation timing after the session has ended, so it moves no bot number either; `tools/bot.ps1`
 numbers must not move. A9's frequency report (cache rate, top-tier beat
 rate, mean wall time to choosable, per act) is kept beside the plan and
 re-run whenever the item plan retunes the ladder; it is a check, not a
@@ -879,7 +907,7 @@ CombatReward.cs` (prizes, class, gold before), a new
 bands, ghosts, medallions, whetstones, door, gold stack, haul strip,
 catcher; every control `.Quiet()`; board replaces tabs),
 `Domain/UiKit/UiStrings.cs` (Reckoning block shrinks),
-`Domain/UiKit/RunEffectRows.cs` (O1). Core: `Core/RealmPrizes.cs`,
+`Domain/UiKit/RunEffectRows.cs` (O1); for C0: `Domain/Combat/Session/HitStop.cs` (`FinalBlowSeconds`), `CombatBeat` (`EndsFight`), `FightSession.Riders.cs` (sets it), a new `RunUpSchedule`, and `FightScreen.cs` (the warm wash node). Core: `Core/RealmPrizes.cs`,
 `Core/Bot/RunOrchestrator.cs` (`SettleFight` fills the record),
 `Core/RewardPages.cs` (`PreviewLeave`),
 `Core/Content/ContentDatabase.Gear.cs` (`HoningOf` consults
@@ -888,14 +916,17 @@ catcher; every control `.Quiet()`; board replaces tabs),
 `Core/RewardCardFace.cs` (parts, not sentences; no `+N` suffix), a shared
 compare builder beside `Core/ItemDescription.cs`, `Core/ReckoningTime.cs`,
 `Core/Sound.cs` (new cues, pre-pitched clips), `Core/ButtonPressAnimator.cs`
-(read only: the quiet path the controls rely on). Editor:
+(read only: the quiet path the controls rely on), and for C0
+`Core/FightBeatPlayer.cs` (the final stop), `Core/FightController.Input.cs`
+(`OnPlaybackFinished`: sting timing, the run-up wait) and
+`Core/FightController.Rounds.cs` (the fade wait, reused). Editor:
 `ScreenRegistry.WireReckoning` (map art table). Tests: every
 `Reckoning*Tests` class (Screen, Tab, Phase, Comparison, Lifecycle, Capture,
 Chip and Gamepad navigation), a new board nav-graph EditMode test,
 `OfferRowLayoutTests`, `MenuTypeLintTests`, `ButtonCueTests`,
 `HeartAnchorSettlementTests` and `RealmRunTests` (callers of `Pay`). Tools:
 the A9 sweep script beside `tools/bot.ps1`. Docs: `docs/CODE_MAP.md` rows
-28, 78, 81, 82, 83, 85.
+28, 78, 81, 82, 83, 85; `docs/ART_PROMPTS_REWARD_SCREENS.md` (the prompts).
 
 ## 10. Revision log
 
@@ -931,6 +962,12 @@ the A9 sweep script beside `tools/bot.ps1`. Docs: `docs/CODE_MAP.md` rows
   then confirmed by the owner on 2026-10-16 (§7).
   No new review round: every structural change here is one the senior
   asked for; the every-page beat and the ghost gate add no contract.
+  Then, at the owner's request: C0, the run-up from the killing blow to the
+  wipe, extending today's hit-stop, death fade, victory stance and sting
+  (F12-F14), with its own cap, skip and phase RU; §5 slimmed to a status
+  table, the hand-off-ready prompts moved to
+  `docs/ART_PROMPTS_REWARD_SCREENS.md`. C0 is a new contract that no
+  reviewer has seen; RU's feel gate is its check.
 
 ## 11. Research notes, per game
 
