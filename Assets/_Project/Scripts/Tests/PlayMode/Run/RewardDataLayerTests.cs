@@ -45,9 +45,10 @@ namespace PrincesPalace.PlayModeTests
 
         // ---- C12: the settlement record --------------------------------------------
 
-        private static RunOrchestrator.FightSettlement Settle(RoomType type, PrizeKind prize)
+        private static RunOrchestrator.FightSettlement Settle(RoomType type, PrizeKind prize, int startGold = 0)
         {
             RunManager.StartRun(4242UL);
+            RunManager.Run.gold = startGold;
             var node = RunManager.Map.Nodes.Where(n => n.Type == type).ElementAt(0);
             node.Prize = prize;
             RunManager.Run.currentNodeId = node.Id;
@@ -95,6 +96,31 @@ namespace PrincesPalace.PlayModeTests
             var book = Settle(RoomType.Fight, PrizeKind.Book);
             Assert.AreEqual("Book->Book 0 [winters_rebuke] | None->Gold 1 []", Describe(book.Reward));
             CollectionAssert.AreEqual(new[] { "Prize: Winter's Rebuke." }, book.Notices);
+        }
+
+        [Test]
+        public void ARoomFight_RecordsTheGoldHeldBeforeAnyPay()
+        {
+            var settled = Settle(RoomType.Fight, PrizeKind.Gold, startGold: 37);
+
+            Assert.AreEqual(37, settled.Reward.GoldBefore);
+            Assert.AreEqual("Gold->Gold 32 [] | None->Gold 1 []", Describe(settled.Reward));
+            Assert.AreEqual(70, RunManager.Run.gold);
+        }
+
+        [Test]
+        public void AConsumableChipThatDrawsNothing_RecordsNothingPaid()
+        {
+            RunManager.StartRun(4242UL);
+            var node = RunManager.Map.Nodes.Where(n => n.Type == RoomType.Fight).ElementAt(0);
+            node.Prize = PrizeKind.Consumable;
+            var record = new List<PaidPrize>();
+
+            var notices = RealmPrizes.Pay(null, RunManager.Run, node, new PageChips(), record);
+
+            Assert.IsEmpty(notices);
+            Assert.AreEqual("Consumable->Consumable 0 []", string.Join(" | ", record.Select(p =>
+                $"{p.Shown}->{p.Paid} {p.Amount} [{string.Join(",", p.Ids)}]")));
         }
 
         [Test]

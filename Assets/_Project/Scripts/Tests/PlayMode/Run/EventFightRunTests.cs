@@ -8,7 +8,9 @@ using PrincesPalace.Content;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Content;
+using PrincesPalace.Domain.Dungeon;
 using PrincesPalace.Domain.Events;
+using PrincesPalace.Domain.Rewards;
 using UnityEngine;
 using UnityEngine.TestTools;
 
@@ -469,6 +471,28 @@ namespace PrincesPalace.PlayModeTests
             // The event's own Leave is what clears the room, as it always was.
             Assert.IsTrue(EventPicks.OnCurrentPage(0).Closed);
             CollectionAssert.Contains(Run.clearedNodeIds, node);
+        }
+
+        [Test]
+        public void AWonPayingEventFight_RecordsTheGoldHeldBeforeAndTheFightsGold()
+        {
+            OpenFightFixture();
+            Run.gold = 37;
+
+            var built = StartAndBuild(Brawl);
+            var session = built.Session;
+            MakeTheHeroesUnkillable(session);
+            foreach (var enemy in session.Encounter.Enemies) enemy.CurrentHealth = 1;
+            Drive(session);
+
+            var settled = RunOrchestrator.SettleFight(session, won: true);
+
+            Assert.AreEqual(37, settled.Reward.GoldBefore);
+            Assert.AreEqual(1, settled.Reward.Prizes.Count);
+            Assert.AreEqual(PrizeKind.None, settled.Reward.Prizes[0].Shown);
+            Assert.AreEqual(PrizeKind.Gold, settled.Reward.Prizes[0].Paid);
+            Assert.AreEqual(1, settled.Reward.Prizes[0].Amount);
+            Assert.AreEqual(38, Run.gold);
         }
 
         [Test]

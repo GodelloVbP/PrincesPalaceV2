@@ -630,16 +630,16 @@ namespace PrincesPalace
 
                 // The record is read-only history for the Reckoning: it
                 // observes the pays below and changes none of them.
-                int goldBefore = run.gold;
+                int goldBefore = run?.gold ?? 0;
                 var prizes = new List<PaidPrize>();
                 notices.AddRange(RealmPrizes.Pay(SaveSlotManager.CurrentSave, run, room, chips, prizes));
                 notices.AddRange(PayHeartAnchors(session, run, chips, prizes));
                 if (session != null) session.SettledChips = chips;
-                reward = PayOut(session, run, payout.Value, participants: null);
-                prizes.Add(new PaidPrize(PrizeKind.None, PrizeKind.Gold, reward.GoldGained));
-                reward.Prizes.AddRange(prizes);
-                reward.GoldBefore = goldBefore;
-                if (session != null && session.IsBossFight) reward.EncounterClass = EncounterClass.Boss;
+                reward = PayOut(session, run, payout.Value, participants: null, goldBefore, prizes);
+
+                // FightSession.EncounterClass is the one ranking; the node's
+                // own class is the fallback only for a settlement with no session.
+                if (session != null) reward.EncounterClass = session.EncounterClass;
                 else if (room != null) reward.EncounterClass = RealmPrizes.ClassOf(room);
 
                 // An anchor beaten on the map no longer waits at the heart.
@@ -738,8 +738,13 @@ namespace PrincesPalace
         // pays by the same lines. `participants` narrows who the experience
         // reaches (an event fight's party override); null is the whole squad,
         // a room's rule.
+        //
+        // The settlement record the Reckoning reads is filled here, for both
+        // settle paths: `goldBefore` is the run's gold before the first pay of
+        // the settlement, `prizes` what the path already paid; the fight's own
+        // gold joins them as a None -> Gold prize.
         private static CombatReward PayOut(FightSession session, RunSnapshot run, VictoryRewards.Payout payout,
-            IReadOnlyCollection<string> participants)
+            IReadOnlyCollection<string> participants, int goldBefore, List<PaidPrize> prizes)
         {
             // GOLD to the run, EXPERIENCE to the characters. Two different
             // owners with two different lifetimes: the run's gold is spent
@@ -753,6 +758,10 @@ namespace PrincesPalace
             // ledger existed, was folded into the run, and was visible only
             // after you died.
             if (session?.Ledger != null) reward.Ledger = session.Ledger;
+
+            reward.GoldBefore = goldBefore;
+            reward.Prizes.AddRange(prizes);
+            reward.Prizes.Add(new PaidPrize(PrizeKind.None, PrizeKind.Gold, reward.GoldGained));
             return reward;
         }
 

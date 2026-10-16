@@ -5,6 +5,7 @@ using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Dungeon;
 using PrincesPalace.Domain.Events;
+using PrincesPalace.Domain.Rewards;
 using PrincesPalace.Domain.Rng;
 
 namespace PrincesPalace
@@ -574,7 +575,8 @@ namespace PrincesPalace
 
             if (payout.HasValue)
             {
-                var reward = PayOut(session, run, payout.Value, request.PartyOverride);
+                int goldBefore = run.gold;
+                var reward = PayOut(session, run, payout.Value, request.PartyOverride, goldBefore, new List<PaidPrize>());
                 return new FightSettlement(reward, null);
             }
 

@@ -60,13 +60,16 @@ namespace PrincesPalace
             switch (chip.Kind)
             {
                 case PrizeKind.Gold:
-                    if (RunManager.CreditPayout(chip.Amount)) notices.Add(UiStrings.PrizePaidGold.Format(chip.Amount));
-                    Record(record, node, PrizeKind.Gold, chip.Amount);
+                    if (RunManager.CreditPayout(chip.Amount))
+                    {
+                        notices.Add(UiStrings.PrizePaidGold.Format(chip.Amount));
+                        Record(record, node, PrizeKind.Gold, chip.Amount);
+                    }
                     break;
 
                 case PrizeKind.Consumable:
                     notices.AddRange(PayConsumables(save, run, node, chip.Amount, ids));
-                    Record(record, node, PrizeKind.Consumable, chip.Amount, ids);
+                    Record(record, node, PrizeKind.Consumable, ids.Count, ids);
                     break;
 
                 case PrizeKind.Book:
