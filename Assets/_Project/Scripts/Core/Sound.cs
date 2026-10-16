@@ -45,6 +45,25 @@ namespace PrincesPalace
 
         // The fight-won sting, layered with the character's own victory line.
         VictorySting,
+
+        // The Reckoning's moments (docs/PLAN_REWARD_SCREENS.md C11). PLACEHOLDERS:
+        // each maps to an existing clip so callers have a name and the suite
+        // stays green; the sound pass replaces the paths in R6 with the
+        // owner's own clips and nothing else changes.
+        CardDeal,
+        CacheOpen,
+        CardFlip,
+        LegendaryBell,
+        CoinTick,
+        PotionLand,
+        BookLand,
+        Take,
+        HoneScrape,
+        EmberSnuff,
+        XpHum,
+        LevelBell,
+        Fell,
+        Endured,
     }
 
     public static class TabSwipe
@@ -76,6 +95,20 @@ namespace PrincesPalace
                 case Sound.Swipe1: return "Audio/Sfx/swipe_1";
                 case Sound.Swipe2: return "Audio/Sfx/swipe_2";
                 case Sound.VictorySting: return "Audio/Sfx/victory_sting";
+                case Sound.CardDeal: return "Audio/Sfx/swipe_1";
+                case Sound.CacheOpen: return "Audio/Sfx/open_the_pack";
+                case Sound.CardFlip: return "Audio/Sfx/swipe_2";
+                case Sound.LegendaryBell: return "Audio/Sfx/victory_sting";
+                case Sound.CoinTick: return "Audio/Sfx/button click";
+                case Sound.PotionLand: return "Audio/Sfx/status_ward_1";
+                case Sound.BookLand: return "Audio/Sfx/melee_thud_placeholder";
+                case Sound.Take: return "Audio/Sfx/status_ward_2";
+                case Sound.HoneScrape: return "Audio/Sfx/melee_whoosh_placeholder";
+                case Sound.EmberSnuff: return "Audio/Sfx/status_regen_2";
+                case Sound.XpHum: return "Audio/Sfx/status_regen_3";
+                case Sound.LevelBell: return "Audio/Sfx/status_regen_1";
+                case Sound.Fell: return "Audio/Sfx/click_fail";
+                case Sound.Endured: return "Audio/Sfx/status_ward_3";
                 default: return null;
             }
         }

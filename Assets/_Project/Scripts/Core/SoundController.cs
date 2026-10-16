@@ -9,10 +9,11 @@ namespace PrincesPalace
     // without a wired reference, and a sound started in the Main Menu is not
     // cut off the instant the Gameplay scene loads.
     //
-    // One AudioSource with PlayOneShot rather than a pool. PlayOneShot mixes
-    // overlapping clips on a single source, which is exactly what UI sound
-    // needs: two buttons clicked in quick succession should overlap, not cut
-    // each other off.
+    // Unpitched sound is one AudioSource with PlayOneShot rather than a pool.
+    // PlayOneShot mixes overlapping clips on a single source, which is exactly
+    // what UI sound needs: two buttons clicked in quick succession should
+    // overlap, not cut each other off. Pitched sound has its own small pool
+    // (see "pitched one-shots").
     //
     // Volume is read from GameSettings AT PLAY TIME rather than cached, so
     // dragging the Sound slider takes effect on the very next sound with no
@@ -151,6 +152,121 @@ namespace PrincesPalace
                 GameSettings.SoundVolume * AudioLevels.GainFor(resourcePath) * volumeScale);
         }
 
+        // ---- pitched one-shots --------------------------------------------------
+        //
+        // Pitch belongs to an AudioSource, not to a PlayOneShot, so a pitched
+        // shot cannot share the main source: it would retune every clip still
+        // ringing there. A small pool of dry sources instead, one clip each,
+        // pitch set when the shot starts. A pool rather than pre-pitched clips
+        // because a pitch ladder (flip, chevron, coin) is then data at the call
+        // site, not N rendered files per sound. The unpitched Play(Sound) path
+        // above is untouched.
+        //
+        // A shot takes an idle source. When all are busy the pool grows up to
+        // PitchPoolMax; past that the oldest shot is cut, which at eight
+        // simultaneous pitched cues is inaudible next to the rest. An idle
+        // source is put back to pitch 1 so a leftover pitch never leaks into
+        // the next user of it.
+        public const int PitchPoolMax = 8;
+        private readonly List<AudioSource> _pitchPool = new List<AudioSource>();
+        private int _pitchOldest;
+
+        // Plays a sound at the given pitch (1 = as recorded, 2 = an octave up).
+        // Volume, correction and the Observer behave exactly as Play(Sound).
+        public static void Play(Sound sound, float pitch)
+        {
+            if (sound == Sound.None)
+            {
+                return;
+            }
+
+            Observer?.Invoke(sound);
+
+            Bootstrap();
+
+            var clip = _instance.Resolve(sound);
+            if (clip == null)
+            {
+                return;
+            }
+
+            var source = _instance.AcquirePitchSource();
+            source.pitch = Mathf.Clamp(pitch, 0.1f, 3f);
+            source.clip = clip;
+            source.volume = Mathf.Clamp01(GameSettings.SoundVolume * AudioLevels.GainFor(SoundLibrary.PathOf(sound)));
+            source.Play();
+        }
+
+        // For tests: how many pooled sources exist, and how many are sounding.
+        public static int PitchSourceCount => _instance != null ? _instance._pitchPool.Count : 0;
+
+        public static int PitchSourcesPlaying
+        {
+            get
+            {
+                if (_instance == null) return 0;
+                int n = 0;
+                foreach (var s in _instance._pitchPool) if (s.isPlaying) n++;
+                return n;
+            }
+        }
+
+        // The pitch of every pooled source, for a test pinning per-shot pitch.
+        public static float[] PitchSourcePitches()
+        {
+            if (_instance == null) return new float[0];
+            var r = new float[_instance._pitchPool.Count];
+            for (int i = 0; i < r.Length; i++) r[i] = _instance._pitchPool[i].pitch;
+            return r;
+        }
+
+        // Test seams: end every pooled shot, and run the idle-pitch reset that
+        // Update does each frame.
+        public static void StopPitched()
+        {
+            if (_instance == null) return;
+            foreach (var s in _instance._pitchPool) s.Stop();
+        }
+
+        public static void RestoreIdlePitches()
+        {
+            if (_instance != null) _instance.ResetIdlePitches();
+        }
+
+        private void ResetIdlePitches()
+        {
+            foreach (var s in _pitchPool)
+            {
+                if (!s.isPlaying && s.pitch != 1f) s.pitch = 1f;
+            }
+        }
+
+        public static float MainSourcePitch => _instance != null ? _instance._source.pitch : 1f;
+
+        private AudioSource AcquirePitchSource()
+        {
+            foreach (var s in _pitchPool)
+            {
+                if (!s.isPlaying) return s;
+            }
+
+            if (_pitchPool.Count < PitchPoolMax)
+            {
+                var go = new GameObject("PitchedSfx");
+                go.transform.SetParent(transform, false);
+                var s = go.AddComponent<AudioSource>();
+                s.playOnAwake = false;
+                s.spatialBlend = 0f;
+                _pitchPool.Add(s);
+                return s;
+            }
+
+            var oldest = _pitchPool[_pitchOldest];
+            _pitchOldest = (_pitchOldest + 1) % _pitchPool.Count;
+            oldest.Stop();
+            return oldest;
+        }
+
         // ---- the one looping channel --------------------------------------------
         //
         // AMBIENCE: one clip looped under everything else, for as long as a
@@ -235,6 +351,8 @@ namespace PrincesPalace
 
         private void Update()
         {
+            ResetIdlePitches();
+
             if (_ambience == null || !_ambience.isPlaying) return;
             _ambience.volume = AmbienceVolumeFor(_ambiencePath);
         }
