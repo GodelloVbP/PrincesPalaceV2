@@ -264,7 +264,7 @@ namespace PrincesPalace.Domain.Tests
             var skipped = top.SkippedAt(0.5f);
             Assert.AreEqual(0.5f, skipped.ChoosableAt, Tolerance, "choosable now");
             Assert.AreEqual(0.12f, skipped.FlareSeconds, Tolerance);
-            Assert.AreEqual(1.2f, skipped.LingerSeconds, Tolerance);
+            Assert.AreEqual(0f, skipped.LingerSeconds, Tolerance, "a press ends the linger");
             Assert.IsTrue(skipped.CacheOpen);
             Assert.IsTrue(skipped.AllFaceUp);
 

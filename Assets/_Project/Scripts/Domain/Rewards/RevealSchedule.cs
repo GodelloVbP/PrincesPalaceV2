@@ -297,13 +297,13 @@ namespace PrincesPalace.Domain.Rewards
 
         // The end state when a press arrives at `t`: the cache open, every
         // card face-up, the row choosable now; a top-tier live upgrade keeps
-        // only its flare. A press when nothing runs changes nothing.
+        // only its flare, and a press ends the linger (C4.5, C10). A press when
+        // nothing runs changes nothing.
         public RevealSkipState SkippedAt(float t)
         {
             float now = Math.Min(t, ChoosableAt);
             float flare = HasTopLiveUpgrade && t < ChoosableAt ? FlareSeconds * _scale : 0f;
-            float linger = HasTopLiveUpgrade ? LingerSeconds * _scale : 0f;
-            return new RevealSkipState(now, flare, linger, HasCache);
+            return new RevealSkipState(now, flare, 0f, HasCache);
         }
     }
 }
