@@ -14,7 +14,8 @@ namespace PrincesPalace.Domain.Tests
         private const float Tolerance = 0.0005f;
 
         private static readonly RevealCard Common = new RevealCard(1, false);
-        private static readonly RevealCard Uncommon = new RevealCard(2, true);
+        // A live Uncommon relic: below the relic line, so it never earns the cache.
+        private static readonly RevealCard Uncommon = RevealCard.Relic(2, true);
         private static readonly RevealCard RareLive = new RevealCard(3, true);
         private static readonly RevealCard RareDown = new RevealCard(3, false);
         private static readonly RevealCard TopLive = new RevealCard(4, true);
@@ -137,8 +138,104 @@ namespace PrincesPalace.Domain.Tests
         public void CacheRequiresARarePlusLiveUpgrade_NotJustQuality()
         {
             Assert.IsFalse(At(1f, 1, RareDown, TopDown, Common).HasCache, "a downgrade never earns the cache");
-            Assert.IsFalse(At(1f, 1, Uncommon, Common, Common).HasCache, "a live Uncommon is below the line");
+            Assert.IsFalse(At(1f, 1, Uncommon, Common, Common).HasCache, "a live Uncommon relic is below the line");
             Assert.IsTrue(At(1f, 1, Common, RareLive, Common).HasCache);
+        }
+
+        // The cache and the held beat key on the worn item (A9, plan C3)
+
+        private static RevealCard Gear(int tier, int worn, bool live = true) => new RevealCard(tier, live, worn);
+
+        private static RevealSchedule Page(EncounterClass cls, params RevealCard[] cards) =>
+            RevealSchedule.For(cards, 1, 1f, cls);
+
+        [Test]
+        public void GearCache_AUpgradeOverALowerWornQuality_Earns()
+        {
+            Assert.IsTrue(Page(EncounterClass.Normal, Gear(3, 2), Gear(1, 1, false), Gear(1, 1, false)).HasCache);
+            Assert.IsTrue(Page(EncounterClass.Normal, Gear(2, 1), Gear(1, 1, false), Gear(1, 1, false)).HasCache,
+                "Uncommon over Common: higher is higher, whatever the tier");
+        }
+
+        [Test]
+        public void GearCache_OverAnEqualWornQuality_DoesNot()
+        {
+            Assert.IsFalse(Page(EncounterClass.Normal, Gear(3, 3), Gear(1, 1, false), Gear(1, 1, false)).HasCache);
+            Assert.IsFalse(Page(EncounterClass.Normal, Gear(2, 2), Gear(2, 3), Gear(1, 1, false)).HasCache,
+                "a live card over a better or equal worn item");
+        }
+
+        [Test]
+        public void GearCache_OverAnEmptySlot_Earns()
+        {
+            Assert.IsTrue(Page(EncounterClass.Normal, Gear(1, 0), Gear(1, 1, false), Gear(1, 1, false)).HasCache);
+        }
+
+        [Test]
+        public void GearCache_ANonLiveCardNeverEarns_HoweverHighItsQuality()
+        {
+            Assert.IsFalse(Page(EncounterClass.Normal, Gear(4, 0, false), Gear(3, 0, false), Gear(1, 1, false)).HasCache);
+        }
+
+        [Test]
+        public void LegendaryBeat_OverAWornItemBelowLegendary_Holds()
+        {
+            foreach (int worn in new[] { 0, 1, 2, 3 })
+            {
+                var s = Page(EncounterClass.Normal, Gear(4, worn), Gear(1, 1, false), Gear(1, 1, false));
+                Assert.IsTrue(s.HasTopLiveUpgrade, "worn " + worn);
+                Assert.AreEqual(1, Of(s, RevealBeatKind.Hold).Length, "worn " + worn);
+                Assert.AreEqual(1, Of(s, RevealBeatKind.Linger).Length, "worn " + worn);
+            }
+        }
+
+        [Test]
+        public void LegendaryBeat_ALegendaryOverALegendary_DoesNotHold_AndEarnsNoCache()
+        {
+            var s = Page(EncounterClass.Normal, Gear(4, 4), Gear(1, 1, false), Gear(1, 1, false));
+            Assert.IsFalse(s.HasCache);
+            Assert.IsFalse(s.HasTopLiveUpgrade);
+            Assert.IsEmpty(Of(s, RevealBeatKind.Hold));
+            Assert.IsEmpty(Of(s, RevealBeatKind.Linger));
+            Assert.AreEqual(0.59f, s.ChoosableAt, Tolerance);
+        }
+
+        [Test]
+        public void BossPage_AlwaysGetsTheCache_EvenWithNoQualifyingCard()
+        {
+            var s = Page(EncounterClass.Boss, Gear(2, 3), Gear(1, 1, false), Gear(3, 0, false));
+            Assert.IsTrue(s.HasCache);
+            Assert.IsEmpty(Of(s, RevealBeatKind.Hold));
+            Assert.AreEqual(1.15f, s.ChoosableAt, Tolerance);
+            Assert.AreEqual(3, Of(s, RevealBeatKind.Flip).Length);
+        }
+
+        [Test]
+        public void BossPage_TheBeatStillFollowsTheWornRule()
+        {
+            var over = Page(EncounterClass.Boss, Gear(4, 2), Gear(1, 1, false), Gear(1, 1, false));
+            Assert.AreEqual(1, Of(over, RevealBeatKind.Hold).Length);
+            Assert.AreEqual(1.40f, over.ChoosableAt, Tolerance);
+            var equal = Page(EncounterClass.Boss, Gear(4, 4), Gear(1, 1, false), Gear(1, 1, false));
+            Assert.IsTrue(equal.HasCache);
+            Assert.IsEmpty(Of(equal, RevealBeatKind.Hold));
+        }
+
+        [Test]
+        public void ElitePage_FollowsTheWornRuleLikeNormal()
+        {
+            Assert.IsFalse(Page(EncounterClass.Elite, Gear(3, 3), Gear(1, 1, false), Gear(1, 1, false)).HasCache);
+            Assert.IsTrue(Page(EncounterClass.Elite, Gear(3, 1), Gear(1, 1, false), Gear(1, 1, false)).HasCache);
+        }
+
+        [Test]
+        public void RelicPage_KeepsTheQualityOnlyRule_IgnoringAnyWornItem()
+        {
+            Assert.IsTrue(Page(EncounterClass.Normal, RevealCard.Relic(3, true), Common, Common).HasCache);
+            Assert.IsFalse(Page(EncounterClass.Normal, RevealCard.Relic(2, true), Common, Common).HasCache);
+            Assert.IsFalse(Page(EncounterClass.Normal, RevealCard.Relic(4, false), Common, Common).HasCache);
+            Assert.AreEqual(1, Of(Page(EncounterClass.Normal, RevealCard.Relic(4, true), Common, Common), RevealBeatKind.Hold).Length);
+            Assert.AreEqual(0, new RevealCard(4, true, 4, true).WornTier, "a relic has no worn item");
         }
 
         // Holds

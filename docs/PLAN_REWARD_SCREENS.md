@@ -358,11 +358,18 @@ One page at a time, gear then relic.
   A downgrade lands silent. A page with nothing for anyone is quiet; a page
   with two upgrades sounds like good news before the cards are read. This
   adds no time: it rides the deal or the flips.
-- **No cache** unless the page holds a **Rare+ live upgrade** (M1). Such a
-  page gets a cache (§5 A1) that the map's chip unfolds into, its seam
-  leaking warm light, humming. The light does not say which card, nor Rare
-  from top tier. A Rare+ card that is a downgrade or inert does not earn a
-  cache, so the cache never promises a downgrade.
+- **No cache** unless the page earns one. **Gear page:** it holds a live
+  upgrade whose *quality* is higher than the item its wearer wears in that
+  slot (an empty slot counts as lower than anything). **Boss page:** always.
+  **Relic page:** a Rare+ live relic (unchanged; A9 measured gear only).
+  Such a page gets a cache (§5 A1) that the map's chip unfolds into, its
+  seam leaking warm light, humming. The light does not say which card, nor
+  Rare from top tier. A downgrade, an inert card or a live card no better
+  than the worn one does not earn a cache, so the cache never promises a
+  downgrade. Why: A9's sweep (`docs/REWARD_CACHE_RATES.md`) found the old
+  "Rare+ live upgrade" rule on 79% of gear pages and the Legendary beat on
+  32%, against a target of one page in five; comparing with the worn item
+  thins the ceremony as the party gears up.
 - **No cache**: the cards deal face-up into the row (0.25 s, left to right,
   a cloth rustle per card).
 - The cache's size and binding follow the page's class
@@ -393,14 +400,16 @@ First sweep (fails at 32% beat over all pages, 15% on Normal pages): `docs/REWAR
 1. The seal snaps (0.12 s), a breath of light.
 2. The *k* + 2 cards slide out face-down into the row (0.25 s).
 3. Cards flip **left to right in row order**, 0.06 s apart, each flip
-   0.12 s. A top-tier **live upgrade** holds a 0.25 s silent beat before its
-   own flip; the cards after it wait. Each flip plays the flip clip at its
+   0.12 s. A **Legendary live upgrade over a worn item below Legendary** holds a
+   0.25 s silent beat before its own flip; the cards after it wait (a boss
+   page keeps this rule; only its cache is unconditional; a relic: any
+   top-tier live relic). Each flip plays the flip clip at its
    quality's pitch step (four pre-pitched clips, C11).
 4. On landing: Uncommon a cloth puff; Rare a shimmer; top tier the burst at
    full size for 0.3 s, a 0.12 s screen-edge flare in its colour, a low
    bell. Common: a flat tap. A top-tier card that is not a live upgrade
    lands like a Rare: no hold, no flare; its plinth still says what it is.
-5. **A top-tier live upgrade lingers without blocking** (F3, F4): for 1.2 s
+5. **A Legendary live upgrade (same rule as the hold) lingers without blocking** (F3, F4): for 1.2 s
    after the row is choosable its halo stays at full strength, motes rise
    off its plinth and the bell decays. Input works throughout. A take, a
    hone, a leave or a Submit ends the linger; **moving focus does not**.

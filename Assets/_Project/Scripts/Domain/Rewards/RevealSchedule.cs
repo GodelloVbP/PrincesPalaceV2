@@ -15,16 +15,36 @@ namespace PrincesPalace.Domain.Rewards
         // LiveUpgrade.Of: good news for the party, not just a high quality.
         public readonly bool LiveUpgrade;
 
-        public RevealCard(int tier, bool liveUpgrade)
+        // Gear: the tier (1..4) of the item its wearer has in that slot now,
+        // 0 for an empty slot. Always 0 on a relic.
+        public readonly int WornTier;
+
+        // A relic card keeps the quality-only rule (A9 measured gear only).
+        public readonly bool IsRelic;
+
+        public RevealCard(int tier, bool liveUpgrade, int wornTier = 0, bool isRelic = false)
         {
             Tier = Math.Max(1, Math.Min(RevealSchedule.TopTier, tier));
             LiveUpgrade = liveUpgrade;
+            WornTier = isRelic ? 0 : Math.Max(0, Math.Min(RevealSchedule.TopTier, wornTier));
+            IsRelic = isRelic;
         }
 
-        public static RevealCard Gear(Quality quality, bool liveUpgrade) => new RevealCard((int)quality + 1, liveUpgrade);
+        public static RevealCard Gear(Quality quality, bool liveUpgrade, int wornTier = 0) =>
+            new RevealCard((int)quality + 1, liveUpgrade, wornTier);
+
+        public static RevealCard Relic(int tier, bool liveUpgrade) => new RevealCard(tier, liveUpgrade, 0, true);
 
         public bool IsRarePlus => Tier >= RevealSchedule.RareTier;
         public bool IsTop => Tier >= RevealSchedule.TopTier;
+
+        // Earns the cache by itself: a live gear card better than what is
+        // worn (an empty slot is lower than anything), or a Rare+ live relic.
+        public bool EarnsCache => LiveUpgrade && (IsRelic ? IsRarePlus : Tier > WornTier);
+
+        // Earns the held beat, the flare and the linger: a live Legendary
+        // over a worn item below Legendary (a relic: any top-tier live one).
+        public bool EarnsHold => LiveUpgrade && IsTop && (IsRelic || WornTier < RevealSchedule.TopTier);
     }
 
     public enum RevealBeatKind
@@ -143,26 +163,30 @@ namespace PrincesPalace.Domain.Rewards
             _scale = scale;
         }
 
-        // The cache appears only for a Rare+ live upgrade (C3, M1): a Rare+
-        // downgrade or inert card never earns one.
-        public static bool CacheApplies(IReadOnlyList<RevealCard> cards)
+        // The cache appears on a boss page always, and on any other page that
+        // holds a card earning it (C3): a downgrade or an equal-quality card
+        // never does, so the cache never promises a downgrade.
+        public static bool CacheApplies(IReadOnlyList<RevealCard> cards, EncounterClass pageClass = EncounterClass.Normal)
         {
+            if (pageClass == EncounterClass.Boss) return true;
             for (int i = 0; i < cards.Count; i++)
-                if (cards[i].IsRarePlus && cards[i].LiveUpgrade) return true;
+                if (cards[i].EarnsCache) return true;
             return false;
         }
 
-        // The held beat, the flare and the linger key on a top-tier live upgrade.
-        public static bool HoldsFor(RevealCard card) => card.IsTop && card.LiveUpgrade;
+        // The held beat, the flare and the linger key on a Legendary live
+        // upgrade over a worn item below Legendary, boss page or not.
+        public static bool HoldsFor(RevealCard card) => card.EarnsHold;
 
-        // cards: row order. choices: the page's k. seam: the controller's test
+        // cards: row order. choices: the page's k. pageClass: the page's
+        // SourceClass (a boss page always gets the cache). seam: the controller's test
         // multiplier (1 in play).
         public static RevealSchedule For(IReadOnlyList<RevealCard> cards, int choices, float presetDisplay,
-                                         float seam = 1f)
+                                         EncounterClass pageClass = EncounterClass.Normal, float seam = 1f)
         {
             float W(float authored) => ReckoningTime.Wall(authored, presetDisplay, seam);
             int n = cards.Count;
-            bool cache = CacheApplies(cards);
+            bool cache = CacheApplies(cards, pageClass);
             bool topLive = false;
             for (int i = 0; i < n; i++) topLive |= HoldsFor(cards[i]);
 

@@ -24,6 +24,17 @@ namespace PrincesPalace
             return card.IsGear ? GearIsLive(save, card) : RelicIsLive(save, card);
         }
 
+        // The tier (1..4, Common..Legendary) of the item the card's recipient
+        // wears in the card's slot now; 0 for an empty slot or a relic card.
+        // The reveal's cache and held beat compare against it.
+        public static int WornTier(SaveData save, PendingCard card)
+        {
+            if (save == null || card == null || !card.IsGear) return 0;
+            var recipient = save.roster?.FirstOrDefault(c => c != null && c.definitionId == card.RecipientId);
+            if (recipient?.equipment == null || recipient.equipment.IsEmpty(card.Slot)) return 0;
+            return (int)ContentDatabase.QualityOf(recipient.equipment.GetInstance(card.Slot)) + 1;
+        }
+
         private static bool GearIsLive(SaveData save, PendingCard card)
         {
             if (card.Inert) return false;
