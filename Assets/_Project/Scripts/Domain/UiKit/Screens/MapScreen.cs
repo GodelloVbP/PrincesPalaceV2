@@ -140,6 +140,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef TitleLabel;
         public NodeRef GoldLabel;
         public NodeRef GoldIcon;
+        public NodeRef BankedLabel;
+        public NodeRef BankedIcon;
         public NodeRef RoomMessageLabel;
         public NodeRef OverviewLabel;
 
@@ -205,13 +207,23 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var title = Ui.Label("MapTitleLabel", UiStrings.MapTitle, new UiVec(660f, 56f), 40, "#EDE6FF",
                 OnContent(590f, -42f)).TextAligned(UiTextAlign.Right).OverArt(backing: false)
                 .Styled(TypographyRole.FunctionalHeading);
-            var gold = Ui.Label("MapGoldLabel", UiStrings.MapGold, new UiVec(460f, 32f), 22, "#F2DB9E",
-                OnContent(690f, -90f)).TextAligned(UiTextAlign.Right).OverArt(backing: false)
+            var gold = Ui.Label("MapGoldLabel", UiStrings.MapGold, new UiVec(200f, 32f), 22, "#F2DB9E",
+                OnContent(820f, -90f)).TextAligned(UiTextAlign.Right).OverArt(backing: false)
                 .Styled(TypographyRole.TacticalData);
 
             // The coin before the amount. The controller slides it to the left
             // of the right-aligned text, whose width is a runtime fact.
             var goldIcon = Ui.Sprite("MapGoldIcon", ChipGoldKey, OnContent(850f, -90f),
+                    UiSize.Fixed(GoldIconSize, GoldIconSize))
+                .AsDecor();
+
+            // Banked gold (the Cache room) reads the same way, to the left of the
+            // purse: the cache's own icon and the amount. Hidden while nothing is
+            // banked; the controller slides both to the purse's left edge.
+            var banked = Ui.Label("MapBankedLabel", UiStrings.MapGold, new UiVec(200f, 32f), 22, "#F2DB9E",
+                OnContent(500f, -90f)).TextAligned(UiTextAlign.Right).OverArt(backing: false)
+                .Styled(TypographyRole.TacticalData);
+            var bankedIcon = Ui.Sprite("MapBankedIcon", CacheIconKey, OnContent(380f, -90f),
                     UiSize.Fixed(GoldIconSize, GoldIconSize))
                 .AsDecor();
 
@@ -240,6 +252,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.TitleLabel = title;
             screen.GoldLabel = gold;
             screen.GoldIcon = goldIcon;
+            screen.BankedLabel = banked;
+            screen.BankedIcon = bankedIcon;
             screen.RoomMessageLabel = roomMessage;
 
             // The painted wood, tiled DOWN the leg; the strip tiles by itself.
@@ -343,7 +357,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.Debug = debug;
 
             screen.Root = Ui.Panel("MapPanel", UiSize.Fill,
-                viewport, vignette, title, gold, goldIcon,
+                viewport, vignette, title, gold, goldIcon, banked, bankedIcon,
                 roomMessage, overview, shop.Root, eventRoom.Root, hone.Root, systemMenu.Root, debug.Root);
 
             return screen;
@@ -569,7 +583,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // brighter than the sprite's own colour, which a hex string cannot say
         // and a Color above 1.0 can.
 
-        // A room's caption, and the colour it takes while it is explaining a
+        // The heart's anchor names, and the colour a tile's plate flashes to on a
         // refused press (MapController.Refuse).
         public const string CaptionHex = "#EDE6FF";
         public const string RefusalHex = "#E0786E";

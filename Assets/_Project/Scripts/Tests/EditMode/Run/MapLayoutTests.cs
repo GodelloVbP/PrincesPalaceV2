@@ -254,7 +254,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0f, MapLayout.Scroll(-900f, 700f, viewport), 0.01f);
         }
 
-        // The header's labels, badge and message occupy the top band; the first
+        // The top-right stack and the room message occupy the top band; the first
         // row must stand below it, and so must everything the overview draws.
         [Test]
         public void TheHeaderBandIsClearOfTheFirstRow_AndOfTheWholeOverview()
@@ -266,6 +266,22 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(230f, MapLayout.OverviewTopInset);
             Assert.AreEqual(190f, MapLayout.OverviewBottomInset);
             Assert.AreEqual(1080f - 230f - 190f, MapLayout.ContentHeight(12) * MapLayout.OverviewScale(MapLayout.ContentHeight(12), 1080f), 0.01f);
+        }
+
+        // Positive units move the content UP on screen, i.e. deeper toward the
+        // heart. Down on the wheel (negative delta), down on the stick (the
+        // inverted MapScroll axis reads negative) and PageDown all go deeper;
+        // the opposite inputs go back up.
+        [Test]
+        public void ScrollInputsAgreeOnDirection()
+        {
+            Assert.AreEqual(140f, MapLayout.ScrollUnits(-1f, 0f, 0f, 0.1f), 0.001f, "wheel down");
+            Assert.AreEqual(-140f, MapLayout.ScrollUnits(1f, 0f, 0f, 0.1f), 0.001f, "wheel up");
+            Assert.AreEqual(110f, MapLayout.ScrollUnits(0f, -1f, 0f, 0.1f), 0.001f, "stick down");
+            Assert.AreEqual(-110f, MapLayout.ScrollUnits(0f, 1f, 0f, 0.1f), 0.001f, "stick up");
+            Assert.AreEqual(90f, MapLayout.ScrollUnits(0f, 0f, 1f, 0.1f), 0.001f, "PageDown");
+            Assert.AreEqual(-90f, MapLayout.ScrollUnits(0f, 0f, -1f, 0.1f), 0.001f, "PageUp");
+            Assert.AreEqual(0f, MapLayout.ScrollUnits(0f, -0.2f, 0f, 0.1f), 0.001f, "inside the dead zone");
         }
 
         [Test]

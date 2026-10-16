@@ -192,7 +192,7 @@ namespace PrincesPalace.Domain.UiKit
 
         public static float BackgroundTileY(int index) => -index * BackgroundTileHeight;
 
-        // THE HEADER BAND: the top strip the top-right stack (floor, depth,
+        // THE HEADER BAND: the top strip the top-right stack (floor and room,
         // gold, overview hint) and the room message occupy. It paints nothing;
         // the overview keeps the realm below it and the first row (TopMargin)
         // stands clear of it.
@@ -209,6 +209,24 @@ namespace PrincesPalace.Domain.UiKit
             if (contentHeight <= 0f || room <= 0f) return 1f;
             float fit = room / contentHeight;
             return fit < 1f ? fit : 1f;
+        }
+
+        // ---- free scrolling -----------------------------------------------------
+
+        public const float WheelUnits = 140f;
+        public const float StickUnitsPerSecond = 1100f;
+        public const float KeyUnitsPerSecond = 900f;
+        public const float StickDeadZone = 0.25f;
+
+        // How far the content moves UP on screen (positive = deeper, toward the
+        // heart) for one frame of input. Wheel up, stick up (the MapScroll axis
+        // is inverted in the Input Manager, so up reads positive) and PageUp
+        // all show the rooms above; `pageKeys` is +1 for PageDown, -1 for PageUp.
+        public static float ScrollUnits(float wheel, float stick, float pageKeys, float deltaSeconds)
+        {
+            float units = -wheel * WheelUnits;
+            if (stick > StickDeadZone || stick < -StickDeadZone) units += -stick * StickUnitsPerSecond * deltaSeconds;
+            return units + pageKeys * KeyUnitsPerSecond * deltaSeconds;
         }
 
         // ---- the trails between rooms -------------------------------------------

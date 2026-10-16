@@ -303,11 +303,9 @@ namespace PrincesPalace.Domain.UiKit
         // its name is the descent itself.
         public static readonly UiString MapTitle =
             UiString.Define("map.title", "FLOOR {0}  ·  ROOM {1}", "FLOOR 99  ·  ROOM 999");
-        // The coin is drawn beside the amount, so the word is gone. Banked
-        // gold keeps its word: there is no icon for it.
+        // The coin is drawn beside the amount, so the word is gone; banked gold
+        // uses the same template beside the cache icon.
         public static readonly UiString MapGold = UiString.Define("map.gold", "{0}", "99999");
-        public static readonly UiString MapGoldBanked =
-            UiString.Define("map.gold_banked", "{0}  ·  {1} BANKED", "99999  ·  99999 BANKED");
         // The map's hint that somebody wants looking at (plan C20): what waits,
         // from CharacterAttention, and the key that opens the menu on it. Only
         // the reasons that hold are named, so the sample is all three.

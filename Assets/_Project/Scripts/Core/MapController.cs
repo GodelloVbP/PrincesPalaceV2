@@ -54,6 +54,8 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text overviewLabel;
         [SerializeField] internal TMP_Text goldLabel;
         [SerializeField] internal Image goldIcon;
+        [SerializeField] internal TMP_Text bankedLabel;
+        [SerializeField] internal Image bankedIcon;
 
         // What the room the party just walked into did. Empty between rooms,
         // rather than left showing the last one's result under a new heading.
@@ -206,7 +208,7 @@ namespace PrincesPalace
                 hover.Changed = (_, entered) => _preview.Pointer(node, entered);
 
                 // A press on a room the party cannot enter never reaches
-                // onClick, so it is heard here and answered on the caption.
+                // onClick, so it is heard here and answered on the tile (Refuse).
                 var click = node.GetComponent<ClickIndex>() ?? node.AddComponent<ClickIndex>();
                 click.Clicked = _ => RefuseIfNotOffered(index);
             }
@@ -399,8 +401,8 @@ namespace PrincesPalace
             var cleared = new HashSet<int>(run.clearedNodeIds);
 
             titleLabel.Set(UiStrings.MapTitle, run.floor, run.roomsWalked);
-            if (run.bankedGold > 0) goldLabel.Set(UiStrings.MapGoldBanked, run.gold, run.bankedGold);
-            else goldLabel.Set(UiStrings.MapGold, run.gold);
+            goldLabel.Set(UiStrings.MapGold, run.gold);
+            if (bankedLabel != null) bankedLabel.Set(UiStrings.MapGold, run.bankedGold);
             PlaceGoldIcon();
             RefreshOverviewLabel();
 
@@ -410,7 +412,7 @@ namespace PrincesPalace
             //
             // Hidden rather than blanked when there is nothing to say: an empty
             // label is still a box the text-fit audit has to reason about, and
-            // a stale-looking gap under the depth line reads as a missing
+            // a stale-looking gap under the top-right stack reads as a missing
             // string rather than as a room that had nothing to report.
             if (roomMessageLabel != null)
             {
@@ -693,7 +695,7 @@ namespace PrincesPalace
             // The entry is never "cleared" (there is nothing in it to resolve;
             // the opening shot reads that to know the realm is fresh), but a
             // party that has left it has walked it. Left Closed it dims to
-            // nothing against the wood, with only its caption showing.
+            // nothing against the wood.
             if (cleared.Contains(node.Id) || node.Role == RealmNodeRole.Entry) return MapTileState.Walked;
             if (reachable.Contains(node.Id)) return MapTileState.Open;
             return ahead.Contains(node.Id) ? MapTileState.Ahead : MapTileState.Closed;
@@ -768,7 +770,7 @@ namespace PrincesPalace
         // clamped to the content.
         private float OverviewScroll(MapGraph graph, float scale, float focusY)
         {
-            // The realm sits between the header band and the bottom inset: a realm
+            // The realm sits between the top-right stack's band and the bottom inset: a realm
             // that fits is pushed DOWN by the top inset (a negative scroll).
             float height = viewport.rect.height;
             float min = -MapLayout.OverviewTopInset;
@@ -1172,10 +1174,6 @@ namespace PrincesPalace
         // slide the content within its own extent; the next move pans the camera
         // back to its pin on the party's room (MapController.Walk.cs PanTo).
         // Pure camera: nothing here reads or writes Time.timeScale.
-        private const float WheelUnits = 140f;
-        private const float StickUnitsPerSecond = 1100f;
-        private const float KeyUnitsPerSecond = 900f;
-        private const float StickDeadZone = 0.25f;
         private const string ScrollAxis = "MapScroll";
 
         private bool CanScroll => !_overview && !IsWalking && !IsOpening && RunManager.Map != null;
@@ -1199,16 +1197,9 @@ namespace PrincesPalace
         {
             if (!CanScroll) return;
 
-            float wheel = Input.mouseScrollDelta.y;
-            if (wheel != 0f) ScrollBy(-wheel * WheelUnits);
-
-            // Stick up reads positive (the axis is inverted in the Input
-            // Manager), and up shows the rooms above.
-            float stick = Input.GetAxisRaw(ScrollAxis);
-            if (Mathf.Abs(stick) > StickDeadZone) ScrollBy(-stick * StickUnitsPerSecond * Time.unscaledDeltaTime);
-
             float keys = (Input.GetKey(KeyCode.PageDown) ? 1f : 0f) - (Input.GetKey(KeyCode.PageUp) ? 1f : 0f);
-            if (keys != 0f) ScrollBy(keys * KeyUnitsPerSecond * Time.unscaledDeltaTime);
+            ScrollBy(MapLayout.ScrollUnits(Input.mouseScrollDelta.y, Input.GetAxisRaw(ScrollAxis), keys,
+                Time.unscaledDeltaTime));
         }
 
         // ---- the ring on a room that can be entered --------------------------------
@@ -1228,17 +1219,38 @@ namespace PrincesPalace
 
         // ---- the top-right stack ---------------------------------------------------
 
-        // The coin sits just left of the right-aligned amount.
+        // The coin sits just left of the right-aligned amount; the banked pair
+        // (cache icon, amount) sits left of that, and is hidden at zero.
         private void PlaceGoldIcon()
         {
             if (goldIcon == null || goldLabel == null) return;
 
-            goldLabel.ForceMeshUpdate();
-            var box = goldLabel.rectTransform;
-            float textWidth = goldLabel.GetPreferredValues(goldLabel.text).x;
+            float left = PlaceIconBeforeText(goldLabel, goldIcon);
+
+            bool banked = bankedLabel != null && bankedIcon != null && RunManager.Run != null
+                && RunManager.Run.bankedGold > 0;
+            if (bankedLabel != null) bankedLabel.gameObject.SetShown(banked);
+            if (bankedIcon != null) bankedIcon.gameObject.SetShown(banked);
+            if (!banked) return;
+
+            var box = bankedLabel.rectTransform;
+            box.anchoredPosition = new Vector2(left - BankedGap - box.rect.width * 0.5f, box.anchoredPosition.y);
+            PlaceIconBeforeText(bankedLabel, bankedIcon);
+        }
+
+        private const float BankedGap = 24f;
+
+        // Returns the icon's left edge.
+        private static float PlaceIconBeforeText(TMP_Text label, Image icon)
+        {
+            label.ForceMeshUpdate();
+            var box = label.rectTransform;
+            float textWidth = label.GetPreferredValues(label.text).x;
             float right = box.anchoredPosition.x + box.rect.width * 0.5f;
-            goldIcon.rectTransform.anchoredPosition = new Vector2(
-                right - textWidth - MapScreen.GoldIconSize * 0.5f - 6f, box.anchoredPosition.y);
+            float size = icon.rectTransform.rect.width;
+            float x = right - textWidth - size * 0.5f - 6f;
+            icon.rectTransform.anchoredPosition = new Vector2(x, box.anchoredPosition.y);
+            return x - size * 0.5f;
         }
 
         // The overview hint names the key of the device in the player's hands.
@@ -1363,7 +1375,7 @@ namespace PrincesPalace
 
             // One walk at a time. A second click mid-walk would otherwise start
             // a step from a room the party is halfway out of, and the two
-            // coroutines would fight over the same figure. Said on the caption
+            // coroutines would fight over the same figure. Flashed on the tile
             // rather than ignored: the press was on a room that IS offered.
             if (IsWalking)
             {
