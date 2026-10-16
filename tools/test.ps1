@@ -97,6 +97,8 @@ $RunnerProduct = $ProjectLeaf -replace '[^A-Za-z0-9]',''
 # Enter-RunnerClaim: claims a runner copy for this whole run, waiting (bounded)
 # while another session holds it. See "Runner claims" in its own file.
 . (Join-Path $PSScriptRoot "unity_lock.ps1")
+# MetaSync.SyncDocs: the docs/ part of the runner mirror.
+. (Join-Path $PSScriptRoot "runner_sync.ps1")
 $UnityExe = Get-UnityExe
 
 # Process-tree focus guard, for this script's WHOLE run -- see
@@ -642,11 +644,11 @@ if (-not $SkipSync) {
         robocopy "$SourceProject\Assets" "$($runner.Path)\Assets" /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
         robocopy "$SourceProject\Packages" "$($runner.Path)\Packages" /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
         robocopy "$SourceProject\ProjectSettings" "$($runner.Path)\ProjectSettings" /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
-        # Not a Unity folder, but ContentSchemaTests reads docs/CONTENT_SCHEMA.md
-        # out of whatever tree it finds Assets/_Project/Scripts in -- which,
-        # under Unity, is this copy. Same line and same reason as Sync-Runner
-        # in run_tests_parallel.ps1.
-        robocopy "$SourceProject\docs" "$($runner.Path)\docs" /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
+        # Not a Unity folder, but tests read docs/CONTENT_SCHEMA.md and
+        # docs/fixtures out of whatever tree they find Assets/_Project/Scripts
+        # in -- which, under Unity, is this copy. SyncDocs copies just those and
+        # purges the rest; see tools/runner_sync.ps1.
+        [PP.RunnerSync.MetaSync]::SyncDocs($SourceProject, $runner.Path)
 
         $settingsPath = Join-Path $runner.Path "ProjectSettings\ProjectSettings.asset"
         Set-ProjectProductName -SettingsPath $settingsPath -Product $runner.Product

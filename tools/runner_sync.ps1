@@ -56,6 +56,95 @@ namespace PP.RunnerSync
             return true;
         }
 
+        // docs/ in a runner holds only what a test reads: ContentSchemaTests
+        // reads CONTENT_SCHEMA.md and DemoDialogueFixtureTests reads
+        // fixtures/. Everything else (docs/captures alone was 7 GB per copy)
+        // is deleted from the copy, so a plain /MIR of docs/ is not used. The
+        // other top-level folders a copy has no use for are pruned here too,
+        // because robocopy /MIR never removes what it was told to skip.
+        static readonly string[] DocsKept = new string[] { "CONTENT_SCHEMA.md", "fixtures" };
+        static readonly string[] RootStray = new string[] { "reports", "output", ".claude", "scratchpad" };
+
+        // A copy's docs/captures can be deleted by another process while this
+        // runs, so a path that vanishes mid-delete is a success, not an error.
+        static void ClearReadOnly(string path)
+        {
+            try
+            {
+                FileAttributes a = File.GetAttributes(path);
+                if ((a & FileAttributes.ReadOnly) != 0) File.SetAttributes(path, a & ~FileAttributes.ReadOnly);
+            }
+            catch (FileNotFoundException) { }
+            catch (DirectoryNotFoundException) { }
+        }
+
+        static void DeleteTree(string path)
+        {
+            try
+            {
+                if (Directory.Exists(path))
+                {
+                    foreach (string f in Directory.GetFiles(path, "*", SearchOption.AllDirectories)) ClearReadOnly(f);
+                    Directory.Delete(path, true);
+                }
+                else if (File.Exists(path))
+                {
+                    ClearReadOnly(path);
+                    File.Delete(path);
+                }
+            }
+            catch (FileNotFoundException) { }
+            catch (DirectoryNotFoundException) { }
+            if (Directory.Exists(path) || File.Exists(path))
+            {
+                // Something emptied part of it under us; one more pass.
+                if (Directory.Exists(path)) Directory.Delete(path, true); else File.Delete(path);
+            }
+        }
+
+        static void MirrorTree(string src, string dst)
+        {
+            Directory.CreateDirectory(dst);
+            HashSet<string> names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (string e in Directory.GetFileSystemEntries(src)) names.Add(Path.GetFileName(e));
+            foreach (string e in Directory.GetFileSystemEntries(dst))
+                if (!names.Contains(Path.GetFileName(e))) DeleteTree(e);
+            foreach (string n in names)
+            {
+                string a = Path.Combine(src, n);
+                string b = Path.Combine(dst, n);
+                if (Directory.Exists(a)) { MirrorTree(a, b); continue; }
+                if (SameBytes(a, b)) continue;
+                if (File.Exists(b)) ClearReadOnly(b);
+                File.Copy(a, b, true);
+            }
+        }
+
+        public static void SyncDocs(string srcRoot, string dstRoot)
+        {
+            string srcDocs = Path.Combine(srcRoot, "docs");
+            string dstDocs = Path.Combine(dstRoot, "docs");
+            Directory.CreateDirectory(dstDocs);
+            foreach (string e in Directory.GetFileSystemEntries(dstDocs))
+            {
+                bool keep = false;
+                foreach (string k in DocsKept) if (string.Equals(Path.GetFileName(e), k, StringComparison.OrdinalIgnoreCase)) keep = true;
+                if (!keep) DeleteTree(e);
+            }
+            foreach (string k in DocsKept)
+            {
+                string a = Path.Combine(srcDocs, k);
+                string b = Path.Combine(dstDocs, k);
+                if (Directory.Exists(a)) MirrorTree(a, b);
+                else if (File.Exists(a) && !SameBytes(a, b))
+                {
+                    if (File.Exists(b)) ClearReadOnly(b);
+                    File.Copy(a, b, true);
+                }
+            }
+            foreach (string d in RootStray) DeleteTree(Path.Combine(dstRoot, d));
+        }
+
         // Returns the relative paths repaired, sorted.
         public static string[] Repair(string srcAssets, string dstAssets)
         {
@@ -232,10 +321,9 @@ $SyncRunnerScript = {
     $codes["Packages"] = $LASTEXITCODE
     robocopy "$src\ProjectSettings" "$($Runner.Path)\ProjectSettings" /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
     $codes["ProjectSettings"] = $LASTEXITCODE
-    # docs/: ContentSchemaTests reads docs/CONTENT_SCHEMA.md out of the copy.
-    # See Sync-Runner's comment history in run_tests_parallel.ps1.
-    robocopy "$src\docs" "$($Runner.Path)\docs" /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
-    $codes["docs"] = $LASTEXITCODE
+    # docs/: only what tests read, plus a purge of everything else; see
+    # SyncDocs. Throws on failure, so no exit code to collect.
+    [PP.RunnerSync.MetaSync]::SyncDocs($src, $Runner.Path)
 
     $settingsPath = Join-Path $Runner.Path "ProjectSettings\ProjectSettings.asset"
     # Inline, not Set-ProjectProductName: a runspace sees no functions. Same
