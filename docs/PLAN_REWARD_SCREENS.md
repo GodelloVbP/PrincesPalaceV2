@@ -1,8 +1,10 @@
 # Plan: the gear reward and the Reckoning
 
-Status: rev 4 (rev 3 plus a sourced research round), 2026-10-16. Plan only; nothing here
-is built. Two review rounds, each with one reviewer reading the code and one
-reading only the plan (§10).
+Status: rev 5, 2026-10-16. Plan only; nothing here is built. Rev 5 folds in
+the senior adversarial review of rev 4
+(`docs/PLAN_REWARD_SCREENS_SENIOR_REVIEW.md`, 3055bed1). Earlier: two review
+rounds, each with one reviewer reading the code and one reading only the
+plan, and a sourced research round (§2, §10).
 
 **Reading of the ask.** "Gear reward screen" is the Reckoning's choice
 phase (the gear page and the relic page, `ReckoningScreen.OfferPhase`);
@@ -15,7 +17,9 @@ the act boundary (C7) moves.
 (shape, light, motion, sound, a number next to a glyph) is never also
 written as a sentence. Words survive only where no picture carries the fact:
 an item's name, an affix's or relic's rules text, and the compare detail on
-focus. No tutorial either: nothing plays "the first time" only.
+focus. No tutorial either: nothing plays "the first time" only. A picture
+that is false is worse than a sentence, so every picture here draws a fact
+where the code keeps it (honing on the slot, not the item: C6).
 
 **What does not change.** The decision model: `RewardPages` (take, hone
 instead, leave), `PendingPage`, the page roll on `RngStreams.Reward`, the
@@ -24,11 +28,11 @@ save after each action, the bot's `SettleRewardPages` / `BotRunDriver.Offer`
 
 **What changes below the screen (cross-layer, additive).** By the time the
 Reckoning opens, `RunOrchestrator.SettleFight` has paid the map prizes and
-cleared the room (`RunOrchestrator.cs:624-651`), and `ReckoningRequest`
-carries only notice strings about them. R1 adds a read-only record of what
-was paid (C12), a pure preview of what leaving a page pays, and a stats
-query at a hypothetical honing level (C13). Notice strings stay for the bot
-and the tests.
+`AdvanceLeg` may have moved the node (`RunOrchestrator.cs:624-651`,
+`RunManager.cs:409-418`), and the request carries only notice strings about
+them. R1 adds a read-only record of what was paid on `CombatReward` (C12), a
+pure preview of what leaving a page pays, and a scoped honing preview at the
+one seam that reads honing (C13). Notice strings stay for the bot and tests.
 
 ## 1. Audit: what the two screens tell today
 
@@ -191,8 +195,20 @@ generated; colour is never the only channel.
 
 ## 3. Behavioural contracts
 
-Durations are authored at the default battle speed (1x) and all go through
-one helper (C10). "Wall time" below counts from the moment the wipe starts.
+Durations are authored at the default battle speed (1x). The whole reveal
+is one pure Domain model, **`RevealSchedule`** (C10), which the controller
+only plays back. "Wall time" counts from the moment the wipe starts.
+
+**Definitions used below.**
+
+- **Live upgrade**: a card that is not inert and is good news for its
+  wearer: a positive headline delta (`GearEvaluator.LargestDelta`, C5), or,
+  with no stat change, an affix or trait the worn copy lacks. A relic is a
+  live upgrade when it reaches at least one member who does not already get
+  its mechanic (`PendingCard.AddsNothingFor`).
+- **Top tier**: gear Legendary; relic Mythic or Godlike.
+- **Rare+**: gear Rare or Legendary; relic Rare, UltraRare, Mythic or
+  Godlike.
 
 ### C1. Arrival
 
@@ -203,82 +219,115 @@ one helper (C10). "Wall time" below counts from the moment the wipe starts.
    plate, `Art/Backgrounds/Processed/map_node_*.png`), from C12's recorded
    class. An event fight (`SettleEventFight`, no class) shows the plain
    fight medallion. No title word.
-3. **Outcome form** (a run fight that paid nothing): Fell = medallion
-   cracked and dimmed, a low note; Endured = medallion plain, a held drone;
-   a paid-nothing Victory = plain, no note. The board (C8) shows who fell.
-   Endured and a paid-nothing Victory look alike without a word: owner call
-   O2.
+3. **Outcome form** (a run fight that paid nothing; provisional O2, §7):
+   for its first 0.4 s the gloom over the stage stays low, so the fight
+   behind the overlay shows the ending (standing enemies, an empty field, a
+   downed party). Then: Fell = medallion cracked, a low note; Endured =
+   medallion dimmed but whole, a held drone; a paid-nothing Victory =
+   medallion plain, no note. No ending word. The board (C8) shows who fell.
 
 ### C2. The haul: the map's prizes arrive as the map's icons
 
-Runs **alongside** C3/C4, never before the cards. Driven by C12's record, in
-pay order, 0.08 s apart, each chip appearing as **the chip the map showed**
-(`Shown`) and then becoming what was paid (`Paid`):
+Sequenced, not parallel: the haul plays **inside the wipe** (0.34 s) and,
+on a cache page, the open wait. It is done before the first card moves.
+Driven by C12's record, in pay order, each chip appearing as the chip the
+map showed (`Shown`), then becoming what was paid (`Paid`):
 
-- **Gold** (fight gold, gold chips, and a Gear/Relic chip past the page
-  limit that `PayOverflow` paid as gold): coins spill into the **gold
-  stack** at the frame's top-right; the number counts from `GoldBefore`
-  (C12) up with a soft tick (at most 12 ticks). A gear or relic chip that
-  became gold shows its own icon first and **dissolves into coins**, so a
-  page the player lost to the limit is seen, not hidden.
+- **Gold**: fight gold (`CombatReward.GoldGained`, recorded with
+  `Shown = None`, so it simply pours in) and every gold chip, including a
+  Gear/Relic chip past the page limit that `PayOverflow` paid as gold. Coins
+  spill into the **gold stack** at the frame's top-right; the number counts
+  from `GoldBefore` (C12) in at most 8 soft ticks, finishing inside the
+  wipe. A gear or relic chip that became gold shows its own icon first and
+  dissolves into coins, so a page lost to the limit is seen.
 - **Exhausted pool** (`RealmPrize.Effective` turned a Book or Relic chip
-  into gold, `RealmPrizes.cs:27`): same dissolve into coins.
+  into gold, `RealmPrizes.cs:27`): the same dissolve.
 - **Potions** (`ConsumablesFor(strength)` draws into
-  `save.stockpiledItems`): one flask per potion flies to the **satchel** at
-  the frame's bottom-left and clinks in.
-- **Book** (into `run.unassignedSpellBooks`, no owner yet): the book's 48 px
-  cover (the existing spell-book icon bake) drops onto a **book pile**
-  beside the satchel, not onto a portrait: nobody owns it yet.
-- **Gear / Relic chips**: fly into their page's slot in the row (C3).
+  `save.stockpiledItems`) and **books** (into `run.unassignedSpellBooks`, no
+  owner yet): one flask per potion and the book's 48 px cover drop into the
+  **haul strip** along the frame's foot. The strip is the one destination for
+  everything the party now holds that is not equipped (A8.1).
+- **Gear / Relic chip**: the chip the map showed flies to the row's centre
+  and **becomes the page** (A2): it unfolds into the cache on a cache page,
+  or straight into the dealt cards otherwise.
 - A merchant's line ("No refunds.") stays text: a character speaking.
+- No page at all: the haul plays into the board (C8) as above.
 
-### C3. The page arrives: one tell
+### C3. The page arrives
 
-One page at a time, gear then relic. Whether a page gets a **cache** is the
-tell:
+One page at a time, gear then relic.
 
-- **Common/Uncommon-best page**: no cache. The cards deal face-up into the
-  row (0.25 s for the whole row, left to right, a cloth-rustle per card).
-  Nothing is held back because nothing is worth holding back.
-- **Rare-or-better page**: a **cache** (§5 A1) drops into the row's centre
-  as the wipe finishes, its seam leaking warm light, humming. The light does
-  not distinguish Rare from Legendary. The cache's size and binding follow
-  the page's class (`PendingPage.SourceClass`, the highest of its chips):
-  normal, anchor, boss.
-- **Choice embers**: *k* embers above the row (or the cache), one per
-  choice. Spending a choice snuffs one.
+- **Every page has a beat** (owner-session point a): as each card lands,
+  one of the page's *k* choice embers lights above the row, with a soft
+  breath, and every card that lands as a live upgrade pops its up-chevron
+  with a short rising note, one step higher per up-card in row order (A1).
+  A downgrade lands silent. A page with nothing for anyone is quiet; a page
+  with two upgrades sounds like good news before the cards are read. This
+  adds no time: it rides the deal or the flips.
+- **No cache** unless the page holds a **Rare+ live upgrade** (M1). Such a
+  page gets a cache (§5 A1) that the map's chip unfolds into, its seam
+  leaking warm light, humming. The light does not say which card, nor Rare
+  from top tier. A Rare+ card that is a downgrade or inert does not earn a
+  cache, so the cache never promises a downgrade.
+- **No cache**: the cards deal face-up into the row (0.25 s, left to right,
+  a cloth rustle per card).
+- The cache's size and binding follow the page's class
+  (`PendingPage.SourceClass`, highest of its chips): normal, anchor, boss.
 - The cache opens by itself 0.2 s after landing; any press opens it at once.
+- **Choice embers**: *k* embers, one per choice; spending a choice snuffs
+  one.
+
+**How often the cache appears (re-derived, M1).** Odds per three-card
+normal page, by quality alone (senior review from `LootLadder.Climb`; Favor
+14 gives step 0.434, the cap 0.55): Rare+ on the page 0.47 (cap 0.66), top
+tier 0.23 (cap 0.42). Those are **upper bounds** for the cache and the held
+beat: keying on a live upgrade removes every Rare+ card that is a downgrade
+or inert, and that share grows as the party gears up, so the ceremony thins
+out by itself late in a run, with no counter. Pity and node floors push the
+other way (`GearPage.cs:147, 236-240, 431-437`), which is why this is
+measured, not argued: A9's bot-seed sweep reports cache rate and top-tier
+beat rate per act, and the R4 gate holds the top-tier beat to at most one
+gear page in five at mid-run Favor. Wall time is short at the upper bound
+anyway: 0.53 x 0.59 + 0.24 x 1.15 + 0.23 x 1.40 = 0.91 s mean to choosable
+at Favor 14, 1.06 s at the cap (C4 table). Fight 200 stays short because
+the wait is short and the ceremony is rarer than the quality odds, not
+because a counter shortens it.
 
 ### C4. The opening (cache pages only)
 
 1. The seal snaps (0.12 s), a breath of light.
-2. The *k* + 2 cards slide out face-down into the row (0.25 s total).
+2. The *k* + 2 cards slide out face-down into the row (0.25 s).
 3. Cards flip **left to right in row order**, 0.06 s apart, each flip
-   0.12 s. A Legendary card holds a 0.25 s silent beat before its own flip;
-   the cards after it wait. A Rare card shimmers once on landing. The flip
-   clip rises a step in pitch per quality.
-4. On landing: Uncommon a cloth puff; Rare a shimmer; Legendary the burst
-   at full size for 0.3 s, a 0.12 s screen-edge flare in its colour, a low
-   bell. Common: a flat tap.
-   **A Legendary lingers without blocking** (F3, F4): for 1.2 s after the
-   row is choosable its halo stays at full strength, warm motes rise off its
-   plinth and the bell decays. Input works throughout; a take or a press
-   ends the linger at once. The rare moment gets its breath; the choice
-   never waits for it.
-5. Focus goes to the first card in row order. Nothing marks a "best" card.
-6. **No near miss** (F3): a card never shows a higher quality than it has,
-   not for a frame. The flip shows the card's own quality on the way over.
+   0.12 s. A top-tier **live upgrade** holds a 0.25 s silent beat before its
+   own flip; the cards after it wait. Each flip plays the flip clip at its
+   quality's pitch step (four pre-pitched clips, C11).
+4. On landing: Uncommon a cloth puff; Rare a shimmer; top tier the burst at
+   full size for 0.3 s, a 0.12 s screen-edge flare in its colour, a low
+   bell. Common: a flat tap. A top-tier card that is not a live upgrade
+   lands like a Rare: no hold, no flare; its plinth still says what it is.
+5. **A top-tier live upgrade lingers without blocking** (F3, F4): for 1.2 s
+   after the row is choosable its halo stays at full strength, motes rise
+   off its plinth and the bell decays. Input works throughout. A take, a
+   hone, a leave or a Submit ends the linger; **moving focus does not**.
+6. **Boss peak** (A5): a boss page whose top-tier card is a live upgrade
+   adds one short musical sting under the bell. The only thing above the
+   ordinary top-tier landing.
+7. Focus: the first card in row order, or the card the player already
+   moved to (C10). Nothing marks a "best" card.
+8. **No near miss** (F3): a card never shows a higher quality than it has,
+   not for a frame.
 
 **Wall time to choosable, at 1x:**
 
 | Page | Arithmetic | Total |
 |---|---|---|
 | No cache, any count | wipe 0.34 + deal 0.25 | 0.59 s |
-| Cache, 5 cards, no Legendary | wipe 0.34 + open wait 0.2 + seal 0.12 + slide 0.25 + flips (4 x 0.06 + 0.12) 0.36 | 1.27 s |
-| Cache, 5 cards, one Legendary | the above + held beat 0.25 | 1.52 s |
+| Cache, 3 cards (k = 1, the common case) | wipe 0.34 + open wait 0.2 + seal 0.12 + slide 0.25 + flips (2 x 0.06 + 0.12) 0.24 | 1.15 s |
+| Cache, 3 cards, top-tier upgrade | the above + held beat 0.25 | 1.40 s |
+| Cache, 5 cards, no top tier | wipe 0.34 + 0.2 + 0.12 + 0.25 + (4 x 0.06 + 0.12) 0.36 | 1.27 s |
+| Cache, 5 cards, top-tier upgrade | the above + 0.25 | 1.52 s |
 
-**Cap: 1.6 s wall time** at any preset. A slower preset shortens the held
-beat and the open wait first, then the flips.
+**Cap: 1.6 s**, holding by construction: the factor never exceeds 1 (C10).
 
 ### C5. The card face
 
@@ -286,117 +335,144 @@ Chromeless (no plate; `ReckoningScreen.cs:1006-1018`). **Row order** groups
 cards by wearer in squad order, stable within a wearer (`GearPage` deals in
 cycling squad order, so this is a real reorder). One pure `RowOrder`
 permutation beside `OfferRowLayout` maps row position to page index; the
-layout, the rail, the Down links and the flip order all iterate it, while
-`offerButtons[]`, test names and `RewardPages` stay page-indexed.
+layout, the rail, the links, the flip order and `RevealSchedule` all iterate
+it, while `offerButtons[]`, test names and `RewardPages` stay page-indexed.
 
 | Part | Shows | Cards 1-3 | Cards 4-5 |
 |---|---|---|---|
-| Plinth | A still under the item. Its **outline** is the primary quality channel (four distinct silhouettes, readable in greyscale); name colour and halo repeat it | yes | yes |
-| Tier | Numeral engraved on the plinth's front band | yes | yes |
+| Plinth | A still under the item. Its **outline** is the primary quality channel (four silhouettes, readable in greyscale); name colour and halo repeat it | yes | yes |
+| Slot band | The plinth's front band. Left: the tier numeral. Right: the **slot's honing `+N`** for this wearer and slot (`ContentDatabase.HoningOf`), lit gold when above 0. It belongs to the slot, so it stays lit when the items swap | yes | yes |
 | New item | The existing icon, large, in front; halo and slow burst behind (kept) | yes | yes |
-| **Worn item (ghost)** | The item the wearer has in that slot, drawn behind and to the left of the new one at 55% size and 45% alpha, on the same plinth. Empty slot: no ghost. The ghost is what "versus what you wear" looks like | yes | yes |
+| Worn item (ghost) | What the wearer has in that slot now, behind and to the left at 55% size and 45% alpha. No honing is drawn on it. Empty slot: no ghost. Gated in R2 (§6) before its size is fixed | yes | yes |
 | Lost affix | A red minus badge on the ghost when the worn copy has an affix the new one lacks; name on focus | yes | yes |
-| Wearer | A round portrait medallion at the card's top-left (`CharacterPortraits.For`; null -> the character's plate art silhouette). Identity only | yes | yes |
-| Name | Item name in its quality colour | yes | truncated |
-| Delta | The **headline stat** (below): its glyph, a signed number, and a **chevron shape**: up (green), down (red), flat bar (grey). Shape carries the sign; colour repeats it | yes | yes |
+| Wearer | Round portrait medallion at the top-left (`CharacterPortraits.For`; null -> the character's plate art silhouette). Identity only | yes | yes |
+| Name | Item name in its quality colour, **without** today's `+N` suffix (`RewardCardFace.cs:53`): the band shows it | yes | truncated |
+| Delta | The headline stat's glyph, a signed number, and a chevron shape: up (green), down (red), flat bar (grey). Shape carries the sign | yes | yes |
 | Affix | One rules line with inline icons (`DescriptionMarkup`); the trait line on a Legendary | yes | focus only |
 | Inert | Art tinted grey with a chain overlay | yes | yes |
 
-**Headline stat rule** (today's, kept): `GearEvaluator.LargestDelta`, the
-stat the swap moves most *relative to what the wearer has now* (a +6 speed
-on a 40-speed member beats +9 health on 400; `GearEvaluator.cs:178-212`).
-No stat moves but affixes change: the flat bar with the affix's icon. Inert:
-no delta.
+**Headline stat rule** (today's): `GearEvaluator.LargestDelta`, the stat the
+swap moves most relative to what the wearer has now
+(`GearEvaluator.cs:178-212`). No stat moves but affixes change: the flat bar
+with the affix's icon. Inert: no delta.
 
-**Quality and delta can disagree, and both stay true** (F6): a Common card
-can out-delta a Legendary for its wearer. Diablo III found blues beating
-rares confused players. This screen shows the plinth (what the item is) and
-the chevron (what it does for this wearer) side by side and never dims a
-high-quality card for a low delta; how often the two disagree is the item
-plan's tuning, not this screen's.
+**Quality and delta can disagree, and both stay true** (F6): the plinth
+says what the item is, the chevron what it does for this wearer. The cache
+and the top-tier ceremony key on the chevron's side (C3, C4), so the
+ceremony never celebrates a downgrade. How often the two disagree is the
+item plan's tuning.
 
-**Focus detail** (arrow on the card, or pointer on it, only once the card
-is face-up): the shared tooltip (`TooltipFocusRouter`) shows every stat that
-changes as glyph + `now -> next`, every affix, the lost affix by name, an
-inert card's requirement. Built by a shared compare builder extracted from
-the dossier's `PaintDeltaRows` (`CharacterDossierController.Loadout.cs:939-960`,
-over `ItemDescription.Compare`).
+**Focus detail** (on a face-up card only): the shared tooltip
+(`TooltipFocusRouter`) shows every stat that changes as glyph +
+`now -> next`, every affix, the lost affix by name, an inert card's
+requirement. Built by a shared compare builder extracted from the dossier's
+`PaintDeltaRows` (`CharacterDossierController.Loadout.cs:939-960`, over
+`ItemDescription.Compare`).
 
 **Type floor**: card name and delta are new scoped rows in
 `MenuTypeLintTests` (20 mixed / 24 caps), each scope with its own
-`minimumNodes`, set when the tree exists. At five cards a card is ~192 px
-(`OfferRowLayout.CardWidth`), which is why the affix leaves the card there.
+`minimumNodes`, set when the tree exists. A 5-card row is ~192 px per card
+(`OfferRowLayout.CardWidth`).
 
-**Relic card**: plinth, relic art, name, rules text with icons. On focus,
-the party's portraits show the members it reaches in colour and the rest
-greyed.
+**Relic card and the relic mapping** (M6). Relics use `RelicRarity`'s six
+tiers (`Domain/Content/RelicRarity.cs:15-23`):
+
+| Relic rarity | Plinth | Flip pitch step | Counts as |
+|---|---|---|---|
+| Common | 1 flagstone | 1 | - |
+| Uncommon | 2 cloth | 2 | - |
+| Rare, UltraRare | 3 blue cloth | 3 | Rare+ |
+| Mythic, Godlike | 4 gold cloth | 4 | Rare+, top tier |
+
+On anchor weights `[100, 45, 18, 6, 2, 1]` (`rewards.json`) Rare+ is ~16% a
+card, ~40% of three-card pages before the live-upgrade filter; top tier
+~1.7% a card. A relic card shows plinth, relic art, name, rules text with
+icons. On focus the party's portraits take **three states**: gains (colour),
+reached but redundant (colour with a hollow ring), not reached (grey).
 
 **After a take**, every open card for the same wearer and slot repaints
-against the new worn item (ghost, delta, lost-affix badge, hone preview).
+against the new worn item (ghost, delta, lost-affix badge, live-upgrade
+status); the slot band does not change.
 
 ### C6. Choosing
 
+All three actions go through **one gate** (B1, C10): `Act(kind, rowIndex)`.
+
 - **Take** (Submit or click on an open, face-up card): the new item lifts
-  off the plinth and flies to its wearer's medallion. Weight by quality:
-  Common a soft clink; Uncommon a clink and a cloth puff; Rare a flare into
-  the medallion and the delta number rises once beside it; Legendary all of
-  that and the medallion rings in the item's colour for 0.4 s. The plinth is
-  left empty.
-- **Displaced copy**: the ghost drifts off the plinth and into the **bag**
-  at the frame's bottom-right. If `EquipmentOps.Equip` displaced more than
-  one copy (R3 checks; `PendingCard.Displaced` holds one today), each goes.
-- **Hone instead** (whetstone glyph under the card, Down from the card): the
-  glyph carries `+N` with a small `+N+1`. **On focus the ghost lifts and the
-  tooltip shows the worn item's stats `now -> next` at +1** (C13). On press:
-  a spark from the whetstone into the ghost, `+N` ticks up, the new item
-  crumbles to dust on its plinth.
+  off the plinth and flies to its wearer's medallion, then the medallion
+  sends a copy of its glow back down onto the slot band, which stays lit:
+  the honing came with the slot, not the item. Weight by quality: Common a
+  soft clink; Uncommon a clink and a cloth puff; Rare a flare into the
+  medallion and the delta number rises once beside it; top tier all of that
+  and the medallion rings in the item's colour for 0.4 s. The take clip
+  lands on the root note of the ladder the flips and chevrons climbed (A3),
+  so choosing resolves the phrase. The medallion warms on every take (A4);
+  a top-tier take plays the wearer's own bark only if a fitting
+  `CharacterVoice` line exists (no new voice work in this plan). The plinth
+  is left empty, its band still lit.
+- **Displaced copy**: the ghost drifts off the plinth into the haul strip.
+  If `EquipmentOps.Equip` displaced more than one copy (R3 checks;
+  `PendingCard.Displaced` holds one today), each goes.
+- **Hone instead** (whetstone glyph under the card, Down from the card): on
+  focus, the card's **slot band** shows `+N -> +N+1` and the tooltip shows
+  the worn item's stats `now -> next` under a scoped honing preview (C13).
+  On press: a spark from the whetstone into the band, `+N` ticks up, the new
+  item crumbles to dust on its plinth.
 - **Every shown slot at `MaxPlus` (10)**: the choice pays the card's price
   (`HoneInsteadResult.Gold`): a coin stack with the amount in the
-  whetstone's place; a different action wears a different glyph. On press
-  the coins fly to the gold stack.
-- **Leave** (door glyph at the row's right end, Down from the whetstones):
-  its face shows what leaving pays now, from `RewardPages.PreviewLeave`
-  (C13): a whetstone per slot it would hone, a coin stack for any
-  remainder. **On focus**, each slot it would hone lights on its card's
-  ghost (sparks waiting), so the player sees exactly which worn items gain.
-  The targets follow page order, not row order (today's rule). On press the
+  whetstone's place; the coins fly to the gold stack on press.
+- **Leave** (door glyph at the row's right end; Right from the last card or
+  Down from the whetstones): its face shows what leaving pays now, from
+  `RewardPages.PreviewLeave` (C13): a whetstone per slot it would hone and
+  a coin stack for any remainder. On focus, **the slot band of every card
+  whose wearer and slot it would hone** shows its waiting spark, whatever
+  the card's outcome (a taken card's empty plinth keeps its band). Targets
+  follow page order (today's rule, `RewardPages.cs:265`). On press the
   sparks and coins play; the remaining embers snuff; open cards dim.
-- **Spent page**: every card stays visible: taken = empty plinth, honed =
-  dust, sold = coin mark, unspent = dimmed. The door becomes the forward
-  arrow. A on it moves on.
-- **Next page**: the relic page arrives (C3-C4).
+- **Spent page**: every card stays visible: taken = empty plinth with a lit
+  band, honed = dust, sold = coin mark, unspent = dimmed. The door becomes
+  the forward arrow. A on it moves on.
+- **Next page**: the relic chip becomes the relic page (C2, C3-C4).
 
 ### C7. To the Reckoning
 
 After the last page, the row sweeps out left (`SweepToSummary`, 0.18 s).
-No page: C8 directly, with C2 still landing into it.
+No page: C8 directly.
 
 ### C8. The Reckoning: one board, no tabs
 
-- **The party**: one portrait per fielded member, squad order
-  (`CharacterPortraits.For`, null -> plate silhouette). Under each, the
-  experience ring with the two-tint fill (violet before, amber this fight),
-  a rising hum, 0.12 s stagger.
+- **The party**: one portrait per member in squad order
+  (`CharacterPortraits.For`, null -> plate silhouette), each with the
+  experience ring's two-tint fill (violet before, amber this fight), a
+  rising hum, 0.12 s stagger. **Three states** (M4):
+  - fielded: full fill;
+  - fell during the fight (`Ledger.TimesDowned > 0`): full fill, and a
+    small cracked-heart mark on the portrait's rim;
+  - not fielded (`IsDowned`): portrait tinted grey, the **half** gain they
+    did get (`VictoryRewards.ExperienceFor`, rounded up) shown in the amber
+    tint. Today's screen hides it (before = after,
+    `ReckoningController.cs:587-613`, and `StartBars` skips the row); R5
+    fixes that as a bug, pinned to a literal.
 - **Level up**: the ring closes, the portrait flares amber, the level
-  numeral on its badge ticks up with a bell, the ring refills with the
-  remainder.
-- **Did not fight / fell**: portrait tinted grey, ring still.
-- **Who carried it**: the member with the most damage dealt wears a thin
-  gold rim. No word.
+  numeral ticks up with a bell, the ring refills with the remainder, and
+  the badge takes the reward track's waiting pulse (`BeaconPulse`, A6): it
+  shows something is waiting and claims nothing (collection stays manual).
 - **Deeds** under each portrait, glyph + number: sword = dealt, cracked
   shield = taken, leaf = healed (when non-zero), skull count = felled. The
-  physical/other split is in the portrait's focus tooltip.
-- **Gold stack, satchel, book pile, bag**: where C2 and C6 left them.
-- **This fight's haul**: one chip row of what the fight left the party
-  holding (each taken item on a small plinth, relics, books, potions, hone
-  sparks): the one recap of the choice row that just swept away. Today's
-  "Gained" event-relic chips join it (`pendingRelicReceipts`, acknowledged
-  on leaving, unchanged). No caption.
-- **Held relics**: not on the board (owner call O5).
+  portrait's focus tooltip adds the physical/other split and **shielded**
+  (`CombatLedger.Shielded`), so a tank's fight is visible. No "who carried
+  it" highlight: ranking by damage undervalues healers and tanks.
+- **Gold stack and haul strip**: where C2 and C6 left them. The strip is
+  this fight's haul (each taken item on a small plinth, relics, books,
+  potions, hone sparks) and today's "Gained" event-relic chips
+  (`pendingRelicReceipts`, acknowledged on leaving, unchanged). No caption.
+- **Held relics**: not on the board (provisional O4: the RUN pane shows
+  them).
 - **Continue**: the gold forward-arrow plate, no word. The stale ember glow
-  goes.
-- **Navigation**: entry is Continue. Up goes to the haul row (a clamped
-  rail, its chips' tooltips), Up again to the portraits (a rail, their deed
+  goes, and `ReckoningPhaseTests`' pin on `ReckoningContinueGlow` changes in
+  the same commit.
+- **Navigation**: entry is Continue. Up goes to the haul strip (a clamped
+  rail, its chips' tooltips), Up again to the portraits (a rail, their
   tooltips). Down returns. Cancel = Continue.
 - **Outcome form**: portraits and deeds only (from `Tally` and `Ledger`);
   no rings (no `CombatReward`), no gold, no haul.
@@ -408,29 +484,38 @@ Continue or Cancel leaves (`Dismiss`, acknowledging displayed receipts,
 
 ### C10. Timing, skip, input
 
-- **One helper** (`ReckoningTime`) turns an authored duration into wall
-  time: `authored x (BattleSpeed.DefaultDisplay / preset.Display)`, times
+- **`RevealSchedule`** (Domain, pure; M9): `RevealSchedule.For(cards, row
+  order, live-upgrade flags, page class, preset)` returns timed events:
+  haul ticks, deal or seal, slide, flip *i* with its pitch step, hold, land,
+  chevron pops, linger end, choosable. Skip returns the end state. The cap,
+  flip order, holds, pitch steps and skip are EditMode tests on literals;
+  PlayMode only checks that the controller plays the schedule.
+- **`ReckoningTime`** turns an authored duration into wall time:
+  `authored x min(1, BattleSpeed.DefaultDisplay / preset.Display)`, times
   the test seam `ReckoningController.SpeedMultiplier`, reading the preset
-  from `GameSettings` when the overlay opens. Every wait and tween goes
-  through it, including today's wipe, sweep and bar fills: **the Reckoning
-  now follows the battle-speed preset**, which it does not today.
-- **The cache is a real `Button` and the `NavContext` entry** from the
-  frame it lands, so A and a click both open it; the entry moves to the
-  first card when the cards land.
-- **Skip**: any Submit or click while a beat runs completes it (the cache
-  opens, all cards flip at once; a Legendary keeps only its 0.12 s flare).
-  The skipping press is consumed. A mouse click anywhere in the frame is
-  caught by a transparent full-frame catcher behind the row; Submit on a
-  face-down card is caught by `Take(i)` checking `_revealing`. **A
-  consumed press shows itself**: the focused card (or the cache) nudges 4 px
-  and settles. A press when nothing runs acts at once; there is no
-  second-press tax.
-- **Moving focus never skips.** Left/Right during the reveal moves the
-  arrow across face-down cards; they show no tooltip until face-up
-  (`TooltipFocusRouter` suppressed while `_revealing`).
-- **Guard**: for 0.15 s after the last card lands, a Submit is consumed and
-  nudges, so a held or repeated press cannot take a card the player has not
-  seen.
+  from `GameSettings` when the overlay opens. The Reckoning speeds up at
+  1.5x and 2x and never slows below its authored times (M8, provisional
+  O3), so the cap holds at every preset. Every wait and tween goes through
+  it, including today's wipe, sweep and bar fills.
+- **One gate** (B1): take, hone instead and leave all call `Act(kind,
+  rowIndex)`. While `RevealSchedule` reports a beat running, `Act` completes
+  the beat, nudges the pressed control 4 px, and returns without calling
+  `RewardPages`. The whetstones and the door exist and are focusable during
+  the reveal but cannot act through any input. The cache and a transparent
+  full-frame catcher route through the same skip.
+- **The cache is a real `Button` and the `NavContext` entry** from the frame
+  it lands (`NavContext.LazyEntry` covers the wipe frames before it exists,
+  `NavContext.cs:35`). The face-down cards are declared selectables from the
+  slide onward, so a player who moves to one keeps it when the cards land
+  (NavContext's remembered-or-entry rule, `NavContext.cs:231-250`).
+- **Skip**: any Submit or click during a beat completes it (the haul lands,
+  the cache opens, all cards flip at once; a top tier keeps only its 0.12 s
+  flare). The press is consumed and nudges. A press when nothing runs acts
+  at once.
+- **Moving focus never skips** and never ends the linger. Face-down cards
+  show no tooltip (`TooltipFocusRouter` suppressed during the reveal).
+- **Guard**: for 0.15 s after the last card lands, `Act` consumes a Submit
+  and nudges, so a held or repeated press cannot take an unseen card.
 - **B** during a beat: nothing (today's `cancelLive: () => !_choosing`).
 
 ### C11. Sound
@@ -438,53 +523,77 @@ Continue or Cancel leaves (`Dismiss`, acknowledging displayed receipts,
 The palette is cloth, breath, wood, soft bells and low strings: tender, not
 a casino. Coins tick softly; no cascade.
 
+`SoundController.Play` is one `AudioSource` with `PlayOneShot`
+(`SoundController.cs:12-15, 119`), and pitch is the source's, not the
+shot's. So **no engine change**: pitch steps are **pre-pitched clips** (four
+flip clips, a short chevron-note ladder, the take's root note). And the
+haul is sequenced before the flips (C2), so the one source carries one
+layer at a time.
+
+**Every Reckoning control is `.Quiet()`** (cards, cache, catcher,
+whetstones, door, Continue, haul chips): the offer cards today are
+`.NoChrome()` but not quiet (`ReckoningScreen.cs:1020-1021`), so
+`ButtonPressAnimator` would add a `ButtonClick` on every take, and a refused
+press on a non-quiet button buzzes `ClickFail`. The controller owns every
+sound. Gate: `ButtonCueTests` gains a Reckoning case (a quiet control's
+refused Submit is silent, as `Submit_OnAQuietButton_IsSilent_EvenWhenRefused`
+pins for the general case).
+
 | Moment | Sound | Source |
 |---|---|---|
 | Card deal (no cache) | cloth rustle | new |
+| Ember lights | breath | new |
+| Up-chevron pop | rising note ladder, pre-pitched | new |
 | Cache open | `OpenPack` if it fits the palette, else a cloth-and-knot untie | exists / new |
-| Card flip | one flip clip, pitch a step per quality | new clip + a pitch overload on `SoundController.Play` |
-| Legendary landing | low bell | new |
+| Card flip | four pre-pitched clips | new |
+| Top-tier landing | low bell | new |
+| Boss peak | short musical sting | new |
 | Coin count | soft tick | new |
 | Potion / book land | glass clink / paper thump | new |
-| Take | soft clink (weight from layering, C6) | new |
+| Take | soft clink on the ladder's root | new |
 | Hone | whetstone scrape | new |
-| Ember snuff | breath | new |
 | Experience fill / level up | hum / bell | new |
 | Fell / Endured | low string note / drone | new |
 
-No music duck: the Legendary's silent beat is a pause in the effects.
+R4 ships a **placeholder layer** (`OpenPack` and one flip clip at four
+pitches rendered offline), so the reveal is never judged silent (M9).
 
-### C12. The settlement record (Domain type, additive)
+### C12. The settlement record (on `CombatReward`, additive)
 
-- A `PaidPrize` (in `Domain/Rewards`, beside `ReckoningRequest`): `Shown`
-  kind (the map chip, `node.Prize`), `Paid` kind (after
-  `RealmPrize.Effective` and overflow), amount, item or book ids.
+- A `PaidPrize` (Domain, `Domain/Rewards/PaidPrize.cs`): `Shown` kind (the
+  map chip, `node.Prize`, or `None` for the fight's own gold), `Paid` kind
+  (after `RealmPrize.Effective` and overflow), amount, item or book ids.
+  A Gear or Relic chip records `Paid = Gear/Relic` with no amount, so the
+  record is non-empty for an item-only chip.
+- `CombatReward` (a mutable class, already carrying notices) gains
+  `Prizes`, `EncounterClass` (nullable) and `GoldBefore`, filled in
+  `SettleFight` where `room` and `chips` are built
+  (`RunOrchestrator.cs:624-631`), before `AdvanceLeg` moves the node. The
+  `FightSettlement` struct does not change, so its construction sites and
+  `WithNotices` need nothing (M3).
 - `RealmPrizes.Pay` keeps its signature and takes an optional
   `List<PaidPrize> record = null`; `SettleFight` threads one list through
   `Pay` and `PayHeartAnchors`.
-- `FightSettlement` gains `Prizes`, `EncounterClass` (nullable, captured
-  before `ClearCurrentRoom`) and `GoldBefore` (captured before `Pay`).
-  **`WithNotices` copies every field** (today it rebuilds through the
-  three-argument constructor, `RunOrchestrator.cs:487-492`, and would drop
-  them on every room fight). All five construction sites are checked.
-- `ReckoningRequest` (full and outcome forms) carries the three.
-- Bot neutrality holds because nothing is added to `RunSnapshot`, a save, or
-  an RNG draw (`BotRunDriver.cs:835` is a comment). The test pins the same
-  save JSON and the same notice list for one settlement before and after,
-  and a won room fight's `Prizes` is non-empty after `WithNotices`.
+- `ReckoningRequest.Full` reads the three off `Reward`. The outcome form
+  needs none: nothing was paid, and its medallion comes from `Ending`.
+- Bot neutrality: nothing is added to `RunSnapshot`, a save, or an RNG
+  draw (`BotRunDriver.cs:835` is a comment). The test pins the same save
+  JSON and notice list for one settlement before and after, and what a Gear
+  chip records.
 
 ### C13. Two pure queries (Core, additive)
 
-- `RewardPages.PreviewLeave(save, page)` returns the hones per
-  (recipient, slot) and the gold that `Leave` would pay; `Leave` itself is
-  rewritten to consume it, so the face and the payout cannot disagree
-  (`RewardPages.cs:259-282` spills hones across slots, then pays gold).
-- Stats at a hypothetical honing: honing is read from the run's
-  `slotHoning` through `ContentDatabase.HoningOf`
-  (`ContentDatabase.Gear.cs:32`) inside `EffectiveStats`, with no override.
-  R1 adds an override parameter on that path (a throwaway lookup, never a
-  write to `slotHoning`, which the page saves after each action), pinned by
-  a test against literals.
+- `RewardPages.PreviewLeave(save, page)` returns the hones per (recipient,
+  slot) and the gold that `Leave` would pay; `Leave` is rewritten to consume
+  it, so the face and the payout cannot disagree (`RewardPages.cs:259-282`
+  spills hones across slots, then pays gold).
+- **`HoningPreview`** (M2): one scoped, disposable override that `HoningOf`
+  consults first (`ContentDatabase.Gear.cs:32`), e.g.
+  `using (HoningPreview.Add(characterId, slot, +1)) { ... Compare ... }`.
+  Every reader on the stats path (`ActiveLoadout`, `EffectiveStats`, weapon
+  power, `SimulateEquip`) then agrees with no new parameters. It never
+  writes `slotHoning`. Tests: `slotHoning` unchanged after dispose, also when
+  the body throws; nested previews stack.
 
 ## 4. Precedence and edge cases
 
@@ -500,19 +609,25 @@ First rule that applies wins.
 4. **Every shown slot at `MaxPlus`**: coin glyph (C6).
 5. **One card's slot at `MaxPlus`**: no whetstone under it; Down goes to the
    door.
-6. **Inert card**: chained; can be taken (today's rule).
-7. **Bag**: no cap; the displaced copy always lands.
-8. **Party of one or two**: medallions and board centre on who is fielded.
-9. **Missing content**: name and art blank, Common plinth, still choosable.
-10. **Gamepad, choice phase**: Left/Right along the row (`RowOrder`), Down to
-    the whetstone, Down to the door, Up back. A acts; B nothing while
-    choices remain. No extra shortcut. The prompt footer shows glyphs only.
-11. **Mouse/keyboard**: the catcher and the cards skip during a beat; arrow
-    keys mirror the D-pad.
-12. **Start / system menu**: the Reckoning absorbs Start today (open call in
-    `AUDIT.md`). If a menu ever opens over it, the running beat completes
-    first (`SettleImmediately`), so nothing ticks underneath.
-13. **Save** after each take, hone or leave (unchanged).
+6. **Inert card**: chained; can be taken (today's rule); never a live
+   upgrade.
+7. **Several cards share one slot**: each shows the same slot band; a leave
+   or hone spark lights every one of them.
+8. **Bag**: no cap; the displaced copy always lands.
+9. **Party of one or two**: medallions and board centre on who is fielded.
+10. **Missing content**: name and art blank, Common plinth, still
+    choosable, never a live upgrade.
+11. **Gamepad, choice phase**: Left/Right along the row (`RowOrder`), Right
+    from the last card to the door, Down to the whetstone, Down to the door,
+    Up back. A acts through `Act`; B nothing while choices remain. No extra
+    shortcut. The prompt footer shows glyphs only.
+12. **Mouse/keyboard**: the catcher, the cache and every control skip during
+    a beat through the one gate; arrow keys mirror the D-pad.
+13. **Start / system menu**: the Reckoning absorbs Start today (open call in
+    `AUDIT.md`). If a menu ever opens over it, `SettleImmediately` completes
+    the running beat, the gold count-up and every running fill first, so
+    nothing ticks underneath.
+14. **Save** after each take, hone or leave (unchanged).
 
 ## 5. Art needs
 
@@ -525,13 +640,17 @@ recipe (`docs/ART_PIPELINE.md` §2-3). 512 px cells. Each sheet has a
 single-object fallback (same text, "one object, centred") if the generator
 will not hold the grid.
 
-**Placeholders**: every phase ships and passes its gates before art lands:
-`proc:radial_glow` discs for plinths and the cache, a plain violet card back,
-`map_chip_*` and `Resources/Icons/Ability/*` icons for glyphs. Art swaps in
-by key with no new phase.
+**Placeholders and the commissioning gate**: every phase ships and passes
+its gates before art lands: `proc:radial_glow` discs for plinths and the
+cache, a plain violet card back, `map_chip_*` and
+`Resources/Icons/Ability/*` icons for glyphs. The ghost needs no new art
+(it is the worn item's own icon). **A2 (plinths) is commissioned only after
+R2's ghost gate passes** (§6): a capture of the 5-card row with ghosts on
+placeholder plinths must read, or the ghost's size or the plinth's band
+changes first.
 
-**Tone**: the caches are **Prince's offerings**: things he wraps for his
-souls the way a cat brings a gift, proud and tender. Cloth, knots, worn tin,
+**Tone**: the caches are Prince's offerings: things he wraps for his souls
+the way a cat brings a gift, proud and tender. Cloth, knots, worn tin,
 stone. Not treasure chests, and no literal household objects (the direction
 bible rules those out).
 
@@ -564,7 +683,7 @@ with a crown seal. Every object has a thin dark seam along its opening with
 nothing drawn in it. Bold silhouettes that read at 96 pixels.
 ```
 
-**A2. Plinths** - `reward_plinths.png` (magenta)
+**A2. Plinths** - `reward_plinths.png` (magenta; after the R2 ghost gate)
 
 ```
 A sheet of 4 low resting places for an object, in a 4x1 row of equal cells,
@@ -576,7 +695,8 @@ DIFFERENT outline so they read in greyscale:
 4. a cloth woven with gold thread on a wide scalloped stone, a small lit
    votive candle at one side.
 Same width, increasing height from 1 to 4. A smooth flat band across the
-front of each stone, left plain (the game engraves a number there).
+front of each stone, left plain and wide enough for two short numbers (the
+game engraves them there).
 ```
 
 **A3. Card back** - `reward_card_back.png`
@@ -596,9 +716,9 @@ A sheet of 10 small icons in a 5x2 grid of equal square cells, centred, very
 bold and simple so each reads at 24 pixels, same outline weight as the
 references. Row 1: a red heart (health); a feather (speed); a whetstone
 with a spark (hone); a stack of three gold coins; a small wooden door ajar
-(leave). Row 2: a cloth satchel (potions); a worn leather bag (gear bag); a
-cracked shield (damage taken); a green leaf (healed); a small skull
-(felled).
+(leave). Row 2: a cloth satchel (haul strip); a cracked heart (fell in the
+fight); a cracked shield (damage taken); a green leaf (healed); a small
+skull (felled).
 ```
 
 **A5. Chain overlay** - `reward_chain.png`
@@ -619,145 +739,198 @@ Each phase is one commit at a test-passing checkpoint: `tools/
 run_tests_parallel.ps1 -Changed -ChangedPaths <its paths>`, plus
 `-BuildScenes` whenever the tree or a `[SerializeField]` changed
 (`docs/TESTING.md`). **Seeing it**: the Reckoning has no static
-`screenshot.ps1 -Panel` entry (`tools/screenshot.ps1:138-146`; AUDIT #43
-records a false success on this panel), so visuals come from
-`ReckoningCaptureTests` under `-Runtime -RuntimeFilter ReckoningCaptureTests`,
-which the owner allows per session, or from the owner's play. Until then a
-phase reports "tests green, not seen".
-
-Strings are deleted in the phase that stops using them, never earlier, so
-every checkpoint renders.
+`screenshot.ps1 -Panel` entry (`tools/screenshot.ps1:138-146`; AUDIT #43),
+so visuals come from `ReckoningCaptureTests` under `-Runtime -RuntimeFilter
+ReckoningCaptureTests` and GIFs from `tools/gif.ps1`, both of which the
+owner allows per session. A phase without them reports "tests green, not
+seen". Strings are deleted in the phase that stops using them, never
+earlier, so every checkpoint renders.
 
 | Phase | Content | Gate beyond the commit gate |
 |---|---|---|
-| R0 | Art prompts §5 to the owner; capture fixtures added to `ReckoningCaptureTests` (no-cache page, cache page with a Legendary, 5-card row, board, outcome board) | Fixtures compile and run headless as no-ops without graphics |
-| R1 | C12 settlement record; C13 `PreviewLeave` and the honing override; the shared compare builder | Bot-neutrality test; `WithNotices` keeps `Prizes`; `Leave` consumes `PreviewLeave` with today's results pinned; honing override against literals; dossier compare tests unchanged |
-| R2 | Card face (C5) with placeholders, beside the old labels, then the old labels go; `RowOrder` | Tree audit at four aspects; face test per quality, count (3 and 5), wearer, ghost, empty slot, inert; `RowOrder` EditMode test; Right from a card goes to the next card in row order; `MenuTypeLintTests` scopes |
-| R3 | Choice actions (C6): take, displaced, hone with preview, coin case, leave preview and payout, spent states, repaint after take; heading, Favor line, ledger and action strings removed | PlayMode: take, hone, sell and leave drive the real `RewardPages` and leave the same save as before (pinned literals); a second card for the same slot repaints |
-| R4 | Arrival and reveal (C3, C4, C10) from the page data | PlayMode: no-cache page deals face-up; cache only on Rare+; flips in row order; skip lands all face-up; a press during a beat never calls `RewardPages.Take`; focus on a face-down card shows no tooltip; guard swallows a repeat; wall time within the cap at the slowest preset |
-| R5 | Haul (C2) into the row and the board (C8); tabs, RELICS and TALLY pages removed | PlayMode: gold stack counts from `GoldBefore` to a pinned literal for a fixture node; potion count; book pile; overflow and exhausted-pool dissolve; level-up, fell and outcome boards; board navigation; `ReckoningTabTests`, `ReckoningChipNavigationTests`, `ReckoningGamepadNavigationTests`, `ReckoningScreenTests` rewritten |
-| R6 | Sound (C11), the pitch overload, the timing helper across every wait | EditMode: every timing reads `ReckoningTime`; PlayMode: a pinned duration at two presets |
+| R0 | Art prompts A1, A3, A4, A5 to the owner (A2 waits for R2); capture fixtures in `ReckoningCaptureTests`: no-cache page, cache page with a top-tier upgrade, 5-card row with ghosts, board, outcome board | Fixtures compile and run headless as no-ops without graphics |
+| R1 | C12 record on `CombatReward`; C13 `PreviewLeave` and `HoningPreview`; the shared compare builder; the live-upgrade predicate | Bot-neutrality test; a Gear chip's record pinned; `Leave` consumes `PreviewLeave` with today's results pinned; `HoningPreview` dispose and nesting; dossier compare tests unchanged; live-upgrade predicate on literals (positive delta, affix gain, inert, relic reach) |
+| R2 | Card face (C5) with placeholders, beside the old labels, then the old labels go; `RowOrder`; slot band; name loses `+N` | Tree audit at four aspects; face test per quality, count (3 and 5), wearer, ghost, empty slot, inert, relic mapping; `RowOrder` test; Right from a card goes to the next card in row order, Right from the last to the door; `MenuTypeLintTests` scopes. **Ghost gate (owner stop/go):** the 5-card capture with ghosts must read before A2 is commissioned |
+| R3 | Choice actions (C6) through `Act`: take, displaced, hone with preview, coin case, leave preview and payout, spent states, repaint after take; heading, Favor line, ledger and action strings removed; every control `.Quiet()` | PlayMode: take, hone, sell and leave drive the real `RewardPages` and leave the same save as before (pinned literals); a second card for the same slot repaints; leave sparks land on a taken card's band; `ButtonCueTests` Reckoning case |
+| R4 | `RevealSchedule`, all of `ReckoningTime`, arrival and reveal (C3, C4, C10), the haul (C2) into the row, every-page beat, placeholder sound layer | EditMode on literals: schedule order, holds only for top-tier live upgrades, pitch steps, skip end state, cap at every preset (`min(1, …)`). PlayMode: the controller plays the schedule; a press during a beat on a card, a whetstone and the door, by mouse and by Submit, never calls `Take`, `HoneInstead` or `Leave`; focus on a face-down card shows no tooltip; guard swallows a repeat. A9 bot-seed sweep: top-tier beat on at most one gear page in five at mid-run Favor. **Feel gate (owner stop/go):** `gif.ps1` captures of the three R0 reveal fixtures, each watched before a verdict is relayed; R5 waits for the owner's yes |
+| R5 | Board (C8); tabs, RELICS and TALLY pages removed; half-gain bug fixed | **First, alone:** the board navigation graph as an EditMode test against `RuntimeNavWiring` groups and links, committed red-to-green before the tabs go. Then PlayMode: gold stack from `GoldBefore` to a pinned literal; potions, book, overflow and exhausted-pool dissolve; the three experience states with the not-fielded half pinned to a literal; level-up pulse; outcome board. `ReckoningGamepadNavigationTests`' choice-phase cases stay untouched; `ReckoningPhaseTests`' Continue-glow pin changes in this commit |
+| R6 | The full sound set (C11) replacing placeholders | Every C11 moment fires once in a PlayMode run of each fixture; no `ButtonClick` or `ClickFail` from a Reckoning control |
 | R7 | Art swap as each sheet arrives | `Art/` diff reviewed after `-BuildScenes` (`LoadSprite` flips importer settings) |
 
 Bot: R1 is the only phase near settlement, pinned neutral; `tools/bot.ps1`
-numbers must not move.
+numbers must not move. A9's frequency report (cache rate, top-tier beat
+rate, mean wall time to choosable, per act) is kept beside the plan and
+re-run whenever the item plan retunes the ladder; it is a check, not a
+commit gate.
 
-## 7. Open owner calls
+## 7. Owner calls: provisional, pending owner confirm
 
-1. **Favor.** The plan drops the Favor line from the reward screen (it
-   explains the dice). Its number would then show nowhere: the RUN pane
-   lists only the event buff (`Domain/UiKit/RunEffectRows.cs:52`), while the
-   page used `ItemOfferRoll.CurrentSquadFavor()` (squad maximum plus that
-   buff). Options: (a) add a squad-Favor row to RUN, fed from
-   `CurrentSquadFavor`; (b) keep a Favor mark on the reward screen; (c)
-   drop the readout. `PLAN_ITEMS.md` 1.2 had the header show it.
-2. **Ending words.** Drop VICTORY / ENDURED / FELL for the medallion states,
-   or keep one word for Endured only (a reviewer's suggestion: it is the
-   state a picture carries worst), or keep all three.
-3. **Battle speed.** The Reckoning will follow the battle-speed preset
-   (today it ignores it). At the default 1x it runs at the authored times
-   above; a player at 2x gets it twice as fast. The evidence leans yes:
-   repeated reward animations are what players ask to speed up (F5), and a
-   speed setting is the answer one shipped spec gives. Confirm.
-4. **Held relics and the tally.** The board drops the held-relic list (it
-   stays on the RUN pane, one press away) and folds the tally into glyph
-   numbers under each portrait (the physical/other split on focus). Keep
-   either on the Reckoning?
+The owner has not answered. These are the plan's working decisions;
+building may proceed on them, and each is one switch to reverse.
+
+1. **Favor: provisional, pending owner confirm.** Drop the Favor line from
+   the reward screen; add a squad-Favor row to the RUN pane fed from
+   `ItemOfferRoll.CurrentSquadFavor()` (`ItemOfferRoll.cs:118-133`; today
+   the pane lists only the event buff, `Domain/UiKit/RunEffectRows.cs:52`).
+   Favor is a stat the player builds, so it stays visible; the odds stay off
+   the reward screen. `PLAN_ITEMS.md` 1.2 had the page header show it.
+2. **Ending words: provisional, pending owner confirm.** Drop VICTORY,
+   ENDURED and FELL. Fell = cracked medallion; Endured = dimmed but whole,
+   which differs from a paid-nothing Victory's plain medallion; the stage
+   behind the overlay shows the ending for its first 0.4 s (C1.3).
+3. **Battle speed: provisional, pending owner confirm.** Follow faster
+   presets only: `min(1, DefaultDisplay / preset.Display)`. A 2x player
+   gets a shorter Reckoning; a 0.5x player chose a slower fight, not a
+   longer reward screen; the 1.6 s cap holds at every preset.
+4. **Held relics and tally: provisional, pending owner confirm.** Both off
+   the board: held relics live on the RUN pane; the tally becomes deeds
+   under each portrait, with the physical/other split and shielded in the
+   portrait tooltip.
 
 Decided here, not asked: Prince's-offering caches (§5 tone); the cache
-opens itself; no cache on Common/Uncommon-best pages; detail in a focus
+opens itself; a cache only for a Rare+ live upgrade; detail in a focus
 tooltip; no pad shortcut to the door; sound sourcing follows the sound pass
-(owner clips first) as a dependency of R6, not a decision.
+(owner clips first) as a dependency of R6.
 
-## 8. Rejected alternatives
+## 8. Rejected alternatives and review dispositions
+
+**Rejected alternatives**
 
 - **Slot-machine reel** (Vampire Survivors): its players love it (F4), but
   a reel suits a haul you keep whole; this screen asks for a choice between
-  k + 2 readable cards, and a cycling reel hides them. The linger on a
-  Legendary (C4.4) takes the part that works: a rare moment allowed to run.
-- **Player-driven flips** (Hearthstone, F2): each flip is one more press on
-  every page of every fight (F5); the cache already gives the one tell, and
-  the row flips itself.
+  k + 2 readable cards. The top-tier linger (C4.5) takes the part that
+  works.
+- **Player-driven flips** (Hearthstone, F2): one more press on every page of
+  every fight (F5).
 - **Drops on the fight stage** (Diablo beams): stage-layer work in
-  `FightController` for one beat; the haul carries the same promise kept.
+  `FightController`; the chip becoming the page (A2) and the stage as
+  witness (A7) take the useful part.
 - **Card frames per quality**: the plate behind cards was removed on
-  purpose (`ReckoningScreen.cs:1006-1018`); the plinth carries quality under
-  the item.
-- **Hover lift / tilt**: banned by the no-hover-scale rule; the item lifts
-  on take, which is not hover.
-- **A first-time teaching ghost** for hone and leave (round 1, cold
-  reviewer): the no-handholding rule. The always-on focus previews (ghost
-  lifts, sparks wait on the target) do the teaching.
-- **Collapse the ceremony after N fights** (round 1, cold reviewer): no
-  hidden counter; value-proportional ceremony (no cache below Rare) and the
-  cap keep fight 200 short.
-- **Focus on the best card** (rev 1): decided for the player and invited a
-  mis-press.
-- **Flips in ascending quality, best last** (rev 1-2): the order itself
-  became a second tell and made flips jump around a row grouped by wearer.
-- **The worn item as a chip on the medallion rim** (rev 2): ~24 px, could
-  not carry "what you wear" or "what you lose" (round 2, cold reviewer).
-- **Household keepsakes as plinths** (saucer, collar; round 2, cold
-  reviewer): warm, but the direction bible rules out literal real-life
-  objects. Cloth on stone keeps the tenderness.
-- **Keep the whetstone glyph with a coin badge at `MaxPlus`** (round 1,
-  cold reviewer): the press sells instead of hones; a whetstone there would
-  show the wrong action.
-- **Drop the haul row from the board** (round 2, cold reviewer): it is the
-  only place the taken items stay visible once the choice row sweeps away.
+  purpose (`ReckoningScreen.cs:1006-1018`).
+- **Hover lift / tilt**: banned by the no-hover-scale rule.
+- **A first-time teaching ghost** for hone and leave: the no-handholding
+  rule; the always-on focus previews (band shows `+N -> +N+1`, sparks wait
+  on the target bands) do it.
+- **Collapse the ceremony after N fights**: no hidden counter. The reason is
+  now M1's, not "the cap": the ceremony keys on a visible live upgrade, so
+  it thins out as the party gears up, and A9 measures that it does.
+- **Focus on the best card**; **flips in ascending quality**; **the worn
+  item as a medallion-rim chip**; **household keepsakes as plinths**;
+  **a whetstone with a coin badge at `MaxPlus`**; **dropping the haul**: as
+  rev 3 recorded.
+- **Honing drawn on the item's ghost** (rev 3-4): false; honing belongs to
+  the slot (B2).
+- **"Who carried it" gold rim** (rev 3-4): ranking by damage undervalues
+  healers and tanks (owner-session point c).
+- **A pitch overload on the one `AudioSource`** (rev 3-4): it retunes every
+  clip still ringing (M5); pre-pitched clips instead.
+
+**Senior review dispositions (3055bed1).** Blockers and majors are all
+taken: B1 -> C6/C10 `Act`; B2 -> C5 slot band, C6; M1 -> C3 live-upgrade
+cache and the re-derived argument; M2 -> C13 `HoningPreview`; M3 -> C12 on
+`CombatReward`; M4 -> C8 three states and the half-gain bug; M5 -> C11
+pre-pitched clips and `.Quiet()`; M6 -> C5 relic mapping and three focus
+states; M7 -> C2 sequenced, A2; M8 -> C10 `min(1, …)`; M9 -> C10
+`RevealSchedule`, R4 owns `ReckoningTime`, the GIF feel gate, placeholder
+sound; M10 -> R5's nav-graph-first commit and the untouched choice-phase
+tests.
+
+Additions:
+
+- **A1** taken (C3, every-page beat).
+- **A2** taken (C2, C3).
+- **A3** taken (C6).
+- **A4** taken in part: the medallion warms on every take; a bark only if a
+  fitting `CharacterVoice` line exists, since new voice work is the sound
+  pass's open item, not this plan's.
+- **A5** taken (C4.6).
+- **A6** taken (C8).
+- **A7** taken (C1.3).
+- **A8.1** taken now (one haul strip, C2). **A8.2 to A8.4** are kept as the
+  cut list, ranked, if scope has to give: two caches with class by binding
+  only; drop the outcome medallion states; halve the clips.
+- **A9** taken (§6).
+
+Minor items:
+
+- **1** taken (C4 table row).
+- **2** taken (C4.5, C10).
+- **3** taken (C10).
+- **4** taken (C6, §4.11).
+- **5** taken (C5 name).
+- **6** taken (C12 `Shown = None`).
+- **7** taken (C12).
+- **8** kept as is: the class shows twice, which is cheap and harmless; its
+  cut is A8.2.
+- **9** taken (§4.13).
+- **10** taken (§9).
+
+One correction to the review: the test it names,
+`EveryButtonInTheScene_HasAClickSound`, does not exist in the tree; the
+quiet-button behaviour is pinned in `Tests/PlayMode/Ui/ButtonCueTests.cs`,
+which R3 extends instead.
 
 ## 9. Files (last)
 
-Domain: `Domain/Rewards/ReckoningRequest.cs`, a new `Domain/Rewards/
-PaidPrize.cs`, `Domain/UiKit/Screens/ReckoningScreen.cs` (cache, embers,
-plinths, ghosts, medallions, whetstones, door, gold stack, satchel, book
-pile, bag, catcher; board replaces tabs), `Domain/UiKit/OfferRowLayout.cs`
-(plinth and medallion bands) and a `RowOrder` beside it,
+Domain: `Domain/Rewards/ReckoningRequest.cs`, `Domain/Rewards/
+CombatReward.cs` (prizes, class, gold before), a new
+`Domain/Rewards/PaidPrize.cs`, a new `RevealSchedule` beside
+`Domain/UiKit/OfferRowLayout.cs` with `RowOrder`,
+`Domain/UiKit/Screens/ReckoningScreen.cs` (cache, embers, plinths, slot
+bands, ghosts, medallions, whetstones, door, gold stack, haul strip,
+catcher; every control `.Quiet()`; board replaces tabs),
 `Domain/UiKit/UiStrings.cs` (Reckoning block shrinks),
-`Domain/UiKit/RunEffectRows.cs` (O1a). Core: `Core/RealmPrizes.cs`,
-`Core/Bot/RunOrchestrator.cs` (`FightSettlement`, `WithNotices`,
-`SettleFight`), `Core/FightController.Input.cs` (`OpenReckoning`),
-`Core/RewardPages.cs` (`PreviewLeave`), `Core/Content/ContentDatabase.*`
-(honing override), `Core/ReckoningController.cs` (split `.Reveal`,
-`.Board`), `Core/RewardCardFace.cs` (parts, not sentences), a shared compare
-builder beside `Core/ItemDescription.cs`, `Core/ReckoningTime.cs`,
-`Core/Sound.cs`, `Core/SoundController.cs` (pitch overload). Editor:
+`Domain/UiKit/RunEffectRows.cs` (O1). Core: `Core/RealmPrizes.cs`,
+`Core/Bot/RunOrchestrator.cs` (`SettleFight` fills the record),
+`Core/RewardPages.cs` (`PreviewLeave`),
+`Core/Content/ContentDatabase.Gear.cs` (`HoningOf` consults
+`HoningPreview`) and a new `Core/Content/HoningPreview.cs`,
+`Core/ReckoningController.cs` (split `.Reveal`, `.Board`; `Act`),
+`Core/RewardCardFace.cs` (parts, not sentences; no `+N` suffix), a shared
+compare builder beside `Core/ItemDescription.cs`, `Core/ReckoningTime.cs`,
+`Core/Sound.cs` (new cues, pre-pitched clips), `Core/ButtonPressAnimator.cs`
+(read only: the quiet path the controls rely on). Editor:
 `ScreenRegistry.WireReckoning` (map art table). Tests: every
 `Reckoning*Tests` class (Screen, Tab, Phase, Comparison, Lifecycle, Capture,
-Chip and Gamepad navigation), `OfferRowLayoutTests`, `MenuTypeLintTests`,
-`HeartAnchorSettlementTests` and `RealmRunTests` (callers of `Pay`). Docs:
-`docs/CODE_MAP.md` rows 28, 78, 81, 82, 83, 85.
+Chip and Gamepad navigation), a new board nav-graph EditMode test,
+`OfferRowLayoutTests`, `MenuTypeLintTests`, `ButtonCueTests`,
+`HeartAnchorSettlementTests` and `RealmRunTests` (callers of `Pay`). Tools:
+the A9 sweep script beside `tools/bot.ps1`. Docs: `docs/CODE_MAP.md` rows
+28, 78, 81, 82, 83, 85.
 
 ## 10. Revision log
 
 - rev 1: first draft.
 - rev 2, after round 1 (reviewer A read the code, B only the plan):
-  cross-layer settlement record instead of "no domain change"; one-bit
-  cache tell; cache auto-opens; haul concurrent; the take carries the
-  weight; per-count card layout; shared compare builder; focus not on
-  "best"; hone preview on focus; skip through a catcher and a flag; one
-  timing helper with a cap; real prize destinations (satchel, book pile,
-  multi-chip, overflow); magenta keying; additive phase order.
+  cross-layer settlement record; one-bit cache tell; cache auto-opens; haul
+  concurrent; the take carries the weight; per-count card layout; shared
+  compare builder; focus not on "best"; hone preview on focus; skip through
+  a catcher and a flag; one timing helper with a cap; real prize
+  destinations; magenta keying; additive phase order.
 - rev 3, after round 2 (C read the code, D only the plan): no cache below
-  Rare, so the cache's presence is the tell; flips in row order; wall-time
-  arithmetic shown; the worn item as a ghost on the plinth; headline-stat
-  rule stated; `PreviewLeave` and a honing override (C13) so hone and leave
-  previews are buildable and truthful; `WithNotices` field loss; shown vs
-  paid chip; `GoldBefore`; `RowOrder` permutation; the cache as nav entry;
-  consumed presses nudge; no tooltip on face-down cards; repaint after take;
-  board navigation; placeholder policy; R0 uses `ReckoningCaptureTests`;
-  sound palette; owner calls rewritten (relics/tally and battle speed added,
-  tone and sourcing decided).
-- rev 4, sourced research round (no review round: no structural change).
-  §2 rewritten as findings F1-F11 with sources; §11 lists every dropped
-  unsourced observation. Changes and what drove them: the Legendary
-  lingers 1.2 s without blocking (F3 Larche et al., F4 Vampire Survivors);
-  no-near-miss rule (F3); a quality-versus-delta note on the card (F6
-  Diablo III postmortem); the reel's rejection reason corrected (F4
-  contradicted "the complaint is length"); player-driven flips rejected
-  with a reason (F2, F5); owner call 3 gains its evidence (F5). The
-  one-bit cache tell, no cache below Rare and the skip contract are
-  confirmed, not changed (F1, F2, F5).
+  Rare; flips in row order; wall-time arithmetic; the worn item as a ghost;
+  headline-stat rule; `PreviewLeave` and a honing override; shown vs paid
+  chip; `GoldBefore`; `RowOrder`; the cache as nav entry; consumed presses
+  nudge; no tooltip on face-down cards; repaint after take; board
+  navigation; placeholder policy; sound palette; owner calls rewritten.
+- rev 4, sourced research round: §2 as findings F1-F11 with sources; §11
+  lists dropped unsourced observations; Legendary linger, no near miss,
+  quality-versus-delta note, reel rejection corrected, player-driven flips
+  rejected.
+- rev 5, senior adversarial review (3055bed1) plus the session's three
+  points: one `Act` gate (B1); honing on the slot band, not the ghost (B2);
+  cache and top-tier beat keyed on a live upgrade, fight-200 argument
+  re-derived from the odds with a bot-seed gate (M1); `HoningPreview` at
+  `HoningOf` (M2); the record on `CombatReward` (M3); three experience states
+  and the hidden half-gain (M4); pre-pitched clips and `.Quiet()` controls
+  (M5); relic mapping and three focus states (M6); haul sequenced, chip
+  becomes the page (M7, A2); faster presets only (M8); `RevealSchedule`,
+  `ReckoningTime` in R4, GIF feel gate, placeholder sound (M9); nav graph
+  test first (M10); every-page beat (A1, point a); ghost gate before plinth
+  art (point b); "who carried it" cut (point c); shielded in the tooltip;
+  A3-A9 and minors per §8; owner calls written as provisional decisions.
+  No new review round: every structural change here is one the senior
+  asked for; the every-page beat and the ghost gate add no contract.
 
 ## 11. Research notes, per game
 
