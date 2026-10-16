@@ -134,21 +134,21 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
-        public IEnumerator AnEliteKillStopsForPointTwoSix()
+        public IEnumerator AnEliteKillStopsForPointThree()
         {
             yield return KillTheFoe(EncounterClass.Elite);
             yield return PlayTheBlow();
 
-            Assert.AreEqual(0.26f, _player.FinalStopWall, 1e-4f);
+            Assert.AreEqual(0.30f, _player.FinalStopWall, 1e-4f);
         }
 
         [UnityTest]
-        public IEnumerator ABossKillStopsForPointThreeFour()
+        public IEnumerator ABossKillStopsForPointFourSix()
         {
             yield return KillTheFoe(EncounterClass.Boss);
             yield return PlayTheBlow();
 
-            Assert.AreEqual(0.34f, _player.FinalStopWall, 1e-4f);
+            Assert.AreEqual(0.46f, _player.FinalStopWall, 1e-4f);
         }
 
         // ---- the run-up ----------------------------------------------------------------
@@ -165,11 +165,19 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(_fight.IsBusy, "nothing can be pressed during the run-up");
 
             float deadline = Time.time + 5f;
+            float washEarly = -1f;
             while (_ended == 0 && Time.time < deadline)
             {
                 Assert.AreEqual(1f, Time.timeScale);
+                if (washEarly < 0f && Time.time - finished >= 0.15f)
+                {
+                    washEarly = Named("VictoryWash").GetComponent<Image>().color.a;
+                }
+
                 yield return null;
             }
+
+            Assert.Greater(washEarly, 0.02f, "the light is already turning 0.15 s after the stop, well before the fade's hold ends");
 
             float waited = Time.time - finished;
             Assert.AreEqual(1, _ended, "the run-up ended into the fight's end");
@@ -184,8 +192,28 @@ namespace PrincesPalace.PlayModeTests
             Assert.That(stings[0].time - finished, Is.InRange(0.25f, 0.5f),
                 "the sting lands when the fade's hold ends, not at the end of the playback");
 
-            Assert.AreEqual(RunUpSchedule.WashAlpha, Named("VictoryWash").GetComponent<Image>().color.a, 0.01f);
+            Assert.AreEqual(0.15f, Named("VictoryWash").GetComponent<Image>().color.a, 0.01f);
             Assert.AreEqual(RunUpSchedule.EnemyDim, Named("EnemyDim").GetComponent<Image>().color.a, 0.01f);
+        }
+
+        [UnityTest]
+        public IEnumerator ABossEndsWithABiggerBrighterWashAndTheEnemySagging()
+        {
+            yield return KillTheFoe(EncounterClass.Boss);
+            yield return PlayTheBlow();
+            yield return null;
+            yield return null;
+
+            Assert.IsTrue(_fight.GetComponentsInChildren<StageActorAnimator>(true)
+                    .Any(a => a.transform.localEulerAngles.z > 0.5f && a.transform.localEulerAngles.z < 359.5f),
+                "the enemy tips as it goes down");
+
+            float deadline = Time.time + 5f;
+            while (_ended == 0 && Time.time < deadline) yield return null;
+
+            var wash = Named("VictoryWash");
+            Assert.AreEqual(0.32f, wash.GetComponent<Image>().color.a, 0.01f);
+            Assert.AreEqual(1.6f, wash.transform.localScale.x, 0.01f);
         }
 
         [UnityTest]

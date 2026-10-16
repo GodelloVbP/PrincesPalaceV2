@@ -402,17 +402,20 @@ namespace PrincesPalace.PlayModeTests
         }
 
         // A fight one blow from victory, for the run-up film (docs/PLAN_REWARD_SCREENS.md
-        // C0): Shawn against one `enemyId` left on a single health point, bound as a
-        // fight of `fightClass`. The class sizes the final-blow stop (HitStop.FinalBlowSeconds).
+        // C0): the three-character party (Shawn, Odette, Bjorn, so the hops stagger)
+        // against one `enemyId` left on a single health point, bound as a fight of
+        // `fightClass`. The class sizes the whole ending (RunUpSchedule.StyleOf).
         public IEnumerator StandOneBlowFromVictory(string enemyId, EncounterClass fightClass, float speed)
         {
-            string hero = HeroId();
-            Assert.IsNotNull(hero, "no characters in content");
+            var party = new List<string> { "sheep", "owl", "bear" }
+                .Where(id => ContentDatabase.Characters.Any(c => c != null && c.id == id)).ToList();
+            if (party.Count == 0) party.Add(HeroId());
+            Assert.IsNotNull(party[0], "no characters in content");
 
             yield return LoadFight(speed);
 
             var built = FightEncounterAdapter.Build(
-                new List<string> { hero },
+                party,
                 new List<string> { enemyId },
                 new Domain.Rng.SeededRandom(Seed),
                 isBoss: fightClass == EncounterClass.Boss,
@@ -1088,16 +1091,29 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.Less(settle, 600, "the fight never reached the player's turn");
 
+            // Whoever acts first lands the blow: the plain swing at the lone
+            // enemy when they reach it, else their own damaging spell.
+            var session = fight.SessionForTest;
+            var actor = session.Current;
             var verb = fight.GetComponentsInChildren<Button>(includeInactive: true)
-                .FirstOrDefault(b => b.name == "Verb0");
-            Assert.IsNotNull(verb, "the fight has no attack verb button");
-            verb.onClick.Invoke();
-            yield return null;
+                .FirstOrDefault(b => b.name == "Verb0" && b.gameObject.activeInHierarchy);
+            if (verb != null && session.EligibleTargets(actor, Reach.Melee).Count > 0)
+            {
+                verb.onClick.Invoke();
+                yield return null;
 
-            var plate = fight.GetComponentsInChildren<Button>(includeInactive: true)
-                .FirstOrDefault(b => b.name == "EnemyPlate0" && b.gameObject.activeInHierarchy);
-            Assert.IsNotNull(plate, "the attack verb opened no enemy plate to pick");
-            plate.onClick.Invoke();
+                var plate = fight.GetComponentsInChildren<Button>(includeInactive: true)
+                    .FirstOrDefault(b => b.name == "EnemyPlate0" && b.gameObject.activeInHierarchy);
+                Assert.IsNotNull(plate, "the attack verb opened no enemy plate to pick");
+                plate.onClick.Invoke();
+            }
+            else
+            {
+                var own = OffensiveSkillOf(session, actor);
+                Assert.IsNotNull(own, actor.Name + " can neither swing at the enemy nor cast at it");
+                PayFor(session, actor, own.Id);
+                fight.ForceFirstAction(own.Id);
+            }
 
             int frame = 0;
             int doneFrames = 0;

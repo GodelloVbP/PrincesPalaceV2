@@ -721,8 +721,15 @@ namespace PrincesPalace
                 _punching = null;
             }
 
+            if (_posing != null)
+            {
+                StopCoroutine(_posing);
+                _posing = null;
+            }
+
             if (_rect != null)
             {
+                _rect.localRotation = Quaternion.identity;
                 _travel = Vector2.zero;
                 _hover = 0f;
                 WritePosition();
@@ -816,6 +823,65 @@ namespace PrincesPalace
             // arc did.
             if (_running == null) ApplyStretch(0f);
             _punching = null;
+        }
+
+        // ---- the run-up's two poses -------------------------------------------
+
+        private Coroutine _posing;
+
+        // A landing: the figure squashes to `yScale` of its height for
+        // `holdSeconds` and springs back over `returnSeconds`. Wall seconds,
+        // stepped by deltaTime like every other tween here.
+        public void Squash(float yScale, float holdSeconds, float returnSeconds)
+        {
+            if (_rect == null || !isActiveAndEnabled) return;
+
+            if (_posing != null) StopCoroutine(_posing);
+            _posing = StartCoroutine(Squashing((1f - yScale) / VolumeRatio, holdSeconds, returnSeconds));
+        }
+
+        private IEnumerator Squashing(float stretch, float holdSeconds, float returnSeconds)
+        {
+            ApplyStretch(stretch);
+            for (float t = 0f; t < holdSeconds; t += Time.deltaTime) yield return null;
+
+            for (float t = 0f; t < returnSeconds; t += Time.deltaTime)
+            {
+                float k = 1f - t / returnSeconds;
+                ApplyStretch(stretch * k * k);
+                yield return null;
+            }
+
+            ApplyStretch(0f);
+            _posing = null;
+        }
+
+        // A defeated figure sags before it fades: it squashes to `yScale` and
+        // tips `tiltDegrees` (clockwise, away from the party) about its feet,
+        // over `seconds`, and stays down. The slot pivots on the ground line,
+        // so the tip does not slide the figure through the floor. Undone by
+        // ResetToHome, which a new fight runs on every slot.
+        public void Collapse(float yScale, float tiltDegrees, float seconds)
+        {
+            if (_rect == null || !isActiveAndEnabled) return;
+
+            if (_posing != null) StopCoroutine(_posing);
+            _posing = StartCoroutine(Collapsing((1f - yScale) / VolumeRatio, tiltDegrees, seconds));
+        }
+
+        private IEnumerator Collapsing(float stretch, float tiltDegrees, float seconds)
+        {
+            for (float t = 0f; t < seconds; t += Time.deltaTime)
+            {
+                float k = 1f - (1f - t / seconds) * (1f - t / seconds);
+                ApplyStretch(stretch * k);
+                _rect.localRotation = Quaternion.Euler(0f, 0f, -tiltDegrees * k);
+                yield return null;
+            }
+
+            ApplyStretch(stretch);
+            _rect.localRotation = Quaternion.Euler(0f, 0f, -tiltDegrees);
+            _posing = null;
         }
 
         private IEnumerator PlayRoutine(Vector2 offset, float holdSeconds, float outSeconds = -1f,

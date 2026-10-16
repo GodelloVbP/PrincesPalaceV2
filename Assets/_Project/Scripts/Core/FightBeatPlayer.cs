@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Combat.Session;
+using PrincesPalace.Domain.Rewards;
 using PrincesPalace.Domain.Stage;
 using PrincesPalace.Domain.UiKit;
 
@@ -93,7 +94,7 @@ namespace PrincesPalace
         // CombatBeat.Shake.
         public static float ShakeStrength(CombatBeat beat) =>
             beat == null ? 0f
-            : beat.EndsFight ? 1f
+            : beat.EndsFight ? HitStop.FinalBlowShake(beat.FightClass)
             : Mathf.Max(Strength(beat), Mathf.Clamp01(beat.Shake));
 
         // AND THE FLOOR A WORN FORM PUTS UNDER IT, the twin of ShakeStrength's
@@ -1193,8 +1194,9 @@ namespace PrincesPalace
             // `remaining`, with SettleAfter's own floor still doing its
             // job underneath.
             float stop = HitStopFor(beat);
-            if (stop > 0f) yield return new WaitForSeconds(Scaled(stop));
-            if (beat.EndsFight) FinalStopWall = Scaled(stop);
+            float stopWall = beat.EndsFight ? RunUpSchedule.FinalStopWall(beat.FightClass, Pace) : Scaled(stop);
+            if (stop > 0f) yield return new WaitForSeconds(stopWall);
+            if (beat.EndsFight) FinalStopWall = stopWall;
 
             // THE PULL (see the PreFormation note at the top of the beat): the
             // chains land, hold while they snap taut, and only then is he

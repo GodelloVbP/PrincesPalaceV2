@@ -104,8 +104,20 @@ namespace PrincesPalace.Domain.Combat.Session
         // stop). Authored at the default battle speed; the beat player scales
         // it like every other stop.
         public const float FinalBlowNormalSeconds = 0.22f;
-        public const float FinalBlowEliteSeconds = 0.26f;
-        public const float FinalBlowBossSeconds = 0.34f;
+        public const float FinalBlowEliteSeconds = 0.30f;
+        public const float FinalBlowBossSeconds = 0.46f;
+
+        // How hard the final contact kicks the stage, by class: the biggest
+        // fight gets the biggest kick, an ordinary one a firm one.
+        public static float FinalBlowShake(PrincesPalace.Domain.Rewards.EncounterClass fightClass)
+        {
+            switch (fightClass)
+            {
+                case PrincesPalace.Domain.Rewards.EncounterClass.Boss: return 1f;
+                case PrincesPalace.Domain.Rewards.EncounterClass.Elite: return 0.8f;
+                default: return 0.6f;
+            }
+        }
 
         public static float FinalBlowSeconds(PrincesPalace.Domain.Rewards.EncounterClass fightClass)
         {

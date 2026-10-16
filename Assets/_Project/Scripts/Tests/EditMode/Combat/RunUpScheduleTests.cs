@@ -34,8 +34,44 @@ namespace PrincesPalace.Domain.Tests
         public void TheFinalBlowStopsLongerTheBiggerTheFight()
         {
             Assert.AreEqual(0.22f, HitStop.FinalBlowSeconds(EncounterClass.Normal), Tolerance);
-            Assert.AreEqual(0.26f, HitStop.FinalBlowSeconds(EncounterClass.Elite), Tolerance);
-            Assert.AreEqual(0.34f, HitStop.FinalBlowSeconds(EncounterClass.Boss), Tolerance);
+            Assert.AreEqual(0.30f, HitStop.FinalBlowSeconds(EncounterClass.Elite), Tolerance);
+            Assert.AreEqual(0.46f, HitStop.FinalBlowSeconds(EncounterClass.Boss), Tolerance);
+        }
+
+        [Test]
+        public void TheFinalKickGrowsWithTheClass()
+        {
+            Assert.AreEqual(0.6f, HitStop.FinalBlowShake(EncounterClass.Normal), Tolerance);
+            Assert.AreEqual(0.8f, HitStop.FinalBlowShake(EncounterClass.Elite), Tolerance);
+            Assert.AreEqual(1f, HitStop.FinalBlowShake(EncounterClass.Boss), Tolerance);
+        }
+
+        [Test]
+        public void AStopNeverOutlastsTheCeilingAtAnyPace()
+        {
+            Assert.AreEqual(0.9f, RunUpSchedule.FinalStopWall(EncounterClass.Boss, 1f / 3f), Tolerance, "1.38 s capped");
+            Assert.AreEqual(0.69f, RunUpSchedule.FinalStopWall(EncounterClass.Boss, 2f / 3f), Tolerance);
+            Assert.AreEqual(0f, RunUpSchedule.FinalStopWall(EncounterClass.Boss, 0f), Tolerance);
+        }
+
+        // ---- how each class ends -------------------------------------------------
+
+        [Test]
+        public void ABossEndsBiggerThanAnEliteAndAnEliteBiggerThanANormalFight()
+        {
+            var normal = RunUpSchedule.StyleOf(EncounterClass.Normal);
+            var elite = RunUpSchedule.StyleOf(EncounterClass.Elite);
+            var boss = RunUpSchedule.StyleOf(EncounterClass.Boss);
+
+            Assert.AreEqual((1f, 0.15f, 1f, 0f, 0f),
+                (normal.WashScale, normal.WashAlpha, normal.CollapseYScale, normal.CollapseTiltDegrees, normal.Aftershock));
+            Assert.AreEqual((1.25f, 0.22f, 0.88f, 4f, 0f),
+                (elite.WashScale, elite.WashAlpha, elite.CollapseYScale, elite.CollapseTiltDegrees, elite.Aftershock));
+            Assert.AreEqual((1.6f, 0.32f, 0.62f, 10f, 0.8f),
+                (boss.WashScale, boss.WashAlpha, boss.CollapseYScale, boss.CollapseTiltDegrees, boss.Aftershock));
+            Assert.IsFalse(normal.Collapses);
+            Assert.IsTrue(elite.Collapses);
+            Assert.IsTrue(boss.Collapses);
         }
 
         [Test]
@@ -54,7 +90,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0.22f, run.StopEnd, Tolerance);
             Assert.AreEqual(0.57f, run.StingAt, Tolerance, "the sting lands when the fade's hold ends");
             Assert.AreEqual(0.77f, run.VoiceAt, Tolerance, "the voices follow it by 0.2 s");
-            Assert.AreEqual(0.57f, run.WashStart, Tolerance);
+            Assert.AreEqual(0.22f, run.WashStart, Tolerance, "the light turns at the kill, not after the hold");
             Assert.AreEqual(1.17f, run.WipeAt, Tolerance, "stop 0.22 + hold 0.35 + fade 0.6");
             Assert.IsTrue(run.HasFade);
             Assert.IsFalse(run.Skipped);
@@ -63,8 +99,11 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void AnEliteAndABossStopLongerAndSoWipeLater()
         {
-            Assert.AreEqual(1.21f, RunUpSchedule.For(EncounterClass.Elite, 1f, 1f, Hold, Fade).WipeAt, Tolerance);
-            Assert.AreEqual(1.29f, RunUpSchedule.For(EncounterClass.Boss, 1f, 1f, Hold, Fade).WipeAt, Tolerance);
+            Assert.AreEqual(1.25f, RunUpSchedule.For(EncounterClass.Elite, 1f, 1f, Hold, Fade).WipeAt, Tolerance);
+
+            var boss = RunUpSchedule.For(EncounterClass.Boss, 1f, 1f, Hold, Fade);
+            Assert.AreEqual(1.3f, boss.WipeAt, Tolerance, "0.46 + 0.35 + 0.6 is 1.41: the cap");
+            Assert.AreEqual(0.81f, boss.StingAt, Tolerance);
         }
 
         [Test]
@@ -76,7 +115,13 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0.30f, run.LiftAt(1), Tolerance);
             Assert.AreEqual(0.38f, run.LiftAt(2), Tolerance);
             Assert.AreEqual(0.25f, run.LiftSecondsWall, Tolerance);
-            Assert.AreEqual(0.4f, run.WashSecondsWall, Tolerance);
+            Assert.AreEqual(0.47f, run.LandAt(0), Tolerance);
+            Assert.AreEqual(0.55f, run.LandAt(1), Tolerance);
+            Assert.AreEqual(0.5f, run.WashSecondsWall, Tolerance);
+            Assert.AreEqual(0.06f, run.LandSecondsWall, Tolerance);
+            Assert.AreEqual(0.18f, run.CollapseSecondsWall, Tolerance);
+            Assert.AreEqual(24f, RunUpSchedule.LiftPixels, Tolerance);
+            Assert.AreEqual(0.94f, RunUpSchedule.LandYScale, Tolerance);
         }
 
         // ---- the cap ----------------------------------------------------------
@@ -93,6 +138,8 @@ namespace PrincesPalace.Domain.Tests
                     var run = RunUpSchedule.For(fightClass, pace, display, Hold, Fade);
 
                     Assert.LessOrEqual(run.WipeAt, RunUpSchedule.CapSeconds + Tolerance, $"{fightClass} at {display}x");
+                    Assert.LessOrEqual(run.StopEnd, RunUpSchedule.StopCeilingSeconds + Tolerance, $"{fightClass} at {display}x");
+                    Assert.GreaterOrEqual(run.WipeAt, run.StopEnd - Tolerance);
                     Assert.LessOrEqual(run.StingAt, run.WipeAt + Tolerance, $"the sting never lands after the wipe, {fightClass} at {display}x");
                 }
             }
@@ -112,10 +159,11 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void AtHalfSpeedABossStopAndHoldOverrunTheCapAndTheStingIsClampedToTheWipe()
         {
-            // 0.5x: pace 1/3. Stop 1.02, hold 1.05: the sting would land at 2.07.
+            // 0.5x: pace 1/3. The stop would be 1.38 and is held to 0.9; with the
+            // 1.05 hold the sting would land at 1.95.
             var run = RunUpSchedule.For(EncounterClass.Boss, 1f / 3f, 0.5f, Hold, Fade);
 
-            Assert.AreEqual(1.02f, run.StopEnd, Tolerance);
+            Assert.AreEqual(0.9f, run.StopEnd, Tolerance);
             Assert.AreEqual(1.3f, run.WipeAt, Tolerance);
             Assert.AreEqual(1.3f, run.StingAt, Tolerance);
         }
@@ -145,7 +193,9 @@ namespace PrincesPalace.Domain.Tests
             var fast = RunUpSchedule.For(EncounterClass.Normal, 4f / 3f, 2f, Hold, Fade);
             Assert.AreEqual(0.125f, fast.LiftSecondsWall, Tolerance);
             Assert.AreEqual(0.04f, fast.LiftStaggerWall, Tolerance);
-            Assert.AreEqual(0.2f, fast.WashSecondsWall, Tolerance);
+            Assert.AreEqual(0.25f, fast.WashSecondsWall, Tolerance);
+            Assert.AreEqual(0.03f, fast.LandSecondsWall, Tolerance);
+            Assert.AreEqual(0.09f, fast.CollapseSecondsWall, Tolerance);
             Assert.AreEqual(0.1f, fast.VoiceAt - fast.StingAt, Tolerance);
         }
 
@@ -164,7 +214,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void AFightWithNoFinalBlowRunsFromZero()
         {
-            var run = RunUpSchedule.WithoutStop(1f, 1f, Hold, Fade);
+            var run = RunUpSchedule.WithoutStop(EncounterClass.Normal, 1f, 1f, Hold, Fade);
 
             Assert.AreEqual(0f, run.StopEnd, Tolerance);
             Assert.AreEqual(0.35f, run.StingAt, Tolerance);
