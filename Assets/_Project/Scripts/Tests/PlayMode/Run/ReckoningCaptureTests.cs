@@ -9,6 +9,8 @@ using UnityEngine.TestTools;
 using PrincesPalace;
 using PrincesPalace.Domain.Rewards;
 using PrincesPalace.Domain.Combat;
+using PrincesPalace.Domain.Dungeon;
+using PrincesPalace.Domain.Stats;
 using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace.PlayModeTests
@@ -166,11 +168,30 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(_reckoning, "the Reckoning was never wired into the fight scene");
         }
 
+        // Character ids are the content's (sheep, owl, bear), which is what
+        // the portraits and the ledger key on.
+        // The whole party after a fight that paid: rings part-way round (one
+        // crossing a level), deeds in every column, a potion and a book held.
         private static CombatReward PartyReward()
         {
-            var reward = Reward();
-            reward.Characters.Add(new CharacterReward("odette", "Odette", 1, 0, 1, 40, 100, 40, expToNextBefore: 100));
-            reward.Characters.Add(new CharacterReward("bjorn", "Bjorn", 1, 0, 1, 60, 100, 60, expToNextBefore: 100));
+            var reward = new CombatReward { GoldGained = 46, GoldBefore = 240 };
+            reward.Characters.Add(new CharacterReward("sheep", "Shawn", 1, 20, 1, 70, 100, 50, slotIndex: 0, expToNextBefore: 100));
+            reward.Characters.Add(new CharacterReward("owl", "Odette", 2, 85, 3, 30, 140, 85, slotIndex: 1, expToNextBefore: 120));
+            reward.Characters.Add(new CharacterReward("bear", "Bjorn", 1, 5, 1, 45, 100, 40, slotIndex: 2, expToNextBefore: 100));
+            reward.Ledger.Dealt("sheep", DamageType.Physical, 412);
+            reward.Ledger.Took("sheep", 96);
+            reward.Ledger.ScoredKill("sheep");
+            reward.Ledger.Dealt("owl", DamageType.Fire, 288);
+            reward.Ledger.Restored("owl", 54);
+            reward.Ledger.Took("owl", 31);
+            reward.Ledger.ScoredKill("owl");
+            reward.Ledger.ScoredKill("owl");
+            reward.Ledger.Dealt("bear", DamageType.Physical, 530);
+            reward.Ledger.Took("bear", 140);
+            reward.Ledger.ScoredKill("bear");
+            reward.Prizes.Add(new PaidPrize(PrizeKind.Consumable, PrizeKind.Consumable, 1, new[] { "health_potion" }));
+            reward.Prizes.Add(new PaidPrize(PrizeKind.Book, PrizeKind.Book, 0, new[] { "test_book" }));
+            reward.Prizes.Add(new PaidPrize(PrizeKind.None, PrizeKind.Gold, 46));
             return reward;
         }
 
@@ -181,8 +202,12 @@ namespace PrincesPalace.PlayModeTests
         // reselection rule puts the pad's focus back on the entry card, which
         // is right for play and wrong only for this picture. The marker is
         // hidden by hand because it only follows the selection in LateUpdate.
+        //
+        // The reveal is settled first through the screen's own silent settle,
+        // so no card is caught face-down however slow the pace.
         private IEnumerator ShootPage(string file)
         {
+            yield return SettleTheReveal();
             UnityEngine.EventSystems.EventSystem.current?.SetSelectedGameObject(null);
             foreach (var marker in Object.FindObjectsByType<FocusMarker>(FindObjectsInactive.Exclude))
             {
@@ -235,11 +260,32 @@ namespace PrincesPalace.PlayModeTests
             yield return OpenFight();
             ReckoningPageFixtures.StartRun();
             _reckoning.Show(PartyReward(), ReckoningPageFixtures.OneGearPage());
-            yield return new WaitForSecondsRealtime(1f);
+            yield return TakeFirstAndLeave();
+            yield return Shoot("Reckoning_board.png");
+        }
+
+        // Settles the reveal (a press during it only skips it), takes the first
+        // card, leaves the page and settles the sweep and the board.
+        private IEnumerator TakeFirstAndLeave()
+        {
+            yield return SettleTheReveal();
             Press("ReckoningOffer0");
             Press("ReckoningLeaveButton");
-            yield return new WaitForSecondsRealtime(3f);
-            yield return Shoot("Reckoning_board.png");
+            yield return null;
+            _reckoning.SettleBeat();
+            yield return null;
+            yield return null;
+        }
+
+        // The screen's own silent settle, then the guard it leaves after a
+        // skip (a press inside it is dropped), so the next press lands.
+        private IEnumerator SettleTheReveal()
+        {
+            yield return null;
+            _reckoning.SettleBeat();
+            float deadline = Time.realtimeSinceStartup + 10f;
+            while (!_reckoning.AcceptsChoices && Time.realtimeSinceStartup < deadline) yield return null;
+            Assert.IsTrue(_reckoning.AcceptsChoices, "the reveal never released its guard");
         }
 
         // A run fight that paid nothing: the party fell, no offers.
@@ -252,8 +298,10 @@ namespace PrincesPalace.PlayModeTests
             var tally = PartyReward().Characters
                 .Select(c => new TallyMember(c.CharacterId, c.DisplayName)).ToList();
             _reckoning.Show(ReckoningRequest.Outcome(
-                FightEnding.Fell, new List<string>(), new List<string>(), tally, new CombatLedger()));
-            yield return new WaitForSecondsRealtime(3f);
+                FightEnding.Fell, new List<string>(), new List<string>(), tally, PartyReward().Ledger));
+            yield return null;
+            _reckoning.SettleBeat();
+            yield return null;
             yield return Shoot("Reckoning_outcome_board.png");
         }
 
@@ -268,28 +316,10 @@ namespace PrincesPalace.PlayModeTests
                 Assert.Ignore("No graphics device. Run: tools/screenshot.ps1 -Runtime -RuntimeFilter ReckoningCaptureTests");
             }
 
-            yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
-            yield return null;
-            yield return null;
-
-            _reckoning = Object.FindAnyObjectByType<ReckoningController>(FindObjectsInactive.Include);
-            Assert.IsNotNull(_reckoning, "the Reckoning was never wired into the fight scene");
-
-            var reward = Reward();
-            reward.Characters.Add(new CharacterReward("odette", "Odette", 1, 0, 1, 40, 100, 40, expToNextBefore: 100));
-            reward.Characters.Add(new CharacterReward("bjorn", "Bjorn", 1, 0, 1, 60, 100, 60, expToNextBefore: 100));
-
-            _reckoning.Show(reward, Offers());
-            yield return new WaitForSecondsRealtime(1f);
-
-            var offer = _reckoning.GetComponentsInChildren<UnityEngine.UI.Button>(includeInactive: true)
-                .First(b => b.name == "ReckoningOffer0");
-            offer.onClick.Invoke();
-
-            // The page waits to be moved on; the same button carries on.
-            _reckoning.GetComponentsInChildren<UnityEngine.UI.Button>(includeInactive: true)
-                .First(b => b.name == "ReckoningLeaveButton").onClick.Invoke();
-            yield return new WaitForSecondsRealtime(3f);
+            yield return OpenFight();
+            ReckoningPageFixtures.StartRun();
+            _reckoning.Show(PartyReward(), ReckoningPageFixtures.OneGearPage());
+            yield return TakeFirstAndLeave();
 
             var canvas = Object.FindObjectsByType<Canvas>(FindObjectsInactive.Exclude)
                 .FirstOrDefault(c => c.isRootCanvas);

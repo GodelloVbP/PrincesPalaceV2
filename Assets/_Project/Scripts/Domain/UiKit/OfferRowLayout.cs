@@ -46,14 +46,25 @@ namespace PrincesPalace.Domain.UiKit
         // the next card along.
         public const float LabelInset = 20f;
 
-        // One card's width in a row of `visibleCount`. The budget divided, less
-        // the gaps between them.
-        public static float CardWidth(int visibleCount)
+        // The slot one card owns in a row of `visibleCount`: the budget divided,
+        // less the gaps between them. Only the pitch and the row's total read it.
+        public static float SlotWidth(int visibleCount)
         {
             if (visibleCount <= 0) return 0f;
 
             return (RowBudget - (visibleCount - 1) * CardGap) / visibleCount;
         }
+
+        // The widest a card is drawn: the card art keeps its aspect inside the
+        // card's height, so a roomier slot (a short row) cannot make it wider.
+        public const float MaxCardWidth = Screens.ReckoningScreen.CardHeight * RewardArt.CardBackAspect;
+
+        // One card's width in a row of `visibleCount`: the slot, capped at what
+        // the card art can fill. The button, the face and every part of the
+        // face (labels, band, delta, chevron, medallion) are sized from this,
+        // so none of them can hang off the drawn card onto the cloth.
+        public static float CardWidth(int visibleCount) =>
+            System.Math.Min(SlotWidth(visibleCount), MaxCardWidth);
 
         // The name and meta labels' width in a row of `visibleCount`.
         public static float LabelWidth(int visibleCount)
@@ -101,7 +112,7 @@ namespace PrincesPalace.Domain.UiKit
         {
             if (visibleCount <= 0) return 0f;
 
-            return (index - (visibleCount - 1) * 0.5f) * (CardWidth(visibleCount) + CardGap);
+            return (index - (visibleCount - 1) * 0.5f) * (SlotWidth(visibleCount) + CardGap);
         }
 
         // ---- the card face's parts (docs/PLAN_REWARD_SCREENS.md C5) -------------
@@ -230,14 +241,14 @@ namespace PrincesPalace.Domain.UiKit
             return rowOf;
         }
 
-        // Total width of a row of `visibleCount` cards, edge to edge. Always
+        // Total width of a row of `visibleCount` slots, edge to edge. Always
         // the budget, for any count that fits in it -- which is the property
         // that makes the audit's one solved layout stand for all of them.
         public static float RowWidth(int visibleCount)
         {
             if (visibleCount <= 0) return 0f;
 
-            return visibleCount * CardWidth(visibleCount) + (visibleCount - 1) * CardGap;
+            return visibleCount * SlotWidth(visibleCount) + (visibleCount - 1) * CardGap;
         }
     }
 }

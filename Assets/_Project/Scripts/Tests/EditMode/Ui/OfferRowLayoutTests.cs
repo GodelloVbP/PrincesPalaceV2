@@ -40,7 +40,7 @@ namespace PrincesPalace.Domain.Tests
         [TestCase(4)]
         public void CardsAreEvenlySpacedAndNeverOverlap(int cards)
         {
-            float pitch = OfferRowLayout.CardWidth(cards) + OfferRowLayout.CardGap;
+            float pitch = OfferRowLayout.SlotWidth(cards) + OfferRowLayout.CardGap;
 
             for (int i = 1; i < cards; i++)
             {
@@ -50,31 +50,32 @@ namespace PrincesPalace.Domain.Tests
             }
         }
 
-        // THE NUMBER THAT MUST NOT MOVE. ~340 is what the three-card row has
-        // always been, and every player below level 50 still sees it. Asserted
-        // here rather than declared in the source because it FALLS OUT of the
-        // budget -- if the budget or the gap is ever retuned, this is what says
-        // the common case changed.
+        // The slot is what the budget divides into; the card is drawn no wider
+        // than its art can fill (CardHeight * CardBackAspect = 233.19), and the
+        // button, face and every part of it take that width, so a short row
+        // never hangs its labels, chevron or medallion off the drawn card.
         //
         // 365.28 rather than a round number: the interior is the spread's hem,
         // 7% inset from a 1344 panel, so it is 1155.84 wide.
         [Test]
-        public void AThreeCardRowStillDrawsTheCardsItAlwaysDid()
+        public void AThreeCardRowKeepsItsSlotsButDrawsTheCardAtTheArtsWidth()
         {
-            Assert.AreEqual(365.28f, OfferRowLayout.CardWidth(3), 0.01f);
-            Assert.AreEqual(345.28f, OfferRowLayout.LabelWidth(3), 0.01f);
+            Assert.AreEqual(365.28f, OfferRowLayout.SlotWidth(3), 0.01f);
+            Assert.AreEqual(233.19f, OfferRowLayout.MaxCardWidth, 0.01f);
+            Assert.AreEqual(233.19f, OfferRowLayout.CardWidth(3), 0.01f);
+            Assert.AreEqual(213.19f, OfferRowLayout.LabelWidth(3), 0.01f);
             Assert.AreEqual(-395.28f, OfferRowLayout.CardX(0, 3), 0.01f);
         }
 
-        // And what the reward actually costs: a four-card row divides the same
-        // interior, so every card in it is narrower -- roughly 266 against 365,
-        // about 27% off the width of the art. Pinned so the trade is visible
-        // rather than discovered.
+        // A four-card row divides the same interior into narrower slots (266),
+        // still above the art's width, so it draws the same card as three; the
+        // five-card row is the first the slot caps.
         [Test]
-        public void AFourCardRowBuysItsFourthCardByNarrowingAllOfThem()
+        public void TheCardOnlyNarrowsOnceTheSlotIsNarrowerThanTheArt()
         {
-            Assert.AreEqual(266.46f, OfferRowLayout.CardWidth(4), 0.01f);
-            Assert.Less(OfferRowLayout.CardWidth(4), OfferRowLayout.CardWidth(3));
+            Assert.AreEqual(266.46f, OfferRowLayout.SlotWidth(4), 0.01f);
+            Assert.AreEqual(233.19f, OfferRowLayout.CardWidth(4), 0.01f);
+            Assert.AreEqual(207.17f, OfferRowLayout.CardWidth(5), 0.01f);
         }
 
         // Every row spans the same painted interior. This is the property that

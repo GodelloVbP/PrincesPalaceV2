@@ -771,7 +771,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const float DeltaTop = NameTop - NameBand;
         private const float FeatureTop = DeltaTop - DeltaBand;
         private const float CardBottom = FeatureTop - FeatureBand;
-        private const float CardHeight = CardTop - CardBottom;
+        public const float CardHeight = CardTop - CardBottom;
         public const float CardCentreY = (CardTop + CardBottom) * 0.5f;
 
         // Band centres relative to the CARD's centre, which is what a child's
