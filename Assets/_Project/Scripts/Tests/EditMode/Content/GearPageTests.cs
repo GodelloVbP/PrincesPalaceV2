@@ -400,32 +400,43 @@ namespace PrincesPalace.Domain.Tests
                 request.Chips = 3;
                 foreach (var card in GearPage.Roll(request, catalog, Seeded(seed)).Cards)
                 {
-                    if (card.Rolled != Quality.Legendary) continue;
-
                     var traits = card.Copy.ModifierIds.Where(IsTrait).ToList();
-                    if (EquipmentSlots.IsWeaponSlot(card.Slot))
+                    if (card.Rolled != Quality.Legendary)
                     {
-                        weaponLegendaries++;
-                        if (traits.Count > 0)
-                        {
-                            CollectionAssert.AreEqual(new[] { "w_t_rune" }, traits, $"seed {seed}");
-                        }
-                        else
-                        {
-                            // The page already gave this owner the only trait.
-                            Assert.AreEqual(3, card.Copy.ModifierIds.Count, $"seed {seed}");
-                        }
+                        Assert.IsEmpty(traits, $"seed {seed}: only a Legendary carries a trait");
+                        continue;
                     }
-                    else
-                    {
-                        Assert.IsEmpty(traits, $"seed {seed}: no trait offered, so none drawn");
-                        Assert.AreEqual(3, card.Copy.ModifierIds.Count, $"seed {seed}: Rare with a third affix");
-                        Assert.AreEqual(Quality.Rare, ItemQuality.Of(card.Copy.ModifierIds.Count, 0));
-                    }
+
+                    // A Legendary with no trait left records Rare instead.
+                    Assert.IsTrue(EquipmentSlots.IsWeaponSlot(card.Slot), $"seed {seed}: armour has no trait to offer");
+                    weaponLegendaries++;
+                    CollectionAssert.AreEqual(new[] { "w_t_rune" }, traits, $"seed {seed}");
                 }
             }
 
             Assert.Greater(weaponLegendaries, 0);
+        }
+
+        [Test]
+        public void ALegendaryWithNoTraitLeft_RecordsRare_AndDoesNotResetPity()
+        {
+            var catalog = new FakeCatalog { TraitRule = (_, _) => Array.Empty<string>() };
+            for (ulong seed = 1; seed <= 60; seed++)
+            {
+                var request = Request(NormalGear, Member("a"), Member("b"), Member("c"));
+                request.Chips = 1;
+                request.LegendaryPity = 6;
+                var roll = GearPage.Roll(request, catalog, Seeded(seed));
+
+                Assert.IsFalse(roll.Cards.Any(c => c.Rolled == Quality.Legendary), $"seed {seed}");
+                Assert.AreEqual(7, roll.LegendaryPity, $"seed {seed}: the counter advances");
+                // The forced card is the page's best by quality-then-tier before the
+                // fallback, so it is the one card carrying a third affix.
+                var third = roll.Cards.Where(c => c.Copy.ModifierIds.Count == 3).ToList();
+                Assert.AreEqual(1, third.Count, $"seed {seed}");
+                Assert.AreEqual(Quality.Rare, third[0].Rolled, $"seed {seed}");
+                Assert.IsEmpty(third[0].Copy.ModifierIds.Where(IsTrait));
+            }
         }
 
         [Test]

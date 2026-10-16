@@ -237,18 +237,19 @@ namespace PrincesPalace.Domain.Rewards
             if (!anyLegendary && request.LegendaryPity >= LegendaryPityPages - 1)
             {
                 qualities[best] = Quality.Legendary;
-                anyLegendary = true;
             }
 
             // Step 8: affixes, then a Legendary's trait. No trait left for the
-            // owner: the card is Rare with a third affix.
+            // owner: the card is Rare with a third affix, and records Rare so
+            // Rolled agrees with ContentDatabase.QualityOf (plinth, WornTier).
             var traitsOnPage = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
             for (int i = 0; i < owners.Count; i++)
             {
                 if (bases[i] == null) continue;
 
                 var picked = ModifierTable.PickModifiers(catalog.AffixPool(slots[i]), AffixCount(qualities[i]), nextIndex);
-                if (qualities[i] == Quality.Legendary)
+                var recorded = qualities[i];
+                if (recorded == Quality.Legendary)
                 {
                     string trait = DrawTrait(owners[i].Id, slots[i], catalog, traitsOnPage, nextIndex);
                     if (trait != null)
@@ -261,6 +262,7 @@ namespace PrincesPalace.Domain.Rewards
                         var rest = new List<string>(catalog.AffixPool(slots[i]));
                         rest.RemoveAll(picked.Contains);
                         picked.AddRange(ModifierTable.PickModifiers(rest, 1, nextIndex));
+                        recorded = Quality.Rare;
                     }
                 }
 
@@ -269,14 +271,17 @@ namespace PrincesPalace.Domain.Rewards
                     OwnerId = owners[i].Id,
                     Slot = slots[i],
                     Copy = ItemInstance.Of(bases[i], tiers[i], picked),
-                    Rolled = qualities[i],
+                    Rolled = recorded,
                     Inert = inert[i],
                     GuaranteedWeapon = i == weaponCard,
                 });
             }
 
             roll.BestIndex = BestIndexOf(roll.Cards);
-            roll.LegendaryPity = anyLegendary ? 0 : request.LegendaryPity + 1;
+            // Pity follows what the player sees: a Legendary that fell back to
+            // Rare does not reset it.
+            bool shownLegendary = roll.Cards.Exists(c => c.Rolled == Quality.Legendary);
+            roll.LegendaryPity = shownLegendary ? 0 : request.LegendaryPity + 1;
             roll.BestWasCommon = roll.BestIndex >= 0 && roll.Cards[roll.BestIndex].Rolled == Quality.Common;
             return roll;
         }
