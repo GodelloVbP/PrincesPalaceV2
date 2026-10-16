@@ -693,7 +693,7 @@ pins for the general case).
 | Up-chevron pop | rising note ladder, pre-pitched | `chevron_note` (Skyward Hero UI 11, root near 620 Hz) |
 | Cache open | cloth unfolds | `cloth_unfold` (FilmCow flag 7); `open_the_pack` stays for `OpenPack` |
 | Card flip | one clip, pitched per step | `card_flip` (FilmCow swoosh 6) |
-| Top-tier landing | low bell | `legendary_bell` (the `toll` bell, trimmed, 0.8 s tail) |
+| Top-tier landing | low bell | `legendary_bell` (Vol.2 UI 50, low soft bell, 0.8 s tail) |
 | Top-tier build (`RevealRiser`) | riser under the 0.6 s tremble | `reveal_riser` (Skyward Hero UI 25, 0.15 s in, 0.2 s out, 0.4 s noise-reverb tail) |
 | Rare landing (`RevealRing`) | the ring of light | `reveal_ring` (Vol.2 Crystal UI 2) |
 | Top-tier landing (`RevealImpact`) | impact under the bell | `reveal_impact` (Sonniss Federico Soler Booms Vol.2 214 + Vol.2 UI 27 sparkle at +0.12 s, mixed in the recipe) |
@@ -704,12 +704,12 @@ pins for the general case).
 | Take | pick-up | `take` (FilmCow book pick up 5) |
 | Hone | whetstone scrape | `hone_scrape` (Sonniss David Dumais `SWING SCRAPE` long blade) |
 | Experience fill / level up | hum / bell | `xp_hum` (Skyward Hero UI 25); `level_bell` (FilmCow ding 3) |
-| Fell / Endured | low string note / drone | `fell` (Sonniss The Noisery bowed metal screech), `endured` (Skyward Hero UI 31) |
+| Fell / Endured | low string note / drone | `fell` (Sonniss The Noisery bowed metal screech), `endured` (Vol.2 UI 14, low swell) |
 
-The owner auditioned and picked the rows above except chevron note, boss peak,
-coin tick, potion land, experience fill, level bell, ember snuff, endured and the
-top-tier bell, which keep their R6 metric-chosen clips (replacements are being
-auditioned). To swap a source, edit the script's `CUES`.
+The owner auditioned and picked the rows above, plus `ember_snuff` (TomMusic
+`Light Torch 2`, low-passed 2.5 kHz). Chevron note and coin tick are being
+re-auditioned; boss peak, potion land, experience fill and level bell keep
+their R6 metric-chosen clips. To swap a source, edit the script's `CUES`.
 Potion / book land, experience fill / level up and Fell / Endured have their
 clip but no trigger yet: their moments (the haul strip, the board, the outcome
 form) are R5's, so the R6 "fires once" gate holds for them when R5 wires

@@ -48,12 +48,11 @@ CUES = [
     ("card_deal", SONNISS + "344 Audio - Casino Cards Vol. 1/GAMECas_Dealing 3_344 Audio_Casino Cards Vol 1.wav",
      0.11, 0.34, 0.0, 0.10, None),
     ("ember_light", "Free Fantasy SFX Pack By TomMusic/WAV Files/SFX/Torch/Light Torch 1.wav", 0.0, 1.2, 0.01, 0.30, None),
-    ("ember_snuff", FILMCOW + "air duster 1.wav", 0.0, 0.40, 0.01, 0.15, 2000),
+    ("ember_snuff", "Free Fantasy SFX Pack By TomMusic/WAV Files/SFX/Torch/Light Torch 2.wav", 0.0, 0.60, 0.01, 0.25, 2500),
     ("card_flip", FILMCOW + "swoosh 6.wav", 0.0, 0.50, 0.004, 0.12, None),
     ("chevron_note", SKY % 11, "onset", 0.42, 0.003, 0.10, None),
     ("take", FILMCOW + "book pick up 5.wav", 0.10, 0.62, 0.004, 0.12, None),
-    ("legendary_bell", "repo:Assets/_Project/Resources/Audio/Sfx/Events/bell_in_the_fog/toll.wav",
-     0.0, 2.20, 0.0, 0.80, None),
+    ("legendary_bell", VOL2 + "Fantasy UI Vol (50).wav", 0.0, 2.20, 0.004, 0.80, None),
     ("boss_peak", SKY % 40, "onset", 1.60, 0.003, 0.50, None),
     ("coin_tick", DUCK + "item_coins_01.ogg", "onset", 0.16, 0.002, 0.06, None),
     ("potion_land", FILMCOW + "glass clink 2.wav", "onset", 0.35, 0.002, 0.15, 6000),
@@ -66,7 +65,7 @@ CUES = [
     ("fell", SONNISS + "The Noisery - Moaning Metal/"
      "DSGNTonl_Designed Metal Bowed Screech Tonal Reverb 7_The Noisery_Moaning Metal.wav",
      0.90, 1.70, 0.25, 0.60, None),
-    ("endured", SKY % 31, "onset", 1.40, 0.02, 0.60, None),
+    ("endured", VOL2 + "Fantasy UI Vol (14).wav", 0.0, 1.50, 0.15, 0.50, None),
     # Soft swell: 0.15 s in, 0.2 s out, then a 0.4 s decaying-noise tail so it
     # rings out under the reveal instead of stopping dead.
     ("reveal_riser", SKY % 25, 0.33, 0.65, 0.15, 0.20, None, {"tail": 0.4}),
