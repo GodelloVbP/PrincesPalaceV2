@@ -150,7 +150,7 @@ namespace PrincesPalace.PlayModeTests
 
             var notices = (List<string>)typeof(RunOrchestrator).GetMethod("PayHeartAnchors",
                     System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)
-                .Invoke(null, new object[] { session, run, chips });
+                .Invoke(null, new object[] { session, run, chips, null });
 
             CollectionAssert.AreEquivalent(new[] { goldNode.Id, gearNode.Id }, run.slainAnchorIds);
             CollectionAssert.AreEqual(new[] { Domain.Rewards.EncounterClass.Elite }, chips.Gear, "the dead Gear chip is collected");

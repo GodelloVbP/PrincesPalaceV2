@@ -159,5 +159,18 @@ namespace PrincesPalace.Domain.Rewards
         // fake that fell apart and the merchant's "No refunds." (see
         // FakeWear). Empty on nearly every fight; never null.
         public readonly List<string> Notices = new List<string>();
+
+        // What the settlement paid, in pay order: the node's chip, the chips of
+        // anchors that died at the heart, then the fight's own gold
+        // (Shown = None). Read-only history for the Reckoning; empty when
+        // nothing paid.
+        public readonly List<PaidPrize> Prizes = new List<PaidPrize>();
+
+        // The class the chips were paid as; null when no node was fought.
+        public EncounterClass? EncounterClass;
+
+        // The run's gold before the settlement paid anything, so a count-up
+        // has somewhere to start.
+        public int GoldBefore;
     }
 }

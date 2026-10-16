@@ -938,21 +938,14 @@ namespace PrincesPalace
 
         private int PaintDeltaRows(Character character, ItemInstance copy)
         {
-            var comparison = ItemDescription.Compare(character, copy);
-            var previewScores = _scores + comparison.ScoreDelta;
-            var stats = ContentDatabase.EffectiveStats(character);
+            var rows = ItemCompareRows.Build(character, copy, _scores, _primaryPoolRule, _hasSignature).Rows;
 
             int row = 0;
-            foreach (var stat in SheetStats.Derived)
+            foreach (var r in rows)
             {
-                if (!StatApplies(stat)) continue;
-
-                int delta = DeltaFor(stat, comparison, previewScores);
-                if (delta == 0 || !TryCurrentValue(character, stat, stats, _scores, out int now)) continue;
-
                 string text = LoadoutCompare.DeltaText(
-                    SheetStats.DisplayText(stat, now), SheetStats.DisplayText(stat, now + delta), delta);
-                SetCompareRow(row++, StatLabel(stat), text, delta > 0 ? Good : Bad);
+                    SheetStats.DisplayText(r.Stat, r.Now), SheetStats.DisplayText(r.Stat, r.Next), r.Delta);
+                SetCompareRow(row++, StatLabel(r.Stat), text, r.Delta > 0 ? Good : Bad);
             }
 
             for (int i = row; i < SheetStats.Derived.Length; i++) SetCompareRow(i, "", "", TextBright);

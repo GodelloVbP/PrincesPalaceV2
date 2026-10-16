@@ -627,10 +627,20 @@ namespace PrincesPalace
                 var room = RunManager.CurrentNode;
                 var chips = new PageChips { Strength = room == null ? 0 : RealmOpening.StrengthOf(run, room.Id) };
                 if (session != null && session.IsBossFight) chips.AddBoss();
-                notices.AddRange(RealmPrizes.Pay(SaveSlotManager.CurrentSave, run, room, chips));
-                notices.AddRange(PayHeartAnchors(session, run, chips));
+
+                // The record is read-only history for the Reckoning: it
+                // observes the pays below and changes none of them.
+                int goldBefore = run.gold;
+                var prizes = new List<PaidPrize>();
+                notices.AddRange(RealmPrizes.Pay(SaveSlotManager.CurrentSave, run, room, chips, prizes));
+                notices.AddRange(PayHeartAnchors(session, run, chips, prizes));
                 if (session != null) session.SettledChips = chips;
                 reward = PayOut(session, run, payout.Value, participants: null);
+                prizes.Add(new PaidPrize(PrizeKind.None, PrizeKind.Gold, reward.GoldGained));
+                reward.Prizes.AddRange(prizes);
+                reward.GoldBefore = goldBefore;
+                if (session != null && session.IsBossFight) reward.EncounterClass = EncounterClass.Boss;
+                else if (room != null) reward.EncounterClass = RealmPrizes.ClassOf(room);
 
                 // An anchor beaten on the map no longer waits at the heart.
                 if (room != null && room.IsAnchor && !run.slainAnchorIds.Contains(room.Id))
@@ -657,7 +667,8 @@ namespace PrincesPalace
         // boss's pages merge, and it is slain. Their exp and gold are already
         // in the session's payout (per-enemy elite pay). Those that died with
         // the boss are not in FallenAnchorNodeIds and pay nothing.
-        private static List<string> PayHeartAnchors(FightSession session, RunSnapshot run, PageChips chips)
+        private static List<string> PayHeartAnchors(FightSession session, RunSnapshot run, PageChips chips,
+            List<PaidPrize> record)
         {
             var notices = new List<string>();
             var map = RunManager.Map;
@@ -671,7 +682,7 @@ namespace PrincesPalace
             run.slainAnchorIds ??= new List<int>();
             foreach (var anchor in HeartAnchors.SettlementOrder(fallen))
             {
-                notices.AddRange(RealmPrizes.Pay(SaveSlotManager.CurrentSave, run, map.Node(anchor.NodeId), chips));
+                notices.AddRange(RealmPrizes.Pay(SaveSlotManager.CurrentSave, run, map.Node(anchor.NodeId), chips, record));
                 if (!run.slainAnchorIds.Contains(anchor.NodeId)) run.slainAnchorIds.Add(anchor.NodeId);
             }
 

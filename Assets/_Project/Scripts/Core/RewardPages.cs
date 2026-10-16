@@ -8,6 +8,7 @@ using PrincesPalace.Domain.Equipment;
 using PrincesPalace.Domain.Relics;
 using PrincesPalace.Domain.Rewards;
 using PrincesPalace.Domain.Rng;
+using PrincesPalace.Domain.Stats;
 using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace
@@ -243,18 +244,54 @@ namespace PrincesPalace
             return result;
         }
 
-        // Closes the page and pays its unused choices. Gear: each hones the
-        // first shown card's slot, or the next shown slot below MaxPlus; with
-        // none left, the first card's sale price. Relic: 30% of the cheapest
-        // shown relic's price each. Returns the gold paid.
-        public static int Leave(SaveData save, PendingPage page)
+        // What leaving a page would pay, per (recipient, slot): honing in the
+        // order Leave applies it, and the gold. Pure; Leave consumes it, so
+        // the face and the payout cannot disagree.
+        public readonly struct LeavePreview
+        {
+            public readonly IReadOnlyList<LeaveHone> Hones;
+            public readonly int Gold;
+
+            public LeavePreview(IReadOnlyList<LeaveHone> hones, int gold)
+            {
+                Hones = hones;
+                Gold = gold;
+            }
+
+            // How many +1s leaving puts on one slot.
+            public int HonesFor(string recipientId, EquipmentSlot slot) =>
+                Hones.Where(h => h.RecipientId == recipientId && h.Slot == slot).Sum(h => h.Count);
+        }
+
+        public readonly struct LeaveHone
+        {
+            public readonly string RecipientId;
+            public readonly EquipmentSlot Slot;
+            public readonly int Count;
+
+            public LeaveHone(string recipientId, EquipmentSlot slot, int count)
+            {
+                RecipientId = recipientId;
+                Slot = slot;
+                Count = count;
+            }
+        }
+
+        // Gear: each unused choice hones the first shown card's slot that can
+        // still be honed, ignoring the card's outcome; with none left, the
+        // first card's sale price. Relic: 30% of the cheapest shown relic's
+        // price each. A closed or null page pays nothing.
+        public static LeavePreview PreviewLeave(SaveData save, PendingPage page)
         {
             var run = save?.activeRun;
-            if (run == null || page == null || page.Closed) return 0;
+            var hones = new List<LeaveHone>();
+            if (run == null || page == null || page.Closed) return new LeavePreview(hones, 0);
 
-            int unused = page.ChoicesLeft;
+            // Honing laid on top of the run's as the choices are spent, so a
+            // slot that reaches MaxPlus hands the next choice to the next slot.
+            var added = new Dictionary<(string, EquipmentSlot), int>();
             int gold = 0;
-            for (int i = 0; i < unused; i++)
+            for (int i = 0; i < page.ChoicesLeft; i++)
             {
                 if (page.Kind == RewardPageKind.Relic)
                 {
@@ -262,11 +299,14 @@ namespace PrincesPalace
                     continue;
                 }
 
-                var target = page.Cards.FirstOrDefault(c => c.IsGear && SlotHoning.CanHone(run.slotHoning, c.RecipientId, c.Slot));
+                var target = page.Cards.FirstOrDefault(c => c.IsGear &&
+                    SlotHoning.PlusOf(run.slotHoning, c.RecipientId, c.Slot) + AddedAt(added, c) < ItemUpgrade.MaxPlus);
                 if (target != null)
                 {
-                    Hone(save, target.RecipientId, target.Slot);
-                    page.UnusedHones++;
+                    added[(target.RecipientId, target.Slot)] = AddedAt(added, target) + 1;
+                    int at = hones.FindIndex(h => h.RecipientId == target.RecipientId && h.Slot == target.Slot);
+                    if (at >= 0) hones[at] = new LeaveHone(target.RecipientId, target.Slot, hones[at].Count + 1);
+                    else hones.Add(new LeaveHone(target.RecipientId, target.Slot, 1));
                 }
                 else if (page.Cards.Count > 0)
                 {
@@ -274,10 +314,32 @@ namespace PrincesPalace
                 }
             }
 
-            page.UnusedGold = gold;
-            RunManager.CreditPayout(gold);
+            return new LeavePreview(hones, gold);
+        }
+
+        private static int AddedAt(Dictionary<(string, EquipmentSlot), int> added, PendingCard card) =>
+            added.TryGetValue((card.RecipientId, card.Slot), out int n) ? n : 0;
+
+        // Closes the page and pays what PreviewLeave says.
+        public static int Leave(SaveData save, PendingPage page)
+        {
+            var run = save?.activeRun;
+            if (run == null || page == null || page.Closed) return 0;
+
+            var preview = PreviewLeave(save, page);
+            foreach (var hone in preview.Hones)
+            {
+                for (int i = 0; i < hone.Count; i++)
+                {
+                    Hone(save, hone.RecipientId, hone.Slot);
+                    page.UnusedHones++;
+                }
+            }
+
+            page.UnusedGold = preview.Gold;
+            RunManager.CreditPayout(preview.Gold);
             page.Closed = true;
-            return gold;
+            return preview.Gold;
         }
 
         // A gear copy's sale price at this step (ShopPricing.SellPrice of its

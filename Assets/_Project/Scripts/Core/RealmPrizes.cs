@@ -48,51 +48,82 @@ namespace PrincesPalace
         // Pays the chip of the node the party just won. Does not persist:
         // SettleFight folds every write into one. Returns the lines the
         // Reckoning shows for it. A Gear or Relic chip is added to `chips`.
-        public static List<string> Pay(SaveData save, RunSnapshot run, RealmNode node, PageChips chips)
+        // `record`, when given, gets one PaidPrize for a chip that paid; it
+        // changes nothing about what is paid.
+        public static List<string> Pay(SaveData save, RunSnapshot run, RealmNode node, PageChips chips,
+            List<PaidPrize> record = null)
         {
             var notices = new List<string>();
             var chip = ChipOf(run, node);
+            var ids = new List<string>();
 
             switch (chip.Kind)
             {
                 case PrizeKind.Gold:
                     if (RunManager.CreditPayout(chip.Amount)) notices.Add(UiStrings.PrizePaidGold.Format(chip.Amount));
+                    Record(record, node, PrizeKind.Gold, chip.Amount);
                     break;
 
                 case PrizeKind.Consumable:
-                    notices.AddRange(PayConsumables(save, run, node, chip.Amount));
+                    notices.AddRange(PayConsumables(save, run, node, chip.Amount, ids));
+                    Record(record, node, PrizeKind.Consumable, chip.Amount, ids);
                     break;
 
                 case PrizeKind.Book:
-                    notices.AddRange(PayBook(run, node));
+                    notices.AddRange(PayBook(run, node, ids));
+                    Record(record, node, ids.Count > 0 ? PrizeKind.Book : PrizeKind.None, 0, ids);
                     break;
 
                 case PrizeKind.Item:
-                    if (chips != null && chips.GearFull) notices.AddRange(PayOverflow(run, node));
-                    else chips?.Gear.Add(ClassOf(node));
+                    if (chips != null && chips.GearFull)
+                    {
+                        notices.AddRange(PayOverflow(run, node, out int gold));
+                        Record(record, node, PrizeKind.Gold, gold);
+                    }
+                    else
+                    {
+                        chips?.Gear.Add(ClassOf(node));
+                        Record(record, node, PrizeKind.Item, 0);
+                    }
+
                     break;
 
                 case PrizeKind.Relic:
-                    if (chips != null && chips.RelicFull) notices.AddRange(PayOverflow(run, node));
-                    else chips?.AddRelic(ClassOf(node));
+                    if (chips != null && chips.RelicFull)
+                    {
+                        notices.AddRange(PayOverflow(run, node, out int gold));
+                        Record(record, node, PrizeKind.Gold, gold);
+                    }
+                    else
+                    {
+                        chips?.AddRelic(ClassOf(node));
+                        Record(record, node, PrizeKind.Relic, 0);
+                    }
+
                     break;
             }
 
             return notices;
         }
 
+        private static void Record(List<PaidPrize> record, RealmNode node, PrizeKind paid, int amount,
+            List<string> ids = null) =>
+            record?.Add(new PaidPrize(node.Prize, paid, amount, ids == null ? null : new List<string>(ids)));
+
         // A Gear or Relic chip past the page's card limit pays its node's gold
-        // instead, with the gold notice.
-        private static IEnumerable<string> PayOverflow(RunSnapshot run, RealmNode node)
+        // instead, with the gold notice. Eager, so `gold` is set on return.
+        private static List<string> PayOverflow(RunSnapshot run, RealmNode node, out int gold)
         {
-            int gold = RealmPrize.GoldFor(RealmOpening.StrengthOf(run, node.Id), run.legStartStep + node.Offset);
-            if (RunManager.CreditPayout(gold)) yield return UiStrings.PrizePaidGold.Format(gold);
+            gold = RealmPrize.GoldFor(RealmOpening.StrengthOf(run, node.Id), run.legStartStep + node.Offset);
+            var notices = new List<string>();
+            if (RunManager.CreditPayout(gold)) notices.Add(UiStrings.PrizePaidGold.Format(gold));
+            return notices;
         }
 
         // One book from the spell pool into unassignedSpellBooks, no
         // recipient. Drawn on the SpellDrop stream keyed to the node, so a
         // reload mid-settlement pays the same one.
-        private static IEnumerable<string> PayBook(RunSnapshot run, RealmNode node)
+        private static IEnumerable<string> PayBook(RunSnapshot run, RealmNode node, List<string> drawn)
         {
             var pool = BookPool(run);
             var rng = RngStreams.Open(run.runSeed, RngStreams.SpellDrop, run.legStartStep + node.Offset, node.Id);
@@ -101,12 +132,14 @@ namespace PrincesPalace
 
             run.unassignedSpellBooks ??= new List<string>();
             run.unassignedSpellBooks.Add(id);
+            drawn.Add(id);
             yield return UiStrings.PrizePaidItem.Format(ContentDatabase.GetSkill(id)?.Data.DisplayName ?? id);
         }
 
         // Each potion drawn from the authored consumables on the Prize
         // stream, so a reload mid-settlement pays the same ones.
-        private static IEnumerable<string> PayConsumables(SaveData save, RunSnapshot run, RealmNode node, int count)
+        private static IEnumerable<string> PayConsumables(SaveData save, RunSnapshot run, RealmNode node, int count,
+            List<string> drawn)
         {
             var pool = ContentDatabase.Consumables.Where(item => item != null).ToList();
             if (save == null || pool.Count == 0 || count <= 0) yield break;
@@ -117,6 +150,7 @@ namespace PrincesPalace
             {
                 var item = pool[rng.NextInt(0, pool.Count)];
                 InventoryOps.Add(save.stockpiledItems, item.id);
+                drawn.Add(item.id);
                 yield return UiStrings.PrizePaidItem.Format(item.displayName);
             }
         }

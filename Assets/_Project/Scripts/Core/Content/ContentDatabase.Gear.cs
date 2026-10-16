@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Equipment;
+using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Content
 {
@@ -28,9 +29,16 @@ namespace PrincesPalace.Content
         // How honed `slot` is for `character`: the run's slotHoning, which ends
         // with the run. Honing belongs to the slot, not to what it holds.
         // Outside a run (a profile screen, a character built by a test) there
-        // is none, and every slot reads +0.
-        public static int HoningOf(Character character, EquipmentSlot slot) =>
-            character == null ? 0 : SlotHoning.PlusOf(RunManager.Run?.slotHoning, character.definitionId, slot);
+        // is none, and every slot reads +0. A live HoningPreview adds to it,
+        // within 0..MaxPlus.
+        public static int HoningOf(Character character, EquipmentSlot slot)
+        {
+            if (character == null) return 0;
+
+            int plus = SlotHoning.PlusOf(RunManager.Run?.slotHoning, character.definitionId, slot)
+                       + HoningPreview.DeltaOf(character.definitionId, slot);
+            return plus < 0 ? 0 : plus > ItemUpgrade.MaxPlus ? ItemUpgrade.MaxPlus : plus;
+        }
 
         // The honing a candidate would wear at: its target slot's, since
         // honing belongs to the slot and not to what it holds.

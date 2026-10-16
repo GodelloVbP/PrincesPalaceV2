@@ -404,20 +404,8 @@ namespace PrincesPalace
             }
         }
 
-        // Whether this character has the row at all. A signature row for
-        // someone with no signature would read "-" beside a name that is not
-        // theirs, and regen for a Fixed pool would name an income that pool
-        // never takes from any source (its gain is authored, pools.json), the
-        // same rule SheetStats.FedBy states for Wisdom.
-        private bool StatApplies(SheetStat stat)
-        {
-            switch (stat)
-            {
-                case SheetStat.SignatureGain: return _hasSignature;
-                case SheetStat.ManaRegen: return _primaryPoolRule != PoolCapacityRule.Fixed;
-                default: return true;
-            }
-        }
+        private bool StatApplies(SheetStat stat) =>
+            ItemCompareRows.StatApplies(stat, _primaryPoolRule, _hasSignature);
 
         // The value as the row prints it. In a fight, a stat the fight has
         // moved reads "sheet -> now (source)" (plan C4), from the same base
@@ -434,46 +422,8 @@ namespace PrincesPalace
             return SheetStats.DisplayText(stat, value);
         }
 
-        // What a stat reads as RIGHT NOW, from the model. False means there
-        // is no number to show, which is not the same thing as zero.
         private static bool TryCurrentValue(Character character, SheetStat stat,
-                                            StatBlock stats, AbilityScoreBlock scores, out int value)
-        {
-            if (stat == SheetStat.MaxMana)
-            {
-                value = ContentDatabase.EffectiveMaxMana(character);
-                return true;
-            }
-
-            if (stat == SheetStat.SignatureGain)
-            {
-                var signature = ContentDatabase.BuildSignatureResource(character);
-                value = signature?.GainPerTurn ?? 0;
-                return signature != null;
-            }
-
-            value = SheetStats.ValueOf(stat, stats, scores);
-            return true;
-        }
-
-        // How far an equip would move a stat. The two pool rows are derived
-        // from Wisdom and Charisma, so an item that shifts a score shifts them
-        // too -- unless the pool is Fixed, when Wisdom moves nothing.
-        private int DeltaFor(SheetStat stat, ItemComparison comparison, AbilityScoreBlock previewScores)
-        {
-            switch (stat)
-            {
-                case SheetStat.MaxHealth: return comparison.StatDelta.maxHealth;
-                case SheetStat.Attack: return comparison.StatDelta.attack;
-                case SheetStat.Speed: return comparison.StatDelta.speed;
-                case SheetStat.ManaRegen: return comparison.StatDelta.manaRegen;
-                case SheetStat.PhysicalDefense: return comparison.StatDelta.physicalDefense;
-                case SheetStat.MagicalDefense: return comparison.StatDelta.magicalDefense;
-                case SheetStat.MaxMana:
-                case SheetStat.SignatureGain:
-                    return SheetStats.ScoreDelta(stat, _scores, previewScores, _primaryPoolRule);
-                default: return 0;
-            }
-        }
+                                            StatBlock stats, AbilityScoreBlock scores, out int value) =>
+            ItemCompareRows.TryCurrentValue(character, stat, stats, scores, out value);
     }
 }
