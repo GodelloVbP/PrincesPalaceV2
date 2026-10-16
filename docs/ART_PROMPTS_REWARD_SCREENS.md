@@ -372,6 +372,39 @@ Flat solid pure green #00FF00 background, no shadow, no gradient, no green
 anywhere in the crack.
 ```
 
+### A7. The reward spread (replaces the box): generate now
+
+Output: `reward_spread.png`. Keyed magenta. Replaces the gold 3:2 container
+(`Art/UI/Buttons/Processed/container_gold_3x2.png`, a flat black slab with
+a hairline border) behind the whole reward screen: the cards, the cache and
+the end-of-fight board all sit on it. Same 3:2 shape, so the layout stays.
+
+Attach:
+- `docs/captures/reward/five_ghosts_row.png` (the screen it goes behind; the black box with the gold line is what it replaces)
+- `Assets/_Project/Art/UI/Reckoning/reward_card_back.png` (match this cloth, its violet and its gold thread)
+- `Assets/_Project/Art/UI/Reckoning/reward_caches.png`
+
+```
+2D game art for a dark-fantasy roguelike's reward screen, matching the
+attached card back and cloth bundles exactly: the same flat cel shading,
+bold dark outlines, deep violet cloth and worn gold thread. Tender and
+handmade, not grim. No text, letters, numbers, UI, icons or watermark.
+
+One wide cloth laid flat, seen straight from above, filling a 3:2
+landscape image (1536x1024), highest resolution you can make: a large
+square of deep violet velvet, slightly worn, its hem stitched with worn
+gold thread and a few small loose threads at the corners, the edges
+softly frayed and gently uneven, NOT a hard rectangle. Its middle is a
+little lighter and smoother, as if smoothed by a paw, and it darkens
+gently toward the edges. Very quiet surface pattern: a faint woven
+texture only, nothing that competes with objects laid on top. A small
+embroidered cat's paw print in gold thread at the top centre of the hem.
+The cloth fills the image to within about 3% of each edge.
+
+Flat solid pure magenta #FF00FF background around the cloth, no shadow
+on it, no gradient, no magenta anywhere on the cloth.
+```
+
 ---
 
 ## Checks before Claude wires them
