@@ -8,11 +8,12 @@
   "statuses": "all",
   "stances": "all",
   "sheets": "all",
+  "scenarios": [{"kind": "fightend", "id": "normal"}, {"kind": "fightend", "id": "elite"}, {"kind": "fightend", "id": "boss"}],
   "stills": [
     {"class": "MainMenuCaptureTests", "files": ["main_menu_no_save.png", "main_menu_with_save.png", "settings_modal.png"]},
     {"class": "MapCaptureTests", "files": ["MapWithALeg.png", "MapMidWalk.png"]},
     {"class": "ShopCaptureTests", "files": ["Shop.png", "Shop_pack.png", "Shop_gear_selected.png"]},
-    {"class": "ReckoningTooltipCaptureTests", "files": ["Reckoning_selected_tooltip.png"]},
+    {"class": "ReckoningCaptureTests", "files": ["Reckoning_nocache_page.png", "Reckoning_cache_toptier_page.png", "Reckoning_five_ghosts_page.png", "Reckoning_board.png", "Reckoning_outcome_board.png"]},
     {"class": "SystemMenuCaptureTests", "files": ["SystemMenu_skeleton.png", "SystemMenu_options.png", "SystemMenu_glossary.png", "SystemMenu_character_loadout.png", "SystemMenu_party_camp_default.png", "SystemMenu_run.png"]},
     {"class": "EventsM6CaptureTests", "files": ["m6_a_speaker_right_fallback_16x9.png", "m6_d_legacy_frame_960x540_16x9.png", "m6_e_fight_toll_1_16x9.png"]},
     {"class": "DialogueStageCaptureTests", "files": ["dialogue_a_shawn_left_16x9.png", "dialogue_e_choices_16x9.png", "dialogue_i_legacy_mechanics_16x9.png"]},
