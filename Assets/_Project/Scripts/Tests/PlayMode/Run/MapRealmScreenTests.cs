@@ -163,61 +163,6 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
-        public IEnumerator TwoOpenRoutesAreComparedSideBySide()
-        {
-            yield return StandAtASkippableChoice();
-
-            var choices = RunManager.Choices();
-            Assert.AreEqual(2, choices.Count, "fixture: the pocket and the spine's next room");
-            var graph = MapGraph.Of(RunManager.Map);
-            var left = choices.OrderBy(n => graph.PositionOf(n.Id).X).First();
-            var right = choices.OrderBy(n => graph.PositionOf(n.Id).X).Last();
-
-            var preview = Named("MapPreviewPanel");
-            var compare = Named("MapComparePanel");
-
-            Focus(NodeObject(left));
-            yield return null;
-
-            Assert.IsTrue(preview.activeSelf);
-            Assert.IsTrue(compare.activeSelf, "two routes are open and the second card is missing");
-            StringAssert.StartsWith(MapNodeCard.Caption(left.Type), Named("MapPreviewTitle").GetComponent<TMP_Text>().text);
-            StringAssert.StartsWith("OR", Named("MapCompareTitle").GetComponent<TMP_Text>().text);
-            StringAssert.Contains(MapNodeCard.Caption(right.Type), Named("MapCompareTitle").GetComponent<TMP_Text>().text);
-            Assert.Less(((RectTransform)preview.transform).anchoredPosition.x, 0f);
-            Assert.Greater(((RectTransform)compare.transform).anchoredPosition.x, 0f);
-
-            // The pair swap when the other route is the one in focus.
-            Blur(NodeObject(left));
-            Focus(NodeObject(right));
-            yield return null;
-            StringAssert.StartsWith(MapNodeCard.Caption(right.Type), Named("MapPreviewTitle").GetComponent<TMP_Text>().text);
-            StringAssert.Contains(MapNodeCard.Caption(left.Type), Named("MapCompareTitle").GetComponent<TMP_Text>().text);
-
-            Blur(NodeObject(right));
-            yield return null;
-            Assert.IsFalse(preview.activeSelf);
-            Assert.IsFalse(compare.activeSelf, "losing focus left the second card up");
-        }
-
-        [UnityTest]
-        public IEnumerator AOneRouteRealmShowsASingleCenteredCard()
-        {
-            // The entry of a fresh run offers one room on most seeds.
-            ulong seed = RealmPaths.SeedWhere(
-                map => map.ReachableFrom(map.Entry.Id).Count == 1, "an entry with a single exit");
-            yield return OpenTheMap(seed);
-
-            var choice = RunManager.Choices().Single();
-            Focus(NodeObject(choice));
-            yield return null;
-
-            Assert.IsTrue(Named("MapPreviewPanel").activeSelf);
-            Assert.IsFalse(Named("MapComparePanel").activeSelf, "there is nothing to compare a lone route with");
-            Assert.AreEqual(0f, ((RectTransform)Named("MapPreviewPanel").transform).anchoredPosition.x, 0.01f);
-        }
-
-        [UnityTest]
         public IEnumerator SkippingAPocketVeilsItsRooms_AndEnteringItVeilsNothing()
         {
             yield return StandAtASkippableChoice();
@@ -237,9 +182,6 @@ namespace PrincesPalace.PlayModeTests
                     $"node {node.Id} ({node.Role}) veil under the spine choice");
             }
 
-            StringAssert.Contains("closes off",
-                Named("MapPreviewBody").GetComponent<TMP_Text>().text, "the card says what the choice shuts");
-
             Blur(NodeObject(spineNext));
             yield return null;
             Assert.IsFalse(map.Nodes.Any(Veiled), "losing focus left fog behind");
@@ -247,7 +189,6 @@ namespace PrincesPalace.PlayModeTests
             Focus(NodeObject(head));
             yield return null;
             Assert.IsFalse(map.Nodes.Any(Veiled), "a pocket rejoins the spine, so it closes nothing");
-            StringAssert.DoesNotContain("closes off", Named("MapPreviewBody").GetComponent<TMP_Text>().text);
         }
 
         // ---- the heart -----------------------------------------------------------
@@ -380,27 +321,24 @@ namespace PrincesPalace.PlayModeTests
             Assert.GreaterOrEqual(tile.color.r, 0.9f, "the entry's tile is darkened to the wood's colour");
         }
 
-        // Header text never meets a node: the bar covers what scrolls under it, so
-        // every header element has to sit inside the bar.
+        // The top-right stack sits clear of the room message, and no header bar,
+        // abandon button, attention badge or detail card is built.
         [UnityTest]
-        public IEnumerator EveryHeaderElementSitsInsideTheOpaqueBar()
+        public IEnumerator TheMapCarriesNoBarButtonBadgeOrCards()
         {
             yield return OpenTheMap();
 
-            var corners = new Vector3[4];
-            var bar = Named("MapHeaderBar");
-            Assert.IsNotNull(bar, "no header bar");
-            ((RectTransform)bar.transform).GetWorldCorners(corners);
-            float barBottom = corners[0].y;
-
-            foreach (var name in new[] { "MapTitleLabel", "MapDepthLabel", "MapGoldLabel", "MapOverviewLabel",
-                         "AbandonRunButton", "MapAttentionBadge", "MapRoomMessageLabel" })
+            foreach (var name in new[] { "MapHeaderBar", "MapHeaderFade", "AbandonRunButton", "MapAttentionBadge",
+                         "MapAttentionLabel", "MapPreviewPanel", "MapComparePanel" })
             {
-                var go = Named(name);
-                Assert.IsNotNull(go, name);
-                ((RectTransform)go.transform).GetWorldCorners(corners);
-                Assert.GreaterOrEqual(corners[0].y, barBottom - 0.5f, $"{name} reaches below the header bar");
+                Assert.IsNull(Named(name), name + " is back on the map");
             }
+
+            var corners = new Vector3[4];
+            ((RectTransform)Named("MapOverviewLabel").transform).GetWorldCorners(corners);
+            float stackBottom = corners[0].y;
+            ((RectTransform)Named("MapRoomMessageLabel").transform).GetWorldCorners(corners);
+            Assert.GreaterOrEqual(stackBottom, corners[1].y - 0.5f, "the top-right stack runs into the room message");
         }
 
         // ---- the easing ----------------------------------------------------------

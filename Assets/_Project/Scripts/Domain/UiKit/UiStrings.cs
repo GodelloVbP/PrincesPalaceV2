@@ -313,7 +313,6 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("map.gold", "{0} GOLD", "99999 GOLD");
         public static readonly UiString MapGoldBanked =
             UiString.Define("map.gold_banked", "{0} GOLD  ·  {1} BANKED", "99999 GOLD  ·  99999 BANKED");
-        public static readonly UiString MapAbandon = UiString.Define("map.abandon", "Abandon Run");
         // The map's hint that somebody wants looking at (plan C20): what waits,
         // from CharacterAttention, and the key that opens the menu on it. Only
         // the reasons that hold are named, so the sample is all three.
@@ -336,47 +335,7 @@ namespace PrincesPalace.Domain.UiKit
         // the refusal when that room is pressed.
         public static readonly UiString MapYouAreHere = UiString.Define("map.here", "YOU ARE HERE");
 
-        // What a room shows when it is hovered or focused (MapNodeCard.Body).
-        // Only what the run has already decided: the enemies and the stash are
-        // fixed by the seed, a shop's stock and an event's page are not.
-        public static readonly UiString MapPreviewEnemies =
-            UiString.Define("map.preview.enemies", "Enemies: {0}", "Enemies: Hollow Treant ×2, Giant Rat ×2");
-        public static readonly UiString MapPreviewReward =
-            UiString.Define("map.preview.reward", "Pays {0} gold · {1} exp", "Pays 99999 gold · 99999 exp");
-        public static readonly UiString MapPreviewTreasure =
-            UiString.Define("map.preview.treasure", "A stash of {0} gold.", "A stash of 999 gold.");
-        public static readonly UiString MapPreviewRest =
-            UiString.Define("map.preview.rest", "The squad rests and recovers to full health.");
-        public static readonly UiString MapPreviewShop =
-            UiString.Define("map.preview.shop", "A trader. The stock is set when you step in.");
-        public static readonly UiString MapPreviewEvent =
-            UiString.Define("map.preview.event", "Something waits here. What, you learn when you step in.");
-        public static readonly UiString MapPreviewCache =
-            UiString.Define("map.preview.cache", "A cache. Gold banked here survives a death.");
-        public static readonly UiString MapPreviewStart =
-            UiString.Define("map.preview.start", "Where this stretch of the descent began.");
-        // The realm's facts on the card (docs/PLAN_RUN_MAP.md sections 2-3).
-        public static readonly UiString MapPreviewStrength =
-            UiString.Define("map.preview.strength", "{0}  ·  STRENGTH {1}", "TREASURE  ·  STRENGTH 3");
-        public static readonly UiString MapPreviewPrizeGold =
-            UiString.Define("map.preview.prize.gold", "Prize: {0} gold", "Prize: 99999 gold");
-        public static readonly UiString MapPreviewPrizePotion =
-            UiString.Define("map.preview.prize.potion", "Prize: a potion");
-        public static readonly UiString MapPreviewPrizePotions =
-            UiString.Define("map.preview.prize.potions", "Prize: {0} potions", "Prize: 9 potions");
-        public static readonly UiString MapPreviewPrizeGear =
-            UiString.Define("map.preview.prize.gear", "Prize: gear");
-        public static readonly UiString MapPreviewPrizeBook =
-            UiString.Define("map.preview.prize.book", "Prize: a spell book");
-        public static readonly UiString MapPreviewPrizeRelic =
-            UiString.Define("map.preview.prize.relic", "Prize: a relic");
-        public static readonly UiString MapPreviewSkipHeal =
-            UiString.Define("map.preview.skip_heal", "Walking past the detour heals the squad {0}%.",
-                "Walking past the detour heals the squad 99%.");
-        public static readonly UiString MapPreviewAnchor =
-            UiString.Define("map.preview.anchor", "Left alive, it guards the boss.");
-        // The prize chip on a node: short, because it is a badge and the card
-        // has the full line.
+        // The prize chip on a node.
         public static readonly UiString MapChipGold =
             UiString.Define("map.chip.gold", "{0} G", "99999 G");
         public static readonly UiString MapChipPotion =
@@ -386,16 +345,6 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString MapChipGear = UiString.Define("map.chip.gear", "GEAR");
         public static readonly UiString MapChipBook = UiString.Define("map.chip.book", "BOOK");
         public static readonly UiString MapChipRelic = UiString.Define("map.chip.relic", "RELIC");
-        // Shown on the second card when two routes are open; the card names
-        // which one it is.
-        public static readonly UiString MapCompareOther =
-            UiString.Define("map.compare.other", "OR  {0}", "OR  TREASURE  ·  STRENGTH 3");
-        // Said on the card of a route that shuts others off, only when it does.
-        public static readonly UiString MapPreviewCloses =
-            UiString.Define("map.preview.closes", "Taking this closes off {0} other rooms.",
-                "Taking this closes off 99 other rooms.");
-        public static readonly UiString MapPreviewClosesOne =
-            UiString.Define("map.preview.closes_one", "Taking this closes off 1 other room.");
         public static readonly UiString MapOverview =
             UiString.Define("map.overview", "OVERVIEW  ·  LOOK ONLY  ·  Y TO RETURN");
         public static readonly UiString MapOverviewHint =

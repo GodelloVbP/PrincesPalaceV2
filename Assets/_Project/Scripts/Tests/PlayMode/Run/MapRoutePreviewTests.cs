@@ -15,9 +15,9 @@ using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace.PlayModeTests
 {
-    // What the map tells a player choosing a route (AUDIT #226, #254): the card
-    // for a hovered or focused room, the cue only where a press works, the
-    // reason a refused press gives, and the book nudge.
+    // What the map tells a player choosing a route (AUDIT #226, #254): the facts
+    // behind each room, the cue only where a press works, and the
+    // reason a refused press gives.
     public class MapRoutePreviewTests
     {
         private string _root;
@@ -88,14 +88,6 @@ namespace PrincesPalace.PlayModeTests
             { RoomType.Entry, "START" }, { RoomType.Fight, "FIGHT" }, { RoomType.EliteFight, "ELITE" },
             { RoomType.Boss, "BOSS" }, { RoomType.Treasure, "TREASURE" }, { RoomType.Rest, "REST" },
             { RoomType.Shop, "SHOP" }, { RoomType.Event, "EVENT" },
-        };
-
-        private static readonly Dictionary<RoomType, string> BodyStartByType = new Dictionary<RoomType, string>
-        {
-            { RoomType.Entry, "Where this stretch" }, { RoomType.Fight, "Enemies: " },
-            { RoomType.EliteFight, "Enemies: " }, { RoomType.Boss, "Enemies: " },
-            { RoomType.Treasure, "A stash of " }, { RoomType.Rest, "The squad rests" },
-            { RoomType.Shop, "A trader." }, { RoomType.Event, "Something waits here." },
         };
 
         // ---- the data ------------------------------------------------------------
@@ -267,66 +259,6 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(1, checkedSeeds, "no seed under 4000 rolls the same event for two rooms");
         }
 
-        // ---- the card ------------------------------------------------------------
-
-        [UnityTest]
-        public IEnumerator HoveringAnyRoomShowsItsCardAndLeavingHidesIt()
-        {
-            var seen = new HashSet<RoomType>();
-
-            foreach (ulong seed in new ulong[] { 4242, 7, 99 })
-            {
-                yield return OpenTheMap(seed);
-                var panel = Named("MapPreviewPanel");
-                Assert.IsFalse(panel.activeSelf, "the card should start hidden");
-
-                foreach (var node in RunManager.Map.Nodes)
-                {
-                    var go = NodeObject(node);
-                    Pointer(go, true);
-                    yield return null;
-
-                    Assert.IsTrue(panel.activeSelf, $"no card for {node.Type} (seed {seed})");
-                    StringAssert.StartsWith(TitleByType[node.Type], Named("MapPreviewTitle").GetComponent<TMP_Text>().text);
-                    // An event room's body is the title its roll will open with.
-                    string title = node.Type == RoomType.Event
-                        ? MapNodePreview.For(RunManager.Run, node).EventTitle
-                        : "";
-                    StringAssert.StartsWith(title.Length > 0 ? title : BodyStartByType[node.Type],
-                        Named("MapPreviewBody").GetComponent<TMP_Text>().text, $"{node.Type} (seed {seed})");
-                    seen.Add(node.Type);
-
-                    Pointer(go, false);
-                    yield return null;
-                    Assert.IsFalse(panel.activeSelf, $"the card stayed up after leaving {node.Type}");
-                }
-            }
-
-            Assert.GreaterOrEqual(seen.Count, 5, "three legs covered too few room types to trust this");
-            CollectionAssert.Contains(seen, RoomType.Entry);
-            CollectionAssert.Contains(seen, RoomType.Boss);
-        }
-
-        [UnityTest]
-        public IEnumerator PadFocusShowsTheSameCardAsThePointer()
-        {
-            yield return OpenTheMap();
-
-            var choice = RunManager.Choices().First();
-            var go = NodeObject(choice);
-            var panel = Named("MapPreviewPanel");
-
-            ExecuteEvents.Execute(go, new BaseEventData(EventSystem.current), ExecuteEvents.selectHandler);
-            yield return null;
-
-            Assert.IsTrue(panel.activeSelf, "focusing a room showed no card");
-            StringAssert.StartsWith(TitleByType[choice.Type], Named("MapPreviewTitle").GetComponent<TMP_Text>().text);
-
-            ExecuteEvents.Execute(go, new BaseEventData(EventSystem.current), ExecuteEvents.deselectHandler);
-            yield return null;
-            Assert.IsFalse(panel.activeSelf, "losing focus left the card up");
-        }
-
         // ---- the cue -------------------------------------------------------------
 
         [UnityTest]
@@ -423,36 +355,6 @@ namespace PrincesPalace.PlayModeTests
 
             for (float waited = 0f; waited < 5f && _map.IsWalking; waited += Time.deltaTime) yield return null;
             Assert.IsFalse(_map.IsWalking, "the walk should have finished");
-        }
-
-        // ---- the book nudge ------------------------------------------------------
-
-        [UnityTest]
-        public IEnumerator TheNudgeIsABigBadgeShownExactlyWhenSomethingWaits()
-        {
-            yield return OpenTheMap();
-
-            var badge = Named("MapAttentionBadge");
-            var label = Named("MapAttentionLabel").GetComponent<TMP_Text>();
-            var bear = SaveSlotManager.CurrentSave.roster.First(c => c.definitionId == "bear");
-
-            bear.unspentStatPoints = 0;
-            _map.Refresh();
-            Assert.IsFalse(badge.activeSelf, "the badge shows with nothing waiting");
-            Assert.IsFalse(label.gameObject.activeSelf);
-
-            bear.unspentStatPoints = 2;
-            _map.Refresh();
-            Assert.IsTrue(badge.activeSelf, "the badge is missing with points to spend");
-            Assert.IsTrue(label.gameObject.activeSelf);
-            Assert.GreaterOrEqual(label.fontSize, 26f, "the nudge is back to a small line");
-
-            var size = ((RectTransform)badge.transform).rect.size;
-            // 560 wide: the badge moved out of the bottom strip to make room
-            // for the pair of detail cards, and under the abandon button there
-            // is no room for the 760 it had.
-            Assert.GreaterOrEqual(size.x, 540f);
-            Assert.GreaterOrEqual(size.y, 80f);
         }
     }
 }

@@ -140,8 +140,8 @@ namespace PrincesPalace.Domain.UiKit
         public static float MaxContentHeight => ContentHeight(MaxRows);
 
         // Where the CURRENT room sits below the viewport's top edge once the
-        // camera has caught up: under the top band, with the next two rows
-        // above the detail card.
+        // camera has caught up: under the top band, with the next rows
+        // below it.
         public const float FollowOffset = TopMargin;
 
         // Auto-scroll, as how far the content has moved UP: positive, clamped
@@ -180,19 +180,14 @@ namespace PrincesPalace.Domain.UiKit
 
         public static float BackgroundTileY(int index) => -index * BackgroundTileHeight;
 
-        // THE HEADER BAND. The floor, the realm name, the gold, the hints and
-        // the attention badge and room message all live in the top band, and
-        // none of them may ever sit on a node or its chip. The screen draws an
-        // opaque bar this tall over the scrolling wood (MapScreen.BuildHeaderBar),
-        // so whatever scrolls under it is hidden, not overlapped, and the first
-        // row (TopMargin) still stands clear below it.
+        // THE HEADER BAND: the top strip the top-right stack (floor, depth,
+        // gold, overview hint) and the room message occupy. It paints nothing;
+        // the overview keeps the realm below it and the first row (TopMargin)
+        // stands clear of it.
         public const float HeaderBand = 220f;
 
-        // A soft edge under the bar, so the wood does not end on a hard line.
-        public const float HeaderFade = 48f;
-
-        // The overview's zoom: the whole realm between the header band and the
-        // detail cards, never magnified.
+        // The overview's zoom: the whole realm below the header band and above
+        // the bottom inset, never magnified.
         public const float OverviewTopInset = HeaderBand + 10f;
         public const float OverviewBottomInset = 190f;
 

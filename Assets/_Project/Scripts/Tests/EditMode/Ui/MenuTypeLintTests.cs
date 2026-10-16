@@ -51,7 +51,6 @@ namespace PrincesPalace.Domain.Tests
             new Scope("system menu: frame and every pane", () => SystemMenuScreen.Build().Root, MenuMinimumNodes, null),
             new Scope("reckoning relics tab", () => ReckoningScreen.Build().Root, 15, "ReckoningRelic"),
             new Scope("relic draft held strip", () => RelicDraftScreen.Build().Root, 9, "DraftHeld"),
-            new Scope("map attention hint", () => MapScreen.Build().Root, 1, "MapAttention"),
         };
 
         // What the whole menu checks today is 627 labels and buttons; a walk

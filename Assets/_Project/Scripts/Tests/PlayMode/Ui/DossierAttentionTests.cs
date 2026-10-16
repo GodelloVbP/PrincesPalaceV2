@@ -12,9 +12,8 @@ using PrincesPalace.Domain.UiKit;
 namespace PrincesPalace.PlayModeTests
 {
     // THE PIPS (plan C20): a strip chip lights when its character wants looking
-    // at, a rail row when that section is what they are owed, and the map says
-    // how many characters carry one. Each is driven through the control a
-    // player presses, and each must clear (or light) with no help from the
+    // at, a rail row when that section is what they are owed. Each is driven
+    // through the control a player presses, and each must clear (or light) with no help from the
     // test: the pips follow the change, they are not repainted by hand.
     //
     // THE RULE ITSELF is CharacterAttentionTests' (EditMode); this proves the
@@ -273,69 +272,6 @@ namespace PrincesPalace.PlayModeTests
             AssertRail(false, false, false, "a book waiting and every slot full");
             Assert.IsFalse(Lit(ChipPipOf(Shawn)), "every slot full: Shawn's chip");
             Assert.IsFalse(Lit(ChipPipOf(Odette)), "every slot full: Odette's chip");
-        }
-
-        // ---- the map's hint ------------------------------------------------------------------------
-
-        private static bool HintShown => Resources.FindObjectsOfTypeAll<Transform>()
-            .First(t => t.name == "MapAttentionLabel" && t.gameObject.scene.IsValid()).gameObject.activeSelf;
-
-        [UnityTest]
-        public IEnumerator TheMapCountsTheCharactersTheStripPipsAndRepaintsWhenTheMenuCloses()
-        {
-            yield return OpenInADescent();
-
-            Assert.IsTrue(HintShown, "a book waiting, and the map said nothing");
-            Assert.AreEqual("Books to place — press Start", DossierPane.TextOf("MapAttentionLabel"),
-                "a book waits, and nothing else is owed: the hint names that alone");
-
-            yield return OpenLoadoutOf(Shawn);
-            DossierPane.Press(DossierPane.PackBookCell(_dossier, Book));
-            _menu.Close();
-            yield return null;
-
-            Assert.IsFalse(HintShown, "the book was placed and the map went on asking for it");
-
-            yield return OpenLoadoutOf(Shawn);
-            DossierPane.Press("DossierBook0");
-            _menu.Close();
-            yield return null;
-
-            Assert.IsTrue(HintShown, "the book came back to the pack and the map did not say so");
-            Assert.AreEqual("Books to place — press Start", DossierPane.TextOf("MapAttentionLabel"));
-        }
-
-        [UnityTest]
-        public IEnumerator APointToSpendIsOnTheMapToo()
-        {
-            yield return OpenInADescent();
-            RunManager.Run.unassignedSpellBooks.Clear();
-            SaveSlotManager.CurrentSave.roster.First(c => c.definitionId == Bjorn).unspentStatPoints = 2;
-
-            yield return OpenLoadoutOf(Bjorn);
-            _menu.Close();
-            yield return null;
-
-            Assert.IsTrue(HintShown, "two points to spend and the map said nothing");
-            Assert.AreEqual("Points to spend — press Start", DossierPane.TextOf("MapAttentionLabel"),
-                "a point is owed and no book waits: only the point is named");
-        }
-
-        [UnityTest]
-        public IEnumerator TheMapNamesEveryReasonThatHoldsInThePipsOwnOrder()
-        {
-            yield return OpenInADescent();
-            var save = SaveSlotManager.CurrentSave;
-            save.roster.First(c => c.definitionId == Bjorn).unspentStatPoints = 2;
-            save.roster.First(c => c.definitionId == Odette).claimedTrackLevel = 25;
-
-            yield return OpenLoadoutOf(Bjorn);
-            _menu.Close();
-            yield return null;
-
-            Assert.AreEqual("Points to spend · Rewards waiting · Books to place — press Start",
-                DossierPane.TextOf("MapAttentionLabel"),
-                "a point (Bjorn), a reward (Odette) and a book (Shawn) all wait");
         }
 
         // The carried figure is not the fight's: outside a fight the rail's

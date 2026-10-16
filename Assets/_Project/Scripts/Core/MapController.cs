@@ -56,18 +56,6 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text overviewLabel;
         [SerializeField] internal TMP_Text depthLabel;
         [SerializeField] internal TMP_Text goldLabel;
-        [SerializeField] internal TMP_Text attentionLabel;
-        [SerializeField] internal GameObject attentionBadge;
-
-        // The card for the hovered or focused room (MapNodeCard.Body), shown
-        // through _preview so pad focus outranks the pointer, and a second one
-        // for the other route while two are open.
-        [SerializeField] internal GameObject previewPanel;
-        [SerializeField] internal TMP_Text previewTitle;
-        [SerializeField] internal TMP_Text previewBody;
-        [SerializeField] internal GameObject comparePanel;
-        [SerializeField] internal TMP_Text compareTitle;
-        [SerializeField] internal TMP_Text compareBody;
 
         // What the room the party just walked into did. Empty between rooms,
         // rather than left showing the last one's result under a new heading.
@@ -78,7 +66,6 @@ namespace PrincesPalace
         // walking back to the hub to swap a breastplate was what made having it
         // in the fight only half an answer.
         [SerializeField] internal GameObject characterSheetPanel;
-        [SerializeField] internal Button abandonButton;
 
         // The in-run shop, mounted here too (F10, docs/PLAN_SHOP.md) --
         // entered from the map, no scene of its own, opened and closed by
@@ -176,8 +163,6 @@ namespace PrincesPalace
             RegisterNavContext();
             _preview.Attach(NavigationInputModule.Contexts);
 
-            if (systemMenu != null) systemMenu.Closed += RefreshAttention;
-
             // A debug grant can move the gold, the pending-book count and the
             // leg itself; the map repaints after each one rather than on the
             // next room.
@@ -216,8 +201,8 @@ namespace PrincesPalace
                 var node = button.gameObject;
                 button.onClick.AddListener(() => OnNodePressed(index));
 
-                // The detail card follows pointer and pad focus alike, through
-                // the router that already decides which of the two owns a card.
+                // The veil follows pointer and pad focus alike, through
+                // the router that already decides which of the two owns focus.
                 _preview.Register(button, shown => ShowPreview(index, shown));
                 var hover = node.GetComponent<HoverIndex>() ?? node.AddComponent<HoverIndex>();
                 hover.Changed = (_, entered) => _preview.Pointer(node, entered);
@@ -228,16 +213,6 @@ namespace PrincesPalace
                 click.Clicked = _ => RefuseIfNotOffered(index);
             }
 
-            // Opens the menu on its Exit tab rather than ending the run: the
-            // Exit pane's hold-to-abandon is the one gesture that gives up a
-            // descent (AUDIT #219; the hub's corner button does the same).
-            abandonButton.onClick.AddListener(OpenExitTab);
-        }
-
-        internal void OpenExitTab()
-        {
-            if (!SystemMenuController.OpenFromRoot(systemMenu)) return;
-            systemMenu.Select(SystemMenuTab.Exit);
         }
 
         // ---- the character sheet, between rooms --------------------------------
@@ -257,13 +232,6 @@ namespace PrincesPalace
 
         private void Update()
         {
-            // The hint names a key, and the key follows the device in hand.
-            if (attentionLabel != null && attentionLabel.gameObject.activeSelf
-                && _attentionPad != NavigationInputModule.LastInputWasPad)
-            {
-                RefreshAttention();
-            }
-
             if (NavigationInputModule.Contexts != null && !NavigationInputModule.Contexts.IsTop(_navContext))
             {
                 return;
@@ -307,37 +275,8 @@ namespace PrincesPalace
         // reaches the menu's own handler, never this.
         private void HandleSystemMenu() => SystemMenuController.OpenFromRoot(systemMenu);
 
-        // THE MAP'S HINT THAT A CHARACTER WANTS LOOKING AT (plan C20): what
-        // waits, from the same model and the same feed as the strip's pips, so
-        // it names only what the player will find lit. Neither the shop nor the
-        // menu is guaranteed to be the next thing opened after a purchase or a
-        // drop, so the map says so; it is repainted when the menu closes
-        // because that is when the answer moves, and when the last input
-        // changes device because the key it names changes with it.
-        private void RefreshAttention()
-        {
-            if (attentionLabel == null) return;
-
-            var run = RunManager.Run;
-            var reasons = run == null
-                ? AttentionReasons.None
-                : CharacterAttentionFeed.ReasonsFor(SaveSlotManager.CurrentSave, run);
-
-            _attentionPad = NavigationInputModule.LastInputWasPad;
-            attentionLabel.gameObject.SetActive(reasons != AttentionReasons.None);
-            if (attentionBadge != null) attentionBadge.SetActive(reasons != AttentionReasons.None);
-            if (reasons != AttentionReasons.None)
-            {
-                attentionLabel.Set(UiStrings.MapAttention, AttentionHint.Named(reasons),
-                    AttentionHint.Key(PromptGlyphs.DeviceFor(_attentionPad)));
-            }
-        }
-
-        private bool _attentionPad;
-
         private void OnDestroy()
         {
-            if (systemMenu != null) systemMenu.Closed -= RefreshAttention;
             _preview.Detach();
             ReleaseEasingMaterial();
 
@@ -429,8 +368,6 @@ namespace PrincesPalace
                 if (heartBackdrop != null) heartBackdrop.gameObject.SetShown(false);
                 fog.gameObject.SetShown(false);
                 walker.gameObject.SetShown(false);
-                if (attentionLabel != null) attentionLabel.gameObject.SetActive(false);
-                if (attentionBadge != null) attentionBadge.SetActive(false);
                 RefreshNavLinks(null, null);
                 return;
             }
@@ -451,8 +388,6 @@ namespace PrincesPalace
             if (run.bankedGold > 0) goldLabel.Set(UiStrings.MapGoldBanked, run.gold, run.bankedGold);
             else goldLabel.Set(UiStrings.MapGold, run.gold);
             overviewLabel.Set(_overview ? UiStrings.MapOverview : UiStrings.MapOverviewHint);
-
-            RefreshAttention();
 
             // Painted from the LAST resolved room, which Arrive has already
             // written by the time this runs. A fight clears it on the way out,
@@ -774,7 +709,7 @@ namespace PrincesPalace
         // clamped to the content.
         private float OverviewScroll(MapGraph graph, float scale, float focusY)
         {
-            // The realm sits between the header band and the cards: a realm
+            // The realm sits between the header band and the bottom inset: a realm
             // that fits is pushed DOWN by the top inset (a negative scroll).
             float height = viewport.rect.height;
             float min = -MapLayout.OverviewTopInset;
@@ -1036,7 +971,7 @@ namespace PrincesPalace
             button.interactable = isReachable || _overview;
 
             // The hover/focus rim answers only where a press does something;
-            // the detail card still follows every room (ShowPreview).
+            // the focus veil still follows every room (ShowPreview).
             var rim = button.GetComponent<HoverBox>();
             if (rim != null) rim.enabled = isReachable && !_overview;
 
@@ -1133,73 +1068,31 @@ namespace PrincesPalace
             return Graph(map).At(index);
         }
 
-        // ---- the detail card ------------------------------------------------------
+        // ---- the focused room -------------------------------------------------------
 
         private readonly TooltipFocusRouter _preview = new TooltipFocusRouter();
 
-        // The focused room's card, and while two routes are open a second one
-        // beside it for the other route, so the choice reads side by side. A
-        // choice that shuts rooms off also veils them under fog.
+        // The focused room veils the rooms its choice would close off, under
+        // fog, and in the overview scrolls to it. Nothing is written out: the
+        // room's own caption, chip and veil carry what it holds.
         private void ShowPreview(int index, bool shown)
         {
-            if (previewPanel == null) return;
-
             var node = shown ? NodeAt(index) : null;
             if (node == null || RunManager.Run == null)
             {
-                previewPanel.SetActive(false);
-                if (comparePanel != null) comparePanel.SetActive(false);
                 ApplyVeil(null);
                 return;
             }
 
-            var run = RunManager.Run;
             var map = RunManager.Map;
             var current = RunManager.CurrentNode;
             var choices = RunManager.Choices();
             bool isChoice = !_overview && current != null && choices.Any(c => c.Id == node.Id);
 
             var closed = isChoice ? map.ClosedBy(current.Id, node.Id) : new HashSet<int>();
-            var facts = MapNodePreview.For(run, node).WithCloses(closed.Count);
-            previewTitle.SetContent(MapNodeCard.Title(facts));
-            previewBody.SetContent(MapNodeCard.Body(facts));
-            previewPanel.SetActive(true);
-
-            RealmNode other = null;
-            if (isChoice && choices.Count >= 2 && comparePanel != null)
-            {
-                var graph = Graph(map);
-                var ordered = choices.OrderBy(c => graph.PositionOf(c.Id).X).ThenBy(c => c.Id).ToList();
-                int at = ordered.FindIndex(c => c.Id == node.Id);
-                other = ordered[(at + 1) % ordered.Count];
-            }
-
-            if (other != null)
-            {
-                var otherClosed = map.ClosedBy(current.Id, other.Id);
-                var otherFacts = MapNodePreview.For(run, other).WithCloses(otherClosed.Count);
-                compareTitle.SetContent(MapNodeCard.OtherTitle(otherFacts));
-                compareBody.SetContent(MapNodeCard.Body(otherFacts));
-            }
-
-            if (comparePanel != null) comparePanel.SetActive(other != null);
-            SetCardPlaces(other != null);
             ApplyVeil(closed);
 
             if (_overview) FocusOverviewOn(node);
-        }
-
-        // One card sits centred; a pair sit either side of the middle.
-        private void SetCardPlaces(bool paired)
-        {
-            float half = (previewPanel.transform as RectTransform).sizeDelta.x * 0.5f + 10f;
-            var preview = (RectTransform)previewPanel.transform;
-            preview.anchoredPosition = new Vector2(paired ? -half : 0f, preview.anchoredPosition.y);
-            if (comparePanel != null)
-            {
-                var compare = (RectTransform)comparePanel.transform;
-                compare.anchoredPosition = new Vector2(half, compare.anchoredPosition.y);
-            }
         }
 
         // Fog over the rooms the focused choice would close off, trails

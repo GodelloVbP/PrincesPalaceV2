@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using PrincesPalace.Domain.Dungeon;
 
 namespace PrincesPalace.Domain.UiKit
@@ -93,8 +92,8 @@ namespace PrincesPalace.Domain.UiKit
                 GuardsHeart, ClosesRooms, title);
     }
 
-    // THE WORDS ON THE MAP'S ROOMS: the caption under each tile, the detail
-    // shown for a hovered or focused one, and the reason a refused press gives.
+    // THE WORDS ON THE MAP'S ROOMS: the caption under each tile, the prize
+    // chip's tag, and the reason a refused press gives.
     // One home so the controller, the tests and the build read the same text.
     public static class MapNodeCard
     {
@@ -115,65 +114,6 @@ namespace PrincesPalace.Domain.UiKit
             }
         }
 
-        // The card's heading: the caption, and a fight's strength beside it.
-        public static string Title(MapNodeFacts facts) =>
-            facts.Strength > 0
-                ? UiStrings.MapPreviewStrength.Format(Caption(facts.Type), facts.Strength)
-                : Caption(facts.Type);
-
-        // Fights name their enemies, the base payout and the chip; a treasure
-        // room names its stash. Shop and event pay out of rolls made on
-        // arrival, so their lines say so instead of guessing. Last, what the
-        // choice itself means: an anchor's promise, or the skip heal.
-        public static string Body(MapNodeFacts facts)
-        {
-            var lines = new List<string>();
-            switch (facts.Type)
-            {
-                case RoomType.Fight:
-                case RoomType.EliteFight:
-                case RoomType.Boss:
-                    if (facts.EnemyNames.Count == 0) break;
-                    lines.Add(UiStrings.MapPreviewEnemies.Format(EnemyLine(facts.EnemyNames)));
-                    string pay = UiStrings.MapPreviewReward.Format(facts.Gold, facts.Experience);
-                    string chip = ChipLine(facts.Chip);
-                    lines.Add(chip.Length == 0 ? pay : pay + "  ·  " + chip);
-                    break;
-                case RoomType.Treasure: lines.Add(UiStrings.MapPreviewTreasure.Format(facts.StashGold)); break;
-                case RoomType.Rest: lines.Add(UiStrings.MapPreviewRest.Format()); break;
-                case RoomType.Shop: lines.Add(UiStrings.MapPreviewShop.Format()); break;
-                case RoomType.Event:
-                    // The title is the whole line: the stock sentence promises
-                    // a mystery, which a named event is not.
-                    lines.Add(facts.EventTitle.Length > 0 ? facts.EventTitle : UiStrings.MapPreviewEvent.Format());
-                    break;
-                case RoomType.Cache: lines.Add(UiStrings.MapPreviewCache.Format()); break;
-                case RoomType.Entry: lines.Add(UiStrings.MapPreviewStart.Format()); break;
-            }
-
-            if (facts.GuardsHeart) lines.Add(UiStrings.MapPreviewAnchor.Format());
-            if (facts.SkipHealPercent > 0) lines.Add(UiStrings.MapPreviewSkipHeal.Format(facts.SkipHealPercent));
-            if (facts.ClosesRooms == 1) lines.Add(UiStrings.MapPreviewClosesOne.Format());
-            else if (facts.ClosesRooms > 1) lines.Add(UiStrings.MapPreviewCloses.Format(facts.ClosesRooms));
-            return string.Join("\n", lines);
-        }
-
-        public static string ChipLine(MapNodeChip chip)
-        {
-            switch (chip.Kind)
-            {
-                case PrizeKind.Gold: return UiStrings.MapPreviewPrizeGold.Format(chip.Amount);
-                case PrizeKind.Consumable:
-                    return chip.Amount == 1
-                        ? UiStrings.MapPreviewPrizePotion.Format()
-                        : UiStrings.MapPreviewPrizePotions.Format(chip.Amount);
-                case PrizeKind.Item: return UiStrings.MapPreviewPrizeGear.Format();
-                case PrizeKind.Book: return UiStrings.MapPreviewPrizeBook.Format();
-                case PrizeKind.Relic: return UiStrings.MapPreviewPrizeRelic.Format();
-                default: return string.Empty;
-            }
-        }
-
         // The badge on the node itself: the kind, and the gold or potions when
         // they are a number. Empty for a node with no prize.
         public static string ChipTag(MapNodeChip chip)
@@ -191,15 +131,6 @@ namespace PrincesPalace.Domain.UiKit
                 default: return string.Empty;
             }
         }
-
-        // The second card's heading while two routes are open.
-        public static string OtherTitle(MapNodeFacts facts) => UiStrings.MapCompareOther.Format(Title(facts));
-
-        // "Giant Rat ×2, Wolf": first-seen order, repeats counted.
-        public static string EnemyLine(IReadOnlyList<string> names) =>
-            string.Join(", ", names
-                .GroupBy(n => n)
-                .Select(g => g.Count() > 1 ? g.Key + " ×" + g.Count() : g.Key));
 
         // What a press on a room that cannot be entered says. Open is the one
         // state that is enterable, so it has no refusal of its own; it gets the

@@ -301,23 +301,20 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreNotEqual(distant.Id, RunManager.CurrentNode.Id);
         }
 
-        // One press must not end a run (AUDIT #219): the button opens the
-        // system menu on its Exit tab, and only that pane's hold abandons.
+        // The map has no abandon button: the system menu's Exit pane is the one
+        // way out of a descent, and only its hold abandons (AUDIT #219).
         [UnityTest]
-        public IEnumerator AbandonOnTheMapOpensTheExitTabAndOnlyTheHoldEndsTheRun()
+        public IEnumerator OnlyTheExitPanesHoldEndsTheRunFromTheMap()
         {
             yield return OpenTheMap();
 
-            Named("AbandonRunButton").GetComponent<Button>().onClick.Invoke();
-            yield return null;
-            yield return null;
-
             var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
-            Assert.IsTrue(menu.IsOpen, "the abandon button did not open the system menu");
-            Assert.AreEqual(SystemMenuTabs.IndexOf(SystemMenuTab.Exit), menu.SelectedIndex,
-                "the abandon button did not land on the Exit tab");
-            Assert.IsTrue(RunManager.HasRun, "one press on the map's abandon button ended the run");
-            CollectionAssert.IsEmpty(_navigated, "one press on the map's abandon button left the map");
+            Assert.IsTrue(SystemMenuController.OpenFromRoot(menu), "the system menu did not open over the map");
+            menu.Select(SystemMenuTab.Exit);
+            yield return null;
+            Assert.AreEqual(SystemMenuTabs.IndexOf(SystemMenuTab.Exit), menu.SelectedIndex);
+            Assert.IsTrue(RunManager.HasRun, "opening the Exit pane ended the run");
+            CollectionAssert.IsEmpty(_navigated, "opening the Exit pane left the map");
 
             var hold = menu.GetComponentsInChildren<HoldToConfirm>(includeInactive: true)
                 .First(h => h.name == "ExitAbandonHold");

@@ -141,29 +141,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef TitleLabel;
         public NodeRef DepthLabel;
         public NodeRef GoldLabel;
-        public NodeRef AbandonButton;
         public NodeRef RoomMessageLabel;
         public NodeRef OverviewLabel;
-
-        // "Somebody wants looking at": how many characters carry a pip in the
-        // CHARACTER tab (plan C20). Shown whenever that is more than none; a
-        // book bought, a level gained or a reward earned is otherwise silent on
-        // the map.
-        public NodeRef AttentionLabel;
-
-        // The frame the hint sits in. Shown and hidden with the label, which
-        // keeps its own active state so "nothing waits" is still the label's.
-        public NodeRef AttentionBadge;
-
-        // The detail card for the hovered or focused room, and a second one
-        // beside it while two routes are open. Inactive until a room is
-        // pointed at; the controller fills the labels from MapNodeCard.
-        public NodeRef PreviewPanel;
-        public NodeRef PreviewTitle;
-        public NodeRef PreviewBody;
-        public NodeRef ComparePanel;
-        public NodeRef CompareTitle;
-        public NodeRef CompareBody;
 
         // The same overlay the hub and the fight mount. Live here:
         // between rooms is when gear is meant to change.
@@ -193,14 +172,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // descent, and the hub has none to act on.
         public DebugMenuScreen Debug;
 
-        // The bottom strip, under the lowest row the camera shows: the detail
-        // card, or the pair of them.
-        private const float CardY = -442f;
-        private static readonly UiVec CardSize = new UiVec(700f, 176f);
-        private const float CardGap = 20f;
-
-        private static readonly UiVec AttentionBadgeSize = new UiVec(560f, 88f);
-
         // Anchored to the content rect's TOP CENTRE, which is the origin every
         // MapLayout coordinate is measured from. Declared once here so no
         // construction site restates it and drifts.
@@ -218,56 +189,33 @@ namespace PrincesPalace.Domain.UiKit.Screens
         {
             var screen = new MapScreen();
 
-            // THE TOP BAND (plan section 7): the floor, the realm's name with the
-            // rooms walked, and the gold. Every element is pinned to the TOP edge,
-            // like the wood and the header bar behind it: a centre anchor would
-            // drift them off the bar in any frame that is not 16:9.
+            // THE TOP-RIGHT STACK: floor, depth line, gold, then the overview
+            // hint, right-aligned down the right edge over the bare wood. Every
+            // element is pinned to the TOP edge, so a frame that is not 16:9
+            // does not drift them. Heights are tight so the stack ends above
+            // MapRoomMessageLabel (top at -160).
+            //
+            // OverArt(backing: false): a dark ring on the glyphs and no plate,
+            // because the text sits straight on the painted wood.
             //
             // FunctionalHeading, not CeremonialTitle -- the map is a working
             // screen the player passes through every room, not a title or a
             // ceremonial moment the way Defeat/Reckoning's own titles are.
-            var title = Ui.Label("MapTitleLabel", UiStrings.MapTitle, new UiVec(700f, 60f), 40, "#EDE6FF",
-                OnContent(0f, -88f)).Styled(TypographyRole.FunctionalHeading);
-            var depth = Ui.Label("MapDepthLabel", UiStrings.MapDepth, new UiVec(420f, 34f), 20, "#B8A8D9",
-                OnContent(0f, -136f)).Styled(TypographyRole.TacticalData);
-            var gold = Ui.Label("MapGoldLabel", UiStrings.MapGold, new UiVec(460f, 40f), 22, "#F2DB9E",
-                OnContent(690f, -88f)).Styled(TypographyRole.TacticalData);
-
-            // THE BOOK/POINT/REWARD NUDGE, as a badge and not a line: neither
-            // the shop nor the menu is guaranteed to be the next thing the
-            // player opens, so the map is where a pending book, point or
-            // reward has to say so, and a 16 px line at the top corner was
-            // missed (AUDIT #254). It sits under the abandon button, out of the
-            // bottom strip the detail cards use. 520 wide at Body 26 wraps the
-            // three-reason worst case onto two lines inside a 560x88 frame.
-            var attention = Ui.Label("MapAttentionLabel", UiStrings.MapAttention, new UiVec(520f, 72f), 26,
-                    FightHudPalette.GoldLight, Place.At(0f, 0f))
-                .TextAligned(UiTextAlign.Centre)
-                .Styled(TypographyRole.Body)
-                .Inactive();
-            var attentionBadge = Ui.OutlineBox("MapAttentionBadge", OnContent(-660f, -168f), AttentionBadgeSize,
-                FightHudPalette.PanelPrimary, FightHudPalette.BorderGold, new[] { attention })
-                .Inactive();
-            screen.AttentionBadge = attentionBadge;
-            screen.AttentionLabel = attention;
-
-            // SILVER: leaving the descent, matching Cancel/Back everywhere
-            // else in the kit. Room-node buttons are NOT themed here -- the
-            // medallion IS their plate (button.SpriteKey below),
-            // so a theme's plate would replace the bespoke art rather than
-            // dress a bare frame.
-            // 240x60 was 4:1 against the FiveByOne plate's true 5:1 --
-            // ThemedButtonAspectLintTests. Height down to nominal, width kept.
-            var abandonSize = Ui.PlateNominalSizeFor(240f, 60f);
-            var abandon = Ui.Button("AbandonRunButton", UiStrings.MapAbandon, abandonSize, 16,
-                    OnContent(-800f, -88f))
-                .Themed(ButtonTheme.Silver);
+            var title = Ui.Label("MapTitleLabel", UiStrings.MapTitle, new UiVec(460f, 56f), 40, "#EDE6FF",
+                OnContent(690f, -42f)).TextAligned(UiTextAlign.Right).OverArt(backing: false)
+                .Styled(TypographyRole.FunctionalHeading);
+            var depth = Ui.Label("MapDepthLabel", UiStrings.MapDepth, new UiVec(460f, 28f), 20, "#B8A8D9",
+                OnContent(690f, -86f)).TextAligned(UiTextAlign.Right).OverArt(backing: false)
+                .Styled(TypographyRole.TacticalData);
+            var gold = Ui.Label("MapGoldLabel", UiStrings.MapGold, new UiVec(460f, 32f), 22, "#F2DB9E",
+                OnContent(690f, -118f)).TextAligned(UiTextAlign.Right).OverArt(backing: false)
+                .Styled(TypographyRole.TacticalData);
 
             // What the room the party just walked into did.
             //
-            // Sits UNDER the depth line rather than over the wood, because it
+            // Sits UNDER the top-right stack rather than over the wood, because it
             // is a heading about the descent's state and not a label on
-            // anything in the scene. Beside the attention badge, not over it.
+            // anything in the scene.
             //
             // Sized for the longest line any room can produce -- the unbuilt
             // shop's apology -- so a placeholder message cannot overflow a box
@@ -278,32 +226,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             // The hint for Y, and the overview's own banner in its place while
             // it is up; the same label, its text swapped by the controller.
-            var overview = Ui.Label("MapOverviewLabel", UiStrings.MapOverviewHint, new UiVec(460f, 28f), 18,
-                    FightHudPalette.GoldLight, OnContent(660f, -130f))
+            var overview = Ui.Label("MapOverviewLabel", UiStrings.MapOverviewHint, new UiVec(460f, 24f), 18,
+                    FightHudPalette.GoldLight, OnContent(690f, -148f))
                 .TextAligned(UiTextAlign.Right)
+                .OverArt(backing: false)
                 .Styled(TypographyRole.TacticalData);
             screen.OverviewLabel = overview;
-
-            // The cards for whichever room is hovered or focused, in the bottom
-            // strip. Inspecting never commits: a card shows for any visible
-            // room, reachable or not, so a route can be planned. The second
-            // card appears while two routes are open, so the choice reads side
-            // by side.
-            var previewPanel = BuildCard("MapPreview", -(CardSize.X + CardGap) * 0.5f,
-                out var previewTitle, out var previewBody);
-            screen.PreviewPanel = previewPanel;
-            screen.PreviewTitle = previewTitle;
-            screen.PreviewBody = previewBody;
-            var comparePanel = BuildCard("MapCompare", (CardSize.X + CardGap) * 0.5f,
-                out var compareTitle, out var compareBody);
-            screen.ComparePanel = comparePanel;
-            screen.CompareTitle = compareTitle;
-            screen.CompareBody = compareBody;
 
             screen.TitleLabel = title;
             screen.DepthLabel = depth;
             screen.GoldLabel = gold;
-            screen.AbandonButton = abandon;
             screen.RoomMessageLabel = roomMessage;
 
             // The painted wood, tiled DOWN the leg; the strip tiles by itself.
@@ -383,7 +315,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // every caller -- C, I, Escape, the hub's building -- reaches the
             // dossier without any of them knowing the screen changed.
 
-            // Viewport FIRST so the headings and the abandon button draw over
+            // Viewport FIRST so the headings draw over
             // the scrolling wood rather than under it. SHOP then SYSTEM MENU,
             // last of all -- the menu has to draw over the shop it can now be
             // opened on top of (AUDIT.md #173's Shop line), the same "opened
@@ -395,31 +327,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.Debug = debug;
 
             screen.Root = Ui.Panel("MapPanel", UiSize.Fill,
-                viewport, screen.BuildHeaderBar(), title, depth, gold, attentionBadge, previewPanel, comparePanel, abandon,
+                viewport, title, depth, gold,
                 roomMessage, overview, shop.Root, eventRoom.Root, hone.Root, systemMenu.Root, debug.Root);
 
             return screen;
-        }
-
-        // One detail card: a gold-rimmed violet plate with a heading and up to
-        // five body lines (enemies, pay and prize, the anchor's promise, the
-        // skip heal, the rooms it closes).
-        private static UiNode BuildCard(string stem, float x, out NodeRef titleRef, out NodeRef bodyRef)
-        {
-            var title = Ui.Label(stem + "Title", UiString.Runtime, new UiVec(CardSize.X - 40f, 28f), 22,
-                    FightHudPalette.HeadingGold, Place.At(0f, 62f))
-                .TextAligned(UiTextAlign.Left)
-                .Styled(TypographyRole.FunctionalHeading);
-            var body = Ui.Label(stem + "Body", UiString.Runtime, new UiVec(CardSize.X - 40f, 118f), 19,
-                    FightHudPalette.TextPrimary, Place.At(0f, -16f))
-                .TextAligned(UiTextAlign.Left)
-                .Styled(TypographyRole.Body);
-            titleRef = title;
-            bodyRef = body;
-
-            return Ui.OutlineBox(stem + "Panel", Place.At(x, CardY), CardSize,
-                FightHudPalette.PanelViolet, FightHudPalette.BorderGold, new[] { title, body })
-                .Inactive();
         }
 
         // One tile of the painted wood, pinned by its own top edge so tile i
@@ -444,27 +355,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // so it cannot be the normal state of this one.
             Backdrops.Add(tile);
             return tile;
-        }
-
-        // The header's own ground: an opaque bar over the scrolling wood and
-        // the nodes on it, HeaderBand tall with a soft edge, so a room that has
-        // scrolled up under the title is hidden rather than overlapped by it.
-        // Between the viewport and the headings, so it covers the one and sits
-        // under the other.
-        private UiNode BuildHeaderBar()
-        {
-            var bar = Ui.Solid("MapHeaderBar", "#050704",
-                    Place.Pin(ContentTop, ContentTop, UiVec.Zero),
-                    UiSize.FillWidth(MapLayout.HeaderBand))
-                .AsDecor();
-
-            var fade = Ui.Sprite("MapHeaderFade", "proc:scrim_ceiling",
-                    Place.Pin(ContentTop, ContentTop, new UiVec(0f, -MapLayout.HeaderBand)),
-                    UiSize.FillWidth(MapLayout.HeaderFade))
-                .Coloured("#050704")
-                .AsDecor();
-
-            return Ui.Panel("MapHeader", Place.Stretch(), UiSize.Fill, bar, fade).AsDecor();
         }
 
         // The same painting again, over the whole leg in ONE image: the

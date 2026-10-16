@@ -81,10 +81,9 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void TheCardSaysCache_AndTheBodyNamesTheBank()
+        public void TheCardSaysCache()
         {
             Assert.AreEqual("CACHE", MapNodeCard.Caption(RoomType.Cache));
-            Assert.AreEqual("A cache. Gold banked here survives a death.", MapNodeCard.Body(new MapNodeFacts(RoomType.Cache)));
         }
 
         [Test]
