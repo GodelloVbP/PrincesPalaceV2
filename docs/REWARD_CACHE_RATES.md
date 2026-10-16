@@ -6,76 +6,86 @@ upgrade) on at most one gear page in five at mid-run Favor
 
 ## Method
 
-- Batch: `tools/bot.ps1 -Runs 250 -Seed 1000 -Shards 1` (Fresh profile, all
-  four archetypes, 1000 runs, 11,311 gear pages; 4,794 relic pages are not
-  counted). Base commit `447046fd` plus the trace change.
-- Trace: `BotRunDriver.Offer` records each card's quality and
-  `LiveUpgrade.Of(save, card)` before the first choice; `BalanceBotRunner`
-  writes them to `pages.jsonl` (a file of its own). Summary:
-  `python tools/reward_cache_rates.py <batch-dir>`.
+- Trace: `BotRunDriver.Offer` records each gear card's quality, its
+  `LiveUpgrade.Of` result and `LiveUpgrade.WornTier` before the first choice.
+  `BalanceBotRunner` builds `RevealCard`s from them and calls
+  `RevealSchedule.For` (page class from the settlement) to get cache, beat
+  and `ChoosableAt` at 1x; it writes those to `pages.jsonl`, a file of its
+  own. Summary: `python tools/reward_cache_rates.py <batch-dir>`.
 - Act = `step / 8 + 1` (a realm is 8 steps, `docs/ARCHITECTURE.md`).
-- Cache = a Rare+ live upgrade on the page; beat = a Legendary live upgrade.
-- Wall time: the C4 table arithmetic in the script (no cache 0.59 s; cache of
-  3 cards 1.15 s, +0.25 s for a beat). Its constants match `RevealSchedule`'s,
-  which landed after the sweep; the script does not call it.
+- **old** = the first rule: a live Rare+ card is a cache, a live Legendary a
+  beat, wall time from the C4 table arithmetic. **new** = the shipped rule
+  (ff122e6e): the cache needs a live Rare+ card above the worn tier (empty
+  slot 0), boss pages always cache, the beat needs a live Legendary over a
+  worn tier below 4. Same pages, same seeds; only the rule differs.
+- Gear pages only; relic pages (about 30% of pages) are not counted.
 - Neutrality: `-Runs 20 -Seed 1` with and without the trace gave
-  byte-identical `traces.jsonl` and `runs.jsonl` (`cmp`).
+  byte-identical `traces.jsonl` and `runs.jsonl` (`cmp`); the 1000-run sweep
+  with WornTier and RevealSchedule is byte-identical in both files to the
+  sweep before them.
 
-## Results
+## Fresh profile (`-Runs 250 -Seed 1000 -Shards 1`, 4 archetypes, 1000 runs)
 
-Per act:
+| act | gear pages | cache old | cache new | beat old | beat new | wall old | wall new | median Favor |
+|---|---|---|---|---|---|---|---|---|
+| act 1 | 1822 | 39.4% | 39.3% | 15.6% | 15.6% | 0.85 s | 0.85 s | 4 |
+| act 2 | 2422 | 77.1% | 77.0% | 32.7% | 32.7% | 1.11 s | 1.12 s | 4 |
+| act 3 | 2274 | 85.5% | 84.9% | 36.1% | 36.1% | 1.17 s | 1.18 s | 4 |
+| act 4 | 2185 | 88.6% | 87.2% | 33.1% | 33.1% | 1.19 s | 1.19 s | 4 |
+| act 5 | 1964 | 90.9% | 88.0% | 32.8% | 32.5% | 1.20 s | 1.19 s | 4 |
+| act 6 | 644 | 99.8% | 100.0% | 61.5% | 60.2% | 1.35 s | 1.37 s | 4 |
+| all | 11311 | 78.6% | 77.7% | 32.4% | 32.2% | 1.13 s | 1.13 s | 4 |
+| non-boss | 7242 | 66.7% | 65.2% | 16.3% | 16.3% | 1.00 s | 1.00 s | 4 |
 
-| act | gear pages | Rare+ / Legendary on page (live or not) | cache | top-tier beat | mean wall | Favor min/med/max |
-|---|---|---|---|---|---|---|
-| act 1 | 1822 | 43.9% / 17.9% | 39.4% | 15.6% | 0.85 s | 4 / 4 / 4 |
-| act 2 | 2422 | 80.8% / 33.6% | 77.1% | 32.7% | 1.11 s | 4 / 4 / 4 |
-| act 3 | 2274 | 88.0% / 36.8% | 85.5% | 36.1% | 1.17 s | 4 / 4 / 4 |
-| act 4 | 2185 | 95.5% / 34.7% | 88.6% | 33.1% | 1.19 s | 4 / 4 / 4 |
-| act 5 | 1964 | 99.8% / 34.9% | 90.9% | 32.8% | 1.20 s | 4 / 4 / 4 |
-| act 6 | 644 | 100.0% / 64.4% | 99.8% | 61.5% | 1.35 s | 4 / 4 / 4 |
-| all | 11311 | 83.5% / 33.9% | 78.6% | 32.4% | 1.13 s | 4 / 4 / 4 |
+| encounter | gear pages | cache old | cache new | beat old | beat new | wall old | wall new | median Favor |
+|---|---|---|---|---|---|---|---|---|
+| Boss | 4069 | 99.9% | 100.0% | 61.0% | 60.7% | 1.34 s | 1.37 s | 4 |
+| Elite | 1741 | 72.4% | 70.8% | 21.1% | 21.1% | 1.05 s | 1.04 s | 4 |
+| Normal | 5501 | 64.8% | 63.4% | 14.8% | 14.7% | 0.99 s | 0.98 s | 4 |
 
-By Favor band (see Limits):
+## Mid and Late profiles (`-Runs 150 -Seed 1000 -Profiles Mid,Late`)
 
-| Favor | gear pages | Rare+ / Legendary on page (live or not) | cache | top-tier beat | mean wall | Favor min/med/max |
-|---|---|---|---|---|---|---|
-| 0-7 | 11311 | 83.5% / 33.9% | 78.6% | 32.4% | 1.13 s | 4 / 4 / 4 |
-| 8-13 | 0 | - | - | - | - | - |
-| 14-19 | 0 | - | - | - | - | - |
-| 20-up | 0 | - | - | - | - | - |
+| act | gear pages | cache old | cache new | beat old | beat new | wall old | wall new | median Favor |
+|---|---|---|---|---|---|---|---|---|
+| act 1 | 2306 | 38.9% | 38.8% | 18.6% | 18.6% | 0.85 s | 0.86 s | 4 |
+| act 2 | 3816 | 57.1% | 57.1% | 31.2% | 31.2% | 1.00 s | 1.00 s | 4 |
+| act 3 | 4043 | 69.1% | 68.8% | 33.4% | 33.1% | 1.07 s | 1.08 s | 4 |
+| act 4 | 3964 | 80.7% | 79.3% | 32.0% | 31.9% | 1.14 s | 1.14 s | 4 |
+| act 5 | 3875 | 90.3% | 88.2% | 34.4% | 33.8% | 1.20 s | 1.20 s | 4 |
+| act 6 | 1425 | 100.0% | 100.0% | 60.5% | 59.5% | 1.34 s | 1.37 s | 4 |
+| all | 19429 | 72.0% | 71.2% | 33.1% | 32.8% | 1.09 s | 1.10 s | 4 |
+| non-boss | 12032 | 54.9% | 53.5% | 16.5% | 16.4% | 0.94 s | 0.93 s | 4 |
 
-By encounter class:
+| encounter | gear pages | cache old | cache new | beat old | beat new | wall old | wall new | median Favor |
+|---|---|---|---|---|---|---|---|---|
+| Boss | 7397 | 99.9% | 100.0% | 60.1% | 59.6% | 1.34 s | 1.36 s | 4 |
+| Elite | 3321 | 63.9% | 61.9% | 22.0% | 21.9% | 1.00 s | 1.00 s | 4 |
+| Normal | 8711 | 51.4% | 50.3% | 14.5% | 14.3% | 0.91 s | 0.91 s | 4 |
 
-| encounter | gear pages | Rare+ / Legendary on page (live or not) | cache | top-tier beat | mean wall | Favor min/med/max |
-|---|---|---|---|---|---|---|
-| Boss | 4069 | 100.0% / 62.1% | 99.9% | 61.0% | 1.34 s | 4 / 4 / 4 |
-| Elite | 1741 | 78.2% / 23.3% | 72.4% | 21.1% | 1.05 s | 4 / 4 / 4 |
-| Normal | 5501 | 73.1% / 16.5% | 64.8% | 14.8% | 0.99 s | 4 / 4 / 4 |
+## Verdict against 1 in 5
 
-## Verdict
-
-**Fails the 1-in-5 target.** Over all gear pages the top-tier beat is 32.4%
-(1 in 3) and the cache 78.6%. Acts 2-5 sit at 33-36% beat.
-
-- Normal pages pass: 14.8% beat. Elite pages are at the line (21.1%).
-- Boss pages fail by a wide margin: 61.0% beat, 99.9% cache. They are 36% of
-  the gear pages in the sweep (every realm ends in one), so they set the
-  all-page rate. Read as non-boss pages, the gate holds.
-- The live filter barely thins the cache: Legendary is on 33.9% of pages at
-  all and 32.4% are live upgrades. The plan expected live-keying to thin the
-  ceremony as the party gears up; it does not here, because the quality
-  ladder climbs with depth as fast as the bot's gear.
-- Act 6 is the depth cap's tail (644 pages), mostly boss pages.
+- **All pages: fails.** Top-tier beat 32.2% (Fresh) and 32.8% (Mid/Late). The
+  new rule moves it by 0.2 to 0.3 points.
+- **Non-boss pages: passes.** 16.3% and 16.4%. Normal 14.7% and 14.3%; Elite
+  is at the line (21.1% and 21.9%).
+- **Boss pages: fail.** 60.7% beat, 100% cache by rule. They are 36% of the
+  gear pages in the sweep (every realm ends in one), so they set the
+  all-page rate.
+- The cache is no rarer under the new rule: 77.7% of all pages (was 78.6%),
+  65.2% of non-boss pages (was 66.7%). Mean wall time to choosable is 1.13 s
+  at 1x, inside the 1.6 s cap; boss pages average 1.37 s.
 
 ## Limits
 
-- Favor is flat at 4. `ItemOfferRoll.CurrentSquadFavor` is authored per
-  character plus run event buffs; the bot never reaches the plan's Favor 14,
-  so the mid-run Favor bands are empty. Higher Favor only raises these rates.
-- Fresh profile only. A Mid/Late run failed to compile when another session
-  overwrote the shared TestRunner2 copy mid-run; not retried.
-- The bot's gearing is a floor on a human's; a human who keeps better gear
-  sees fewer live upgrades.
+- **The bot leaves most slots empty,** so the worn-tier test almost never
+  bites: about 87% of gear cards face an empty slot (worn tier 0), 6% a tier-1 item.
+  A human who fills slots will see the new rule thin the cache and the beat
+  more than this shows. Treat these numbers as the ceiling the rule cannot go
+  above, not a forecast.
+- Favor is flat at 4 (`ItemOfferRoll.CurrentSquadFavor` is authored per
+  character plus event buffs); the bot never reaches the plan's Favor 14, so
+  there is no mid-run Favor band. Higher Favor only raises these rates.
+- The bot's gearing is a floor on a human's.
 
 ## Open call
 

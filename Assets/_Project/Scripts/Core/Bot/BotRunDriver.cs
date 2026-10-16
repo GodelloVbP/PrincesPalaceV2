@@ -1955,6 +1955,7 @@ namespace PrincesPalace
                 {
                     Quality = c.IsGear ? c.Rolled.ToString() : c.Rarity.ToString(),
                     Live = LiveUpgrade.Of(save, c),
+                    WornTier = LiveUpgrade.WornTier(save, c),
                 }));
             }
 

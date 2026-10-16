@@ -161,6 +161,9 @@ namespace PrincesPalace.Domain.Bot
     {
         public string Quality = "";
         public bool Live;
+
+        // LiveUpgrade.WornTier: the tier worn in the slot, 0 empty or relic.
+        public int WornTier;
     }
 
     // One reward page the bot played: the rewards.json row that rolled it and

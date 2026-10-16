@@ -650,11 +650,28 @@ namespace PrincesPalace.Editor.Bot
                     sb.Append(",\"roomType\":").Append(Str(r.RoomType));
                     sb.Append(",\"encounter\":").Append(Str(r.EncounterClass));
                     sb.Append(",\"kind\":").Append(Str(pg.Kind));
+                    if (pg.Kind == "Gear" && pg.Cards.Count > 0)
+                    {
+                        // The shipped rule, not a restatement: RevealSchedule
+                        // decides cache, hold and the 1x wall time.
+                        var cls = Enum.TryParse(r.EncounterClass, out PrincesPalace.Domain.Rewards.EncounterClass parsed)
+                            ? parsed : PrincesPalace.Domain.Rewards.EncounterClass.Normal;
+                        var reveal = pg.Cards
+                            .Select(c => new PrincesPalace.Domain.Rewards.RevealCard(
+                                (int)Enum.Parse(typeof(PrincesPalace.Domain.Content.Quality), c.Quality) + 1, c.Live, c.WornTier))
+                            .ToList();
+                        var sched = PrincesPalace.Domain.Rewards.RevealSchedule.For(
+                            reveal, pg.Choices, PrincesPalace.Domain.Combat.Session.BattleSpeed.DefaultDisplay, cls);
+                        sb.Append(",\"cache\":").Append(sched.HasCache ? "true" : "false");
+                        sb.Append(",\"beat\":").Append(sched.HasTopLiveUpgrade ? "true" : "false");
+                        sb.Append(",\"wall\":").Append(sched.ChoosableAt.ToString("0.###", CultureInfo.InvariantCulture));
+                    }
                     sb.Append(",\"cards\":[");
                     for (int i = 0; i < pg.Cards.Count; i++)
                     {
                         if (i > 0) sb.Append(',');
-                        sb.Append("{\"q\":").Append(Str(pg.Cards[i].Quality));
+                        sb.Append("{\"w\":").Append(pg.Cards[i].WornTier);
+                        sb.Append(",\"q\":").Append(Str(pg.Cards[i].Quality));
                         sb.Append(",\"live\":").Append(pg.Cards[i].Live ? "true" : "false").Append('}');
                     }
                     sb.Append("]}");
