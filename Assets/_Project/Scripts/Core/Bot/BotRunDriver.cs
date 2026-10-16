@@ -1945,24 +1945,15 @@ namespace PrincesPalace
             {
                 var trace = new PageTrace { SourceId = page.SourceId, Choices = page.Choices, Kind = page.Kind.ToString() };
                 roomTrace.Pages.Add(trace);
-            }
 
-            // Read before any choice moves the save: the ceremony keys on the
-            // page as it opens. No RNG, no writes.
-            for (int p = 0; p < pages.Count; p++)
-            {
-                roomTrace.Pages[p].Cards.AddRange(pages[p].Cards.Select(c => new CardTrace
+                // Read as the page opens, after the pages before it were
+                // played (their takes change what is worn). No RNG, no writes.
+                trace.Cards.AddRange(page.Cards.Select(c => new CardTrace
                 {
                     Quality = c.IsGear ? c.Rolled.ToString() : c.Rarity.ToString(),
                     Live = LiveUpgrade.Of(save, c),
                     WornTier = LiveUpgrade.WornTier(save, c),
                 }));
-            }
-
-            int pageIndex = 0;
-            foreach (var page in pages)
-            {
-                var trace = roomTrace.Pages[pageIndex++];
 
                 if (page.Kind == RewardPageKind.Gear) PlayGearPage(save, runPolicy, page, trace, offerRng, roomTrace);
                 else PlayRelicPage(save, runPolicy, page, trace, offerRng);

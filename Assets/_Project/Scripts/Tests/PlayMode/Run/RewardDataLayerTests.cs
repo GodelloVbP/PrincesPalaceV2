@@ -334,6 +334,25 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [Test]
+        public void WornTier_ReadsTheRecipientsOwnSlot_EmptyIsZero()
+        {
+            var sheep = ArmedSheep(out var save);
+            var card = Card(ItemInstance.Of("sword", 0));
+
+            Assert.AreEqual(1, LiveUpgrade.WornTier(save, card), "a plain sword in Weapon1 is Common: tier 1");
+
+            sheep.equipment.Set(EquipmentSlot.Weapon1, "sword", new List<string> { "a", "b" });
+            Assert.AreEqual(3, LiveUpgrade.WornTier(save, card), "two affixes is Rare: tier 3");
+
+            card.Slot = EquipmentSlot.Weapon2;
+            Assert.AreEqual(0, LiveUpgrade.WornTier(save, card), "Weapon2 is empty and is not Weapon1");
+
+            card.Slot = EquipmentSlot.Weapon1;
+            card.RecipientId = "owl";
+            Assert.AreEqual(0, LiveUpgrade.WornTier(save, card), "another character's Weapon1 is empty");
+        }
+
+        [Test]
         public void LiveUpgrade_WithNoStatChange_IsLiveOnlyForAnAffixTheWornCopyLacks()
         {
             var sheep = ArmedSheep(out var save);

@@ -77,14 +77,26 @@ upgrade) on at most one gear page in five at mid-run Favor
 
 ## Limits
 
-- **The bot leaves most slots empty,** so the worn-tier test almost never
-  bites: about 87% of gear cards face an empty slot (worn tier 0), 6% a tier-1 item.
-  A human who fills slots will see the new rule thin the cache and the beat
-  more than this shows. Treat these numbers as the ceiling the rule cannot go
-  above, not a forecast.
-- Favor is flat at 4 (`ItemOfferRoll.CurrentSquadFavor` is authored per
+- **Most cards face an empty slot (87%), and that is how the roll plays, not
+  a trace bug.** The bot equips what it takes (`RewardPages.Take` ->
+  `EquipmentOps.Equip`) and `LiveUpgrade.WornTier` reads the same recipient
+  and slot (`WornTier_ReadsTheRecipientsOwnSlot_EmptyIsZero`). There is no
+  starting gear; a gear page comes about one room in four and a card fills
+  one of 24 slots (3 members x 8), so about 6.5 slots are filled by the time
+  a run ends; `GearPage.DrawSlot` weights an empty slot 3:1 and weapon cards
+  target an empty Weapon1, then Weapon2, so cards keep landing on empty
+  slots. A uniform model over the traced takes gives 90% empty in act 2 and
+  66% in act 5 (observed 98% and 71%). A human faces the same bias, so the
+  worn-tier test thins the cache late in a run, not early.
+- **One quality scale.** The first sweep built reveal tiers from `Rolled`
+  while `WornTier` used `QualityOf`; a Legendary with no trait left kept
+  `Rolled = Legendary`. db515a0b made `Rolled` agree. Re-run on top of it, the
+  Fresh sweep is byte-identical in `pages.jsonl` and `runs.jsonl` to the one
+  before: the bot never hit the no-trait fallback. The Mid/Late table was not
+  re-run (the same logic applies).
+- Favor is flat at 4 in every act (`ItemOfferRoll.CurrentSquadFavor` is authored per
   character plus event buffs); the bot never reaches the plan's Favor 14, so
-  there is no mid-run Favor band. Higher Favor only raises these rates.
+  this sweep cannot judge the mid-run Favor gate. Higher Favor only raises these rates.
 - The bot's gearing is a floor on a human's.
 
 ## Open call
