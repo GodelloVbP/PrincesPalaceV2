@@ -143,7 +143,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(defeat, "fixture: the Fight scene has no defeat screen to keep closed");
             Assert.IsFalse(defeat.gameObject.activeSelf, "the defeat screen opened for a run that did not end");
 
-            var reckoning = AssertOutcomeForm("FELL");
+            var reckoning = AssertOutcomeForm(Domain.Rewards.FightEnding.Fell);
             Assert.IsEmpty(reckoning.DisplayedReceipts, "Fell grants nothing, so there is nothing to show");
 
             Assert.AreEqual(1, run.currentHealth.First(e => e.characterId == "sheep").hp);
@@ -179,22 +179,23 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.IsTrue(fight.Session.PlayerWon, "fixture: the rat won");
 
-            AssertOutcomeForm("VICTORY");
+            AssertOutcomeForm(Domain.Rewards.FightEnding.Victory);
             Assert.AreEqual("Won quietly.", RunManager.Run.eventResult);
         }
 
-        // The Reckoning took the fight over in its outcome form: titled for
-        // the ending, no gold, and the fight's own Continue left down.
-        private ReckoningController AssertOutcomeForm(string title)
+        // The Reckoning took the fight over in its outcome form: for the
+        // ending (its crest, no word), no gold, and the fight's own Continue
+        // left down.
+        private ReckoningController AssertOutcomeForm(Domain.Rewards.FightEnding ending)
         {
             var reckoning = UnityEngine.Object.FindAnyObjectByType<ReckoningController>(FindObjectsInactive.Include);
             Assert.IsNotNull(reckoning, "fixture: the Fight scene has no Reckoning");
             Assert.IsTrue(reckoning.gameObject.activeSelf, "a fight inside a run opens the Reckoning");
             Assert.IsTrue(reckoning.IsOutcomeForm, "nothing was paid, so the outcome form");
 
-            var texts = reckoning.GetComponentsInChildren<TMPro.TMP_Text>(includeInactive: true);
-            Assert.AreEqual(title, texts.First(t => t.name == "ReckoningTitle").text);
-            Assert.IsFalse(texts.First(t => t.name == "ReckoningGoldLabel").gameObject.activeSelf, "no gold on the outcome form");
+            Assert.AreEqual(ending, reckoning.Ending);
+            var gold = reckoning.GetComponentsInChildren<Transform>(includeInactive: true).First(t => t.name == "ReckoningGoldStack");
+            Assert.IsFalse(gold.gameObject.activeSelf, "no gold on the outcome form");
 
             Assert.IsFalse(ContinueShown(_fight), "inside a run there is no Continue fallback");
             return reckoning;

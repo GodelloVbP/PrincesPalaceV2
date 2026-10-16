@@ -180,6 +180,12 @@ namespace PrincesPalace.Domain.UiKit
             return BuildFrameHolder(name, ContainerArt.Key(ContainerKind.Container, theme, ratio), place, size);
         }
 
+        // A frame whose art is a screen's own painting rather than a kit
+        // theme (the Reckoning's spread): the same holder Container builds,
+        // so it audits the same way. The caller owns the aspect.
+        public static UiNode ArtFrame(string name, string spriteKey, Place place, UiVec size) =>
+            BuildFrameHolder(name, spriteKey, place, size);
+
         // Same rules as Container, always Decor, never a Button -- a flag
         // banner names a place or an identity, it does not do anything, so it
         // gets no ThemedButtonState and no click target at all.

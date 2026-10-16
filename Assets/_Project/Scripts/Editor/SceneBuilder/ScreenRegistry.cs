@@ -1466,11 +1466,14 @@ public static class ScreenRegistry
         var controller = result.Attach<ReckoningController>(screen.Root);
         UiAutoBind.Bind(result, controller, screen);
 
-        // The Continue arrow's heat, animated. Attached rather than wired into
-        // the controller: it needs no state from the Reckoning, and a screen
-        // controller that also owns an ambient loop is the shape every other
-        // ambience component here was pulled OUT of.
-        result.Attach<EmberFlare>(screen.ContinueGlow);
+        // A level-up's waiting pulse on each portrait's badge: the reward
+        // track's own BeaconPulse, in the ring's amber. The controller only
+        // switches the node on.
+        foreach (var node in screen.PortraitPulses)
+        {
+            var pulse = result.Attach<BeaconPulse>(node);
+            pulse.BaseColor = new Color(1f, 0.76f, 0.29f, 1f);
+        }
 
         controller.offerBurstRects = screen.OfferBursts.Select(result.Rect).ToArray();
 
@@ -1489,6 +1492,11 @@ public static class ScreenRegistry
         // the tree and need no entry.
         controller.rewardArt = RewardArt.TableIds
             .Select(id => new IconEntry(id, SceneBuilder.LoadSpriteByKey(RewardArt.PathOf(id))))
+            .ToArray();
+
+        // The map's medallions and chips, as the map drew them (C1, C2).
+        controller.mapArt = RewardArt.MapTableIds
+            .Select(id => new IconEntry(id, SceneBuilder.LoadSpriteByKey(RewardArt.MapPathOf(id))))
             .ToArray();
 
         // NO CountBindings for offerBurstRects, offerRects or rewardArt: each is

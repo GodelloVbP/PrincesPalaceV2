@@ -56,26 +56,24 @@ namespace PrincesPalace.Domain.Tests
         // budget -- if the budget or the gap is ever retuned, this is what says
         // the common case changed.
         //
-        // 340.192 rather than a round 340: the interior is 9.8% inset from a
-        // 1344 panel, so it is 1080.576 wide. BuildOffer's own note -- "the row
-        // runs to x 540 against a clip half-width of 540.3" -- is that same
-        // fraction seen from the other end.
+        // 365.28 rather than a round number: the interior is the spread's hem,
+        // 7% inset from a 1344 panel, so it is 1155.84 wide.
         [Test]
         public void AThreeCardRowStillDrawsTheCardsItAlwaysDid()
         {
-            Assert.AreEqual(340.192f, OfferRowLayout.CardWidth(3), 0.01f);
-            Assert.AreEqual(320.192f, OfferRowLayout.LabelWidth(3), 0.01f);
-            Assert.AreEqual(-370.192f, OfferRowLayout.CardX(0, 3), 0.01f);
+            Assert.AreEqual(365.28f, OfferRowLayout.CardWidth(3), 0.01f);
+            Assert.AreEqual(345.28f, OfferRowLayout.LabelWidth(3), 0.01f);
+            Assert.AreEqual(-395.28f, OfferRowLayout.CardX(0, 3), 0.01f);
         }
 
         // And what the reward actually costs: a four-card row divides the same
-        // interior, so every card in it is narrower -- roughly 248 against 340,
+        // interior, so every card in it is narrower -- roughly 266 against 365,
         // about 27% off the width of the art. Pinned so the trade is visible
         // rather than discovered.
         [Test]
         public void AFourCardRowBuysItsFourthCardByNarrowingAllOfThem()
         {
-            Assert.AreEqual(247.644f, OfferRowLayout.CardWidth(4), 0.01f);
+            Assert.AreEqual(266.46f, OfferRowLayout.CardWidth(4), 0.01f);
             Assert.Less(OfferRowLayout.CardWidth(4), OfferRowLayout.CardWidth(3));
         }
 

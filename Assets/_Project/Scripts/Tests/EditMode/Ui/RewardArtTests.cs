@@ -1,5 +1,6 @@
 using System.IO;
 using NUnit.Framework;
+using PrincesPalace.Domain.Dungeon;
 using PrincesPalace.Domain.Rewards;
 using PrincesPalace.Domain.UiKit;
 
@@ -35,6 +36,48 @@ namespace PrincesPalace.Domain.Tests
         public void NoAxisHasNoGlyph()
         {
             Assert.IsNull(RewardArt.DeltaGlyphId(-1));
+        }
+
+        [TestCase(null, "map_node_fight")]
+        [TestCase(EncounterClass.Normal, "map_node_fight")]
+        [TestCase(EncounterClass.Elite, "map_node_elite")]
+        [TestCase(EncounterClass.Boss, "map_node_boss")]
+        public void TheCrestsMedallionIsTheRoomsClass_AndAnEventFightIsAFight(EncounterClass? cls, string expected)
+        {
+            Assert.AreEqual(expected, RewardArt.MedallionId(cls));
+        }
+
+        [TestCase(PrizeKind.Item, "map_chip_gear")]
+        [TestCase(PrizeKind.Relic, "map_chip_relic")]
+        [TestCase(PrizeKind.Book, "map_chip_book")]
+        [TestCase(PrizeKind.Consumable, "map_chip_potion")]
+        [TestCase(PrizeKind.Gold, "map_chip_gold")]
+        public void AChipIsTheOneTheMapDrew(PrizeKind shown, string expected)
+        {
+            Assert.AreEqual(expected, RewardArt.ChipId(shown));
+        }
+
+        [Test]
+        public void TheFightsOwnGoldHasNoChip()
+        {
+            Assert.IsNull(RewardArt.ChipId(PrizeKind.None));
+        }
+
+        [Test]
+        public void TheMapTableHoldsEightFiles_EachOnDisk()
+        {
+            Assert.AreEqual(8, RewardArt.MapTableIds.Count);
+            Assert.AreEqual("Assets/_Project/Art/Backgrounds/Processed/map_node_boss.png",
+                RewardArt.MapPathOf("map_node_boss"));
+            var dir = new DirectoryInfo(Directory.GetCurrentDirectory());
+            while (dir != null && !Directory.Exists(Path.Combine(dir.FullName, "Assets", "_Project", "Scripts")))
+            {
+                dir = dir.Parent;
+            }
+
+            Assert.IsNotNull(dir, "Could not locate the repo root from the working directory.");
+            foreach (var id in RewardArt.MapTableIds)
+                Assert.IsTrue(File.Exists(Path.Combine(dir.FullName, RewardArt.MapPathOf(id))), id);
         }
 
         [Test]

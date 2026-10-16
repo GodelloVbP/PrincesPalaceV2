@@ -112,18 +112,12 @@ namespace PrincesPalace.PlayModeTests
             }
         }
 
-        // POLLED ON THE GAIN LABEL ITSELF. FillBar has no exposed
-        // "still running" flag any more than ReckoningTests' bar sequence
-        // does (see its WaitForTheBarSequence), but unlike that one this
-        // fixture's Reward() never levels up (LevelAfter == LevelBefore), so
-        // CountGain only ever climbs toward ExpGained and never plateaus or
-        // resets mid-sequence -- safe to poll for the final value landing
-        // rather than guess a duration for it. BarSeconds is 0.55s, and row
-        // 0 has no stagger delay, so that is the whole budget.
-        private IEnumerator WaitForTheGainToLand(TMPro.TMP_Text gain, string expected)
+        // POLLED ON THE BOARD'S OWN FLAG: the rings are a function of one
+        // clock, so "settled" is a real end, not a pause between passes.
+        private IEnumerator WaitForTheBoardToSettle()
         {
-            int frames = 0, maxFrames = MaxFrames(0.55f);
-            while (!gain.text.Contains(expected) && frames < maxFrames)
+            int frames = 0, maxFrames = MaxFrames(1.2f);
+            while (!_reckoning.BoardSettled && frames < maxFrames)
             {
                 frames++;
                 yield return null;
@@ -295,30 +289,23 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
-        public IEnumerator TheBarsOnlyStartOnceTheSweepHasLanded()
+        public IEnumerator TheRingsOnlyFillOnceTheSweepHasLanded()
         {
-            // Filling a bar mid-sweep means watching a number climb on
-            // something still sliding, and neither gets read.
+            // Filling a ring mid-sweep means watching it climb on something
+            // still sliding, and neither gets read.
             yield return OpenIt(Offers());
 
             yield return TakeAndMoveOn();
+            var gain = Named("ReckoningPortrait0RingGain").GetComponent<Image>();
+            if (Named("ReckoningOfferPhase").activeSelf)
+            {
+                Assert.AreEqual(0f, gain.fillAmount, 0.001f, "the ring moved before the board arrived");
+            }
 
-            // MUST land the sweep first. Paint() writes each row's FINAL
-            // gain text the moment Show() runs -- a preview, sitting there
-            // before the sweep or FillBar have moved at all -- and FillBar
-            // only overwrites it to "+0 EXP" and starts climbing once
-            // StartBars() fires at the very end of SweepToSummary. Polling
-            // the gain text immediately after Click could catch that
-            // Paint() preview on its very first, same-frame check and
-            // return early having watched nothing animate, independent of
-            // whether the second wait below is bounded by seconds or by
-            // frames.
             yield return WaitForTheSweepToLand();
+            yield return WaitForTheBoardToSettle();
 
-            var gain = Named("ReckoningRow0Gain").GetComponent<TMPro.TMP_Text>();
-            yield return WaitForTheGainToLand(gain, "79");
-
-            StringAssert.Contains("79", gain.text, "the bar never ran after the sweep");
+            Assert.AreEqual(0.79f, gain.fillAmount, 0.001f, "the ring never ran after the sweep");
         }
 
         [UnityTest]
@@ -413,76 +400,18 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(plate.raycastTarget, "the offer can no longer be clicked");
         }
 
+        // C8: Continue is the gold forward-arrow plate, no word, and the ember
+        // glow tuned to the old arrow's taper is gone.
         [UnityTest]
-        public IEnumerator TheContinueGlowIsAliveRatherThanADecal()
+        public IEnumerator ContinueIsTheGoldForwardArrow_WithNoEmberGlow()
         {
-            // A baked sprite holding perfectly still reads as a decal stuck on
-            // the panel however well it is drawn. Nothing else on this screen
-            // would fail if the flare stopped ticking -- the tree would still
-            // audit, the sprite would still be there, and the screen would
-            // simply go dead.
             yield return OpenIt(Offers());
             yield return TakeAndMoveOn();
             yield return WaitForTheSweepToLand();
 
-            var glow = Named("ReckoningContinueGlow").GetComponent<RectTransform>();
-            var image = glow.GetComponent<Image>();
-
-            float xMin = glow.anchoredPosition.x, xMax = xMin;
-            float sxMin = glow.localScale.x, sxMax = sxMin;
-            float syMin = glow.localScale.y, syMax = syMin;
-            float aMin = image.color.a, aMax = aMin;
-
-            // Long enough for the slowest term in FlickerCurve.Ember (1.31
-            // rad/s) to travel, and for the drift, which is slower still.
-            for (float t = 0f; t < 1.6f; t += Time.unscaledDeltaTime)
-            {
-                xMin = Mathf.Min(xMin, glow.anchoredPosition.x);
-                xMax = Mathf.Max(xMax, glow.anchoredPosition.x);
-                sxMin = Mathf.Min(sxMin, glow.localScale.x);
-                sxMax = Mathf.Max(sxMax, glow.localScale.x);
-                syMin = Mathf.Min(syMin, glow.localScale.y);
-                syMax = Mathf.Max(syMax, glow.localScale.y);
-                aMin = Mathf.Min(aMin, image.color.a);
-                aMax = Mathf.Max(aMax, image.color.a);
-                yield return null;
-            }
-
-            Assert.Greater(xMax - xMin, 2f, "the glow never drifted");
-            Assert.Greater(sxMax - sxMin, 0.02f, "the glow never flared");
-            Assert.Greater(aMax - aMin, 0.02f, "the glow never changed brightness");
-
-            // WIDER than it is tall, which is the difference between flaring
-            // out along the arrow and simply pulsing. It is also the constraint
-            // the layout imposes: the box is 88 tall against 90 of headroom
-            // before the frame's painted bottom ornament.
-            Assert.Greater(sxMax - sxMin, syMax - syMin,
-                "the flare is pulsing evenly rather than reaching along the arrow");
-
-            // AND THE CONFIGURED SWING, which is the assertion that was missing
-            // and the reason this test was worthless the first time.
-            //
-            // Sampling alone only ever proves the numbers are not constant. The
-            // first version of this effect swung x by 0.11 on a curve that
-            // travels two thirds of its range, so a 1.6s window saw about a
-            // hundredth of a scale unit change -- comfortably over the old
-            // 0.01 floor, and completely invisible in the running game. A test
-            // that passes while a player says "it doesn't move" is measuring
-            // the wrong thing.
-            //
-            // This one is phase-independent: it asks what the effect was
-            // CONFIGURED to do, not what a short sample happened to catch.
-            var flare = glow.GetComponent<EmberFlare>();
-            Assert.IsNotNull(flare, "the glow has no flare component at all");
-            Assert.GreaterOrEqual(flare.MaxScaleX - flare.MinScaleX, 0.25f,
-                "the flare is configured too tightly to be seen, whatever a sample says");
-            Assert.GreaterOrEqual(flare.MaxAlpha - flare.MinAlpha, 0.35f,
-                "brightness is what reads as fire; this is barely a change");
-
-            // Still bounded. Past about a third it stops reading as light on
-            // the arrow and starts reading as the arrow being inflated.
-            Assert.Less(flare.MaxScaleX - flare.MinScaleX, 0.45f,
-                "the flare has grown into a pulse you cannot ignore");
+            Assert.IsNull(Named("ReckoningContinueGlow"), "the stale ember glow is back");
+            var label = Named("ReckoningContinueButton").GetComponentInChildren<TMPro.TMP_Text>(true);
+            Assert.AreEqual(">>", label.text);
         }
 
         [UnityTest]

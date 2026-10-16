@@ -56,12 +56,9 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- the Reckoning --------------------------------------------------------------
 
-        // Directly above Continue, and clear of the lowest row of every page:
-        // Continue carries the summary's one AllowOverlap, so the audit cannot
-        // see a strip under it, and the pages are exclusive with each other but
-        // not with the strip.
+        // Directly above Continue, and clear of the haul strip above it.
         [Test]
-        public void OnTheReckoning_TheStripSitsBetweenEveryPagesRowsAndContinue()
+        public void OnTheReckoning_TheStripSitsBetweenTheHaulAndContinue()
         {
             foreach (var frame in UiFrames.All)
             {
@@ -74,16 +71,8 @@ namespace PrincesPalace.Domain.Tests
                 Assert.AreEqual(1f, strip.Bottom - continueRect.Top, 0.01f, "1px above Continue");
                 Assert.AreEqual(continueRect.Centre.X, strip.Centre.X, 0.01f, "centred over Continue");
 
-                var lowest = new[]
-                {
-                    "ReckoningRow" + (ReckoningScreen.RowCount - 1),
-                    "ReckoningTally" + (ReckoningScreen.RowCount - 1),
-                    "ReckoningRelic" + (ReckoningScreen.RelicRowCount - 1),
-                };
-                foreach (var name in lowest)
-                {
-                    Assert.Greater(Rect(name).Bottom, strip.Top, $"{name} reaches into the chips at {UiFrames.Describe(frame)}");
-                }
+                Assert.Greater(Rect("ReckoningHaul").Bottom, strip.Top,
+                    $"the haul reaches into the chips at {UiFrames.Describe(frame)}");
 
                 for (int i = 0; i < RelicChipTree.ChipCount; i++)
                 {

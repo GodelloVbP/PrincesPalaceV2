@@ -138,11 +138,10 @@ namespace PrincesPalace.PlayModeTests
 
             yield return WaitForTheSweepToLand();
 
-            var gain = Named("ReckoningRow0Gain").GetComponent<TMP_Text>();
-            yield return WaitForTheGainToLand(gain, "79");
+            yield return WaitForTheBoardToSettle();
 
-            StringAssert.Contains("79", gain.text,
-                "the gain counter did not end on the real number after the extra presses");
+            Assert.AreEqual(0.79f, Named("ReckoningPortrait0RingGain").GetComponent<Image>().fillAmount, 0.001f,
+                "the ring did not end on the real number after the extra presses");
         }
 
         // ---- C8: a scene arriving over the sweep -----------------------------------------
@@ -224,10 +223,10 @@ namespace PrincesPalace.PlayModeTests
             }
         }
 
-        private IEnumerator WaitForTheGainToLand(TMP_Text gain, string expected)
+        private IEnumerator WaitForTheBoardToSettle()
         {
-            int frames = 0, maxFrames = MaxFrames(0.55f);
-            while (!gain.text.Contains(expected) && frames < maxFrames)
+            int frames = 0, maxFrames = MaxFrames(1.2f);
+            while (!_reckoning.BoardSettled && frames < maxFrames)
             {
                 frames++;
                 yield return null;

@@ -98,22 +98,25 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void TheFrameWearsTheGoldThreeByTwoContainerArt()
+        public void TheFrameWearsTheSpread()
         {
-            // Was the bespoke reckoning_frame.png, asserted directly against
-            // frame.SpriteKey -- the frame moved to the kit's Gold 3:2
-            // container 2026-09-02 (see the build site's own comment), which
-            // wraps the art as a Decor CHILD rather than being the sprite
-            // itself, so frame.SpriteKey is null now and the art lives one
-            // level down.
+            // The cloth (reward_spread.png) as a frame holder: the art is a
+            // Decor child, so content beside it still audits.
             var frame = ReckoningScreen.Build().Frame.Node;
 
             Assert.IsFalse(frame.Decor,
                 "the wrapper must stay non-Decor, or content beneath it audits clean against itself");
             var art = frame.Children.Single(c => c.Kind == UiNodeKind.Sprite);
-            Assert.AreEqual("UI/Buttons/Processed/container_gold_3x2.png", art.SpriteKey,
-                "the violet blob is back");
+            Assert.AreEqual("Assets/_Project/Art/UI/Reckoning/Processed/reward_spread.png", art.SpriteKey);
             Assert.IsTrue(art.Decor);
+        }
+
+        [Test]
+        public void TheContentBoxIsTheSpreadsMeasuredHem()
+        {
+            Assert.AreEqual(577.92f, ReckoningScreen.ContentHalfWidth, 0.01f);
+            Assert.AreEqual(327.04f, ReckoningScreen.ContentTop, 0.01f);
+            Assert.AreEqual(-358.4f, ReckoningScreen.ContentBottom, 0.01f);
         }
 
         [Test]
@@ -156,17 +159,56 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void EveryRowStartsHiddenSoAnEmptyPartyDrawsNothing()
+        public void EveryPortraitAndHaulChipStartsHiddenSoAnEmptyPartyDrawsNothing()
         {
-            // Four rows are built and a party is one or two. Rows left visible
-            // would be four empty boxes under an EXPERIENCE heading.
+            // Three portraits and twelve chips are built; a party is one to
+            // three and a haul usually a few. Left visible they would be empty
+            // rings and blank chips.
             var screen = ReckoningScreen.Build();
 
-            Assert.AreEqual(ReckoningScreen.RowCount, screen.RowGroups.Count);
-            foreach (var row in screen.RowGroups)
+            Assert.AreEqual(3, screen.PortraitButtons.Count);
+            Assert.AreEqual(3, screen.DeedRows.Count);
+            Assert.AreEqual(12, screen.HaulChips.Count);
+            Assert.AreEqual(3 * 4, screen.DeedGlyphs.Count);
+            foreach (var node in screen.PortraitButtons.Concat(screen.DeedRows).Concat(screen.HaulChips))
             {
-                Assert.IsTrue(row.Node.StartInactive, $"{row.Node.Name} is visible before anything filled it");
+                Assert.IsTrue(node.Node.StartInactive, $"{node.Node.Name} is visible before anything filled it");
             }
+        }
+
+        [Test]
+        public void TheBoardHasNoTabsPagesTitleOrBars()
+        {
+            // C8, O2, O4: one board; no ending word, no held relics, no tally.
+            var names = Walk(Tree()).Select(n => n.Name).ToList();
+            foreach (var gone in new[] { "ReckoningTab0", "ReckoningSpoilsPage", "ReckoningRelicsPage",
+                         "ReckoningTallyPage", "ReckoningTitle", "ReckoningTitlePlaque", "ReckoningContinueGlow",
+                         "ReckoningRow0BarTrack", "ReckoningGoldLabel" })
+            {
+                CollectionAssert.DoesNotContain(names, gone);
+            }
+        }
+
+        [Test]
+        public void TheCrestSitsOnTheFramesTopEdge_InsideTheWipe()
+        {
+            var screen = ReckoningScreen.Build();
+            var crest = screen.FrameWipe.Node.Children.Single(c => c.Name == "ReckoningCrest");
+
+            Assert.AreEqual(0f, crest.Place.Offset.X, 0.001f);
+            Assert.AreEqual(369.152f, crest.Place.Offset.Y, 0.01f, "on the spread's paw crest");
+            Assert.AreEqual(96f, crest.Size.X, 0.001f);
+            Assert.LessOrEqual(crest.Place.Offset.Y + crest.Size.Y * 0.5f, ReckoningScreen.PanelHeight * 0.5f,
+                "inside the wipe, which would clip its top");
+            Assert.AreEqual("Assets/_Project/Art/UI/Reckoning/Processed/reward_crack.png", ReckoningScreen.CrackKey);
+        }
+
+        [Test]
+        public void TheGoldStackIsOnTheFrame_NotOnAPhase()
+        {
+            // It counts inside the wipe whichever phase opens.
+            var screen = ReckoningScreen.Build();
+            CollectionAssert.Contains(screen.Frame.Node.Children.Select(c => c.Name).ToList(), "ReckoningGoldStack");
         }
 
         [Test]
@@ -389,27 +431,6 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void TheExpTrackIsDeepEnoughToReadAsAChannel()
-        {
-            // 26px read as a flat black gap. Only the HEIGHT is asserted here,
-            // and the omission is deliberate.
-            //
-            // The bar's brightness is the product of two numbers this test
-            // cannot both see: ProceduralSpriteBaker's baked shading and the
-            // tint over it. Asserting the tint alone is measuring the wrong
-            // quantity, and doing exactly that is how the first attempt at this
-            // fix passed while overshooting to 0.85x the panel's luminance --
-            // the channel vanishing into the panel rather than reading as cut
-            // into it. tools/measure_bar.py composites the two against the
-            // painted frame and is the check that caught it.
-            var track = Walk(Tree()).First(n => n.Name == "ReckoningRow0BarTrack");
-
-            Assert.GreaterOrEqual(track.Size.Y, 30f, "the track is back to reading as a slot");
-            Assert.LessOrEqual(track.Size.Y, 32f,
-                "the row is 64 tall and the name line above the track starts at y 4 - taller than this and they touch");
-        }
-
-        [Test]
         public void NoOfferChildCollidesWithItsButtonsGeneratedCaption()
         {
             // UiEmitter names a button's caption "<button>Label" and it never
@@ -427,77 +448,33 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void TheRelicPageLeavesContinueAndTheTabStripClear()
+        public void TheBoardsRowsStayApart_AtEveryFrame()
         {
-            // THE AUDIT CANNOT CHECK THIS ONE. Continue carries the summary
-            // phase's AllowOverlap ("the page frames beneath it ... leave its
-            // band clear"), and A1 skips every pair either side of which has a
-            // reason -- so a relic row drawn under the button passed the audit.
-            // One did: the fifth row, until RelicRowCount dropped to four.
-            // Asserted on the solved rects, at every frame.
+            // Top to bottom: portraits, deeds, the detail's band, the haul, the
+            // gained chips, Continue. Nothing on the board carries an overlap
+            // waiver, so this also holds the audit's word; asserted on the
+            // solved rects so a row creeping into the next one names itself.
             foreach (var frame in UiFrames.All)
             {
                 var all = UiSolver.Solve(Tree(), frame).Descendants().ToList();
                 SolvedNode One(string name) => all.Single(n => n.Name == name);
 
-                var relicContent = new List<SolvedNode>
+                var column = new[]
                 {
-                    One("ReckoningRelicHeading"),
-                    One("ReckoningRelicPrevPage"),
-                    One("ReckoningRelicPageLabel"),
-                    One("ReckoningRelicNextPage"),
+                    "ReckoningPortrait0", "ReckoningDeeds0", "ReckoningBoardTip", "ReckoningHaul",
+                    "ReckoningGainedStrip", "ReckoningContinueButton",
                 };
-                for (int i = 0; i < ReckoningScreen.RelicRowCount; i++)
+                for (int i = 1; i < column.Length; i++)
                 {
-                    relicContent.Add(One("ReckoningRelic" + i));
+                    var above = One(column[i - 1]).Rect;
+                    var below = One(column[i]).Rect;
+                    Assert.GreaterOrEqual(above.Bottom, below.Top - 0.01f,
+                        $"{column[i - 1]} reaches into {column[i]} at {UiFrames.Describe(frame)}");
                 }
 
-                var phaseChrome = new List<SolvedNode> { One("ReckoningContinueButton") };
-                for (int i = 0; i < 3; i++) phaseChrome.Add(One("ReckoningTab" + i));
-
-                var offenders = new List<string>();
-                foreach (var content in relicContent)
-                {
-                    foreach (var chrome in phaseChrome)
-                    {
-                        if (content.Rect.Overlaps(chrome.Rect)) offenders.Add($"{content.Name} under {chrome.Name}");
-                    }
-
-                    foreach (var other in relicContent)
-                    {
-                        if (string.CompareOrdinal(content.Name, other.Name) < 0 && content.Rect.Overlaps(other.Rect))
-                        {
-                            offenders.Add($"{content.Name} on {other.Name}");
-                        }
-                    }
-                }
-
-                CollectionAssert.IsEmpty(offenders, $"at {UiFrames.Describe(frame)}");
-            }
-        }
-
-        [Test]
-        public void TheSpoilsAndTallyRowsStayAboveContinue()
-        {
-            // Continue's AllowOverlap hides it from the audit, so a row drawn
-            // under the plate passed. Rows 2 of both pages sat 10px under it.
-            foreach (var frame in UiFrames.All)
-            {
-                var all = UiSolver.Solve(Tree(), frame).Descendants().ToList();
-                SolvedNode One(string name) => all.Single(n => n.Name == name);
-
-                var continueRect = One("ReckoningContinueButton").Rect;
-                var offenders = new List<string>();
-
-                for (int i = 0; i < ReckoningScreen.RowCount; i++)
-                {
-                    foreach (var name in new[] { "ReckoningRow" + i, "ReckoningTally" + i })
-                    {
-                        if (One(name).Rect.Overlaps(continueRect)) offenders.Add($"{name} {One(name).Rect} vs Continue {continueRect}");
-                    }
-                }
-
-                CollectionAssert.IsEmpty(offenders, $"at {UiFrames.Describe(frame)}");
+                var right = One("ReckoningPortrait2").Rect;
+                var gold = One("ReckoningGoldStack").Rect;
+                Assert.IsFalse(right.Overlaps(gold), $"the right portrait is under the gold stack at {UiFrames.Describe(frame)}");
             }
         }
 

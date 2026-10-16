@@ -31,16 +31,8 @@ namespace PrincesPalace
         // because anything with a reference to it is one edit away from
         // scaling it again.
         [SerializeField] internal RectTransform frameWipe;
-        [SerializeField] internal TMP_Text goldLabel;
         [SerializeField] internal TMP_Text noticeLabel;
         [SerializeField] internal Button continueButton;
-
-        [SerializeField] internal GameObject[] rowGroups;
-        [SerializeField] internal TMP_Text[] rowNames;
-        [SerializeField] internal TMP_Text[] rowLevels;
-        [SerializeField] internal Image[] rowBarFills;
-        [SerializeField] internal Image[] rowBarBefores;
-        [SerializeField] internal TMP_Text[] rowGains;
 
         [SerializeField] internal Button[] offerButtons;
         [SerializeField] internal TMP_Text[] offerNames;
@@ -85,36 +77,14 @@ namespace PrincesPalace
         // does not serialise dictionaries. Same shape the overlay uses.
         [SerializeField] internal IconEntry[] icons;
 
-        // Relic art, by relic id: the RELICS tab's rows (RelicListPresenter).
+        // Relic art, by relic id: the gained chips and the haul's relics.
         [SerializeField] internal IconEntry[] relicArt;
-
-        [SerializeField] internal Button[] tabButtons;
-        [SerializeField] internal Image[] tabMarkers;
-        [SerializeField] internal GameObject[] pages;
 
         [SerializeField] internal Image dimmer;
         [SerializeField] internal Image frameGlow;
 
         [SerializeField] internal RectTransform offerPhase;
         [SerializeField] internal RectTransform summaryPhase;
-
-        [SerializeField] internal GameObject relicEmptyHint;
-        [SerializeField] internal GameObject[] relicRows;
-        [SerializeField] internal Image[] relicIcons;
-        [SerializeField] internal TMP_Text[] relicNames;
-        [SerializeField] internal TMP_Text[] relicMetas;
-        [SerializeField] internal TMP_Text[] relicBodies;
-        [SerializeField] internal TMP_Text relicPageLabel;
-        [SerializeField] internal Button relicPrevPageButton;
-        [SerializeField] internal Button relicNextPageButton;
-
-        [SerializeField] internal GameObject[] tallyRows;
-        [SerializeField] internal TMP_Text[] tallyNames;
-        [SerializeField] internal TMP_Text[] tallyStats;
-        [SerializeField] internal TMP_Text[] tallyKills;
-
-        [SerializeField] internal TMP_Text titleLabel;
-        [SerializeField] internal GameObject expHeading;
 
         // The "Gained" chips (RelicChipStrip) and their tooltip.
         [SerializeField] internal GameObject gainedStrip;
@@ -130,10 +100,6 @@ namespace PrincesPalace
         private const float ExpandSeconds = 0.28f;
         private const float BarSeconds = 0.55f;
         private const float BarStagger = 0.12f;
-
-        // Long enough to register as a beat, short enough not to stall the
-        // sequence behind it.
-        private const float FlashSeconds = 0.09f;
 
         // A HORIZONTAL WIPE, not a scale-pop. Full height from the first
         // frame, zero width, opening outward -- so it reads as the panel being
@@ -196,11 +162,6 @@ namespace PrincesPalace
         // overlay is not supposed to be.
         private const float GloomSeconds = 0.34f;
 
-        private static readonly Color MarkerLit = new Color(0.95f, 0.86f, 0.62f, 1f);
-        private static readonly Color MarkerDark = new Color(0.95f, 0.86f, 0.62f, 0f);
-
-        private int _tab;
-        private RelicListPresenter _relics;
         private bool _choosing;
 
         // Degrees per second. Slow: this is a glow behind an object, and a
@@ -239,11 +200,10 @@ namespace PrincesPalace
         // THE TEST SEAM, same shape as FightBeatPlayer.BeatSpeedMultiplier and
         // FightController.BreathSpeedMultiplier -- this driver has neither of
         // those, being entirely its own thing off Time.unscaledDeltaTime (the
-        // wipe/gloom in PlayIn, the sweep and smear in SweepToSummary, the bar
-        // fill and stagger delay in Sweep/FillBar, the level-up flash in
-        // Flash), so it needed its own. 1 outside a test, which changes
-        // nothing about play. ReckoningTests, ReckoningPhaseTests and
-        // ReckoningTabTests set/reset it in [SetUp]/[TearDown].
+        // wipe/gloom in PlayIn, the sweep and smear in SweepToSummary, the
+        // reveal, the board's rings and haul), so it needed its own. 1 outside
+        // a test, which changes nothing about play. The Reckoning* PlayMode
+        // fixtures set/reset it in [SetUp]/[TearDown].
         public static float SpeedMultiplier = 1f;
 
         // Raised when the player dismisses it. An event rather than a call into
@@ -294,15 +254,8 @@ namespace PrincesPalace
             if (_wired) return;
             _wired = true;
 
-            for (int i = 0; i < tabButtons.Length; i++)
-            {
-                int index = i;
-                tabButtons[i].onClick.AddListener(() => SelectTab(index));
-            }
-
             continueButton.onClick.AddListener(Dismiss);
-
-            Relics.WirePager();
+            WireBoard();
 
             // Pressing a chip is "done reading": focus goes to Continue.
             Gained.Pressed = () =>
@@ -361,7 +314,7 @@ namespace PrincesPalace
         //
         // TWO STATES, one context. The choice phase is a Rail of the open
         // cards, a Rail of their "hone instead" buttons beneath, and the page's
-        // way off; the summary it sweeps to is the page tabs plus Continue.
+        // way off; the board it sweeps to is the portraits, the haul and Continue.
         // Reconfigured rather than popped and re-pushed, which is
         // NavContext.Reconfigure's own documented case -- the phase change is
         // the same screen showing something else, not a modal over it.
@@ -448,75 +401,20 @@ namespace PrincesPalace
             }
             else
             {
-                var tabs = new List<Selectable>();
-                for (int i = 0; tabButtons != null && i < tabButtons.Length; i++)
-                {
-                    if (tabButtons[i] != null && TabShown(i)) tabs.Add(tabButtons[i]);
-                }
-
-                groups.Add(RuntimeNavWiring.Group("reckoningTabs", UiNavGroupKind.Rail, tabs));
-
-                // Continue is the summary's own primary action and its entry:
-                // the tabs are there to be read, and a player who wants them
-                // presses Up. (Not a List with Continue as its last member --
-                // the tabs are a horizontal strip, so Left/Right has to mean
-                // "another page".)
-                //
-                // THE RELIC PAGER SITS BETWEEN THEM when it is up: it is only
-                // on screen on the relics tab with more than one page, and a
-                // pad player has to be able to reach it or the later pages are
-                // mouse-only.
-                //
-                // THE CHIP RAIL sits between the pager and Continue, matching
-                // where it is drawn (docs/PLAN_BUGS_QA.md C2, the
-                // Reckoning navigation graph): each element's Down is the next
-                // one present, Continue's Up the nearest one present.
-                var pager = RelicPagerShown()
-                    ? new List<Selectable> { relicPrevPageButton, relicNextPageButton }
-                    : new List<Selectable>();
-                var chips = Gained.Selectables;
-                var currentTab = tabButtons != null && _tab < tabButtons.Length && TabShown(_tab)
-                    ? tabButtons[_tab]
-                    : First(tabs);
-                var belowPager = First(chips) ?? continueButton;
-                var belowTabs = First(pager) ?? belowPager;
-
-                foreach (var tab in tabs)
-                {
-                    links.Add(RuntimeNavWiring.Link(tab, UiNavDirection.Down, belowTabs));
-                }
-
-                if (pager.Count > 0)
-                {
-                    groups.Add(RuntimeNavWiring.Group("reckoningRelicPager", UiNavGroupKind.Rail, pager));
-                    foreach (var arrow in pager)
-                    {
-                        links.Add(RuntimeNavWiring.Link(arrow, UiNavDirection.Up, currentTab));
-                        links.Add(RuntimeNavWiring.Link(arrow, UiNavDirection.Down, belowPager));
-                    }
-
-                    Declare(selectables, pager);
-                }
-
-                if (chips.Count > 0)
-                {
-                    groups.Add(RuntimeNavWiring.Group("reckoningGained", UiNavGroupKind.Rail, chips,
-                        wrap: UiNavWrap.Clamp));
-                    var aboveChips = First(pager) ?? currentTab;
-                    foreach (var chip in chips)
-                    {
-                        links.Add(RuntimeNavWiring.Link(chip, UiNavDirection.Up, aboveChips));
-                        links.Add(RuntimeNavWiring.Link(chip, UiNavDirection.Down, continueButton));
-                    }
-
-                    Declare(selectables, chips);
-                }
-
-                links.Add(RuntimeNavWiring.Link(continueButton, UiNavDirection.Up,
-                    First(chips) ?? First(pager) ?? currentTab));
+                // THE BOARD (C8): Continue is the entry; Up reaches the haul
+                // strip (this fight's chips, then the event relics' receipts),
+                // Up again the portraits. ReckoningBoardNav owns the shape and
+                // ReckoningBoardNavTests pins it.
+                var portraits = ShownPortraits();
+                var haul = ShownHaulChips();
+                haul.AddRange(Gained.Selectables);
+                var board = ReckoningBoardNav<Selectable>.For(portraits, haul, continueButton);
+                groups.AddRange(board.Groups);
+                links.AddRange(board.Links.Select(l => (UiNavLink<Selectable>?)l));
 
                 entry = continueButton == null ? null : continueButton.gameObject;
-                Declare(selectables, tabs);
+                Declare(selectables, portraits);
+                Declare(selectables, haul);
                 if (continueButton != null) selectables[continueButton.name] = continueButton.gameObject;
             }
 
@@ -567,6 +465,8 @@ namespace PrincesPalace
             _tooltips.Detach();
             CancelFlights();
             StopReveal();
+            StopBoard();
+            WatchMenus(false);
             _nudging.Clear();
 
             if (_navContext == null) return;
@@ -621,15 +521,6 @@ namespace PrincesPalace
             _choosing = choosing;
             PaintEmbers();
 
-            // THE OUTCOME FORM HAS NO SPOILS TAB: nothing was paid, so the
-            // page would be empty. It is hidden, the shown tabs close up, and
-            // the screen opens on the tally, which is what the fight left.
-            LayOutTabs();
-            _tab = _request.IsOutcomeForm ? TallyTab : SpoilsTab;
-            Relics.Model.SetPage(0);
-            PaintTabs();
-            PaintRelics();
-            PaintTally();
             Gained.Show(_request.Receipts);
 
             // AFTER Paint/PaintOffers, never on OnEnable: which cards exist
@@ -639,6 +530,7 @@ namespace PrincesPalace
             // PushNavContext states).
             _tooltips.Attach(NavigationInputModule.Contexts);
             RefreshNavigation();
+            WatchMenus(true);
 
             // Selected NOW rather than left to the dispatcher's next-frame
             // reselection rule, so the screen never draws a frame with the
@@ -650,9 +542,9 @@ namespace PrincesPalace
                 _animation = StartCoroutine(PlayIn());
                 if (choosing) BeginReveal();
 
-                // Straight to the summary means the bars start with it; the
+                // Straight to the board means its fills start with it; the
                 // choosing path starts them when the sweep lands.
-                if (!choosing) StartBars();
+                if (!choosing) StartBoard();
             }
             else
             {
@@ -664,14 +556,6 @@ namespace PrincesPalace
 
         private void Paint()
         {
-            // THE OUTCOME FORM pays nothing, so nothing that reports a payout
-            // shows, and the title names the ending instead (C3).
-            bool outcome = _request.IsOutcomeForm;
-            if (titleLabel != null) titleLabel.Set(TitleFor(_request));
-            goldLabel.gameObject.SetShown(!outcome);
-            if (expHeading != null) expHeading.SetShown(!outcome);
-            goldLabel.Set(UiStrings.ReckoningGold, _reward?.GoldGained ?? 0);
-
             // A caravan fake that fell apart in this fight, and the merchant's
             // "No refunds." (the settlement's notices). Hidden on every fight
             // that has nothing to say, which is nearly all of them.
@@ -683,52 +567,8 @@ namespace PrincesPalace
                 if (any) noticeLabel.SetContent(string.Join("\n", notices));
             }
 
-            var characters = _reward?.Characters ?? new List<CharacterReward>();
-
-            for (int i = 0; i < rowGroups.Length; i++)
-            {
-                bool present = i < characters.Count;
-
-                // Hidden rather than blank, the same rule the bag and the debug
-                // list follow: empty furniture reads as a load failure.
-                rowGroups[i].SetActive(present);
-                if (!present) continue;
-
-                var row = characters[i];
-                rowNames[i].SetContent(row.DisplayName);
-
-                if (row.IsDowned)
-                {
-                    // A squad member left out of the encounter still gets a
-                    // row. Dropping them made the party silently change size
-                    // between the fight and the results -- three went in, two
-                    // came back, and nothing said why.
-                    rowLevels[i].Set(UiStrings.ReckoningDowned);
-                    rowGains[i].SetContent("");
-                }
-                else
-                {
-                    rowLevels[i].Set(
-                        row.LevelledUp ? UiStrings.ReckoningLevelUp : UiStrings.ReckoningLevel,
-                        row.LevelAfter);
-                    rowGains[i].Set(UiStrings.ReckoningExpGain, row.ExpGained);
-                }
-
-                // The dim segment runs 0 -> where they already stood. The
-                // bright one starts WHERE THAT ENDS and grows to the total.
-                //
-                // Both anchored from the left would put the bright bar on top
-                // of the dim one -- it is declared last, so it paints over --
-                // and the "before" segment would never be visible at all. The
-                // whole point of CharacterReward carrying a before is that the
-                // player can see what THIS fight was worth rather than only
-                // where they ended up.
-                float before = row.IsDowned ? row.BarFill01() : row.BarFillBefore01();
-
-                SetSpan(rowBarBefores[i], 0f, before);
-                SetSpan(rowBarFills[i], before, before);
-            }
-
+            PaintArrival();
+            PaintBoard();
             PaintOffers();
         }
 
@@ -1497,6 +1337,7 @@ namespace PrincesPalace
         private void AfterChoice()
         {
             SaveSlotManager.SaveCurrent();
+            RefreshGold();
             PaintOffers();
             RefreshNavigation();
 
@@ -1784,117 +1625,6 @@ namespace PrincesPalace
             }
         }
 
-        // ---- tabs ---------------------------------------------------------------------
-
-        // The tabs' order on the tree (ReckoningScreen.TabStrings).
-        private const int SpoilsTab = 0;
-        private const int TallyTab = 2;
-
-        private bool TabShown(int index) => !(_request.IsOutcomeForm && index == SpoilsTab);
-
-        // Where the tree put each tab, read once, so a full form after an
-        // outcome form gets the strip back exactly as built.
-        private float[] _tabHomeX;
-
-        // The shown tabs, spread over the same centre and pitch the tree uses
-        // for all of them, so hiding one never leaves a gap in the strip.
-        private void LayOutTabs()
-        {
-            if (tabButtons == null) return;
-
-            if (_tabHomeX == null)
-            {
-                _tabHomeX = new float[tabButtons.Length];
-                for (int i = 0; i < tabButtons.Length; i++)
-                {
-                    var rect = tabButtons[i] == null ? null : tabButtons[i].transform as RectTransform;
-                    if (rect != null) _tabHomeX[i] = rect.anchoredPosition.x;
-                }
-            }
-
-            var shown = new List<int>();
-            for (int i = 0; i < tabButtons.Length; i++)
-            {
-                if (tabButtons[i] == null) continue;
-                tabButtons[i].gameObject.SetActive(TabShown(i));
-                if (TabShown(i)) shown.Add(i);
-            }
-
-            float pitch = tabButtons.Length > 1 ? _tabHomeX[1] - _tabHomeX[0] : 0f;
-            for (int k = 0; k < shown.Count; k++)
-            {
-                var rect = (RectTransform)tabButtons[shown[k]].transform;
-                float x = (k - (shown.Count - 1) * 0.5f) * pitch;
-                if (shown.Count == tabButtons.Length) x = _tabHomeX[shown[k]];
-                rect.anchoredPosition = new Vector2(x, rect.anchoredPosition.y);
-            }
-        }
-
-        private void SelectTab(int index)
-        {
-            if (pages == null || index < 0 || index >= pages.Length || !TabShown(index)) return;
-
-            if (index != _tab) SoundController.Play(TabSwipe.Next());
-            _tab = index;
-            PaintTabs();
-
-            // The pager joins or leaves the pad's graph with the relics tab.
-            if (!_choosing && _navContext != null) RefreshNavigation();
-        }
-
-        private void PaintTabs()
-        {
-            for (int i = 0; i < pages.Length; i++)
-            {
-                if (pages[i] != null) pages[i].SetActive(i == _tab);
-                if (i < tabMarkers.Length && tabMarkers[i] != null)
-                {
-                    tabMarkers[i].color = i == _tab ? MarkerLit : MarkerDark;
-                }
-            }
-        }
-
-        // ---- what the descent is carrying ----------------------------------------------
-
-        // The one relic presenter, over this screen's own widgets.
-        private RelicListPresenter Relics =>
-            _relics ?? (_relics = new RelicListPresenter(new RelicListWidgets(
-                relicRows, relicIcons, relicNames, relicMetas, relicBodies,
-                relicPrevPageButton, relicNextPageButton, relicPageLabel, relicEmptyHint, relicArt)));
-
-        private void PaintRelics()
-        {
-            // The RUN'S relics, read straight off the snapshot. The Reckoning
-            // is the only screen a player sees between fights, so it is where
-            // "what am I actually carrying" belongs. PAGED, never truncated:
-            // the shop sells relics with no cap.
-            var held = RunManager.HasRun
-                ? RunManager.Run.relicIds ?? new List<string>()
-                : new List<string>();
-
-            Relics.Show(held);
-        }
-
-        private bool RelicPagerShown() =>
-            relicPrevPageButton != null && relicNextPageButton != null
-            && pages != null && _tab < pages.Length && pages[_tab] != null
-            && relicPrevPageButton.transform.IsChildOf(pages[_tab].transform)
-            && relicPrevPageButton.gameObject.activeSelf;
-
-        // ---- what everyone did ----------------------------------------------------------
-
-        private static UiString TitleFor(ReckoningRequest request)
-        {
-            if (!request.IsOutcomeForm) return UiStrings.ReckoningTitle;
-
-            switch (request.Ending)
-            {
-                case FightEnding.Endured: return UiStrings.ReckoningEndingEndured;
-                case FightEnding.Fell: return UiStrings.ReckoningEndingFell;
-                default: return UiStrings.ReckoningEndingVictory;
-            }
-        }
-
         // The one chip presenter, over this screen's own widgets.
         private RelicChipStrip Gained =>
             _gained ?? (_gained = new RelicChipStrip(new RelicChipWidgets(
@@ -1905,36 +1635,6 @@ namespace PrincesPalace
         public IReadOnlyList<string> DisplayedReceipts => Gained.Displayed;
 
         public bool IsOutcomeForm => _request.IsOutcomeForm;
-
-        private void PaintTally()
-        {
-            var characters = _request.Tally;
-            var ledger = _request.Ledger;
-
-            for (int i = 0; i < tallyRows.Length; i++)
-            {
-                bool present = i < characters.Count;
-                tallyRows[i].SetActive(present);
-                if (!present) continue;
-
-                var character = characters[i];
-                var line = ledger?.For(character.CharacterId);
-
-                tallyNames[i].SetContent(character.DisplayName);
-                tallyKills[i].Set(UiStrings.ReckoningKills, line?.Kills ?? 0);
-
-                // A character who was benched reads as zeroes rather than
-                // vanishing -- "you did nothing" is a true and useful thing to
-                // be told, and a missing row is a bug the player has to guess
-                // at. Same rule the defeat screen holds.
-                tallyStats[i].Set(UiStrings.ReckoningTallyLine,
-                    line?.TotalDealt ?? 0,
-                    line?.PhysicalDealt ?? 0,
-                    line?.OtherDealt ?? 0,
-                    line?.DamageTaken ?? 0,
-                    line?.Healed ?? 0);
-            }
-        }
 
         // ---- animation ---------------------------------------------------------------
 
@@ -1950,7 +1650,10 @@ namespace PrincesPalace
             SetWipeWidth(0f);
             frameWipe.anchoredPosition = new Vector2(frameWipe.anchoredPosition.x, LiftFrom);
 
-            float gloomTarget = dimmer != null ? dimmer.color.a : 0f;
+            // Read once per open: a PlayIn cut short leaves the dimmer part-way,
+            // and settling must land on the authored gloom, not on that.
+            if (_gloomTarget < 0f) _gloomTarget = dimmer != null ? dimmer.color.a : 0f;
+            float gloomTarget = _gloomTarget;
             float glowTarget = frameGlow != null ? GlowAlpha : 0f;
             if (dimmer != null) SetAlpha(dimmer, 0f);
             if (frameGlow != null) SetAlpha(frameGlow, 0f);
@@ -1958,7 +1661,11 @@ namespace PrincesPalace
             float elapsed = 0f;
             float wipe = W(WipeSeconds);
             float gloom = W(GloomSeconds);
-            float longest = Mathf.Max(wipe, gloom);
+
+            // THE OUTCOME FORM HOLDS THE GLOOM LOW (C1.3) for its first beat,
+            // so the fight behind the overlay shows how it ended.
+            float hold = _request.IsOutcomeForm ? W(OutcomeHoldSeconds) : 0f;
+            float longest = Mathf.Max(wipe, hold + gloom);
 
             while (elapsed < longest)
             {
@@ -1968,8 +1675,9 @@ namespace PrincesPalace
                 SetWipeWidth(ReckoningScreen.PanelWidth * k);
                 frameWipe.anchoredPosition =
                     new Vector2(frameWipe.anchoredPosition.x, Mathf.Lerp(LiftFrom, 0f, k));
+                ApplyArrival(elapsed, audible: true);
 
-                float g = Easing.SmoothStep(Mathf.Clamp01(elapsed / gloom));
+                float g = Easing.SmoothStep(Mathf.Clamp01((elapsed - hold) / gloom));
                 if (dimmer != null) SetAlpha(dimmer, gloomTarget * g);
                 if (frameGlow != null) SetAlpha(frameGlow, glowTarget * g);
 
@@ -1980,6 +1688,7 @@ namespace PrincesPalace
             frameWipe.anchoredPosition = new Vector2(frameWipe.anchoredPosition.x, 0f);
             if (dimmer != null) SetAlpha(dimmer, gloomTarget);
             if (frameGlow != null) SetAlpha(frameGlow, glowTarget);
+            ApplyArrival(float.MaxValue, audible: true);
 
             _animation = null;
         }
@@ -2043,111 +1752,11 @@ namespace PrincesPalace
 
             offerPhase.gameObject.SetActive(false);
 
-            // The bars only start once the summary has arrived. Filling them
+            // The rings only start once the board has arrived. Filling them
             // mid-sweep means watching a number climb on something still
             // sliding, and neither gets read.
-            StartBars();
+            StartBoard();
             _animation = null;
-        }
-
-        private void StartBars()
-        {
-            var characters = _reward?.Characters ?? new List<CharacterReward>();
-
-            for (int i = 0; i < characters.Count && i < rowBarFills.Length; i++)
-            {
-                if (characters[i].IsDowned) continue;
-                StartCoroutine(FillBar(i, characters[i], i * BarStagger));
-            }
-        }
-
-        private IEnumerator FillBar(int index, CharacterReward row, float delay)
-        {
-            // Scaled the same way as everything else on this seam, rather
-            // than by dividing WaitForSecondsRealtime's own clock -- there is
-            // no unscaled equivalent of WaitForSeconds that also multiplies,
-            // so this is a manual timer instead of the realtime wait it
-            // replaces.
-            if (delay > 0f)
-            {
-                float wait = W(delay);
-                for (float t = 0f; t < wait; t += Tick) yield return null;
-            }
-
-            // NO LEVEL-UP: one fill, start to finish.
-            if (!row.LevelledUp)
-            {
-                yield return Sweep(index, row, row.BarFillBefore01(), row.BarFill01(), 0f, 1f);
-                CountGain(index, row.ExpGained);
-                yield break;
-            }
-
-            // A LEVEL-UP SWEEPS THE BAR TO FULL, flashes, and starts again.
-            //
-            // Without this the biggest experience event the game has produced
-            // the emptiest bar it can draw: the level reset the track, so what
-            // remains is a handful of points measured against the NEW level's
-            // larger requirement, and 75 experience and a level rendered as a
-            // sliver. The arithmetic was right and the reading was backwards.
-            int sweeps = row.LevelsGained;
-
-            // The counter runs across the WHOLE sequence rather than resetting
-            // per level -- it is reporting one number, however many times the
-            // bar happens to refill behind it.
-            float progressPerSweep = 1f / (sweeps + 1);
-
-            // First: from wherever they actually were, up to full.
-            yield return Sweep(index, row, row.SweepStart01(), 1f, 0f, progressPerSweep);
-            yield return Flash(index);
-
-            // Any further levels crossed in one fight: empty to full each.
-            for (int i = 1; i < sweeps; i++)
-            {
-                float from = i * progressPerSweep;
-                yield return Sweep(index, row, 0f, 1f, from, from + progressPerSweep);
-                yield return Flash(index);
-            }
-
-            // Then the remainder on the new level's scale, which is where the
-            // bar actually stands now.
-            yield return Sweep(index, row, 0f, row.BarFill01(), sweeps * progressPerSweep, 1f);
-            CountGain(index, row.ExpGained);
-        }
-
-        // One pass of the bar, carrying its share of the counter with it.
-        private IEnumerator Sweep(int index, CharacterReward row, float from, float to,
-                                  float countFrom, float countTo)
-        {
-            // Each pass gets an equal share of the budget, so a two-level fight
-            // is not three times as long to watch as a one-level fight.
-            float seconds = W(BarSeconds * (countTo - countFrom));
-
-            for (float t = 0f; t < seconds; t += Tick)
-            {
-                float k = Easing.SmoothStep(Mathf.Clamp01(t / seconds));
-                SetSpan(rowBarFills[index], from, Mathf.Lerp(from, to, k));
-                CountGain(index, Mathf.RoundToInt(row.ExpGained * Mathf.Lerp(countFrom, countTo, k)));
-                yield return null;
-            }
-
-            SetSpan(rowBarFills[index], from, to);
-        }
-
-        // The moment the level lands. A brief white-out of the fill, because
-        // the bar going from full to empty with no punctuation reads as the
-        // animation glitching rather than as something being earned.
-        private IEnumerator Flash(int index)
-        {
-            var fill = rowBarFills[index];
-            var resting = fill.color;
-
-            fill.color = Color.white;
-
-            // Manual timer, same reason as FillBar's delay above.
-            float flash = W(FlashSeconds);
-            for (float t = 0f; t < flash; t += Tick) yield return null;
-
-            fill.color = resting;
         }
 
         // Attached at RUNTIME, the same way HoverIndex and BarSlider are: the
@@ -2183,14 +1792,9 @@ namespace PrincesPalace
             image.color = colour;
         }
 
-        private void CountGain(int index, int amount)
-        {
-            if (index < 0 || index >= rowGains.Length || rowGains[index] == null) return;
-            rowGains[index].Set(UiStrings.ReckoningExpGain, amount);
-        }
-
-        // Everything the animation would have arrived at, at once. Used when
-        // there is no live hierarchy to animate in.
+        // Everything the animation would have arrived at, at once and
+        // silently. Used when there is no live hierarchy to animate in, and
+        // when a menu opens over a running beat (section 4.13).
         private void SettleImmediately()
         {
             if (frameWipe != null)
@@ -2199,39 +1803,11 @@ namespace PrincesPalace
                 frameWipe.anchoredPosition = new Vector2(frameWipe.anchoredPosition.x, 0f);
             }
 
-            if (dimmer != null) SetAlpha(dimmer, dimmer.color.a);
+            if (dimmer != null) SetAlpha(dimmer, _gloomTarget >= 0f ? _gloomTarget : dimmer.color.a);
             if (frameGlow != null) SetAlpha(frameGlow, GlowAlpha);
 
-            var characters = _reward?.Characters ?? new List<CharacterReward>();
-            for (int i = 0; i < characters.Count && i < rowBarFills.Length; i++)
-            {
-                SetSpan(rowBarFills[i], characters[i].BarFillBefore01(), characters[i].BarFill01());
-                CountGain(i, characters[i].ExpGained);
-            }
-        }
-
-        // A SEGMENT of the track, from one fraction to another.
-        //
-        // Moves the ANCHORS, not the scale. localScale scales about the centre,
-        // so a bar sized that way grows from the middle in both directions --
-        // the exact bug already fixed once on the fight HUD's health bars.
-        //
-        // Takes a `from` as well as a `to` because this track carries two
-        // segments that must sit BESIDE each other rather than on top of each
-        // other; a fill-from-zero helper cannot express the second one.
-        private static void SetSpan(Image fill, float from, float to)
-        {
-            if (fill == null) return;
-
-            float min = Mathf.Clamp01(from);
-            float max = Mathf.Clamp01(to);
-            if (max < min) max = min;
-
-            var rect = (RectTransform)fill.transform;
-            rect.anchorMin = new Vector2(min, 0f);
-            rect.anchorMax = new Vector2(max, 1f);
-            rect.offsetMin = Vector2.zero;
-            rect.offsetMax = Vector2.zero;
+            ApplyArrival(float.MaxValue, audible: false);
+            SettleBoard();
         }
     }
 }

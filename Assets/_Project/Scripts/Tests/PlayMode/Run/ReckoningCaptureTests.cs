@@ -226,8 +226,7 @@ namespace PrincesPalace.PlayModeTests
             yield return ShootPage("Reckoning_five_ghosts_page.png");
         }
 
-        // The full party after one pick: today's spoils/tally pages stand in
-        // for the board.
+        // The full party after one pick: the board (C8).
         [UnityTest]
         public IEnumerator CaptureTheBoard()
         {
@@ -258,8 +257,8 @@ namespace PrincesPalace.PlayModeTests
             yield return Shoot("Reckoning_outcome_board.png");
         }
 
-        // The summary phase's Continue plate against the spoils and tally
-        // rows, at 16:9 and 4:3. The canvas renders at 1 unit per pixel, so the
+        // The board's Continue plate against the haul and the portraits, at
+        // 16:9 and 4:3. The canvas renders at 1 unit per pixel, so the
         // 4:3 shot is the same canvas cropped to 1440x1080.
         [UnityTest]
         public IEnumerator CaptureTheSummaryPages()
@@ -297,15 +296,8 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(canvas);
             Directory.CreateDirectory(OutputDir);
 
-            var tabs = _reckoning.GetComponentsInChildren<UnityEngine.UI.Button>(includeInactive: true);
-            foreach (var page in new[] { (tab: "ReckoningTab0", label: "spoils"), (tab: "ReckoningTab2", label: "tally") })
-            {
-                tabs.First(b => b.name == page.tab).onClick.Invoke();
-                yield return new WaitForSecondsRealtime(1.5f);
-
-                CanvasCapture.RenderToFile(canvas, Path.Combine(OutputDir, $"Reckoning_summary_{page.label}_16x9.png"), 1920, 1080);
-                CanvasCapture.RenderToFile(canvas, Path.Combine(OutputDir, $"Reckoning_summary_{page.label}_4x3.png"), 1440, 1080);
-            }
+            CanvasCapture.RenderToFile(canvas, Path.Combine(OutputDir, "Reckoning_summary_board_16x9.png"), 1920, 1080);
+            CanvasCapture.RenderToFile(canvas, Path.Combine(OutputDir, "Reckoning_summary_board_4x3.png"), 1440, 1080);
         }
     }
 }

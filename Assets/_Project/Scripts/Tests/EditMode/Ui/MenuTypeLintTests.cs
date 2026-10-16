@@ -55,7 +55,7 @@ namespace PrincesPalace.Domain.Tests
         private static readonly Scope[] Scoped =
         {
             new Scope("system menu: frame and every pane", () => SystemMenuScreen.Build().Root, MenuMinimumNodes, null),
-            new Scope("reckoning relics tab", () => ReckoningScreen.Build().Root, 15, "ReckoningRelic"),
+            new Scope("reckoning board deeds", () => ReckoningScreen.Build().Root, 12, "ReckoningDeeds"),
             new Scope("reckoning card name", () => ReckoningScreen.Build().Root, 5, "ReckoningOffer", "Name"),
             new Scope("reckoning card delta", () => ReckoningScreen.Build().Root, 5, "ReckoningOffer", "Delta"),
             new Scope("relic draft held strip", () => RelicDraftScreen.Build().Root, 9, "DraftHeld"),

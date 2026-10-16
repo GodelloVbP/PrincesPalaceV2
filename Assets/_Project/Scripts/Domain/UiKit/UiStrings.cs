@@ -556,52 +556,27 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("continue_subline", "{0} - Floor {1} - {2}", "Bjorn the Bear - Floor 99 - 999h 59m");
 
         // --- the Reckoning ------------------------------------------------------
-        public static readonly UiString ReckoningTitle = UiString.Define("reckoning.title", "THE RECKONING");
-
-        // The outcome form's title (ReckoningRequest.Outcome), naming how the
-        // fight ended. THE RECKONING is the widest, so the title box the
-        // audit measures holds all four.
-        public static readonly UiString ReckoningEndingVictory = UiString.Define("reckoning.ending_victory", "VICTORY");
-        public static readonly UiString ReckoningEndingEndured = UiString.Define("reckoning.ending_endured", "ENDURED");
-        public static readonly UiString ReckoningEndingFell = UiString.Define("reckoning.ending_fell", "FELL");
-        public static readonly UiString ReckoningExperience =
-            UiString.Define("reckoning.experience", "EXPERIENCE");
-        public static readonly UiString ReckoningGold =
-            UiString.Define("reckoning.gold", "+{0} GOLD", "+99999 GOLD");
-        public static readonly UiString ReckoningLevel =
-            UiString.Define("reckoning.level", "LEVEL {0}", "LEVEL 99");
-        // The level-up is called out in the level slot rather than as a fourth
-        // label, because it is the SAME fact -- what level they are now -- and
-        // a separate badge would need somewhere to live on every row that
-        // never earns one.
-        public static readonly UiString ReckoningLevelUp =
-            UiString.Define("reckoning.level_up", "LEVEL {0}  -  UP!", "LEVEL 99  -  UP!");
+        // The board (docs/PLAN_REWARD_SCREENS.md C8): the level numeral on a
+        // portrait's badge, the gold stack's count, and the portrait's detail.
+        public static readonly UiString ReckoningLevelNumeral =
+            UiString.Define("reckoning.level_numeral", "{0}", "99");
+        public static readonly UiString ReckoningGoldCount =
+            UiString.Define("reckoning.gold_count", "{0}", "99999");
         public static readonly UiString ReckoningExpGain =
             UiString.Define("reckoning.exp_gain", "+{0} EXP", "+99999 EXP");
         public static readonly UiString ReckoningDowned =
             UiString.Define("reckoning.downed", "DID NOT FIGHT");
         public static readonly UiString ReckoningOfferMeta =
             UiString.Define("reckoning.offer_meta", "{0}  -  TIER {1}", "Legendary  -  TIER 10");
-
-        // The three tabs. Named for what they hold rather than numbered, and
-        // spelled out here rather than derived from an enum name -- "TALLY"
-        // is not what any reasonable enum member would be called.
-        public static readonly UiString ReckoningTabSpoils = UiString.Define("reckoning.tab_spoils", "SPOILS");
-        public static readonly UiString ReckoningTabRelics = UiString.Define("reckoning.tab_relics", "RELICS");
-        public static readonly UiString ReckoningTabTally = UiString.Define("reckoning.tab_tally", "TALLY");
-
-        public static readonly UiString ReckoningNoRelics =
-            UiString.Define("reckoning.no_relics", "YOU CARRY NOTHING INTO THE DARK");
         public static readonly UiString ReckoningRelicHeld =
             UiString.Define("reckoning.relic_held", "HELD FOR THIS DESCENT");
-        public static readonly UiString ReckoningTallyHeading =
-            UiString.Define("reckoning.tally_heading", "WHAT THEY DID, THIS FIGHT");
-        // Reuses the defeat screen's shape on purpose: the same four numbers
-        // about the same people should read identically wherever they appear.
-        public static readonly UiString ReckoningTallyLine =
-            UiString.Define("reckoning.tally_line",
-                "{0} dealt  ({1} phys / {2} other)      {3} taken      {4} healed",
-                "999999 dealt  (999999 phys / 999999 other)      999999 taken      999999 healed");
+        public static readonly UiString ReckoningTipDealt =
+            UiString.Define("reckoning.tip_dealt", "{0} dealt  ({1} physical / {2} other)",
+                "999999 dealt  (999999 physical / 999999 other)");
+        public static readonly UiString ReckoningTipTaken =
+            UiString.Define("reckoning.tip_taken", "{0} taken  ({1} shielded)", "999999 taken  (999999 shielded)");
+        public static readonly UiString ReckoningTipHealed =
+            UiString.Define("reckoning.tip_healed", "{0} healed", "999999 healed");
         public static readonly UiString ReckoningKills =
             UiString.Define("reckoning.kills", "{0} felled", "999 felled");
 
@@ -627,7 +602,6 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("reckoning.band_tier", "T{0}", "T10");
         public static readonly UiString ReckoningBandHone =
             UiString.Define("reckoning.band_hone", "+{0}", "+10");
-
 
         // The relic card's face.
         public static readonly UiString ReckoningAddsNothing =

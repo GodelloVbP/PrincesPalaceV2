@@ -63,23 +63,16 @@ namespace PrincesPalace.PlayModeTests
             _reckoning.GetComponentsInChildren<Transform>(includeInactive: true)
                 .FirstOrDefault(t => t.name == name)?.gameObject;
 
-        // A FIXED WAIT STILL, not a poll -- there is no exposed "this bar is
-        // still animating" flag to poll on (FillBar's coroutine reference is
-        // private, and a level-up's Sweep-Flash-Sweep sequence PLATEAUS
-        // between passes, which rules out watching the fill rect settle: it
-        // legitimately stops moving mid-sequence during the flash).
-        //
-        // What changed is the duration. [SetUp]'s SpeedMultiplier = 40 runs
-        // the whole Sweep/Flash/Sweep sequence (worst case here: two sweeps
-        // and a flash, well under 0.55s + 0.09s of *scaled* clock) in low
-        // tens of milliseconds of real time -- 0.2s real is roughly 6x that,
-        // which still catches a real stall (the bar never reaching its final
-        // span) while being ~7x faster than the flat 1.5s this replaced.
+        // Polls the board's own flag: the wipe, the rings and the haul are
+        // functions of one clock each, so "settled" is a real end, not a pause.
         private IEnumerator WaitForTheBarSequence()
         {
-            float deadline = Time.realtimeSinceStartup + 0.2f;
-            while (Time.realtimeSinceStartup < deadline) yield return null;
+            float deadline = Time.realtimeSinceStartup + 2f;
+            while (!_reckoning.BoardSettled && Time.realtimeSinceStartup < deadline) yield return null;
+            Assert.IsTrue(_reckoning.BoardSettled, "the board never settled");
         }
+
+        private float Fill(string name) => Named(name).GetComponent<Image>().fillAmount;
 
         private static SaveData Save => SaveSlotManager.CurrentSave;
 
@@ -178,46 +171,80 @@ namespace PrincesPalace.PlayModeTests
         public IEnumerator TheGoldItShowsIsTheGoldTheFightPaid()
         {
             yield return ShowIt(Reward(gold: 137, rows: Row("shawn", "Shawn")));
+            yield return WaitForTheBarSequence();
 
-            StringAssert.Contains("137", Named("ReckoningGoldLabel").GetComponent<TMP_Text>().text);
+            Assert.AreEqual("137", Named("ReckoningGoldCount").GetComponent<TMP_Text>().text);
         }
 
         [UnityTest]
-        public IEnumerator OneRowPerFieldedCharacterAndTheRestStayHidden()
+        public IEnumerator OnePortraitPerMemberAndTheRestStayHidden()
         {
             yield return ShowIt(Reward(rows: new[] { Row("shawn", "Shawn"), Row("other", "Other") }));
 
-            Assert.IsTrue(Named("ReckoningRow0").activeSelf);
-            Assert.IsTrue(Named("ReckoningRow1").activeSelf);
+            Assert.IsTrue(Named("ReckoningPortrait0").activeSelf);
+            Assert.IsTrue(Named("ReckoningPortrait1").activeSelf);
+            Assert.IsTrue(Named("ReckoningDeeds1").activeSelf);
 
             for (int i = 2; i < ReckoningScreen.RowCount; i++)
             {
-                Assert.IsFalse(Named($"ReckoningRow{i}").activeSelf,
-                    $"row {i} is drawn empty rather than hidden");
+                Assert.IsFalse(Named($"ReckoningPortrait{i}").activeSelf, $"portrait {i} is drawn empty rather than hidden");
+                Assert.IsFalse(Named($"ReckoningDeeds{i}").activeSelf, $"deeds {i} are drawn empty rather than hidden");
             }
         }
 
+        // THE THREE EXPERIENCE STATES (C8, M4). Fielded: the ring fills from
+        // where they stood (20/100) to where they stand (50/100). Not fielded:
+        // greyed, and the half they did get shows in amber the same way --
+        // the screen used to draw it with before = after and no fill at all.
         [UnityTest]
-        public IEnumerator ADownedMemberGetsARowSayingSoRatherThanVanishing()
+        public IEnumerator TheThreeExperienceStates_TheNotFieldedHalfShowsInAmber()
         {
-            // Three went in and two came back with nothing explaining the
-            // third is the confusion CharacterReward.IsDowned exists to stop.
-            yield return ShowIt(Reward(rows: new[]
+            var reward = Reward(rows: new[]
             {
-                Row("shawn", "Shawn"),
-                Row("ghost", "Ghost", gained: 0, downed: true),
-            }));
+                Row("shawn", "Shawn", gained: 30),
+                Row("owl", "Odette", gained: 30),
+                new CharacterReward("bear", "Bjorn", 2, 20, 2, 35, 100, 15, 2, isDowned: true),
+            });
+            reward.Ledger.WentDown("owl");
+            yield return ShowIt(reward);
+            yield return WaitForTheBarSequence();
 
-            Assert.IsTrue(Named("ReckoningRow1").activeSelf, "the downed member still gets a row");
-            StringAssert.Contains("DID NOT FIGHT", Named("ReckoningRow1Level").GetComponent<TMP_Text>().text);
+            Assert.AreEqual(0.20f, Fill("ReckoningPortrait0RingBefore"), 0.001f);
+            Assert.AreEqual(0.50f, Fill("ReckoningPortrait0RingGain"), 0.001f, "fielded: full fill");
+            Assert.IsFalse(Named("ReckoningPortrait0Mark").activeSelf);
+
+            Assert.AreEqual(0.50f, Fill("ReckoningPortrait1RingGain"), 0.001f, "fell during the fight: full fill");
+            Assert.IsTrue(Named("ReckoningPortrait1Mark").activeSelf, "and the cracked heart on the rim");
+
+            Assert.AreEqual(0.20f, Fill("ReckoningPortrait2RingBefore"), 0.001f);
+            Assert.AreEqual(0.35f, Fill("ReckoningPortrait2RingGain"), 0.001f,
+                "the not-fielded half (15 of 30) shows as amber from 20 to 35");
+            var face = Named("ReckoningPortrait2Face").GetComponent<Image>();
+            Assert.Less(face.color.r, 0.6f, "the not-fielded portrait is greyed");
+            Assert.IsFalse(Named("ReckoningPortrait2Mark").activeSelf);
         }
 
         [UnityTest]
-        public IEnumerator ALevelUpIsCalledOutOnTheRowThatEarnedIt()
+        public IEnumerator ALevelUpClosesTheRing_TicksTheNumeral_AndLeavesTheBadgePulsing()
         {
-            yield return ShowIt(Reward(rows: Row("shawn", "Shawn", levelBefore: 2, levelAfter: 3)));
+            var bells = 0;
+            SoundController.Observer = sound => { if (sound == Sound.LevelBell) bells++; };
+            try
+            {
+                yield return ShowIt(Reward(rows: Row("shawn", "Shawn", levelBefore: 2, levelAfter: 3)));
+                yield return WaitForTheBarSequence();
+            }
+            finally
+            {
+                SoundController.Observer = null;
+            }
 
-            StringAssert.Contains("UP", Named("ReckoningRow0Level").GetComponent<TMP_Text>().text);
+            Assert.AreEqual("3", Named("ReckoningPortrait0Level").GetComponent<TMP_Text>().text);
+            Assert.AreEqual(1, bells, "one bell per level crossed");
+            Assert.IsTrue(Named("ReckoningPortrait0Pulse").activeSelf, "the badge waits, as the reward track's node does");
+            Assert.IsNotNull(Named("ReckoningPortrait0Pulse").GetComponent<BeaconPulse>());
+            Assert.AreEqual(0f, Fill("ReckoningPortrait0RingBefore"), 0.001f, "nothing carried over the level boundary");
+            Assert.AreEqual(0.50f, Fill("ReckoningPortrait0RingGain"), 0.001f, "the remainder on the new level's scale");
         }
 
         [UnityTest]
@@ -440,47 +467,6 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.IsTrue(Named("ReckoningOffer0").activeSelf);
             Assert.IsNotEmpty(Named("ReckoningOffer0Name").GetComponent<TMP_Text>().text);
-        }
-
-            [UnityTest]
-        public IEnumerator TheTwoBarSegmentsSitBesideEachOtherRatherThanOnTopOfEachOther()
-        {
-            // Both anchored from zero would put the bright segment ON the dim
-            // one -- it is declared last, so it paints over -- and the "before"
-            // half would never be visible. That is the entire reason
-            // CharacterReward carries a before as well as an after, and a
-            // composite of the layout is what caught it; every test passed.
-            yield return ShowIt(Reward(rows: Row("shawn", "Shawn")));
-
-            var before = Named("ReckoningRow0BarBefore").GetComponent<RectTransform>();
-            var fill = Named("ReckoningRow0BarFill").GetComponent<RectTransform>();
-
-            // Let the fill animation finish so the assertion is on the settled
-            // state rather than on a frame partway through it.
-            yield return WaitForTheBarSequence();
-
-            Assert.AreEqual(0f, before.anchorMin.x, 0.001f, "the dim segment starts at the left edge");
-            Assert.AreEqual(before.anchorMax.x, fill.anchorMin.x, 0.001f,
-                "the earned segment must start exactly where the already-had segment ends");
-            Assert.Greater(fill.anchorMax.x, fill.anchorMin.x,
-                "a fight that granted experience drew a zero-width earned segment");
-        }
-
-        [UnityTest]
-        public IEnumerator ALevelUpGivesTheWholeBarToWhatWasJustEarned()
-        {
-            // BarFillBefore01 returns 0 after a level-up, and that is not a
-            // fudge: the level reset the bar, so every point now showing
-            // genuinely was earned in this fight.
-            yield return ShowIt(Reward(rows: Row("shawn", "Shawn", levelBefore: 2, levelAfter: 3)));
-
-            var before = Named("ReckoningRow0BarBefore").GetComponent<RectTransform>();
-            var fill = Named("ReckoningRow0BarFill").GetComponent<RectTransform>();
-
-            yield return WaitForTheBarSequence();
-
-            Assert.AreEqual(0f, before.anchorMax.x, 0.001f, "nothing was carried over the level boundary");
-            Assert.AreEqual(0f, fill.anchorMin.x, 0.001f);
         }
 
         // ---- leaving ---------------------------------------------------------------------

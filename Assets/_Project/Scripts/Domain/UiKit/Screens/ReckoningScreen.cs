@@ -9,46 +9,29 @@ namespace PrincesPalace.Domain.UiKit.Screens
     // down behind it, which is what lets it expand INTO place from the fight
     // that produced it rather than cutting to a new screen.
     //
-    // 70% of the frame, centred. That number is the design's, and it decides
-    // the layout below more than anything else: 1344x756 is generous
-    // horizontally and tight vertically, so the content runs in TWO COLUMNS --
-    // experience left, gold and loot right -- rather than one tall stack that
-    // would not fit four party rows and three offers.
+    // Two phases in one frame: the page row (the choice), then the board
+    // (docs/PLAN_REWARD_SCREENS.md C8) -- the party's portraits in their
+    // experience rings with their deeds, the haul strip and Continue. The
+    // crest and the gold stack belong to the frame, so they stand through both.
     public sealed class ReckoningScreen
     {
-        // 3:2, MATCHING THE PAINTED FRAME'S OWN ASPECT (1536x1024).
-        //
-        // Was 1344x756 (16:9), which would have stretched the border 18% and
-        // distorted every corner ornament on it. 70% of the width and 83% of
-        // the height instead -- and the extra 140px of height is what the left
-        // column was short of when a party of one left three hidden rows.
+        // 3:2, MATCHING THE SPREAD'S OWN ASPECT (reward_spread.png, 1536x1024),
+        // so the cloth and its rope hem are never stretched.
         public const float PanelWidth = 1344f;
         public const float PanelHeight = 896f;
 
-        // Where the ORNAMENT stops -- not where the art stops.
-        //
-        // The first pass measured the keyed alpha box (91.9% x 90.3%) and was
-        // wrong in the one direction that mattered: that says where the image
-        // ends, while the top edge carries a CREST reaching 16.7% down the
-        // canvas against the 12.8% of the flat border beside it. The title sat
-        // 60px inside the crest and collided with it on screen while every
-        // test passed.
-        //
-        // Scanned inward per edge until the gold gives way to plain interior
-        // (tools measure_frame.py): top 16.7%, bottom 14.6%, sides 9.8%.
-        // ASYMMETRIC VERTICALLY, deliberately -- the crest is deeper than the
-        // bottom ornament and pretending otherwise would waste 19px.
-        //
-        // The bottom is the exception to the scan: the kit's gold 3:2 container
-        // that replaced the bespoke frame draws its bottom border ~35px deep,
-        // not 14.6% (131px), so 14.6% left a ~90px dead band under Continue.
-        // 7% keeps ~28px of margin off the painted border.
-        public const float ContentHalfWidth = PanelWidth * 0.5f - PanelWidth * 0.098f;
-        public const float ContentTop = PanelHeight * 0.5f - PanelHeight * 0.167f;
-        public const float ContentBottom = -(PanelHeight * 0.5f - PanelHeight * 0.07f);
+        // Where the ROPE HEM stops, measured off reward_spread.png by scanning
+        // inward per edge for the last gold pixel: sides 6.1-6.9%, top 8.0%
+        // with the paw crest dipping to 12.3% at the centre, bottom 9.5%
+        // (the corner ties reach further in than the rope). Each bound sits a
+        // little inside its measurement; the top clears the crest's foot, not
+        // just the rope, because the crest is where the medallion sits.
+        public const float ContentHalfWidth = PanelWidth * 0.5f - PanelWidth * 0.07f;
+        public const float ContentTop = PanelHeight * 0.5f - PanelHeight * 0.135f;
+        public const float ContentBottom = -(PanelHeight * 0.5f - PanelHeight * 0.10f);
 
         // Kept for the containment test, which asks one question of both axes.
-        public const float ContentHalfHeight = PanelHeight * 0.5f - PanelHeight * 0.167f;
+        public const float ContentHalfHeight = ContentTop;
 
         // How far the painted border reaches in from each side, derived from
         // ContentHalfWidth rather than restating 9.8%. The phase clip and
@@ -63,43 +46,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // rotation cannot clip a ray, and true radial symmetry so a spin does
         // not wobble. Compared side by side before switching.
         public const string BurstKey = "proc:rarity_burst";
-        public const string PlaqueKey = "UI/Reckoning/Processed/title_plaque.png";
-
-        // Both uniform along their length, so stretching the fill to any
-        // fraction of the track cannot distort it -- all the shaping is
-        // vertical.
-        public const string BarTrackKey = "proc:bar_track";
-        public const string BarFillKey = "proc:bar_fill";
-
-        // The light the earned segment throws onto the panel. Hollow through
-        // the middle, so it lights the bar's surroundings rather than painting
-        // over the bar.
-        public const string BarBloomKey = "proc:bar_bloom";
-
-        // Fire, and it carries its own hues -- see ProceduralSpriteBaker.
-        // BakeEmber for why this one is not a greyscale ramp with a tint.
-        public const string EmberKey = "proc:arrow_ember";
-
-        // White, so the baked fire colours pass through unchanged, and the
-        // alpha is the one dial this holds.
-        //
-        // 0xB4 is 71%, down from fully opaque. At FF the glow was too hot
-        // against the frame's violet â€” seen in the running game, which is the
-        // only place it could be seen, since the Reckoning is a sub-panel and
-        // ScreenshotTool only knows top-level ones. The flare's own curve then
-        // swings this further down again, so the peak is what is being set
-        // here rather than the average.
-        public const string EmberTint = "#FFFFFFB4";
-
-        // Fixed at build time, so it must cover the largest party the save can
-        // field. Base squad is 3 once both placeholder seats resolve in
-        // content (SaveData.SquadOfThreeReady); unused rows are hidden, so
-        // there is no cost to this covering the common case exactly rather
-        // than leaving headroom above it. Pinned against EffectiveMaxSquadSize
-        // by ReckoningTests. The one purchasable extra slot cannot outgrow
-        // it: EffectiveMaxSquadSize caps the squad at
-        // FightHudSpec.StageSlotsPerSide, which is 3.
-        public const int RowCount = 3;
 
         public UiNode Root;
 
@@ -120,60 +66,70 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // reads as a scene cut, which is the one thing this overlay is not.
         public NodeRef Dimmer;
 
-        // TWO PHASES in one container: pick your spoils, then read what the
-        // fight was worth. Separate from the three TABS, which belong to the
-        // second phase only -- a tab strip over an item choice would offer to
-        // navigate away from the one decision the screen is asking for.
+        // TWO PHASES in one container: pick your spoils, then the board
+        // (docs/PLAN_REWARD_SCREENS.md C8) that reads what the fight was worth.
         public NodeRef FrameGlow;
         public NodeRef OfferPhase;
         public NodeRef SummaryPhase;
 
-        public List<NodeRef> TabButtons = new List<NodeRef>();
-        public List<NodeRef> TabMarkers = new List<NodeRef>();
+        // THE CREST (C1): the medallion of the room just cleared, on the
+        // frame's crest from the wipe's first frame, and the crack an outcome
+        // form's Fell lays over it. Both swapped or shown by the controller.
+        public NodeRef CrestMedallion;
+        public NodeRef CrestCrack;
 
-        // One node per tab, toggled whole. Pages rather than a rebuilt list:
-        // every tab's content is authored, audited and bound once at build
-        // time, and switching is three SetActive calls.
-        public List<NodeRef> Pages = new List<NodeRef>();
-
-        public NodeRef RelicEmptyHint;
-        public List<NodeRef> RelicRows = new List<NodeRef>();
-        public List<NodeRef> RelicIcons = new List<NodeRef>();
-        public List<NodeRef> RelicNames = new List<NodeRef>();
-        public List<NodeRef> RelicMetas = new List<NodeRef>();
-        public List<NodeRef> RelicBodies = new List<NodeRef>();
-
-        // The relic list's pager. Hidden by the controller while everything
-        // held fits on one page, which is the common case.
-        public NodeRef RelicPageLabel;
-        public NodeRef RelicPrevPageButton;
-        public NodeRef RelicNextPageButton;
-
-        public List<NodeRef> TallyRows = new List<NodeRef>();
-        public List<NodeRef> TallyNames = new List<NodeRef>();
-        public List<NodeRef> TallyStats = new List<NodeRef>();
-        public List<NodeRef> TallyKills = new List<NodeRef>();
-
-        public NodeRef GoldLabel;
+        // THE GOLD STACK (C2), top-right on the frame itself rather than on a
+        // phase, so the count runs inside the wipe whichever phase opens. A
+        // chip that paid as gold shows its own icon here and dissolves.
+        public NodeRef GoldStack;
+        public NodeRef GoldGlyph;
+        public NodeRef GoldCount;
+        public NodeRef GoldDissolve;
 
         // What the settlement had to say that is not a payout -- a caravan
-        // fake falling apart, then "No refunds." (FakeWear). Beside the gold,
-        // on the line the fight's spoils are read from. Hidden when empty,
-        // which is nearly every fight.
+        // fake falling apart, then "No refunds." (FakeWear): a character
+        // speaking, so it stays text, at the board's foot beside Continue.
+        // Hidden when empty, which is nearly every fight.
         public NodeRef NoticeLabel;
+
+        // Continue: the gold forward-arrow plate, no word.
         public NodeRef ContinueButton;
-        public NodeRef ContinueGlow;
 
-        // The plaque's title: THE RECKONING on a paid fight, the ending's name
-        // (VICTORY, ENDURED, FELL) on the outcome form.
-        public NodeRef TitleLabel;
+        // THE PARTY (C8): one portrait per member in squad order, each in its
+        // experience ring (track, the violet before, the amber this fight), a
+        // rim mark for one who fell, the level numeral on a badge that takes
+        // the reward track's waiting pulse on a level-up, and the deeds row
+        // under it. Unused portraits are hidden.
+        public List<NodeRef> PortraitButtons = new List<NodeRef>();
+        public List<NodeRef> PortraitFlares = new List<NodeRef>();
+        public List<NodeRef> PortraitRingTracks = new List<NodeRef>();
+        public List<NodeRef> PortraitRingBefores = new List<NodeRef>();
+        public List<NodeRef> PortraitRingGains = new List<NodeRef>();
+        public List<NodeRef> PortraitFaces = new List<NodeRef>();
+        public List<NodeRef> PortraitMarks = new List<NodeRef>();
+        public List<NodeRef> PortraitPulses = new List<NodeRef>();
+        public List<NodeRef> PortraitLevelDiscs = new List<NodeRef>();
+        public List<NodeRef> PortraitLevels = new List<NodeRef>();
+        public List<NodeRef> DeedRows = new List<NodeRef>();
 
-        // Hidden with the gold and the rows on the outcome form, which pays
-        // nothing to head.
-        public NodeRef ExpHeading;
+        // DeedsPerRow glyph + count pairs per portrait, flattened row-major.
+        public List<NodeRef> DeedGlyphs = new List<NodeRef>();
+        public List<NodeRef> DeedCounts = new List<NodeRef>();
 
-        // THE "GAINED" CHIPS (RelicChipTree), on the summary phase directly
-        // above Continue so they show on every tab, with their tooltip.
+        // THE HAUL STRIP (C2, C8): everything this fight left the party
+        // holding that is not equipped, one chip each, in a clamped rail.
+        public NodeRef HaulStrip;
+        public List<NodeRef> HaulChips = new List<NodeRef>();
+        public List<NodeRef> HaulPlinths = new List<NodeRef>();
+        public List<NodeRef> HaulIcons = new List<NodeRef>();
+
+        // The board's one focus detail, shared by the portraits and the haul.
+        public NodeRef BoardTip;
+        public NodeRef BoardTipTitle;
+        public NodeRef BoardTipBody;
+
+        // THE "GAINED" CHIPS (RelicChipTree): the event relics' receipts,
+        // directly above Continue, with their tooltip.
         public NodeRef GainedStrip;
         public NodeRef GainedCaption;
         public List<NodeRef> GainedChips = new List<NodeRef>();
@@ -184,16 +140,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef GainedTooltipMeta;
         public NodeRef GainedTooltipBody;
 
-        // The strip is as wide as a relic row, centred like everything else on
-        // the summary.
         public const float GainedStripWidth = 1040f;
-
-        public List<NodeRef> RowGroups = new List<NodeRef>();
-        public List<NodeRef> RowNames = new List<NodeRef>();
-        public List<NodeRef> RowLevels = new List<NodeRef>();
-        public List<NodeRef> RowBarFills = new List<NodeRef>();
-        public List<NodeRef> RowBarBefores = new List<NodeRef>();
-        public List<NodeRef> RowGains = new List<NodeRef>();
 
         public List<NodeRef> OfferButtons = new List<NodeRef>();
         public List<NodeRef> OfferHalos = new List<NodeRef>();
@@ -253,98 +200,79 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef LeaveCoinGlyph;
         public NodeRef LeaveCoinCount;
 
-        // Pulled in to 280 so a 520-wide column clears the painted border:
-        // 280 +/- 260 lands at 540, inside ContentHalfWidth.
-        private const float ColumnX = 280f;
-        private const float ColumnWidth = 520f;
-
-        // 88 tall on a 96 pitch: an 8px gutter between rows, and enough height
-        // for a name line, a bar and a gain line without the last of the three
-        // hanging out of the box. The first attempt was 80 on 92 and the gain
-        // label escaped by exactly 8px at every frame.
+        // THE EXPERIENCE RING'S THREE TINTS. The violet is where the member
+        // already stood, the amber what this fight paid, and the track the
+        // channel both are cut into. tools/measure_bar.py reads all three out
+        // of this file rather than carrying copies.
         //
-        // The first row's y and this pitch keep the third row's bottom edge above
-        // the Continue plate's top (the plate is 100 tall, see continueSize); the
-        // tally page's row y and pitch in BuildTallyPage do the same.
-        private const float RowHeight = 64f;
-        private const float RowPitch = 72f;
-        private const float BarWidth = 900f;
-
-        // 26 read as a flat black gap rather than a channel: on a 1344-wide
-        // frame that is a 1:35 slot, and at that ratio the eye takes it for a
-        // hole punched in the panel. Six more pixels and a lighter tint below
-        // are what turn it back into something cut INTO the violet.
-        //
-        // 32 is the ceiling, not a preference. The row is 64 tall and carries a
-        // name line above the track and the gain line below it; the track is
-        // centred at -14, so 32 puts its top at 2 with the name's baseline box
-        // starting at 4. One more pixel and they touch.
-        private const float BarHeight = 32f;
-
-        // What this fight paid. A saturated amber rather than a desaturated
-        // cream: against a violet panel a desaturated yellow has nothing to
-        // push against and reads as beige, and this is the one element on the
-        // screen that is meant to look like a reward.
-        //
-        // Still in the gold family the rest of the screen speaks -- the plaque,
-        // the title and the tabs are all #F2DB9E -- rather than a new hue, so
-        // it reads as that light turned up rather than as a second accent.
+        // The amber is saturated rather than a desaturated cream: against a
+        // violet panel a desaturated yellow has nothing to push against and
+        // reads as beige, and this is the one element on the board meant to
+        // look like a reward.
         public const string BarFillTint = "#FFC24A";
-
-        // Where the bar already stood. The resting violet, named here rather
-        // than written at the construction site so tools/measure_bar.py can
-        // read all three tints out of one place instead of carrying copies.
         public const string BarBeforeTint = "#6B58A8";
-
-        // The bloom runs HOTTER than the fill it comes off, which is what stops
-        // it reading as a blurred copy of the bar: light spilling onto a
-        // surface keeps the source's colour and loses its detail, so a slightly
-        // oranger low-alpha wash is right where a duplicate would look wrong.
-        public const string BarBloomTint = "#FFA23C8C";
-
-        // Barely moved from #2A1C46, and that is the answer rather than a
-        // hedge. The bar read as a hole because TWO darknesses compounded: a
-        // baked shading whose body ran 0.10..0.22 multiplied by a tint at
-        // luminance 0.13, landing on screen at #07040B against a panel of
-        // #261433 -- a fifth of the surface it was cut into.
-        //
-        // The baked shading is where that was fixed (ProceduralSpriteBaker,
-        // body raised to 0.30..0.46). Lifting the tint as well overshot badly:
-        // measured at 0.85x the panel, the channel disappeared INTO the panel,
-        // which is a different failure and not obviously a better one.
-        //
-        // 0.16 luminance puts the body at 0.6x the panel and the lit lip at
-        // 1.36x it -- darker than the surface, with a bright edge where it is
-        // cut. Measured, not judged: tools/measure_bar.py.
         private const string BarTrackTint = "#33224F";
 
-        // How many relics one page of the RELICS tab shows. The design says
-        // "infinite slots per run" and the shop means it -- relics sell with
-        // no cap and the shelf rerolls -- so the tab PAGES (Paging, the pager
-        // on the heading line) rather than dropping whatever does not fit.
-        //
-        // Four, not five: the band between the tab strip (bottom ~77) and the
-        // Continue plate (top ~-216) is ~293px, which is the heading plus four
-        // 56px rows. A fifth row sat under Continue -- a real overlap the
-        // audit cannot see, because Continue carries the phase's one
-        // AllowOverlap. ReckoningScreenTests pins the clearance directly.
-        public const int RelicRowCount = 4;
+        // The ring is the talent collar's baked ring, radial-filled by the
+        // controller (Image.type Filled / Radial360), so it needs no shader.
+        public const string RingKey = "proc:collar_ring";
 
-        private const float RelicHeadingY = 52f;
-        private const float RelicTopRowY = 2f;
-        private const float RelicRowPitch = 60f;
+        // THE CREST. The medallion sits on the spread's paw crest (centre
+        // measured at 8.8% down the canvas). On the wipe beside the frame
+        // rather than inside it: it covers the painted crest by design, which
+        // NothingSitsOnThePaintedBorder refuses for anything inside the frame,
+        // and the wipe still reveals it.
+        public const float CrestSize = 96f;
+        public const float CrestY = PanelHeight * 0.5f - PanelHeight * 0.088f;
 
-        // Inside a 1040-wide row, from its centre: the icon at the left, the
-        // name-over-rarity block after it, the description over the rest.
-        private const float RelicIconSize = 44f;
-        private const float RelicIconX = -520f + 12f + RelicIconSize * 0.5f;
-        private const float RelicNameWidth = 300f;
-        private const float RelicNameX = -520f + 68f + RelicNameWidth * 0.5f;
-        private const float RelicBodyWidth = 648f;
-        private const float RelicBodyX = 520f - 12f - RelicBodyWidth * 0.5f;
+        // The Fell overlay (reward_crack.png): a diagonal spanning 0.56 of its
+        // canvas's width and 0.98 of its height, laid square over the
+        // medallion so the split runs rim to rim.
+        public const string CrackKey = RewardArt.Dir + "reward_crack.png";
 
-        private const float TabY = 100f;
-        private const float TabPitch = 250f;
+        // The gold stack, inside the content box's top-right corner: clear of
+        // the offer row's top (CardTop) and of the board's right portrait.
+        public const float GoldStackWidth = 150f;
+        public const float GoldStackHeight = 48f;
+        public const float GoldStackX = ContentHalfWidth - GoldStackWidth * 0.5f;
+        public const float GoldStackY = ContentTop - 2f - GoldStackHeight * 0.5f;
+        public const float GoldGlyphSize = 36f;
+
+        // THE PORTRAITS. Fixed at build time, so it must cover the largest
+        // party the save can field: EffectiveMaxSquadSize caps the squad at
+        // FightHudSpec.StageSlotsPerSide, which is 3; unused portraits are
+        // hidden. Pinned against EffectiveMaxSquadSize by ReckoningTests.
+        public const int RowCount = 3;
+        public const float RingSize = 168f;
+        public const float FaceSize = 120f;
+        public const float PortraitPitch = 300f;
+        public const float PortraitY = ContentTop - 34f - RingSize * 0.5f;
+        public const float BadgeSize = 44f;
+        public const float BadgeOffset = 60f;
+        public const float MarkSize = 36f;
+
+        // The deeds under each portrait: dealt, taken, healed, felled.
+        public const int DeedsPerRow = 4;
+        public const float DeedsWidth = 280f;
+        public const float DeedsHeight = 32f;
+        public const float DeedsY = PortraitY - RingSize * 0.5f - 6f - DeedsHeight * 0.5f;
+
+        // The haul strip: one chip per thing held, a clamped rail.
+        public const int HaulChipCount = 12;
+        public const float HaulChipSize = 48f;
+        public const float HaulChipPitch = 56f;
+        public const float HaulHeight = 56f;
+        public const float HaulWidth = HaulChipCount * HaulChipPitch;
+        public const float HaulGap = 8f;
+
+        // The board's detail, in the band between the deeds and the haul.
+        public const float BoardTipWidth = 560f;
+        public const float BoardTipTitleHeight = 30f;
+        public const float BoardTipMinBody = 60f;
+
+        public static float PortraitX(int index, int count) => (index - (count - 1) * 0.5f) * PortraitPitch;
+
+        public static float HaulChipX(int index, int count) => (index - (count - 1) * 0.5f) * HaulChipPitch;
 
         public static ReckoningScreen Build()
         {
@@ -479,125 +407,57 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var offerPhase = Ui.Panel("ReckoningOfferPhase", Place.Stretch(), UiSize.Fill, offerChildren);
             screen.OfferPhase = offerPhase;
 
-            // ---- phase two: what it was worth --------------------------
-            var summaryChildren = new List<UiNode>
+            // ---- phase two: the board (C8) ------------------------------
+            var summaryChildren = new List<UiNode>();
+            for (int i = 0; i < RowCount; i++)
             {
-                // The plaque FIRST, so the title draws over it. Sized to the
-                // keyed art's own 3.05 aspect -- the border ornament tapers to
-                // points at both ends and stretching it bends them.
-                Ui.Sprite("ReckoningTitlePlaque", PlaqueKey, Place.At(0f, 218f),
-                    UiSize.Fixed(480f, 157f)).AsDecor(),
-            };
-
-            var title = Ui.Label("ReckoningTitle", UiStrings.ReckoningTitle, new UiVec(400f, 46f), 26, "#F2DB9E",
-                Place.At(0f, 218f)).AsDecor().Styled(TypographyRole.CeremonialTitle);
-            screen.TitleLabel = title;
-            summaryChildren.Add(title);
-
-            for (int i = 0; i < TabStrings.Length; i++)
-            {
-                summaryChildren.Add(screen.BuildTab(i));
+                summaryChildren.Add(screen.BuildPortrait(i));
+                summaryChildren.Add(screen.BuildDeeds(i));
             }
 
-            // ONE BOOK, THREE PAGES. Declared as alternatives rather than
-            // waived with an AllowOverlap apiece: they are exempt from each
-            // other and still checked against the tab bar, the footer and
-            // anything added to this panel later.
-            summaryChildren.AddRange(Ui.Exclusive(
-                screen.BuildSpoilsPage(),
-                screen.BuildRelicsPage(),
-                screen.BuildTallyPage()));
-
-            // The heat behind the arrow. DECLARED FIRST, so it draws UNDER the
-            // button rather than over it -- a child of the button would paint
-            // on top of the gold and bury it, because uGUI draws children after
-            // their parent's own graphic.
-            //
-            // Offset RIGHT of the button's centre and wider than it: the arrow
-            // tapers to its point across the last fifth of its art, and the
-            // glow is light thrown past that point rather than a backing plate
-            // the arrow sits on.
-            //
-            // 88 tall is a ceiling, not a taste. The button's centre sits 51px
-            // above ContentBottom, so anything taller than 102 puts glow on the
-            // frame's painted bottom ornament -- which is exactly what
-            // NothingSitsOnThePaintedBorder exists to refuse.
-            // 720 wide at x 160, so the box spans -200 to 520: it EMBRACES the
-            // button, whose own left edge is at -170, rather than starting
-            // where the art stops. The sprite's core is offset back inside its
-            // own texture, which lands it under the arrowhead â€” see
-            // ProceduralSpriteBaker.BakeEmber for why that is what makes the
-            // glow surround the arrow instead of pointing away from it.
-            //
-            // 520 is the right-hand limit worth knowing: ContentHalfWidth is
-            // 540, so this is 20px off the painted border.
+            // Continue sits on the content box's floor, the event relics' chips
+            // 1px above it, the haul strip above them.
             var continueSize = Ui.PlateNominalSizeFor(300f, 80f);
             var continueY = ContentBottom + continueSize.Y * 0.5f + 1f;
-
-            // The chips in the band between the pages' lowest rows and
-            // Continue's top, 1px off Continue. The band is tight;
-            // ReckoningScreenGainedTests pins the clearance on every page.
             float gainedY = continueY + continueSize.Y * 0.5f + 1f + RelicChipTree.StripHeight * 0.5f;
+            float haulY = gainedY + RelicChipTree.StripHeight * 0.5f + HaulGap + HaulHeight * 0.5f;
+
+            summaryChildren.Add(screen.BuildHaul(haulY));
+
             var gained = RelicChipTree.Build("ReckoningGained", Place.At(0f, gainedY), GainedStripWidth,
                 Place.At(0f, 0f));
             screen.TakeGained(gained);
             foreach (var chip in gained.Chips) chip.Node.Quiet();
             summaryChildren.Add(gained.Strip);
-            var continueGlow = Ui.Sprite("ReckoningContinueGlow", EmberKey,
-                    Place.At(160f, continueY), UiSize.Fixed(720f, 88f))
-                .Coloured(EmberTint)
-                .AsDecor();
-            screen.ContinueGlow = continueGlow;
-            summaryChildren.Add(continueGlow);
 
-            // ONLY on the summary phase. Phase one has no way out but the
-            // choice itself -- you always take something.
-            // GOLD, same size/font as FightScreen's own ContinueButton
-            // (FightScreen.cs ~1715) so the two "the recommended next
-            // action" buttons in the game read as the same control.
-            // ReckoningContinueGlow (above) is left in place: it is still a
-            // real node PlayMode pins (ReckoningPhaseTests) and EmberFlare
-            // still animates it, but it was tuned to an arrow's taper point
-            // and now sits behind a rectangular plate that brings its own
-            // built-in glow -- worth a follow-up look, not resolved here.
-            //
-            // 300x80: nominal aspect for the Legacy plate's true 3:1
-            // (ThemedButtonAspectLintTests). The button sits high enough to
-            // clear ContentBottom by 1px; the glow behind it
-            // (tuned to +-a few px of slop already) does not need to track
-            // that exactly.
-            var continueButton = Ui.Button("ReckoningContinueButton", UiStrings.Continue,
+            var notice = Ui.Label("ReckoningNoticeLabel", UiString.Runtime, new UiVec(360f, 54f), 15,
+                    "#E8A07A", Place.At(-ContentHalfWidth + 180f, continueY))
+                .AsDecor()
+                .Styled(TypographyRole.Body)
+                .Inactive();
+            screen.NoticeLabel = notice;
+            summaryChildren.Add(notice);
+
+            // The forward arrow: the same mark the door carries once nothing is
+            // left to choose, so the two read as one control moving along.
+            var continueButton = Ui.Button("ReckoningContinueButton", UiStrings.ReckoningForward,
                     continueSize, 20, Place.At(0f, continueY))
                 .Themed(ButtonTheme.Gold)
                 .Quiet();
-
-            // THE EXEMPTION SITS HERE NOW, on one button, rather than on the
-            // three full-size pages it crosses.
-            //
-            // Carrying it on the pages would be a blanket: A1 skips a pair
-            // when EITHER side has a reason, so a page-level exemption stops
-            // that page being checked against the tab bar, the footer and
-            // anything else on the phase too. Declaring the pages
-            // alternatives (Ui.Exclusive) narrows that to the pairs it
-            // should be, and this button is the real overlap that narrowing
-            // exposes: Continue is a drawn button, declared after the
-            // pages, so it is on top of whatever they hold at the bottom of
-            // the phase.
-            //
-            // Which is intended. It is the way out of the summary and it has to
-            // be reachable from every tab, so it belongs to the phase rather
-            // than to any one page, and the pages leave the band it occupies
-            // clear. That last clause is the part A1 cannot check for itself --
-            // it does not look inside a container - so it is stated here rather
-            // than assumed.
-            continueButton.AllowOverlap(
-                "Continue belongs to the phase, not to a page: it is the only way out of the summary and " +
-                "must be reachable from every tab, so it is declared last and draws over the page frames " +
-                "beneath it, which leave its band clear");
             screen.ContinueButton = continueButton;
             summaryChildren.Add(continueButton);
 
-            // Last, so the box draws over the pages, the chips and Continue.
+            // The details last, so each draws over what it describes.
+            float deedsBottom = DeedsY - DeedsHeight * 0.5f;
+            float haulTop = haulY + HaulHeight * 0.5f;
+            var boardTip = ItemComparisonPanel.Build("ReckoningBoardTip", Place.At(0f, (deedsBottom + haulTop) * 0.5f),
+                new UiVec(BoardTipWidth, deedsBottom - haulTop - 8f), BoardTipTitleHeight, 20, "#F2DB9E", 15,
+                "#D9CCF2");
+            boardTip.Panel.Inactive();
+            screen.BoardTip = boardTip.Panel;
+            screen.BoardTipTitle = boardTip.Title;
+            screen.BoardTipBody = boardTip.Body;
+            summaryChildren.Add(boardTip.Panel);
             summaryChildren.Add(gained.Tooltip);
 
             var summaryPhase = Ui.Panel("ReckoningSummaryPhase", Place.Stretch(), UiSize.Fill, summaryChildren)
@@ -607,26 +467,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
             Ui.Exclusive(offerPhase, summaryPhase);
             screen.SummaryPhase = summaryPhase;
 
-            // ---- the container -----------------------------------------
+            // ---- the spread -------------------------------------------------
             //
-            // GOLD, 3:2 KIT CONTAINER: the reward container -- this is the
-            // screen paying out. 1344x896 is aspect 1.5, exactly the kit's
-            // 3:2 aspect.
-            //
-            // ContentHalfWidth/ContentTop/ContentBottom below still gate
-            // NothingSitsOnThePaintedBorder -- they stay put deliberately,
-            // not recomputed from the kit's own (looser) measured inset:
-            // they are tighter than the kit's border in every direction, so
-            // content already proven to clear them clears the art's border
-            // too.
-            //
-            // Ui.Container returns a wrapper Panel with the art as a Decor
-            // CHILD ("ReckoningFrameArt"), not the sprite itself, so
-            // frame.SpriteKey is null and the art lives one level down.
-            // Un-Decor wrapper, same as every other Container call site (see
-            // Ui.BuildFrameHolder).
-            var frame = Ui.Container("ReckoningFrame", ButtonTheme.Gold, ContainerRatio.ThreeByTwo,
-                Place.At(0f, 0f), new UiVec(PanelWidth, PanelHeight));
+            // Prince's cloth, laid out under the whole screen (reward_spread,
+            // 3:2 like the panel). Built as a frame holder (Ui.ArtFrame): the
+            // art is a Decor child of a non-Decor wrapper, so content beside
+            // it is still audited against its own siblings.
+            var frame = Ui.ArtFrame("ReckoningFrame", RewardArt.SpreadKey, Place.At(0f, 0f),
+                new UiVec(PanelWidth, PanelHeight));
 
             // The phases hang inside a CLIP inset to the painted border rather
             // than off the frame directly.
@@ -650,6 +498,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .Clipping();
 
             frame.Children.Add(phaseClip);
+            frame.Children.Add(screen.BuildGoldStack());
             screen.Frame = frame;
 
             // The WIPE, and the reason it exists as a node at all.
@@ -664,7 +513,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // Centred, and grown symmetrically about that centre, so the fixed
             // frame inside it does not drift while it is being uncovered.
             var wipe = Ui.Panel("ReckoningFrameWipe", Place.At(0f, 0f),
-                    UiSize.Fixed(PanelWidth, PanelHeight), frame)
+                    UiSize.Fixed(PanelWidth, PanelHeight), frame, screen.BuildCrest())
                 .Clipping();
             screen.FrameWipe = wipe;
 
@@ -708,288 +557,189 @@ namespace PrincesPalace.Domain.UiKit.Screens
             GainedTooltipBody = gained.TooltipBody;
         }
 
-        private static readonly UiString[] TabStrings =
+        // ---- the board's parts ----------------------------------------------------
+
+        private UiNode BuildPortrait(int index)
         {
-            UiStrings.ReckoningTabSpoils,
-            UiStrings.ReckoningTabRelics,
-            UiStrings.ReckoningTabTally,
-        };
+            float x = PortraitX(index, RowCount);
+            const string light = "the level-up flare is light thrown past the ring, wider than the portrait by design";
 
-        private UiNode BuildTab(int index)
-        {
-            float x = (index - (TabStrings.Length - 1) * 0.5f) * TabPitch;
-
-            // The lit marker is a separate layer from the caption, so "which
-            // tab am I on" and "what is it called" stay two channels -- the
-            // same split the draft cards and the glossary rail both make.
-            // Independent from the plate underneath it, which is exactly the
-            // seam that survives the HQ-kit swap below: ReckoningController's
-            // PaintTabs recolours only this Image (MarkerLit/MarkerDark), never
-            // the tab's own plate, so ThemedPlate needs no selected-state
-            // support of its own.
-            var marker = Ui.Solid("ReckoningTab" + index + "Marker", "#F2DB9E00",
-                    Place.Frac(new UiVec(0f, 0f), new UiVec(1f, 0f), top: -4f), UiSize.Fill)
-                .AsDecor();
-
-            // ThemedPlate(Silver). Caption-preserving mode because the
-            // marker strip is already a declared child sitting
-            // UNDER the label -- Themed()'s label-generating mode has no
-            // hook for a second layered child, and ThemedPlate's whole
-            // reason to exist is a button whose caption isn't just one
-            // centred string (see FightScreen's verb rows for the same
-            // shape).
-            // 230x52 was 4.423:1 against the FiveByOne plate's true 5:1 --
-            // ThemedButtonAspectLintTests. Height down to nominal, width kept.
-            var tabSize = Ui.PlateNominalSizeFor(230f, 52f);
-            var caption = Ui.Label("ReckoningTab" + index + "Caption", TabStrings[index], tabSize, 19,
-                    "#FFFFFFFF", Place.Stretch())
+            var flare = Ui.Sprite($"ReckoningPortrait{index}Flare", "proc:radial_glow", Place.At(0f, 0f),
+                    UiSize.Fixed(RingSize * 1.4f, RingSize * 1.4f))
+                .Coloured("#FFB45A00")
                 .AsDecor()
-                .Styled(TypographyRole.ButtonLabel);
-
-            var tab = Ui.Button("ReckoningTab" + index, UiString.Runtime, tabSize, 19, Place.At(x, TabY))
-                .ThemedPlate(ButtonTheme.Silver)
-                .Quiet();
-            tab.Children.Add(caption);
-            tab.Children.Add(marker);
-            tab.LayerCaptionWithVisuals(caption, marker);
-
-            TabButtons.Add(tab);
-            TabMarkers.Add(marker);
-            return tab;
-        }
-
-        // ---- page 1: the payout ----------------------------------------------
-
-        private UiNode BuildSpoilsPage()
-        {
-            // WIDE, not two columns. The offers moved to their own phase, so
-            // the right half emptied out -- a party of one under an EXPERIENCE
-            // heading beside a hole is worse than either half alone.
-            //
-            // The gold line is 420 wide, not the 700 it was: "+99999 GOLD" at
-            // 32 needs well under that, and the band to its right carries the
-            // settlement's notice (230..530, inside ContentHalfWidth 540).
-            var children = new List<UiNode>
-            {
-                Ui.Label("ReckoningGoldLabel", UiStrings.ReckoningGold, new UiVec(420f, 54f), 32,
-                    "#F2DB9E", Place.At(0f, 30f)).AsDecor().Styled(TypographyRole.TacticalData),
-                Ui.Label("ReckoningExpHeading", UiStrings.ReckoningExperience, new UiVec(700f, 32f), 20,
-                    "#B8A8D9", Place.At(0f, -20f)).AsDecor().Styled(TypographyRole.FunctionalHeading),
-                Ui.Label("ReckoningNoticeLabel", UiString.Runtime, new UiVec(300f, 54f), 15,
-                    "#E8A07A", Place.At(380f, 30f)).AsDecor().Styled(TypographyRole.Body).Inactive(),
-            };
-
-            GoldLabel = children[0];
-            ExpHeading = children[1];
-            NoticeLabel = children[2];
-
-            for (int i = 0; i < RowCount; i++)
-            {
-                children.Add(BuildRow(i));
-            }
-
-            var page = Ui.Panel("ReckoningSpoilsPage", Place.Stretch(), UiSize.Fill, children);
-            Pages.Add(page);
-            return page;
-        }
-
-        // ---- page 2: what the descent carries ---------------------------------
-
-        private UiNode BuildRelicsPage()
-        {
-            var children = new List<UiNode>
-            {
-                Ui.Label("ReckoningRelicHeading", UiStrings.ReckoningRelicHeld, new UiVec(460f, 34f), 24,
-                    "#B8A8D9", Place.At(0f, RelicHeadingY)).AsDecor().Styled(TypographyRole.FunctionalHeading),
-            };
-
-            // THE PAGER SHARES THE HEADING'S LINE, to the right of it. There is
-            // no band below the rows to put it in -- that is Continue's.
-            var pager = Ui.Pager("ReckoningRelicPrevPage", Place.At(330f, RelicHeadingY),
-                "ReckoningRelicNextPage", Place.At(500f, RelicHeadingY), new UiVec(52f, 44f), 20,
-                "ReckoningRelicPageLabel", UiStrings.RelicPage, Place.At(415f, RelicHeadingY),
-                new UiVec(100f, 34f), 20, "#B8A8D9");
-            pager.Label.AsDecor().Styled(TypographyRole.Body).Inactive();
-            pager.Prev.Styled(TypographyRole.Body).Inactive().Quiet();
-            pager.Next.Styled(TypographyRole.Body).Inactive().Quiet();
-            RelicPageLabel = pager.Label;
-            RelicPrevPageButton = pager.Prev;
-            RelicNextPageButton = pager.Next;
-            children.Add(pager.Label);
-            children.Add(pager.Prev);
-            children.Add(pager.Next);
-
-            for (int i = 0; i < RelicRowCount; i++)
-            {
-                float y = RelicTopRowY - i * RelicRowPitch;
-
-                // ONE LINE PER RELIC at the menu type floor (plan C14): the
-                // icon, the name over its rarity, and the description on the
-                // rest of the line, cut with an ellipsis where it runs long.
-                // The full text is the RUN pane's job; this tab is a glance
-                // between fights and its band has room for four 56px rows.
-                var icon = Ui.Sprite("ReckoningRelic" + i + "Icon", null,
-                        Place.At(RelicIconX, 0f), UiSize.Fixed(RelicIconSize, RelicIconSize))
-                    .AsDecor();
-                var name = Ui.Label("ReckoningRelic" + i + "Name", UiString.Runtime, new UiVec(RelicNameWidth, 28f), 22,
-                        "#EDE6FF", Place.At(RelicNameX, 14f))
-                    .Styled(TypographyRole.Body)
-                    .TextAligned(UiTextAlign.Left)
-                    .Truncated()
-                    .AsDecor();
-                var meta = Ui.Label("ReckoningRelic" + i + "Meta", UiString.Runtime, new UiVec(RelicNameWidth, 26f), 20,
-                        "#B8A8D9", Place.At(RelicNameX, -14f))
-                    .Styled(TypographyRole.Body)
-                    .TextAligned(UiTextAlign.Left)
-                    .AsDecor();
-                var body = Ui.Label("ReckoningRelic" + i + "Body", UiString.Runtime, new UiVec(RelicBodyWidth, 30f), 20,
-                        "#9C8FC4", Place.At(RelicBodyX, 0f))
-                    .Styled(TypographyRole.Body)
-                    .TextAligned(UiTextAlign.Left)
-                    .Truncated()
-                    .AsDecor();
-
-                var row = Ui.Panel("ReckoningRelic" + i, Place.At(0f, y), UiSize.Fixed(1040f, 56f),
-                        icon, name, meta, body)
-                    .Inactive();
-
-                RelicIcons.Add(icon);
-                RelicRows.Add(row);
-                RelicNames.Add(name);
-                RelicMetas.Add(meta);
-                RelicBodies.Add(body);
-                children.Add(row);
-            }
-
-            var empty = Ui.Label("ReckoningRelicEmpty", UiStrings.ReckoningNoRelics, new UiVec(900f, 44f), 24,
-                    "#7E6E9E", Place.At(0f, -100f))
-                .Styled(TypographyRole.Body)
-                .AsDecor()
-                .Inactive();
-            RelicEmptyHint = empty;
-            children.Add(empty);
-
-            var page = Ui.Panel("ReckoningRelicsPage", Place.Stretch(), UiSize.Fill, children)
-                .Inactive();
-            Pages.Add(page);
-            return page;
-        }
-
-        // ---- page 3: what everyone did ----------------------------------------
-
-        private UiNode BuildTallyPage()
-        {
-            var children = new List<UiNode>
-            {
-                Ui.Label("ReckoningTallyHeading", UiStrings.ReckoningTallyHeading, new UiVec(800f, 34f), 20,
-                    "#B8A8D9", Place.At(0f, 40f)).AsDecor().Styled(TypographyRole.FunctionalHeading),
-            };
-
-            for (int i = 0; i < RowCount; i++)
-            {
-                float y = -30f - i * 88f;
-
-                var name = Ui.Label("ReckoningTally" + i + "Name", UiString.Runtime, new UiVec(380f, 30f), 20,
-                        "#EDE6FF", Place.At(-300f, 20f))
-                    .AsDecor();
-                var kills = Ui.Label("ReckoningTally" + i + "Kills", UiStrings.ReckoningKills, new UiVec(280f, 26f), 15,
-                        "#F2DB9E", Place.At(320f, 20f))
-                    .AsDecor();
-                var stats = Ui.Label("ReckoningTally" + i + "Stats", UiString.Runtime, new UiVec(1000f, 26f), 14,
-                        "#9C8FC4", Place.At(0f, -18f))
-                    .AsDecor();
-
-                var row = Ui.Panel("ReckoningTally" + i, Place.At(0f, y), UiSize.Fixed(1040f, 78f),
-                        name, kills, stats)
-                    .Inactive();
-
-                TallyRows.Add(row);
-                TallyNames.Add(name);
-                TallyKills.Add(kills);
-                TallyStats.Add(stats);
-                children.Add(row);
-            }
-
-            var page = Ui.Panel("ReckoningTallyPage", Place.Stretch(), UiSize.Fill, children)
-                .Inactive();
-            Pages.Add(page);
-            return page;
-        }
-
-        // One party member's line: who, what level, and a bar showing what this
-        // fight was worth against what they had already.
-        private UiNode BuildRow(int index)
-        {
-            float y = -70f - index * RowPitch;
-
-            var name = Ui.Label($"ReckoningRow{index}Name", UiString.Runtime, new UiVec(300f, 28f), 21,
-                    "#EDE6FF", Place.At(-330f, 18f))
-                .AsDecor();
-            var level = Ui.Label($"ReckoningRow{index}Level", UiString.Runtime, new UiVec(220f, 28f), 17,
-                    "#B8A8D9", Place.At(280f, 18f))
-                .AsDecor();
-            var gain = Ui.Label($"ReckoningRow{index}Gain", UiString.Runtime, new UiVec(200f, 22f), 15,
-                    "#9C8FC4", Place.At(370f, -21f))
-                .AsDecor();
-
-            // Two fills on one track. The dim one is where the bar stood before
-            // the fight and the bright one is what was just earned, so the
-            // player reads THIS FIGHT'S worth rather than only where they ended
-            // up -- which is the entire reason CharacterReward carries a before
-            // as well as an after.
-            // Both wear the SAME baked fill, tinted differently: the resting
-            // violet for what was already earned, and the bright gold for what
-            // this fight paid. One asset, two colours -- a second sprite would
-            // be a second thing to keep in step with the first.
-            var before = Ui.Sprite($"ReckoningRow{index}BarBefore", BarFillKey,
-                    Place.Frac(new UiVec(0f, 0f), new UiVec(1f, 1f)), UiSize.Fill)
-                .Coloured(BarBeforeTint)
-                .AsDecor();
-            // See BarFillTint's own comment for why this is saturated amber
-            // rather than a desaturated cream.
-            var fill = Ui.Sprite($"ReckoningRow{index}BarFill", BarFillKey,
-                    Place.Frac(new UiVec(0f, 0f), new UiVec(1f, 1f)), UiSize.Fill)
-                .Coloured(BarFillTint)
-                .AsDecor();
-
-            // The bloom rides the fill as a CHILD, which is what makes it
-            // follow the animation for free: the controller's SetSpan moves the
-            // fill's anchors, and a stretched child goes with it. Spanning it
-            // from the controller as well would be a second copy of the same
-            // number, updated in a second place.
-            //
-            // Inset NEGATIVELY, so it reaches 12 past the track on both sides
-            // and lights the panel; the sprite is hollow across the fill's own
-            // height so the bar underneath is not painted over.
-            var bloom = Ui.Sprite($"ReckoningRow{index}BarBloom", BarBloomKey,
-                    Place.Frac(new UiVec(0f, 0f), new UiVec(1f, 1f), top: -12f, bottom: -12f),
-                    UiSize.Fill)
-                .Coloured(BarBloomTint)
-                .AsDecor()
-                .AllowOverflow("a bloom that stopped at the bar's edge would not be one - reaching past the track IS the effect");
-            fill.Children.Add(bloom);
-
-            // the earned segment is drawn ON TOP of the before segment - one
-            // track, two fills, by design
-            var track = Ui.Sprite($"ReckoningRow{index}BarTrack", BarTrackKey, Place.At(0f, -14f),
-                    UiSize.Fixed(BarWidth, BarHeight))
+                .AllowOverflow(light);
+            var track = Ui.Sprite($"ReckoningPortrait{index}RingTrack", RingKey, Place.Stretch(), UiSize.Fill)
                 .Coloured(BarTrackTint)
                 .AsDecor();
+            var before = Ui.Sprite($"ReckoningPortrait{index}RingBefore", RingKey, Place.Stretch(), UiSize.Fill)
+                .Coloured(BarBeforeTint)
+                .AsDecor();
+            var gain = Ui.Sprite($"ReckoningPortrait{index}RingGain", RingKey, Place.Stretch(), UiSize.Fill)
+                .Coloured(BarFillTint)
+                .AsDecor();
+            var face = Ui.Sprite($"ReckoningPortrait{index}Face", null, Place.At(0f, 0f),
+                    UiSize.Fixed(FaceSize, FaceSize))
+                .AsDecor();
+            face.PreserveAspect = true;
 
-            track.Children.Add(before);
-            track.Children.Add(fill);
-
-            var group = Ui.Panel($"ReckoningRow{index}", Place.At(0f, y),
-                    UiSize.Fixed(1000f, RowHeight), name, level, track, gain)
+            // The cracked heart on the rim of one who fell during the fight.
+            var mark = Ui.Sprite($"ReckoningPortrait{index}Mark", null, Place.At(-BadgeOffset, BadgeOffset),
+                    UiSize.Fixed(MarkSize, MarkSize))
+                .AsDecor()
                 .Inactive();
+            mark.PreserveAspect = true;
 
-            RowGroups.Add(group);
-            RowNames.Add(name);
-            RowLevels.Add(level);
-            RowBarBefores.Add(before);
-            RowBarFills.Add(fill);
-            RowGains.Add(gain);
-            return group;
+            // The level badge, and behind it the waiting pulse (BeaconPulse,
+            // attached at build) a level-up switches on.
+            var pulse = Ui.Sprite($"ReckoningPortrait{index}Pulse", "proc:radial_glow",
+                    Place.At(BadgeOffset, -BadgeOffset), UiSize.Fixed(BadgeSize * 1.6f, BadgeSize * 1.6f))
+                .Coloured("#FFC24AFF")
+                .AsDecor()
+                .AllowOverflow("the waiting pulse is light around the badge, reaching past the ring by design")
+                .Inactive();
+            var disc = Ui.Sprite($"ReckoningPortrait{index}LevelDisc", "proc:solid_circle",
+                    Place.At(BadgeOffset, -BadgeOffset), UiSize.Fixed(BadgeSize, BadgeSize))
+                .Coloured("#2A1C46FF")
+                .AsDecor();
+            var level = Ui.Label($"ReckoningPortrait{index}Level", UiStrings.ReckoningLevelNumeral,
+                    new UiVec(BadgeSize, BadgeSize - 8f), 20, "#F2DB9E", Place.At(BadgeOffset, -BadgeOffset))
+                .AsDecor()
+                .Styled(TypographyRole.TacticalData);
+
+            var button = Ui.Button($"ReckoningPortrait{index}", UiString.Runtime, new UiVec(RingSize, RingSize), 14,
+                    Place.At(x, PortraitY))
+                .NoChrome()
+                .Quiet()
+                .Inactive();
+            button.Children.Add(flare);
+            // The amber runs from twelve o'clock to where they stand now and the
+            // violet over it to where they stood, so the gain shows as the arc
+            // the violet leaves uncovered.
+            button.Children.Add(track);
+            button.Children.Add(gain);
+            button.Children.Add(before);
+            button.Children.Add(face);
+            button.Children.Add(mark);
+            button.Children.Add(pulse);
+            button.Children.Add(disc);
+            button.Children.Add(level);
+
+            PortraitButtons.Add(button);
+            PortraitFlares.Add(flare);
+            PortraitRingTracks.Add(track);
+            PortraitRingBefores.Add(before);
+            PortraitRingGains.Add(gain);
+            PortraitFaces.Add(face);
+            PortraitMarks.Add(mark);
+            PortraitPulses.Add(pulse);
+            PortraitLevelDiscs.Add(disc);
+            PortraitLevels.Add(level);
+            return button;
+        }
+
+        // Glyph + number pairs the controller seats (PaintGroups); at rest they
+        // sit apart so the audit sees no overlap.
+        private UiNode BuildDeeds(int index)
+        {
+            var children = new List<UiNode>();
+            for (int k = 0; k < DeedsPerRow; k++)
+            {
+                float x = -DeedsWidth * 0.5f + 14f + k * 70f;
+                var glyph = GlyphPart($"ReckoningDeeds{index}Glyph{k}", x);
+                var count = Ui.Label($"ReckoningDeeds{index}Count{k}", UiString.Runtime, new UiVec(40f, 28f), 20,
+                        "#EDE6FF", Place.At(x + 34f, 0f))
+                    .TextAligned(UiTextAlign.Left)
+                    .AsDecor()
+                    .Styled(TypographyRole.TacticalData);
+                DeedGlyphs.Add(glyph);
+                DeedCounts.Add(count);
+                children.Add(glyph);
+                children.Add(count);
+            }
+
+            var row = Ui.Panel($"ReckoningDeeds{index}", Place.At(PortraitX(index, RowCount), DeedsY),
+                    UiSize.Fixed(DeedsWidth, DeedsHeight), children)
+                .Inactive();
+            DeedRows.Add(row);
+            return row;
+        }
+
+        private UiNode BuildHaul(float y)
+        {
+            var children = new List<UiNode>();
+            for (int i = 0; i < HaulChipCount; i++)
+            {
+                var plinth = Ui.Sprite($"ReckoningHaulChip{i}Plinth", "proc:radial_glow", Place.Stretch(), UiSize.Fill)
+                    .Coloured("#B8A8D966")
+                    .AsDecor();
+                var icon = Ui.Sprite($"ReckoningHaulChip{i}Icon", null, Place.At(0f, 2f),
+                        UiSize.Fixed(HaulChipSize - 8f, HaulChipSize - 8f))
+                    .AsDecor();
+                icon.PreserveAspect = true;
+
+                var chip = Ui.Button($"ReckoningHaulChip{i}", UiString.Runtime,
+                        new UiVec(HaulChipSize, HaulChipSize), 14, Place.At(HaulChipX(i, HaulChipCount), 0f))
+                    .NoChrome()
+                    .Quiet()
+                    .Inactive();
+                chip.Children.Add(plinth);
+                chip.Children.Add(icon);
+
+                HaulChips.Add(chip);
+                HaulPlinths.Add(plinth);
+                HaulIcons.Add(icon);
+                children.Add(chip);
+            }
+
+            var strip = Ui.Panel("ReckoningHaul", Place.At(0f, y), UiSize.Fixed(HaulWidth, HaulHeight), children);
+            HaulStrip = strip;
+            return strip;
+        }
+
+        private UiNode BuildCrest()
+        {
+            var medallion = Ui.Sprite("ReckoningCrestMedallion", null, Place.Stretch(), UiSize.Fill)
+                .AsDecor();
+            medallion.PreserveAspect = true;
+            var crack = Ui.Sprite("ReckoningCrestCrack", CrackKey, Place.Stretch(), UiSize.Fill)
+                .AsDecor()
+                .Inactive();
+            crack.PreserveAspect = true;
+            CrestMedallion = medallion;
+            CrestCrack = crack;
+            return Ui.Panel("ReckoningCrest", Place.At(0f, CrestY), UiSize.Fixed(CrestSize, CrestSize),
+                    medallion, crack)
+                .AsDecor();
+        }
+
+        private UiNode BuildGoldStack()
+        {
+            float glyphX = -GoldStackWidth * 0.5f + GoldGlyphSize * 0.5f + 4f;
+            var glyph = Ui.Sprite("ReckoningGoldGlyph", null, Place.At(glyphX, 0f),
+                    UiSize.Fixed(GoldGlyphSize, GoldGlyphSize))
+                .AsDecor();
+            glyph.PreserveAspect = true;
+            var dissolve = Ui.Sprite("ReckoningGoldDissolve", null, Place.At(glyphX, 0f),
+                    UiSize.Fixed(GoldGlyphSize + 6f, GoldGlyphSize + 6f))
+                .AsDecor()
+                .Inactive();
+            dissolve.PreserveAspect = true;
+            float countWidth = GoldStackWidth - GoldGlyphSize - 12f;
+            var count = Ui.Label("ReckoningGoldCount", UiStrings.ReckoningGoldCount, new UiVec(countWidth, 40f), 28,
+                    "#F2DB9E", Place.At(GoldStackWidth * 0.5f - countWidth * 0.5f, 0f))
+                .TextAligned(UiTextAlign.Left)
+                .AsDecor()
+                .Styled(TypographyRole.TacticalData);
+
+            GoldGlyph = glyph;
+            GoldDissolve = dissolve;
+            GoldCount = count;
+            var stack = Ui.Panel("ReckoningGoldStack", Place.At(GoldStackX, GoldStackY),
+                    UiSize.Fixed(GoldStackWidth, GoldStackHeight), glyph, dissolve, count)
+                .AsDecor();
+            GoldStack = stack;
+            return stack;
         }
 
         // ---- one page card's vertical bands -----------------------------------

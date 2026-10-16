@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using PrincesPalace.Domain.Dungeon;
 using PrincesPalace.Domain.Rewards;
 
 namespace PrincesPalace.Domain.UiKit
@@ -18,6 +19,9 @@ namespace PrincesPalace.Domain.UiKit
 
         // The back's drawn shape, width over height (492x768).
         public const float CardBackAspect = 492f / 768f;
+
+        // The cloth under the whole Reckoning, 3:2 (ReckoningScreen.PanelWidth/Height).
+        public const string SpreadKey = Dir + "reward_spread.png";
 
         public const string CacheSmall = "reward_cache_small";
         public const string CacheMedium = "reward_cache_medium";
@@ -55,6 +59,7 @@ namespace PrincesPalace.Domain.UiKit
         public const string PlinthRare = "reward_plinth_rare";
         public const string PlinthTopTier = "reward_plinth_toptier";
         public const float PlinthAspect = 600f / 499f;
+
         // Every id the Reckoning's table holds.
         public static readonly IReadOnlyList<string> TableIds = new[]
         {
@@ -63,6 +68,53 @@ namespace PrincesPalace.Domain.UiKit
             HeartCracked, ShieldCracked, Leaf, Skull, Potion,
             Up, Down, Level, PlinthCommon, PlinthUncommon, PlinthRare, PlinthTopTier,
         };
+
+        // THE MAP'S OWN ART, which the Reckoning shows as the map showed it
+        // (C1 medallions, C2 chips): its own table, wired in WireReckoning,
+        // since the Map scene bakes these by key and the Fight scene has no
+        // copy. Ids are the file stems.
+        public const string MapDir = "Assets/_Project/Art/Backgrounds/Processed/";
+        public const string MedallionFight = "map_node_fight";
+        public const string MedallionElite = "map_node_elite";
+        public const string MedallionBoss = "map_node_boss";
+        public const string ChipGold = "map_chip_gold";
+        public const string ChipPotion = "map_chip_potion";
+        public const string ChipGear = "map_chip_gear";
+        public const string ChipRelic = "map_chip_relic";
+        public const string ChipBook = "map_chip_book";
+
+        public static readonly IReadOnlyList<string> MapTableIds = new[]
+        {
+            MedallionFight, MedallionElite, MedallionBoss, ChipGold, ChipPotion, ChipGear, ChipRelic, ChipBook,
+        };
+
+        public static string MapPathOf(string id) => MapDir + id + ".png";
+
+        // The crest's medallion: the room's class, and the plain fight
+        // medallion when no room was fought (an event fight, the outcome form).
+        public static string MedallionId(EncounterClass? encounter)
+        {
+            switch (encounter)
+            {
+                case EncounterClass.Boss: return MedallionBoss;
+                case EncounterClass.Elite: return MedallionElite;
+                default: return MedallionFight;
+            }
+        }
+
+        // The chip the map showed for a prize, or null for the fight's own gold.
+        public static string ChipId(PrizeKind shown)
+        {
+            switch (shown)
+            {
+                case PrizeKind.Gold: return ChipGold;
+                case PrizeKind.Consumable: return ChipPotion;
+                case PrizeKind.Item: return ChipGear;
+                case PrizeKind.Relic: return ChipRelic;
+                case PrizeKind.Book: return ChipBook;
+                default: return null;
+            }
+        }
 
         // Glyphs are drawn square at this size on every face.
         public const float GlyphSize = 24f;

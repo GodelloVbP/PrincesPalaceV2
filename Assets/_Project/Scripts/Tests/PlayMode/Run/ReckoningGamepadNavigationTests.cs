@@ -242,7 +242,7 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
-        public IEnumerator OnTheSummary_UpFromContinue_ReachesTheTabStrip()
+        public IEnumerator OnTheBoard_UpFromContinue_ReachesThePortraits()
         {
             yield return ShowTheReckoning(new List<PendingPage>());
 
@@ -251,8 +251,8 @@ namespace PrincesPalace.PlayModeTests
 
             yield return Press(0f, 1f);
 
-            AssertSelected("ReckoningTab0",
-                "the tabs are there to be read; Up is how a pad asks for them");
+            AssertSelected("ReckoningPortrait0",
+                "no haul on this fight, so Up from Continue is the portraits (ReckoningBoardNav)");
         }
 
         // ---- no per-party box on a page card -----------------------------------
