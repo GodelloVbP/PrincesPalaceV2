@@ -1,6 +1,6 @@
 # Plan: the gear reward and the Reckoning
 
-Status: rev 5, 2026-10-16. Plan only; nothing here is built. Rev 5 folds in
+Status: rev 5, 2026-10-16; owner calls O1-O4 decided 2026-10-16. Plan only; nothing here is built. Rev 5 folds in
 the senior adversarial review of rev 4
 (`docs/PLAN_REWARD_SCREENS_SENIOR_REVIEW.md`, 3055bed1). Earlier: two review
 rounds, each with one reviewer reading the code and one reading only the
@@ -219,7 +219,7 @@ only plays back. "Wall time" counts from the moment the wipe starts.
    plate, `Art/Backgrounds/Processed/map_node_*.png`), from C12's recorded
    class. An event fight (`SettleEventFight`, no class) shows the plain
    fight medallion. No title word.
-3. **Outcome form** (a run fight that paid nothing; provisional O2, §7):
+3. **Outcome form** (a run fight that paid nothing; O2 decided, §7):
    for its first 0.4 s the gloom over the stage stays low, so the fight
    behind the overlay shows the ending (standing enemies, an empty field, a
    downed party). Then: Fell = medallion cracked, a low note; Endured =
@@ -466,7 +466,7 @@ No page: C8 directly.
   this fight's haul (each taken item on a small plinth, relics, books,
   potions, hone sparks) and today's "Gained" event-relic chips
   (`pendingRelicReceipts`, acknowledged on leaving, unchanged). No caption.
-- **Held relics**: not on the board (provisional O4: the RUN pane shows
+- **Held relics**: not on the board (O4 decided: the RUN pane shows
   them).
 - **Continue**: the gold forward-arrow plate, no word. The stale ember glow
   goes, and `ReckoningPhaseTests`' pin on `ReckoningContinueGlow` changes in
@@ -494,8 +494,7 @@ Continue or Cancel leaves (`Dismiss`, acknowledging displayed receipts,
   `authored x min(1, BattleSpeed.DefaultDisplay / preset.Display)`, times
   the test seam `ReckoningController.SpeedMultiplier`, reading the preset
   from `GameSettings` when the overlay opens. The Reckoning speeds up at
-  1.5x and 2x and never slows below its authored times (M8, provisional
-  O3), so the cap holds at every preset. Every wait and tween goes through
+  1.5x and 2x and never slows below its authored times (M8, O3 decided), so the cap holds at every preset. Every wait and tween goes through
   it, including today's wipe, sweep and bar fills.
 - **One gate** (B1): take, hone instead and leave all call `Act(kind,
   rowIndex)`. While `RevealSchedule` reports a beat running, `Act` completes
@@ -763,26 +762,26 @@ rate, mean wall time to choosable, per act) is kept beside the plan and
 re-run whenever the item plan retunes the ladder; it is a check, not a
 commit gate.
 
-## 7. Owner calls: provisional, pending owner confirm
+## 7. Owner decisions
 
-The owner has not answered. These are the plan's working decisions;
-building may proceed on them, and each is one switch to reverse.
+No owner calls are open. The four below were confirmed by the owner on
+2026-10-16, as written.
 
-1. **Favor: provisional, pending owner confirm.** Drop the Favor line from
+1. **Favor: decided 2026-10-16.** Drop the Favor line from
    the reward screen; add a squad-Favor row to the RUN pane fed from
    `ItemOfferRoll.CurrentSquadFavor()` (`ItemOfferRoll.cs:118-133`; today
    the pane lists only the event buff, `Domain/UiKit/RunEffectRows.cs:52`).
    Favor is a stat the player builds, so it stays visible; the odds stay off
    the reward screen. `PLAN_ITEMS.md` 1.2 had the page header show it.
-2. **Ending words: provisional, pending owner confirm.** Drop VICTORY,
+2. **Ending words: decided 2026-10-16.** Drop VICTORY,
    ENDURED and FELL. Fell = cracked medallion; Endured = dimmed but whole,
    which differs from a paid-nothing Victory's plain medallion; the stage
    behind the overlay shows the ending for its first 0.4 s (C1.3).
-3. **Battle speed: provisional, pending owner confirm.** Follow faster
+3. **Battle speed: decided 2026-10-16.** Follow faster
    presets only: `min(1, DefaultDisplay / preset.Display)`. A 2x player
    gets a shorter Reckoning; a 0.5x player chose a slower fight, not a
    longer reward screen; the 1.6 s cap holds at every preset.
-4. **Held relics and tally: provisional, pending owner confirm.** Both off
+4. **Held relics and tally: decided 2026-10-16.** Both off
    the board: held relics live on the RUN pane; the tally becomes deeds
    under each portrait, with the physical/other split and shielded in the
    portrait tooltip.
@@ -928,7 +927,8 @@ the A9 sweep script beside `tools/bot.ps1`. Docs: `docs/CODE_MAP.md` rows
   `ReckoningTime` in R4, GIF feel gate, placeholder sound (M9); nav graph
   test first (M10); every-page beat (A1, point a); ghost gate before plinth
   art (point b); "who carried it" cut (point c); shielded in the tooltip;
-  A3-A9 and minors per §8; owner calls written as provisional decisions.
+  A3-A9 and minors per §8; owner calls written as provisional decisions,
+  then confirmed by the owner on 2026-10-16 (§7).
   No new review round: every structural change here is one the senior
   asked for; the every-page beat and the ghost gate add no contract.
 
