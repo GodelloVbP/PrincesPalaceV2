@@ -54,7 +54,7 @@ CUES = [
     ("take", FILMCOW + "book pick up 5.wav", 0.10, 0.62, 0.004, 0.12, None),
     ("legendary_bell", VOL2 + "Fantasy UI Vol (50).wav", 0.0, 2.20, 0.004, 0.80, None),
     ("boss_peak", SKY % 40, "onset", 1.60, 0.003, 0.50, None),
-    ("coin_tick", DUCK + "item_coins_01.ogg", "onset", 0.16, 0.002, 0.06, None),
+    ("coin_tick", DUCK + "item_coins_04.ogg", 0.03, 0.28, 0.004, 0.10, 5500),
     ("potion_land", FILMCOW + "glass clink 2.wav", "onset", 0.35, 0.002, 0.15, 6000),
     ("book_land", FILMCOW + "book throw 5.wav", 0.20, 0.60, 0.004, 0.15, 3200),
     ("hone_scrape", SONNISS + "David Dumais Audio - Melee Weapons Sound Effects Pack 2/"

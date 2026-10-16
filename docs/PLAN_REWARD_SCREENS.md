@@ -699,7 +699,7 @@ pins for the general case).
 | Top-tier landing (`RevealImpact`) | impact under the bell | `reveal_impact` (Sonniss Federico Soler Booms Vol.2 214 + Vol.2 UI 27 sparkle at +0.12 s, mixed in the recipe) |
 | Top-tier shake (`RevealRumble`) | low rumble of the 8 px kick | `reveal_rumble` (Sonniss Jake Fielding Interior Thunder Rumble, 7.5 s window) |
 | Boss peak | short musical sting | `boss_peak` (Skyward Hero UI 40, 1.6 s) |
-| Coin count | soft tick | `coin_tick` (rubberduck item_coins_01, CC0) |
+| Coin count | soft tick | `coin_tick` (rubberduck item_coins_04, CC0, 0.28 s, low-passed 5.5 kHz) |
 | Potion / book land | glass clink / paper thump | `potion_land` (FilmCow glass clink 2); `book_land` (FilmCow book throw 5, low-passed 3.2 kHz) |
 | Take | pick-up | `take` (FilmCow book pick up 5) |
 | Hone | whetstone scrape | `hone_scrape` (Sonniss David Dumais `SWING SCRAPE` long blade) |
@@ -707,8 +707,8 @@ pins for the general case).
 | Fell / Endured | low string note / drone | `fell` (Sonniss The Noisery bowed metal screech), `endured` (Vol.2 UI 14, low swell) |
 
 The owner auditioned and picked the rows above, plus `ember_snuff` (TomMusic
-`Light Torch 2`, low-passed 2.5 kHz). Coin tick is being
-re-auditioned; boss peak, potion land, experience fill and level bell keep
+`Light Torch 2`, low-passed 2.5 kHz).
+Boss peak, potion land, experience fill and level bell keep
 their R6 metric-chosen clips. To swap a source, edit the script's `CUES`.
 Potion / book land, experience fill / level up and Fell / Endured have their
 clip but no trigger yet: their moments (the haul strip, the board, the outcome
