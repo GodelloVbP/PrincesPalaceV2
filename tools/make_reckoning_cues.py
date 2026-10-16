@@ -50,7 +50,7 @@ CUES = [
     ("ember_light", "Free Fantasy SFX Pack By TomMusic/WAV Files/SFX/Torch/Light Torch 1.wav", 0.0, 1.2, 0.01, 0.30, None),
     ("ember_snuff", "Free Fantasy SFX Pack By TomMusic/WAV Files/SFX/Torch/Light Torch 2.wav", 0.0, 0.60, 0.01, 0.25, 2500),
     ("card_flip", FILMCOW + "swoosh 6.wav", 0.0, 0.50, 0.004, 0.12, None),
-    ("chevron_note", SKY % 11, "onset", 0.42, 0.003, 0.10, None),
+    ("chevron_note", FILMCOW + "glass ding 11.wav", 0.0, 0.40, 0.004, 0.15, 3500),
     ("take", FILMCOW + "book pick up 5.wav", 0.10, 0.62, 0.004, 0.12, None),
     ("legendary_bell", VOL2 + "Fantasy UI Vol (50).wav", 0.0, 2.20, 0.004, 0.80, None),
     ("boss_peak", SKY % 40, "onset", 1.60, 0.003, 0.50, None),

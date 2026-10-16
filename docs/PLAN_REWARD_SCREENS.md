@@ -690,7 +690,7 @@ pins for the general case).
 |---|---|---|
 | Card deal (no cache) | card dealt | `card_deal` (Sonniss 344 Audio Casino Cards `Dealing 3`, onset at frame 0, 0.34 s) |
 | Ember lights | torch flare | `ember_light` (TomMusic `Light Torch 1`) |
-| Up-chevron pop | rising note ladder, pre-pitched | `chevron_note` (Skyward Hero UI 11, root near 620 Hz) |
+| Up-chevron pop | rising note ladder, pre-pitched | `chevron_note` (FilmCow glass ding 11, about 1.7 kHz, low-passed 3.5 kHz) |
 | Cache open | cloth unfolds | `cloth_unfold` (FilmCow flag 7); `open_the_pack` stays for `OpenPack` |
 | Card flip | one clip, pitched per step | `card_flip` (FilmCow swoosh 6) |
 | Top-tier landing | low bell | `legendary_bell` (Vol.2 UI 50, low soft bell, 0.8 s tail) |
@@ -707,7 +707,7 @@ pins for the general case).
 | Fell / Endured | low string note / drone | `fell` (Sonniss The Noisery bowed metal screech), `endured` (Vol.2 UI 14, low swell) |
 
 The owner auditioned and picked the rows above, plus `ember_snuff` (TomMusic
-`Light Torch 2`, low-passed 2.5 kHz). Chevron note and coin tick are being
+`Light Torch 2`, low-passed 2.5 kHz). Coin tick is being
 re-auditioned; boss peak, potion land, experience fill and level bell keep
 their R6 metric-chosen clips. To swap a source, edit the script's `CUES`.
 Potion / book land, experience fill / level up and Fell / Endured have their

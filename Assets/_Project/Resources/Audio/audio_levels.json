@@ -110,11 +110,11 @@
     },
     {
       "path": "Sfx/Reckoning/chevron_note",
-      "gainDb": -1.0,
-      "gain": 0.8913,
+      "gainDb": 1.88,
+      "gain": 1.2417,
       "metric": "rms",
-      "measuredDb": -17.0,
-      "peakDb": -3.0
+      "measuredDb": -25.8,
+      "peakDb": -2.9
     },
     {
       "path": "Sfx/Reckoning/cloth_unfold",
