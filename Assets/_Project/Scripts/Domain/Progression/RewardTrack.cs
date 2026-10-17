@@ -347,45 +347,24 @@ namespace PrincesPalace.Domain.Progression
         // A CAPABILITY GRANTED ONCE -- the three kinds whose whole meaning is
         // that they happened.
         //
-        // "GRANTED ONCE" IS NOT "HAS NO NUMBER", and this comment said the
-        // latter until it was checked: SecondLife's Amount is its CHARGE
-        // COUNT, both shipped tracks author it as 1, and SquadTrack.
+        // "GRANTED ONCE" IS NOT "HAS NO NUMBER": SecondLife's Amount is its
+        // CHARGE COUNT, both shipped tracks author it as 1, and SquadTrack.
         // SecondLivesLeft sums CollectedTotal(SecondLife, ...) across the
-        // squad to get the ceiling. Author it as 0 -- which is what the old
-        // wording told you to do -- and the level-90 milestone silently
-        // grants nothing, with no resolver rule refusing it and nothing on
-        // screen saying so. Respec and UnlockSkill are the two that
-        // genuinely carry no number; see TrackEntry.Amount, which has always
-        // said "the PARAMETER of the capability where it has one". These are
-        // the three an author may not place as FILLER (docs/PLAN_REWARD_
-        // TRACKS.md §4's rule 3): a filler node's level is computed rather
-        // than authored, and "you learn Lightning Bolt at whichever level
-        // the interleave happens to put it" is not a design decision anybody
-        // made.
+        // squad to get the ceiling. Authored as 0, the level-25 milestone
+        // silently grants nothing, with no resolver rule refusing it and
+        // nothing on screen saying so. Respec and UnlockSkill are the two that
+        // carry no number; see TrackEntry.Amount, "the PARAMETER of the
+        // capability where it has one".
         //
-        // NOT "every kind but the one grant". A helper with that broader
-        // meaning briefly gated the filler check here and refused MaxHealth
-        // 10 x15, which is a filler row on BOTH shipped tracks -- MaxHealth
-        // is not StatPoint either, so the broader test caught it too and
-        // would have left levels 2-24 as nothing but stat points. This list
-        // names the three one-shot kinds explicitly instead.
+        // The resolver refuses a second placement of any of these on one
+        // track, because HasUnlocked only reads the first level a capability
+        // appears at. The list is explicit, not "every kind but StatPoint":
+        // MaxHealth is a repeating row on both shipped tracks and must stay
+        // placeable more than once.
         public static bool IsOneShotCapability(TrackReward reward) =>
             reward == TrackReward.Respec
             || reward == TrackReward.SecondLife
             || reward == TrackReward.UnlockSkill;
-
-        // THE FILLER BAN IS GONE, with the filler mechanism it policed.
-        //
-        // IsFillerIneligible lived here from phase 3 until phase 4: a track
-        // was authored as twelve milestones plus a "filler mix" whose
-        // placements the game computed, and a reward whose whole meaning is
-        // WHERE it sits (a fury-opening step, a title, a skill) could not be
-        // allowed to land wherever an interleave happened to put it. Phase 4
-        // made every level an authored row (see RawTrackLevel), so there is
-        // no computed placement left to refuse and no kind that is
-        // ineligible for one. IsOneShotCapability above stays, because the
-        // question it answers -- "may this appear twice on one track" -- is
-        // about HasUnlocked's reading, not about placement.
 
         // THE SET ContentDatabase.BuildSignatureResource PAYS -- a reward of
         // any of these four kinds is meaningless on a character with no

@@ -11,12 +11,10 @@ namespace PrincesPalace
 {
     // Rolls the three items a won fight offers.
     //
-    // Every RULE here already existed and had no caller: RarityTable decides
-    // what a depth and an encounter class are worth, ItemOfferTable picks which
-    // items given a target tier, and both are pure, injected-randomness and
-    // fully tested. What was missing was the one Core-side step neither can
-    // take -- turning ContentDatabase's ItemDefinitions into candidates -- so
-    // the whole reward table sat unreachable behind it.
+    // The rules live elsewhere and are pure: RarityTable decides what a depth
+    // and an encounter class are worth, ItemOfferTable picks which items given
+    // a target tier. This is the one Core-side step neither can take, turning
+    // ContentDatabase's ItemDefinitions into candidates.
     //
     // Kept out of the controller because "what does a fight drop" is a rule
     // about the game, not about a screen, and the Reckoning is not the only
@@ -33,21 +31,16 @@ namespace PrincesPalace
         // A "choose one of three" that can offer a health potion is not a
         // choice, it is a tax on the one player who reads carefully. Potions
         // come from the shop and from drops; the fight-reward slot is where
-        // gear comes from. That much was always here -- what was missing is
-        // the other half of the same argument, which ContentDatabase.Offerable
-        // has stated for months: the hand-authored one-offs in items.json
-        // "have their own routes in and would otherwise turn up as a 'reward'
-        // the player already owns six of". The filter here read IsEquippable,
-        // so all six starting-kit items sat in the floor-1 band and the first
-        // fight of a run could hand you the helm on your own head.
+        // gear comes from. The hand-authored one-offs in items.json "have
+        // their own routes in and would otherwise turn up as a 'reward' the
+        // player already owns" (ContentDatabase.Offerable), so IsEquippable is
+        // not the filter.
         //
         // Offerable's predicate is "was this generated with a tier", not the
         // kind, because the offer screen ranks what it shows by run depth and
         // an item with no tier cannot be placed on that axis at all. ASKED
-        // RATHER THAN RESTATED: this is the only reward-side caller, the
-        // shop's gear shelf and the Reckoning both come through here, and a
-        // second copy of the predicate is how the two drifted apart in the
-        // first place.
+        // RATHER THAN RESTATED: the shop's gear shelf and the Reckoning both
+        // come through here, so there is one copy of the predicate.
         public static IReadOnlyList<ItemOffer> Candidates()
         {
             var candidates = new List<ItemOffer>();
