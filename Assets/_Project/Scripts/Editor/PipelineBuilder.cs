@@ -73,6 +73,7 @@ public static class PipelineBuilder
         AssignToGraphicsAndQuality(pipeline);
 
         BuildVolumeProfile();
+        BuildSilhouetteMaterials();
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
