@@ -4,13 +4,13 @@ namespace PrincesPalace.Domain.Combat
 {
     // WHICH ROOT ENGINE PAYS A COMBATANT'S PRIMARY POOL (docs/
     // PLAN_BJORN_CONSTELLATIONS.md, section 1 "Engines replace the pool's flat
-    // gains" and Phase 2). None is today's behaviour: the pool's authored
-    // gainOnAttack / gainOnDamageTaken pay, exactly as before.
+    // gains"). None is the default: the pool's authored
+    // gainOnAttack / gainOnDamageTaken pay.
     //
     // A plain enum in a file ContentInputHash does not list, on purpose: no
-    // content record carries it. The root TalentEffect members that will set
-    // it are content-hashed and land with the Unity session; until then
-    // nothing sets it and every combatant reads None.
+    // content record carries it. The root TalentEffect members that set it
+    // are content-hashed; FightSession.ArmEngineSeams sets Kind at fight
+    // start, and a combatant whose talents switch no engine on reads None.
     public enum FuryEngineKind
     {
         None,

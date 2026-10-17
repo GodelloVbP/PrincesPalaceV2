@@ -42,11 +42,10 @@ namespace PrincesPalace.Domain.Combat
         // of the same question and an easy place for the two to disagree.
         //
         // A ONE-LINE CALL TO StatusEffects.TrySpend (plan 1.8) rather than
-        // its own removal any more -- Marked has exactly one live entry per
+        // its own removal -- Marked has exactly one live entry per
         // target (StackPolicyOf refreshes it), so "the first entry of this
         // type" and "the mark" are the same question, and this keeps its own
-        // name and its own contract for the sixteen call sites that already
-        // key off it.
+        // name and its own contract for the callers that key off it.
         public static bool ConsumeMark(CombatantState target)
         {
             return target != null && StatusEffects.TrySpend(target.Statuses, StatusEffectType.Marked, out _);

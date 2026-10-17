@@ -157,8 +157,9 @@ namespace PrincesPalace.Domain.Combat
         // THE PER-HIT FURY CLAMP for damage the wall soaks for an ally: the
         // Sentinel root's engine (plan section 2) applied to what was
         // absorbed -- floor(absorbed x 150 / holder max HP), clamped to 3-25.
-        // Phase 2 builds the root engine for hits Bjorn takes himself; this is
-        // the same formula so the two can merge onto one helper then.
+        // FuryEngine.SentinelFury, the root engine for hits Bjorn takes
+        // himself, delegates to this helper, so the wall and the engine
+        // share one formula.
         public const int FuryScale = 150;
         public const int FuryPerHitMin = 3;
         public const int FuryPerHitMax = 25;

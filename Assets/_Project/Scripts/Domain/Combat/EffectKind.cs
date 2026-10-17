@@ -283,8 +283,7 @@ namespace PrincesPalace.Domain.Combat
         // Magnitude wool at the start of your turn while at or below
         // Threshold percent of max health. REPLACES the baseline rather than
         // stacking with it, and the highest satisfied tier wins — see
-        // EffectSet.BestBelowHealth. Handoff §6.1 asked this question
-        // and never answered it; replace is what the ability prices were
+        // EffectSet.BestBelowHealth. Replace is what the ability prices were
         // sanity-checked against, so replace is what this is.
         WoolPerTurnBelowHealth,
 
@@ -440,7 +439,7 @@ namespace PrincesPalace.Domain.Combat
         // Warding no longer consumes the action, so she can ward and attack
         // in the same turn. Magnitude is ignored.
         //
-        // The single biggest quality-of-life node in the path. Before it,
+        // The single biggest quality-of-life node in the path. Without it,
         // every ward is a turn not spent doing anything else — which on a
         // frail character with no damage output feels like being punished for
         // playing her correctly.
@@ -553,15 +552,12 @@ namespace PrincesPalace.Domain.Combat
         // the ward is. The same shape as the Ram's capstone — take a
         // temporary state and make it who you are — on a different resource.
         //
-        // IT MEANT "WARDS STOP POPPING" until the shield model landed (AUDIT
-        // #152), and it could not keep meaning that. While
-        // a ward was a percentage spent whole by one hit, "never expires" and
-        // "never pops" were the same sentence; against a pool of shield
-        // points, a ward that never pops is literal immunity to everything
-        // forever. So it is the DURATION that is permanent -- ApplyWard is
-        // handed StatusEffects.PermanentWardTurns -- and the pool drains like
+        // IT MEANS THE DURATION IS PERMANENT, NOT THAT WARDS NEVER POP
+        // (AUDIT #152): against a pool of shield points, a ward that never
+        // pops is literal immunity to everything forever. ApplyWard is
+        // handed StatusEffects.PermanentWardTurns, and the pool drains like
         // anybody else's. The node's own text in talents.json ("They last the
-        // fight") was already the duration reading and needed no change.
+        // fight") is the duration reading.
         //
         // The engine survives it either way. Income is paid for CARRYING a
         // ward when hit, not for the ward being spent (see
