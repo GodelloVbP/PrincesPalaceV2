@@ -4,7 +4,7 @@ using PrincesPalace.Domain.Combat;
 
 namespace PrincesPalace.Domain.Content
 {
-    // THE EIGHT WORDS A LAYER IS AUTHORED IN, each as a closed enum with a
+    // THE WORDS A LAYER IS AUTHORED IN, each as a closed enum with a
     // Parse/IsKnown pair beside it.
     //
     // The shape is SpellAnchorNames' exactly (SpellAnchor.cs), and it is copied
@@ -79,8 +79,7 @@ namespace PrincesPalace.Domain.Content
 
     public enum SpellRender
     {
-        // An animated folder, played at `fps` or fitted into `seconds`. What
-        // every spell in the game is today.
+        // An animated folder, played at `fps` or fitted into `seconds`.
         Sprite,
 
         // ONE frame of a folder -- the folder's `startFrame` -- held rather

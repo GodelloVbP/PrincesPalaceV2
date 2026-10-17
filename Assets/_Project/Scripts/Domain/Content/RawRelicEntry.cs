@@ -22,8 +22,8 @@ namespace PrincesPalace.Domain.Content
         // Optional. Points at the keyed icon under Assets/_Project/Art/Items/
         // Relics/Processed/ — empty until the art lands, in which case
         // SceneBuilder.LoadSprite leaves it blank (with a console warning)
-        // and RelicsController falls back to the flat accent-coloured circle
-        // it already draws today.
+        // and RelicRows falls back to the flat accent-coloured circle
+        // it draws instead.
         [ContentDoc("Editor-time path to this relic's icon under Assets/_Project/Art/Items/Relics/Processed/; empty falls back to a flat accent-coloured circle.")]
         public string iconPath = "";
 

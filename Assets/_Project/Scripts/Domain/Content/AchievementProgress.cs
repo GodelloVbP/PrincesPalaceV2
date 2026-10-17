@@ -6,7 +6,7 @@ namespace PrincesPalace.Domain.Content
     //
     // A flat snapshot of facts rather than a reference to the save, and that is
     // the point: Domain cannot see SaveData, and more usefully, an evaluator
-    // that can only read these six numbers cannot quietly grow a dependency on
+    // that can only read these facts cannot quietly grow a dependency on
     // the whole game. Core gathers them in one place; the rules below stay
     // testable with literals.
     public readonly struct AchievementFacts

@@ -173,7 +173,7 @@ namespace PrincesPalace.Domain.Content
             return sb.ToString();
         }
 
-        // BFS outward from the 11 root types over every field whose type (or
+        // BFS outward from the FileMap root types over every field whose type (or
         // array element type) is itself a [Serializable] class in this same
         // namespace -- SpellPresentation, RawDamageInstance, RawEnemyAbility,
         // RawEffect, RawSetPiece

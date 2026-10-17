@@ -329,7 +329,7 @@ namespace PrincesPalace.Domain.Content
 
         private static void CheckWords(string at, SpellLayer layer, List<string> problems)
         {
-            // BLANK IS REFUSED for these two and known for the other four.
+            // BLANK IS REFUSED for these two and known for every other word.
             // There is no safe default for what draws or where it goes; there
             // is one for every other word, and refusing an omission would make
             // every optional word mandatory.

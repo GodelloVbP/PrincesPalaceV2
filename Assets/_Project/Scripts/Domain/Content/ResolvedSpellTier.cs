@@ -25,7 +25,7 @@ namespace PrincesPalace.Domain.Content
         // this as the JSON order and only THEN sorts the resolved list by
         // level, so the two agree exactly as long as spells.json happens to be
         // written in level order -- which is why SpellTierDefinition.SortOrder
-        // reads Level instead. Recorded in architecture_audit.md F14.
+        // reads Level instead.
         public int SortOrder;
 
         // Which ability scores this tier's spell rides. None for a tier that
