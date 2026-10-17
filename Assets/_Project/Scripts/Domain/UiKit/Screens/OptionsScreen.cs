@@ -31,12 +31,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // DENSE, and keyed rather than index-aligned with AllRows.
         //
-        // The first shape here padded these with nulls so every array matched
-        // AllRows position for position, and UiWiringSweep refused it -- rightly,
-        // since a null element in a serialized array is exactly what an unwired
-        // reference looks like, and the sweep cannot tell a deliberate hole from
-        // a forgotten one. Carrying the key instead says which setting each
-        // control belongs to without leaving gaps for the sweep to trip on.
+        // A null element in a serialized array looks exactly like an unwired
+        // reference, and UiWiringSweep cannot tell a deliberate hole from a
+        // forgotten one. The key says which setting each control belongs to
+        // without padding the arrays to AllRows position for position.
         public List<string> SliderKeys = new List<string>();
         public List<NodeRef> SliderTracks = new List<NodeRef>();
         public List<NodeRef> SliderFills = new List<NodeRef>();
@@ -81,9 +79,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 children.Add(BuildCard(screen, group, centreY));
             }
 
-            // Under column 0, below its last card. Themed Crimson -- the
-            // brief's one reset action -- which means dropping the .NoChrome()
-            // this row used before there was a semantic kit to reach for.
+            // Under column 0, below its last card. Themed Crimson: the one
+            // reset action.
             var restore = Ui.Button("OptionsRestoreDefaults", UiStrings.OptionsRestoreDefaults,
                     new UiVec(OptionsLayout.RestoreWidth, OptionsLayout.RestoreHeight), 26,
                     Place.At(OptionsLayout.ColumnCentreX(0),
@@ -147,13 +144,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // A row is a CONTAINER, not a stack of siblings.
         //
-        // The first version laid the tint plate down as a sibling under the
-        // label and controls and hung the hover off that, which could not work
-        // twice over. AsDecor sets raycastTarget false, so the plate received
-        // no pointer events at all -- and even raycastable, a sibling is not in
-        // the control's parent chain, so reaching for the slider would have
-        // fired exit on the plate and dropped the tint exactly when the player
-        // was about to use the row.
+        // The tint plate cannot be a sibling under the label and controls with
+        // the hover hung off it. AsDecor sets raycastTarget false, so the plate
+        // gets no pointer events, and even raycastable a sibling is not in the
+        // control's parent chain: reaching for the slider would fire exit on
+        // the plate and drop the tint just as the player uses the row.
         //
         // As the row's PARENT it gets both: enter and exit bubble up from
         // whichever child the pointer is actually over, so the whole row lights
@@ -258,6 +253,5 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.RowHovers.Add(rowNode);
             return rowNode;
         }
-
-                    }
+    }
 }
