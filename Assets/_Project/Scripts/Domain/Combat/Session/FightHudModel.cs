@@ -1596,11 +1596,11 @@ namespace PrincesPalace.Domain.Combat.Session
             // live table, never authored.
             if (intent.DamageBySeat != null)
             {
-                return KnellSentence(intent) + ThenLine(intent);
+                return KnellSentence(intent);
             }
 
             string line = $"{enemyName} will {verb} {who}";
-            if (intent.ExpectedDamage <= 0) return line + ThenLine(intent);
+            if (intent.ExpectedDamage <= 0) return line;
 
             // THE SIGN, SAID IN WORDS. ExpectedDamage is a magnitude, and a
             // magnitude with no sign reads as a threat -- "for about 40" under a
@@ -1618,12 +1618,8 @@ namespace PrincesPalace.Domain.Combat.Session
             // figure already includes the multiplier (EnemyIntent.WillCrit).
             string crit = intent.WillCrit ? " (critical)" : "";
             string lethal = intent.IsLethal ? " (lethal)" : "";
-            return line + $"\nfor about {intent.ExpectedDamage} {what}{spread}{crit}{lethal}" + ThenLine(intent);
+            return line + $"\nfor about {intent.ExpectedDamage} {what}{spread}{crit}{lethal}";
         }
-
-        // The next step of a sequence is not spelled out: the player reads it
-        // off the plate callout and the badge, not the tooltip.
-        private static string ThenLine(EnemyIntent intent) => "";
 
         private static string KnellSentence(EnemyIntent intent)
         {
