@@ -109,6 +109,7 @@ namespace PrincesPalace
         private int _wantedTip = -1;
         private bool _wantedHone;
         private bool _cacheUp;
+        private bool _rimsHeld;
 
         private struct RowTimes
         {
@@ -186,7 +187,9 @@ namespace PrincesPalace
         // player cannot make yet.
         private void HoldRims(bool held)
         {
-            if (offerButtons == null) return;
+            // RunReveal asks every frame; only a change touches the buttons.
+            if (offerButtons == null || held == _rimsHeld) return;
+            _rimsHeld = held;
             foreach (var button in offerButtons)
             {
                 var box = button == null ? null : button.GetComponent<HoverBox>();

@@ -58,7 +58,7 @@ namespace PrincesPalace.PlayModeTests
 
         private string DescribeSting()
         {
-            var live = Object.FindObjectsByType<FightController>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            var live = Object.FindObjectsByType<FightController>(FindObjectsInactive.Include);
             string ids = string.Join(",", live.Select(f => f.GetEntityId() + (f == _fight ? "(test)" : "")));
             return $"frame {Time.frameCount}, test fight {(_fight != null ? _fight.GetEntityId() : 0)}, "
                 + $"live FightControllers [{ids}]" + System.Environment.NewLine + System.Environment.StackTrace;

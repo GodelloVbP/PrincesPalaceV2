@@ -122,6 +122,16 @@ namespace PP.RunnerSync
 
         public static void SyncDocs(string srcRoot, string dstRoot)
         {
+            // This deletes most of dstRoot/docs and four root folders, so a
+            // runner path that came through empty, relative or equal to the
+            // source would purge the real project instead of the copy.
+            if (string.IsNullOrEmpty(srcRoot) || string.IsNullOrEmpty(dstRoot)
+                || !Path.IsPathRooted(srcRoot) || !Path.IsPathRooted(dstRoot))
+                throw new ArgumentException("SyncDocs needs two absolute roots: '" + srcRoot + "' -> '" + dstRoot + "'");
+            if (string.Equals(Path.GetFullPath(srcRoot).TrimEnd('\\', '/'), Path.GetFullPath(dstRoot).TrimEnd('\\', '/'),
+                    StringComparison.OrdinalIgnoreCase))
+                throw new ArgumentException("SyncDocs refuses to purge the source project itself: " + dstRoot);
+
             string srcDocs = Path.Combine(srcRoot, "docs");
             string dstDocs = Path.Combine(dstRoot, "docs");
             Directory.CreateDirectory(dstDocs);
