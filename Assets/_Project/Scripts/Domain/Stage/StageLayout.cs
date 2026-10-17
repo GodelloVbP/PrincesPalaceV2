@@ -11,8 +11,8 @@ namespace PrincesPalace.Domain.Stage
     // rather than game rules: it is pure deterministic math over floats with
     // no UnityEngine types, which means it can be unit-tested in EditMode
     // (that assembly can only reference Domain). The actual pixel anchors —
-    // where "near" and "far" physically are on a 1920x1080 canvas — stay in
-    // SceneBuilder, because those are genuinely a UI concern and change
+    // where "near" and "far" physically are on a 1920x1080 canvas — live in
+    // FightStageAnchors, because those are a UI concern and change
     // whenever the layout does. This file only answers "how far back is slot
     // i, and what does depth do to size", which is the part worth pinning
     // with tests.
@@ -22,7 +22,7 @@ namespace PrincesPalace.Domain.Stage
     // That direction is the convention every method here assumes.
     public static class StageLayout
     {
-        // A far actor draws at 89% of a near one.
+        // A far actor draws at 87% of a near one (0.82 / 0.94).
         //
         // A narrower spread than a straight near/far falloff would give,
         // because a front figure at full size next to a far one much

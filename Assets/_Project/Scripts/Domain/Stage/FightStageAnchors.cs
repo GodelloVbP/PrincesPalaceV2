@@ -213,11 +213,10 @@ namespace PrincesPalace.Domain.Stage
         // it. Anchored to the slot's TOP for the same reason the nameplate is
         // anchored to its bottom: it must not depend on how tall a given
         // monster's sprite happens to be, and monsters differ by a lot.
-        // Must exceed HALF the icon's height, or the icon hangs back down into
-        // the slot: it is pinned to the slot's top edge by its own CENTRE. At 18
-        // against a 46px icon it overlapped the sprite by exactly 5px, and
-        // because the icon is a Button declared after the sprite it would have
-        // taken the clicks along that strip. 30 - 23 leaves 7px of daylight.
+        // IntentIconOffset must exceed HALF the icon's height, or the icon
+        // hangs back down into the slot: it is pinned to the slot's top edge
+        // by its own CENTRE, and because the icon is a Button declared after
+        // the sprite it would take the clicks along any overlap.
         //
         // Every status badge on the HUD is sized to match the debuff/buff
         // icons; IntentIconOffset below scales with it, so the daylight

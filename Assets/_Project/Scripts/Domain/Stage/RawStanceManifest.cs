@@ -95,7 +95,8 @@ namespace PrincesPalace.Domain.Stage
         //
         // A JUDGEMENT, like castPoint: which pixels "are the face" is a
         // choice about the drawing, not a measurement. Same coordinate
-        // convention as RawCastPoint (dx from the canvas centre, dy above the
+        // convention as RawCastPoint (dx from the canvas centre, canvas-right
+        // positive and mirrored with the sprite, dy above the
         // ground line), measured on the actor's idle still.
         public RawHeadBox head;
     }
@@ -137,11 +138,11 @@ namespace PrincesPalace.Domain.Stage
     // either -- the figure's own horizontal centre and its own ground line.
     //
     // dx: pixels from the figure's horizontal centre (canvas width / 2),
-    //     POSITIVE TOWARD THE ACTOR'S OWN FACING (SpriteFacing, not the side
-    //     of the stage it happens to stand on -- the mirror that flips a
-    //     leftward-drawn monster onto the right side of the stage flips this
-    //     too, automatically, because it rides the same transform the sprite
-    //     does).
+    //     POSITIVE TOWARD CANVAS-RIGHT, as the art is drawn, and mirrored
+    //     with the sprite (CastPointPlacement multiplies it by the sprite's
+    //     own facing flip). That equals "toward the actor's facing" only for
+    //     right-native art; a left-native actor authors dx against the
+    //     canvas as drawn, not against its facing.
     // dy: pixels ABOVE the actor's own ground line (same "up from
     //     groundLine" direction groundLine itself is measured in, not up
     //     from the canvas edge) -- so a re-slice that changes groundLine by

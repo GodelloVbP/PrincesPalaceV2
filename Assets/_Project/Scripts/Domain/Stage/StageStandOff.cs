@@ -64,7 +64,7 @@ namespace PrincesPalace.Domain.Stage
 
         // An unmeasurable figure contributes nothing rather than a guess: a
         // zero span degrades the stand-off below to "stop at the target's
-        // mark", which is where the old fractions were aiming anyway.
+        // mark".
         public static OpaqueSpan None => new OpaqueSpan(0f, 0f);
 
         // The span as it is DRAWN, given the sprite's mirror (-1 flips the
