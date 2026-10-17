@@ -1139,9 +1139,10 @@ namespace PrincesPalace
             ShopAtTheStockInFront(seed, save, runPolicy, roomTrace);
 
             // Honing comes after the buy decisions, on what the policy left.
-            var scoreCache = new Dictionary<(string, int), float>();
+            // Each hone changes every later card score, so the cache lives
+            // for one comparison only.
             foreach (string hone in GearEvaluator.HoneAtTheShop(save, runPolicy.Gear,
-                () => BestCardPerGold(ShopViewOf(save, runPolicy, scoreCache))))
+                () => BestCardPerGold(ShopViewOf(save, runPolicy, new Dictionary<(string, int), float>()))))
             {
                 roomTrace.Hones.Add("shop:" + hone);
             }
