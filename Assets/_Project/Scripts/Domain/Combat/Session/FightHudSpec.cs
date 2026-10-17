@@ -117,9 +117,9 @@ namespace PrincesPalace.Domain.Combat.Session
         // reserves, alongside DetailStatRows rather than replacing it.
         // FightHudModel.DetailPanel.Stats and .Icons are both populated by
         // DetailForSkill; RefreshDetail paints Icons. Eight is the ceiling
-        // because Effect (a non-damaging skill's row) excludes the Element and
-        // Defense rows, so no card carries more than eight of the nine
-        // DetailIconKind members.
+        // because Effect (non-damaging skills) and Defense (damaging skills)
+        // are mutually exclusive, so a card carries at most one of them, not
+        // all nine DetailIconKind members.
         public const int DetailIconRows = 8;
 
         // Attack / Skill / Item / Hold Back. RUN was removed -- see
