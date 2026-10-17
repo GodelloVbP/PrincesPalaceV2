@@ -475,8 +475,6 @@ namespace PrincesPalace.Domain.Content
         // Applied when a monster names a skill but leaves the numbers out.
         private const float DefaultSkillPower = 1.5f;
         private const float DefaultSkillChance = 0.35f;
-        private const float DefaultVfxSeconds = 0.6f;
-        private const int DefaultVfxImpactFrame = 3;
 
         // appliesStatus is entirely optional, but once authored, magnitude
         // and duration are both required. Used to be a byte-for-byte copy of

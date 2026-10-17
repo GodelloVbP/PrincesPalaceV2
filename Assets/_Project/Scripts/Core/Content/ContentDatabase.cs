@@ -520,6 +520,7 @@ namespace PrincesPalace.Content
             _levelCosts = null;
             _rewardSources = null;
             _realms = null;
+            _events = null;
 
             // Portraits are keyed by character id and resolved through the
             // roster above, so a swapped roster has to drop them too -- a test

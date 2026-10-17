@@ -83,13 +83,16 @@ namespace PrincesPalace.Domain.Content
             };
         }
 
+        // At runs once per worn slot per stat read; the array is built once.
+        internal static readonly StatType[] AllStats = (StatType[])Enum.GetValues(typeof(StatType));
+
         public GearStats At(int tier)
         {
             int t = tier < 0 ? 0 : tier;
             int gradeTier = maxTier > 0 && t > maxTier ? maxTier : t;
 
             var stats = StatBlock.Zero;
-            foreach (StatType stat in Enum.GetValues(typeof(StatType)))
+            foreach (StatType stat in AllStats)
             {
                 stats = stats + StatBlock.ForStat(stat, Value(statsAtZero[stat], statsAtMax[stat], t));
             }
@@ -194,7 +197,7 @@ namespace PrincesPalace.Domain.Content
                 }
 
                 var scaled = StatBlock.Zero;
-                foreach (StatType stat in Enum.GetValues(typeof(StatType)))
+                foreach (StatType stat in GearCurve.AllStats)
                 {
                     scaled = scaled + StatBlock.ForStat(stat, ItemUpgrade.Apply(withAttack[stat], Honing));
                 }
