@@ -7,7 +7,7 @@ namespace PrincesPalace.Domain.Dungeon
     // Without this, an infinite map is an infinite corridor of trivial
     // fights: the descent has no other source of scaling difficulty, so the
     // leg generator and this file ship together on purpose. Wired in
-    // FightEncounterAdapter.ToCombatant, and EnemiesGetTougherWithDepth pins
+    // FightEncounterAdapter.ToCombatant, and DepthReachesTheEnemiesTests pins
     // the wiring rather than the arithmetic.
     //
     // Pure and engine-free so the curve can be pinned by literal tests

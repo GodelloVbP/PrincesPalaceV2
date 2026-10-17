@@ -30,7 +30,7 @@ namespace PrincesPalace.Domain.Events
         public const string PrincesFavor = "princesFavor";
 
         // The special pool is full when a character's turn opens, this leg
-        // (read by the fight in P3).
+        // (read by FightEncounterAdapter).
         public const string FillSpecialPool = "fillSpecialPool";
 
         // Every kind above, in the order the RUN pane lists them. A kind added

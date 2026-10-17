@@ -397,18 +397,10 @@ namespace PrincesPalace.Domain.Rewards
                 return PadTo(entries, BookSection, BookCount, ShopEntryKind.Book);
             }
 
-            var remaining = new List<BookCandidate>(available);
-            int wanted = Math.Min(BookCount, remaining.Count);
-
-            for (int i = 0; i < wanted; i++)
+            var picks = SamplingOps.SampleWithoutReplacement(new List<BookCandidate>(available), BookCount, nextIndex);
+            for (int i = 0; i < picks.Count; i++)
             {
-                int roll = nextIndex(remaining.Count);
-                if (roll < 0) roll = 0;
-                if (roll >= remaining.Count) roll = remaining.Count - 1;
-
-                var picked = remaining[roll];
-                remaining.RemoveAt(roll);
-
+                var picked = picks[i];
                 entries.Add(ShopStockEntry.Book(i, picked.SkillId, ShopPricing.BookPrice(picked.BookTier, step)));
             }
 
