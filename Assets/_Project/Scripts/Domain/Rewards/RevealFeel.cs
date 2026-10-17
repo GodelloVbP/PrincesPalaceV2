@@ -35,17 +35,19 @@ namespace PrincesPalace.Domain.Rewards
         // How far past the card's own size the glow spreads by the end of the
         // build, as extra scale: the ceremony's glow spills past the edges.
         public static float Spill(LandStyle style) =>
-            style == LandStyle.Burst ? 0.4f : style == LandStyle.Shimmer ? 0.08f : 0f;
+            style == LandStyle.Burst ? 0.4f
+            : style == LandStyle.Shimmer ? 0.25f
+            : style == LandStyle.Puff ? 0.18f : 0.12f;
 
         // The flash of the glow on landing, decaying to its rest level.
         public static float LandGlow(LandStyle style)
         {
             switch (style)
             {
-                case LandStyle.Puff: return 0.5f;
-                case LandStyle.Shimmer: return 0.8f;
+                case LandStyle.Puff: return 0.75f;
+                case LandStyle.Shimmer: return 0.95f;
                 case LandStyle.Burst: return 1f;
-                default: return 0.3f;
+                default: return 0.55f;
             }
         }
 
@@ -117,21 +119,21 @@ namespace PrincesPalace.Domain.Rewards
             dy = (Hash(step, 2) * 2f - 1f) * amplitude * 0.6f;
         }
 
-        // Scale the card lands at, settling to 1: a Common's flat tap dips, a
-        // ceremony punches.
+        // Scale the card lands at, settling to 1: every landing punches, harder
+        // by quality.
         public static float PunchFrom(LandStyle style)
         {
             switch (style)
             {
-                case LandStyle.Puff: return 1.04f;
-                case LandStyle.Shimmer: return 1.07f;
+                case LandStyle.Puff: return 1.11f;
+                case LandStyle.Shimmer: return 1.13f;
                 case LandStyle.Burst: return 1.15f;
-                default: return 0.97f;
+                default: return 1.08f;
             }
         }
 
         public static float PunchSeconds(LandStyle style) =>
-            style == LandStyle.Burst ? 0.25f : style == LandStyle.Flat ? 0.1f : 0.18f;
+            style == LandStyle.Burst ? 0.25f : style == LandStyle.Flat ? 0.12f : 0.18f;
 
         public static float Punch(LandStyle style, float afterLand)
         {
@@ -145,7 +147,7 @@ namespace PrincesPalace.Domain.Rewards
         // A ring of light bursting outward: a Rare's small, the ceremony's
         // full reach (UiBurst's ring curve, scaled by this).
         public static float RingReach(LandStyle style) =>
-            style == LandStyle.Burst ? 1f : style == LandStyle.Shimmer ? 0.55f : 0f;
+            style == LandStyle.Burst ? 1f : style == LandStyle.Shimmer ? 0.85f : 0f;
 
         public static float RingSeconds(LandStyle style) => style == LandStyle.Burst ? 0.8f : 0.45f;
 
@@ -162,7 +164,9 @@ namespace PrincesPalace.Domain.Rewards
         // stage's behind it. UI and stage transforms only (StageShake), never
         // Time.timeScale.
         public static float PanelShakePixels(LandStyle style) =>
-            style == LandStyle.Burst ? 8f : style == LandStyle.Shimmer ? 3f : 0f;
+            style == LandStyle.Burst ? 8f
+            : style == LandStyle.Shimmer ? 3.5f
+            : style == LandStyle.Puff ? 2.5f : 1.5f;
 
         public static float StageShakePixels(LandStyle style) => style == LandStyle.Burst ? 8f : 0f;
 
@@ -170,8 +174,9 @@ namespace PrincesPalace.Domain.Rewards
 
         // ---- particles --------------------------------------------------------------
 
-        // What a landing throws: Common dust off the bottom edge, Uncommon a
-        // puff of motes, Rare a shimmer, the ceremony an explosion. Card size
+        // What a landing throws, one model with a per-style intensity: Common
+        // a few motes off the bottom edge, Uncommon a puff, Rare a shimmer,
+        // the ceremony an explosion. Card size
         // in canvas pixels; the spec's source is the card's centre.
         public static SpellEmitter LandEmitter(LandStyle style, float cardWidth, float cardHeight)
         {
@@ -180,14 +185,14 @@ namespace PrincesPalace.Domain.Rewards
                 case LandStyle.Puff:
                     return new SpellEmitter
                     {
-                        burst = 10, aimDegrees = 90f, spreadDegrees = 360f, speedMin = 50f, speedMax = 120f,
+                        burst = 14, aimDegrees = 90f, spreadDegrees = 360f, speedMin = 70f, speedMax = 160f,
                         drag = 3f, gravity = 50f, lifeMin = 0.45f, lifeMax = 0.7f, sizeMin = 0.5f, sizeMax = 0.9f,
                         fadeFrom = 0.4f, lateral = cardWidth * 0.6f, seed = 2,
                     };
                 case LandStyle.Shimmer:
                     return new SpellEmitter
                     {
-                        burst = 16, aimDegrees = 90f, spreadDegrees = 360f, speedMin = 140f, speedMax = 280f,
+                        burst = 26, aimDegrees = 90f, spreadDegrees = 360f, speedMin = 160f, speedMax = 340f,
                         drag = 4f, lifeMin = 0.35f, lifeMax = 0.65f, sizeMin = 0.4f, sizeMax = 0.8f,
                         fadeFrom = 0.3f, endScale = 0.4f, seed = 3,
                     };
@@ -201,7 +206,7 @@ namespace PrincesPalace.Domain.Rewards
                 default:
                     return new SpellEmitter
                     {
-                        burst = 6, aimDegrees = 90f, spreadDegrees = 150f, speedMin = 30f, speedMax = 80f,
+                        burst = 9, aimDegrees = 90f, spreadDegrees = 200f, speedMin = 50f, speedMax = 110f,
                         drag = 5f, gravity = -40f, lifeMin = 0.3f, lifeMax = 0.45f, sizeMin = 0.5f, sizeMax = 0.8f,
                         fadeFrom = 0.2f, endScale = 1.3f, lateral = cardWidth * 0.8f,
                         sourceDy = -cardHeight * 0.45f, seed = 1,

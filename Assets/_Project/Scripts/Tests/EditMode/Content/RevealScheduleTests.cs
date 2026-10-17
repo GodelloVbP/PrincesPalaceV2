@@ -88,17 +88,21 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0.34f, s.ChoosableAt, Tolerance);
         }
 
-        // The treatments' look (RevealFeel): only a Rare and the ceremony
-        // shake, only the ceremony shakes the stage, and the punch grows with
-        // the treatment.
+        // The treatments' look (RevealFeel): every landing kicks and punches,
+        // scaled by quality; only the ceremony shakes the stage.
         [Test]
         public void TheTreatments_ShakeAndPunch_ByQuality()
         {
-            Assert.AreEqual(0f, RevealFeel.PanelShakePixels(LandStyle.Flat));
-            Assert.AreEqual(0f, RevealFeel.PanelShakePixels(LandStyle.Puff));
-            Assert.AreEqual(3f, RevealFeel.PanelShakePixels(LandStyle.Shimmer));
+            Assert.AreEqual(1.5f, RevealFeel.PanelShakePixels(LandStyle.Flat));
+            Assert.AreEqual(2.5f, RevealFeel.PanelShakePixels(LandStyle.Puff));
+            Assert.AreEqual(3.5f, RevealFeel.PanelShakePixels(LandStyle.Shimmer));
             Assert.AreEqual(8f, RevealFeel.PanelShakePixels(LandStyle.Burst));
             Assert.AreEqual(0f, RevealFeel.StageShakePixels(LandStyle.Shimmer));
+            Assert.AreEqual(1.08f, RevealFeel.Punch(LandStyle.Flat, 0f), Tolerance);
+            Assert.AreEqual(1.11f, RevealFeel.Punch(LandStyle.Puff, 0f), Tolerance);
+            Assert.AreEqual(1.13f, RevealFeel.Punch(LandStyle.Shimmer, 0f), Tolerance);
+            Assert.AreEqual(0.85f, RevealFeel.RingReach(LandStyle.Shimmer), Tolerance);
+            Assert.AreEqual(0f, RevealFeel.RingReach(LandStyle.Puff), Tolerance);
             Assert.AreEqual(8f, RevealFeel.StageShakePixels(LandStyle.Burst));
             Assert.AreEqual(0.25f, RevealFeel.ShakeSeconds(LandStyle.Burst), Tolerance);
             Assert.AreEqual(1.15f, RevealFeel.Punch(LandStyle.Burst, 0f), Tolerance);

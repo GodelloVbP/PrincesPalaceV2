@@ -588,6 +588,7 @@ namespace PrincesPalace
             if (count <= 0) return;
 
             float cardWidth = OfferRowLayout.CardWidth(count);
+            float cardHeight = OfferRowLayout.CardHeight(count);
             float labelWidth = OfferRowLayout.LabelWidth(count);
             float iconWidth = OfferRowLayout.IconWidth(count);
             float bandLabelX = OfferRowLayout.BandLabelX(count);
@@ -600,6 +601,11 @@ namespace PrincesPalace
                 float x = OfferRowLayout.CardX(RowOf(i), count);
 
                 Seat(RectAt(offerRects, i), x, cardWidth);
+
+                // The button is the drawn card, not the tallest card the tree
+                // allows: a narrower card is shorter by the card art's aspect,
+                // and the hover rim is the button's edge.
+                SetHeight(RectAt(offerRects, i), cardHeight);
 
                 // "Hone instead" keeps its size, because a plate is a 3:1 art
                 // and stretching it with the row would bend it; only its x
@@ -714,6 +720,15 @@ namespace PrincesPalace
         // have to follow the card for a different reason -- a long item name in
         // a narrow row runs under the card next door, and they are decor, so
         // nothing else would catch it.
+        private static void SetHeight(RectTransform rect, float height)
+        {
+            if (rect == null) return;
+
+            var size = rect.sizeDelta;
+            size.y = height;
+            rect.sizeDelta = size;
+        }
+
         private static void SetWidth(RectTransform rect, float width)
         {
             if (rect == null) return;

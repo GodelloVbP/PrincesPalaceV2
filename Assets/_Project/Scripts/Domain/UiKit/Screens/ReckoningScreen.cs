@@ -69,6 +69,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // TWO PHASES in one container: pick your spoils, then the board
         // (docs/PLAN_REWARD_SCREENS.md C8) that reads what the fight was worth.
         public NodeRef FrameGlow;
+        public NodeRef FlareGlow;
         public NodeRef OfferPhase;
         public NodeRef SummaryPhase;
 
@@ -282,6 +283,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // No heading, Favor line or ledger: the cards, the whetstones and
             // the door say what the page is and what became of it.
             var offerChildren = new List<UiNode>();
+
+            // The top-tier flare's light, behind everything on the page and
+            // sized to the content box, so its falloff ends inside the rope.
+            var flare = Ui.Sprite("ReckoningFlareGlow", "proc:radial_glow",
+                    Place.At(0f, (ContentTop + ContentBottom) * 0.5f),
+                    UiSize.Fixed(ContentHalfWidth * 2f, ContentTop - ContentBottom))
+                .Coloured("#FFFFFF00")
+                .AsDecor();
+            screen.FlareGlow = flare;
+            offerChildren.Add(flare);
 
             // FIRST, so every control draws and catches clicks over it; it only
             // answers while a reveal beat runs (the controller shows it then).
@@ -839,10 +850,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> OfferRings = new List<NodeRef>();
         public List<NodeRef> OfferShadows = new List<NodeRef>();
         public List<NodeRef> OfferRims = new List<NodeRef>();
+        public List<NodeRef> OfferFaceTints = new List<NodeRef>();
+        public List<NodeRef> OfferFaceRims = new List<NodeRef>();
         public const float CardShadowDrop = 8f;
         public const float CardShadowSpread = 1.12f;
 
         // The light's sizes, as fractions of the card's box.
+        // The face's opaque ground: the card back's own violet, darkened.
+        public const string FaceGround = "#1C1228";
         public const float UnderGlowWidth = 1.3f;
         public const float UnderGlowHeight = 1.15f;
         public const float RaysSpan = 1.6f;
@@ -1045,10 +1060,26 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // The face is one node so the controller can hide all of it while
             // the back shows: the back art keeps its own aspect and is narrower
             // than the card, so it cannot cover the face by size.
+            // OPAQUE, so the cloth never shows through a face-up card: a dark
+            // plate in the card's own shape, a quality-coloured wash over it
+            // and a quality-coloured rim round it. The controller sets the two
+            // colours; the plate stays one dark violet so the quality leads.
+            var ground = Ui.Sprite($"ReckoningOffer{index}Ground", "proc:card_plate", Place.Stretch(), UiSize.Fill)
+                .Coloured(FaceGround)
+                .AsDecor();
+            var faceTint = Ui.Sprite($"ReckoningOffer{index}FaceTint", "proc:radial_glow", Place.Stretch(), UiSize.Fill)
+                .Coloured("#FFFFFF00")
+                .AsDecor();
+            var faceRim = Ui.Sprite($"ReckoningOffer{index}FaceRim", "proc:card_rim", Place.Stretch(), UiSize.Fill)
+                .Coloured("#FFFFFF00")
+                .AsDecor();
+            OfferFaceTints.Add(faceTint);
+            OfferFaceRims.Add(faceRim);
+
             var face = Ui.Panel($"ReckoningOffer{index}Face", Place.Stretch(), UiSize.Fill, new List<UiNode>
             {
-                plinth, halo, burst, ghost, icon, chain, wearerDisc, wearerPortrait,
-                band, bandTier, bandPlus, name, delta, deltaGlyph, chevron, feature, spark,
+                ground, faceTint, plinth, halo, burst, ghost, icon, chain, wearerDisc, wearerPortrait,
+                band, bandTier, bandPlus, name, delta, deltaGlyph, chevron, feature, spark, faceRim,
             });
             button.Children.Add(face);
             OfferFaces.Add(face);

@@ -40,6 +40,12 @@ namespace PrincesPalace
         [SerializeField] internal Image[] revealMotes;
         [SerializeField] internal Image[] offerShadows;
         [SerializeField] internal Image[] offerRims;
+        [SerializeField] internal Image[] offerFaceTints;
+        [SerializeField] internal Image[] offerFaceRims;
+
+        // The top-tier flare: light inside the cloth's inner rect, under the
+        // cards, so it never washes the fight past the rope border.
+        [SerializeField] internal Image flareGlow;
 
         // The fight's two stage racks (ScreenRegistry wires the same shakers
         // the fight's blows kick): a top-tier landing kicks them too.
@@ -50,6 +56,10 @@ namespace PrincesPalace
         private const float EmberSpent = 0.15f;
         private const float LingerHaloAlpha = 0.6f;
         private const float FlareGlowAlpha = 0.75f;
+
+        // The face's quality wash over its dark ground, and its rim, at rest.
+        private const float FaceWash = 0.34f;
+        private const float FaceRimAlpha = 0.9f;
         private const float OpenHaloAlpha = 0.30f;
 
         // A particle is its card's colour pulled toward white, so it reads as
@@ -65,7 +75,6 @@ namespace PrincesPalace
         private float _flareFrom = -1f;
         private float _flareFor;
         private Color _flareColour;
-        private Color _glowRest;
 
         // Row position -> page index for the page being revealed, each card's
         // resting x, and the rows whose landing was a top-tier burst.
@@ -162,15 +171,27 @@ namespace PrincesPalace
             _lingerEnded = false;
             _flareFrom = -1f;
             _burstRows.Clear();
-            _glowRest = frameGlow != null ? frameGlow.color : Color.clear;
-            _glowRest.a = GlowAlpha;
             _wantedTip = -1;
             HideCardTip();
             EnsurePanelShake();
 
             if (catcher != null) catcher.gameObject.SetActive(true);
+            HoldRims(true);
             ApplyReveal();
             _revealRoutine = StartCoroutine(RunReveal());
+        }
+
+        // The offer buttons' hover/focus rim stays off until the row accepts
+        // choices: a box on card 1 through the reveal marks a choice the
+        // player cannot make yet.
+        private void HoldRims(bool held)
+        {
+            if (offerButtons == null) return;
+            foreach (var button in offerButtons)
+            {
+                var box = button == null ? null : button.GetComponent<HoverBox>();
+                if (box != null) box.Suppressed = held;
+            }
         }
 
         // The schedule's per-card beats, read once, and the emitters sized to
@@ -237,6 +258,7 @@ namespace PrincesPalace
             _revealRoutine = null;
 
             bool was = _reveal != null;
+            HoldRims(false);
             for (int i = 0; i < offerButtons.Length; i++) RestCard(i, was);
             RestEffects();
             _reveal = null;
@@ -245,7 +267,7 @@ namespace PrincesPalace
             if (chipGear != null) chipGear.gameObject.SetActive(false);
             if (chipRelic != null) chipRelic.gameObject.SetActive(false);
             if (cache != null) cache.gameObject.SetActive(false);
-            if (was && frameGlow != null) frameGlow.color = _glowRest;
+            if (was) RestFlare();
             PaintEmbers();
         }
 
@@ -255,6 +277,7 @@ namespace PrincesPalace
             while (true)
             {
                 FireDue();
+                HoldRims(RevealBlocks());
 
                 // Once the row has landed and been drawn there, the cards are
                 // left to the nudge and the choices; only the landing's
@@ -278,6 +301,7 @@ namespace PrincesPalace
             }
 
             _revealRoutine = null;
+            HoldRims(false);
             if (!_lingerEnded) EndLinger();
             RestEffects();
             _reveal = null;
@@ -396,14 +420,13 @@ namespace PrincesPalace
         // top-tier bell.
         private void Land(RevealBeat beat)
         {
-            if (beat.Style == LandStyle.Shimmer)
+            // Every landing kicks, scaled by RevealFeel; only a Rare rings.
+            if (beat.Style != LandStyle.Burst)
             {
-                SoundController.Play(Sound.RevealRing);
+                if (beat.Style == LandStyle.Shimmer) SoundController.Play(Sound.RevealRing);
                 Kick(beat.Style);
                 return;
             }
-
-            if (beat.Style != LandStyle.Burst) return;
 
             _burstRows.Add(beat.Card);
             SoundController.Play(Sound.RevealImpact);
@@ -753,6 +776,13 @@ namespace PrincesPalace
 
             SeatCardParts(i);
 
+            // The face's wash and rim carry the quality colour; the face is
+            // hidden while the back shows, so neither can leak ahead of a flip.
+            if (Part(offerFaceTints, i) != null)
+                Part(offerFaceTints, i).color = WithAlpha(colour, open ? FaceWash : spent ? 0f : FaceWash * 0.5f);
+            if (Part(offerFaceRims, i) != null)
+                Part(offerFaceRims, i).color = WithAlpha(colour, open ? FaceRimAlpha : spent ? 0.25f : FaceRimAlpha * 0.5f);
+
             float rest = RevealFeel.RestGlow(tier);
             _underRest[i] = WithAlpha(colour, open ? rest : spent ? 0f : rest * 0.5f);
             if (_revealRoutine == null) RestUnderGlow(i);
@@ -857,22 +887,25 @@ namespace PrincesPalace
             SetAlpha(offerHalos[i], open ? OpenHaloAlpha : 0f);
         }
 
-        // The screen-edge flare: the frame's glow in the card's colour.
+        // The flare: the cloth's inner light in the card's colour, fading out.
         private void DrawFlare()
         {
-            if (frameGlow == null || _flareFrom < 0f) return;
+            if (flareGlow == null || _flareFrom < 0f) return;
 
             float k = (_revealClock - _flareFrom) / Mathf.Max(0.0001f, _flareFor);
             if (k >= 1f)
             {
-                frameGlow.color = _glowRest;
-                _flareFrom = -1f;
+                RestFlare();
                 return;
             }
 
-            var lit = _flareColour;
-            lit.a = FlareGlowAlpha;
-            frameGlow.color = Color.Lerp(lit, _glowRest, Mathf.Clamp01(k));
+            flareGlow.color = WithAlpha(_flareColour, FlareGlowAlpha * (1f - Mathf.Clamp01(k)));
+        }
+
+        private void RestFlare()
+        {
+            _flareFrom = -1f;
+            if (flareGlow != null) SetAlpha(flareGlow, 0f);
         }
 
         // ---- embers ----------------------------------------------------------------------

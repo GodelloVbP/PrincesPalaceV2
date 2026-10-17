@@ -78,6 +78,15 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(207.17f, OfferRowLayout.CardWidth(5), 0.01f);
         }
 
+        // The button is the drawn card's height too, so its rim hugs the card:
+        // the five-card row's card is 323 tall, not the tree's 364.
+        [Test]
+        public void TheCardsHeightFollowsItsWidthAtTheArtsAspect()
+        {
+            Assert.AreEqual(364.00f, OfferRowLayout.CardHeight(3), 0.01f);
+            Assert.AreEqual(323.39f, OfferRowLayout.CardHeight(5), 0.01f);
+        }
+
         // Every row spans the same painted interior. This is the property that
         // lets UiAudit solve ONE layout and have it stand for all of them: if
         // the widest row fits, so does every narrower one, because they are the

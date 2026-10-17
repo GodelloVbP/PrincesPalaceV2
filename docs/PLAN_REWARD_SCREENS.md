@@ -434,10 +434,17 @@ the look of each treatment: `RevealFeel` (both Domain, pure); drawn by
 
 | Quality | Build before the flip | Landing |
 |---|---|---|
-| Common (`Flat`) | none | a flat tap (scale 0.97 -> 1) and a little dust off the bottom edge |
-| Uncommon (`Puff`) | 0.1 s faint under-glow | punch 1.04, a puff of motes |
-| Rare (`Shimmer`) | 0.25 s: the glow builds under the card, the card lifts 8 px | punch 1.07, a ring of light bursts outward, shimmer particles, a 0.2 s edge pulse on the halo, a 3 px kick of the reward panel, the ring cue |
-| Top-tier live upgrade (`Burst`, **the ceremony**) | 0.6 s: the glow builds and spills past the card's edges (+40%), the card lifts and trembles with a jitter rising to 3 px, embers drift up, the riser cue | rays and a white-hot core burst behind the card, the full ring, a particle explosion, punch 1.15 -> 1.0, an 8 px kick of the panel and the fight stage for 0.25 s, the screen-edge flare in its colour (0.3 s), the impact, the bell and the rumble |
+| Common (`Flat`) | none | punch 1.08 -> 1 over 0.12 s, a light pop (glow 0.55, spill 0.12) in its colour, 9 motes, a 1.5 px kick |
+| Uncommon (`Puff`) | 0.1 s faint under-glow | punch 1.11, glow 0.75, 14 motes, a 2.5 px kick |
+| Rare (`Shimmer`) | 0.25 s: the glow builds under the card, the card lifts 8 px | punch 1.13, glow 0.95, a ring of light bursts outward (reach 0.85), 26 shimmer particles, a 0.2 s edge pulse on the halo, a 3.5 px kick of the reward panel, the ring cue |
+| Top-tier live upgrade (`Burst`, **the ceremony**) | 0.6 s: the glow builds and spills past the card's edges (+40%), the card lifts and trembles with a jitter rising to 3 px, embers drift up, the riser cue | rays and a white-hot core burst behind the card, the full ring, a particle explosion, punch 1.15 -> 1.0, an 8 px kick of the panel and the fight stage for 0.25 s, the flare in its colour inside the cloth's content box (0.3 s), the impact, the bell and the rumble |
+
+   One model, a per-quality intensity (`RevealFeel`): every landing punches,
+   pops light in its colour, throws motes and kicks the panel; the numbers
+   above are its literals, pinned in `RevealScheduleTests`. No landing adds
+   time: the Common's 0.12 s punch runs inside the 0.27 s settle, so the wall
+   times below are unchanged. Only a Rare rings (the ring cue plays for it
+   alone; Common and Uncommon are silent beyond their flip clip).
 
    The under-glow stays faintly lit in the card's colour after landing, by
    quality tier, so the row reads by rarity at rest.
@@ -473,6 +480,17 @@ skips it (C10). Every duration goes through `ReckoningTime`, so 1.5x and 2x
 shorten it and no preset lengthens it.
 
 ### C5. The card face
+
+The face is opaque: a dark violet plate in the card's rounded shape
+(`proc:card_plate`, lighter at the head), a quality-coloured wash over it
+(`proc:radial_glow`, alpha 0.34 on an open card) and a quality-coloured rim
+(`proc:card_rim`, alpha 0.9), all inside the face node so they turn with it
+and never show before the flip. The card button is the drawn card:
+`OfferRowLayout.CardHeight` is the width over the card art's aspect, so the
+hover rim hugs the card at every count. The hover rim stays off until the row
+accepts choices (`AcceptsChoices`). The top-tier flare is its own glow
+(`ReckoningFlareGlow`), sized to the content box and drawn under the row, so
+its falloff ends inside the rope border.
 
 Chromeless (no plate; `ReckoningScreen.cs:1006-1018`). **Row order** groups
 cards by wearer in squad order, stable within a wearer (`GearPage` deals in
@@ -869,6 +887,7 @@ No owner calls are open. The four below were confirmed by the owner on
    the pane lists only the event buff, `Domain/UiKit/RunEffectRows.cs:52`).
    Favor is a stat the player builds, so it stays visible; the odds stay off
    the reward screen. `PLAN_ITEMS.md` 1.2 had the page header show it.
+   Built: `RunEffectRows` Favor row (hidden at 0, no icon or hover surface on the pane yet).
 2. **Ending words: decided 2026-10-16.** Drop VICTORY,
    ENDURED and FELL. Fell = cracked medallion; Endured = dimmed but whole,
    which differs from a paid-nothing Victory's plain medallion; the stage

@@ -820,6 +820,17 @@ public static class ProceduralSpriteBaker
             float d = RoundedRectDistance(nx, ny, 0.94f, 0.08f);
             return Mathf.Exp(-(d * d) / (0.025f * 0.025f));
         });
+
+        // A REWARD CARD FACE'S GROUND: the card's own rounded shape, opaque,
+        // lighter at the head than the foot. Tinted dark at the use site, it
+        // is what keeps the cloth from showing through a face-up card. A
+        // VALUE ramp with full alpha, like card_ground, so nothing fades it.
+        BakeShaded("card_plate", Size, (nx, ny) =>
+        {
+            float d = RoundedRectDistance(nx, ny, 0.985f, 0.08f);
+            float coverage = 1f - Mathf.Clamp01((d + 0.012f) / 0.024f);
+            return (Mathf.Lerp(0.62f, 1f, (ny + 1f) * 0.5f), coverage);
+        });
     }
 
     // Signed distance from (nx, ny) to a rounded rectangle centred on the

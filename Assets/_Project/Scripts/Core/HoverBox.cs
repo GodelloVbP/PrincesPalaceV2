@@ -31,6 +31,20 @@ namespace PrincesPalace
 
         private bool _isHovering;
         private bool _isSelected;
+        private bool _suppressed;
+
+        // A screen holds the rim off while the control cannot act yet; hover
+        // and selection are remembered and show the moment it is released.
+        public bool Suppressed
+        {
+            get => _suppressed;
+            set
+            {
+                if (_suppressed == value) return;
+                _suppressed = value;
+                Refresh();
+            }
+        }
 
         private void OnEnable() => Refresh();
 
@@ -75,7 +89,7 @@ namespace PrincesPalace
 
         private void Refresh()
         {
-            if (Rim != null) Rim.SetActive(_isHovering || _isSelected);
+            if (Rim != null) Rim.SetActive(!_suppressed && (_isHovering || _isSelected));
         }
     }
 }

@@ -66,6 +66,10 @@ namespace PrincesPalace.Domain.UiKit
         public static float CardWidth(int visibleCount) =>
             System.Math.Min(SlotWidth(visibleCount), MaxCardWidth);
 
+        // The drawn card's height: the card art's aspect at its width, so the
+        // button (and its rim) is exactly the card in every row.
+        public static float CardHeight(int visibleCount) => CardWidth(visibleCount) / RewardArt.CardBackAspect;
+
         // The name and meta labels' width in a row of `visibleCount`.
         public static float LabelWidth(int visibleCount)
         {
