@@ -241,11 +241,6 @@ namespace PrincesPalace.Domain.UiKit
         public const float LintelTopScreenY = 34f;
         public static float LintelCentreY => StageHalfHeight - LintelTopScreenY - LintelHeight * 0.5f;
 
-        // The gold rule under the lintel, at screen y 86 -- flush against the
-        // panel's own top edge at screen y 90.
-        public const float GoldRuleScreenY = 86f;
-        public static float GoldRuleCentreY => StageHalfHeight - GoldRuleScreenY;
-
         public const float LintelPadX = 24f;
         public const float CloseButtonSize = 38f;
 
