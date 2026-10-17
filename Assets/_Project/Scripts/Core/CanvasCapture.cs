@@ -78,9 +78,9 @@ namespace PrincesPalace
             // exactly 1920x1080 at capture time, the canvas silently scaled
             // itself to fit THAT size instead, leaving the fixed-size 1920-wide
             // panel short of the render target's actual right/bottom edge.
-            // Forcing ConstantPixelSize for the capture makes 1 canvas unit =
-            // 1 texture pixel unconditionally, matching what every position in
-            // SceneBuilder was authored against, then restores whatever mode
+            // Forcing ConstantPixelSize for the capture makes the scale
+            // independent of the window: 1 canvas unit = 1 texture pixel, or,
+            // with fitReference, the reference-fit factor below. Then it restores whatever mode
             // the canvas normally runs in once the capture is done.
             var scaler = canvas.GetComponent<CanvasScaler>();
             var previousScaleMode = scaler != null ? scaler.uiScaleMode : CanvasScaler.ScaleMode.ConstantPixelSize;

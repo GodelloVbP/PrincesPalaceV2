@@ -12,10 +12,8 @@ namespace PrincesPalace
     //
     // But a few fields are genuinely per-scene, where wiring a placeholder
     // just to keep the sweep quiet would put a lie in the scene to satisfy
-    // a test. Currently unused -- SystemMenuController's escapeConsumers
-    // was the field that forced this into existence and was deleted with
-    // it -- kept rather than removed since the shape it names is a real
-    // one and will recur.
+    // a test. EventController and FightController use it for fields whose
+    // wiring is per-scene.
     //
     // Carries a REASON for the same purpose AllowOverlap and AllowOverflow do:
     // an exemption that has to be written out is one that can be read back and

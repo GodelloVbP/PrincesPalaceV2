@@ -25,13 +25,8 @@ namespace PrincesPalace
     // GameObject, so this composes with the existing Button component without
     // touching its click wiring at all.
     //
-    // MIGRATED FROM v1, where it was attached in SceneBuilder.CreateButton.
-    // It did not survive the rebuild, and neither did anything replacing it:
-    // every button in v2 was silent and static, while Sound.ButtonClick's own
-    // comment still read "Fired by ButtonPressAnimator on every button in the
-    // game" -- the intent outlived the implementation by the whole rebuild.
-    // v2's single EmitButton is a strictly better choke point than v1's
-    // several CreateButton variants, so the rule is easier to hold here.
+    // Attached by the single EmitButton choke point, so every button in the
+    // game gets the press feedback and the click sound from one place.
     public class ButtonPressAnimator : MonoBehaviour, IPointerExitHandler, IPointerDownHandler, IPointerUpHandler, IPointerClickHandler, ISubmitHandler
     {
         // What this button sounds like. Defaults to the shared click, so every
