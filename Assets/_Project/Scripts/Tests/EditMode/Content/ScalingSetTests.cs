@@ -81,9 +81,7 @@ namespace PrincesPalace.Domain.Tests
             var set = new ScalingSet(spellTierStr, mainHandStr, ScalingProfile.None);
             var scores = Scores(strength: 20);
 
-            float expected = mainHandStr.BonusFor(scores, AbilityScore.Strength)
-                + spellTierStr.BonusFor(scores, AbilityScore.Strength);
-            Assert.AreEqual(expected, set.BonusFor(scores, AbilityScore.Strength), 0.0001f);
+            Assert.AreEqual(0.8f, set.BonusFor(scores, AbilityScore.Strength), 0.0001f);
             Assert.AreEqual(1f + set.BonusFor(scores), set.MultiplierFor(scores), 0.0001f);
         }
     }
