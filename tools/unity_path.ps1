@@ -1,19 +1,16 @@
 # tools/unity_path.ps1 -- resolves the Unity editor THIS project is pinned to,
 # AND is the one seam every script in tools/ launches Unity.exe through.
 #
-# Dot-sourced by every script in tools/ that launches Unity --
-# run_tests_parallel.ps1, test.ps1, screenshot.ps1, preview.ps1,
-# build_content.ps1, graphics_tests.ps1 and bot.ps1. Never invoked directly.
+# Dot-sourced by every script in tools/ that launches Unity. Never invoked
+# directly.
 #
 # Pure ASCII, no BOM: CLAUDE.md's PowerShell gotcha applies here same as
 # everywhere else in tools/ -- an em-dash inside a string breaks PS 5.1's parser
 # and points the error at an unrelated line, so plain "--" throughout.
 #
-# WHY THIS EXISTS: all four scripts hardcoded
-# "...\Hub\Editor\6000.5.4f1\Editor\Unity.exe". The moment the project was
-# opened in a newer editor, ProjectVersion.txt moved and the scripts did not --
-# so the harness would have driven the OLD editor against a project marked for
-# the new one. Two editors taking turns on one project thrash Library and can
+# WHY THIS EXISTS: a hardcoded editor path goes stale the moment the project is
+# opened in a newer editor and ProjectVersion.txt moves -- the harness would
+# drive the OLD editor against a project marked for the new one. Two editors taking turns on one project thrash Library and can
 # silently downgrade assets. Reading the version the project actually declares
 # makes that impossible rather than merely corrected once.
 #
@@ -177,7 +174,6 @@ function Assert-LibraryProvenance {
     return "deleted"
 }
 
-# The path after -projectPath, unquoted, or $null when the launch names none.
 # Writes productName into a ProjectSettings.asset so each copy has its own
 # persistentDataPath. BOM-less UTF-8: PS 5.1's Set-Content -Encoding utf8
 # writes a BOM, and -LiteralPath keeps brackets in a path literal.
@@ -197,10 +193,15 @@ function Stop-UnityTree {
     param($Proc)
 
     if ($null -eq $Proc -or $Proc.HasExited) { return }
+    # A launcher that exits after the check makes taskkill write "not found" to
+    # stderr; under the caller's Stop that is a terminating error, and the
+    # Stop-Process fallback below would never run.
+    $ErrorActionPreference = "Continue"
     & taskkill.exe /PID $Proc.Id /T /F 2>&1 | Out-Null
     if (-not $Proc.HasExited) { Stop-Process -Id $Proc.Id -Force -ErrorAction SilentlyContinue }
 }
 
+# The path after -projectPath, unquoted, or $null when the launch names none.
 function Get-UnityProjectArg {
     param([string[]]$ArgumentList)
 

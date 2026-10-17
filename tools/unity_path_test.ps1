@@ -1,6 +1,8 @@
-# tools/unity_path_test.ps1 -- pins the Library provenance guard in
-# tools/unity_path.ps1. Pure PowerShell, no Unity. Every case builds a fixture
-# tree under a temp directory; nothing here points at a real project or Library.
+# tools/unity_path_test.ps1 -- pins tools/unity_path.ps1 (the Library provenance
+# guard, Set-ProjectProductName, Stop-UnityTree, accept_library.ps1, gif.ps1
+# -Compare binding) and the runner claims of tools/unity_lock.ps1 it takes.
+# Pure PowerShell, no Unity. Every case builds a fixture tree under a temp
+# directory; nothing here points at a real project or Library.
 # Run: powershell -File tools/unity_path_test.ps1   (exits 1 on any failure)
 # Pure ASCII, no BOM.
 
@@ -140,6 +142,13 @@ try {
     Start-Sleep -Milliseconds 500
     Assert-That "the launcher is gone" ($parent.HasExited)
     Assert-That "its child went with it" (@($kids | Where-Object { Get-Process -Id $_.ProcessId -ErrorAction SilentlyContinue }).Count -eq 0)
+
+    # The launcher exits between the HasExited check and taskkill: taskkill then
+    # writes "not found" to stderr, which is terminating under Stop.
+    $ghost = [pscustomobject]@{ Id = 2147000000; HasExited = $false }
+    $threw = $false
+    try { Stop-UnityTree -Proc $ghost } catch { $threw = $true }
+    Assert-That "a launcher that vanished before taskkill does not throw under Stop" (-not $threw)
 
     Write-Host "gif.ps1 -Compare binding"
     $out = (& powershell.exe -NoProfile -File (Join-Path $PSScriptRoot "gif.ps1") -Compare "nope_a" "nope_b" 2>&1 | Out-String)

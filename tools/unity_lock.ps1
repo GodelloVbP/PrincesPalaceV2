@@ -1,9 +1,9 @@
 # tools/unity_lock.ps1 -- is a Unity Editor actually holding this project?
 #
-# Dot-sourced by build_content.ps1, preview.ps1, test.ps1,
-# run_tests_parallel.ps1, graphics_tests.ps1, screenshot.ps1 and bot.ps1.
-# Never invoked directly. Every tool that mirrors into or launches Unity in a
-# runner copy takes it through Enter-RunnerClaim ("Runner claims", below).
+# Dot-sourced by the tools/ scripts that launch Unity or mirror into a runner
+# copy (unity_path.ps1 pulls it in for the rest). Never invoked directly. Every
+# tool that mirrors into or launches Unity in a runner copy takes it through
+# Enter-RunnerClaim ("Runner claims", below).
 #
 # Pure ASCII, no BOM: CLAUDE.md's PowerShell gotcha applies here as everywhere
 # else in tools/ -- PS 5.1 reads a BOM-less file as Windows-1252 and an em-dash
@@ -150,10 +150,10 @@ function Clear-StaleUnityLock {
 #     old contents is simply free.
 #   - nothing ever deletes it. A contender that cannot open it waits.
 #
-# WAITS, BOUNDED, rather than refusing. Test-RunnerFree refused because a
-# wait on a stale lock hangs forever -- which a handle-held claim cannot be. The bound is PP_RUNNER_WAIT_SECONDS (default
-# 1200: a full gate run with a cold import fits in it; a hung holder does not
-# keep a waiter forever); 0 means refuse at once. Unity's own lock is still
+# WAITS, BOUNDED, rather than refusing: a handle-held claim cannot go stale.
+# The bound is PP_RUNNER_WAIT_SECONDS (default 1200: a full gate run with a
+# cold import fits in it; a hung holder does not keep a waiter forever); 0
+# means refuse at once. Unity's own lock is still
 # checked INSIDE the claim: a Unity.exe that certainly has the copy open is
 # waited on too (an orphan whose script was killed, or one launched by hand),
 # and a lockfile nothing holds is cleared by Clear-StaleUnityLock -- the one
