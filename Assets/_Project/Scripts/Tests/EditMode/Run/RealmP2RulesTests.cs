@@ -87,12 +87,19 @@ namespace PrincesPalace.Domain.Tests
         // ---- the skip heal's trigger ---------------------------------------
 
         // The edge lists are the generator's output for these seeds, so a
-        // generator change re-pins them. Rows read: seed, skip-heal edges.
-        [TestCase(1UL, "3>6 6>9 9>12 9>13")]
-        [TestCase(2UL, "3>6 6>8 10>13")]
-        public void SkipHeal_FiresOnlyOnTheSpineEdgePastAPocket(ulong seed, string skippedEdges)
+        // generator change re-pins them. Rows read: seed, pocket stretches,
+        // skip-heal edges. Seed 1 forks past a pocket (9>12 9>13), seed 3
+        // has two forked stretches, seed 7 has pockets on consecutive
+        // stretches 3 and 4 and a skip into the fork from node 3.
+        [TestCase(1UL, "3 4 5", "3>6 6>9 9>12 9>13")]
+        [TestCase(2UL, "2 3 6", "3>6 6>8 10>13")]
+        [TestCase(3UL, "1 2 6", "1>4 1>5 4>8 5>8 11>13")]
+        [TestCase(7UL, "3 4 6", "3>5 3>6 5>8 6>8 9>12")]
+        public void SkipHeal_FiresOnlyOnTheSpineEdgePastAPocket(ulong seed, string pocketStretches, string skippedEdges)
         {
             var map = RealmMapGenerator.GenerateFor(seed, 24, RealmProfiles.Default(4));
+            Assert.AreEqual(pocketStretches, string.Join(" ", map.Pockets.Select(p => p.Stretch)));
+
             var skipped = new List<string>();
             foreach (var node in map.Nodes)
             {
@@ -103,8 +110,22 @@ namespace PrincesPalace.Domain.Tests
             }
 
             Assert.AreEqual(skippedEdges, string.Join(" ", skipped));
+        }
 
-            // Never off an edge that does not exist.
+        // Seed 1 (pockets on stretches 3, 4, 5): one edge per way to not
+        // fire. 3>4 enters a pocket, 4>5 and 5>6 run inside or leave it (off
+        // the spine); 0>1 and 12>14 are spine edges on stretches with no
+        // pocket; 3>9 skips two stretches and is not an edge.
+        [TestCase(3, 4)]
+        [TestCase(4, 5)]
+        [TestCase(5, 6)]
+        [TestCase(0, 1)]
+        [TestCase(12, 14)]
+        [TestCase(3, 9)]
+        public void SkipHeal_DoesNotFireOffTheEdgeShapeItNeeds(int from, int to)
+        {
+            var map = RealmMapGenerator.GenerateFor(1UL, 24, RealmProfiles.Default(4));
+            Assert.IsNull(map.PocketSkippedBy(from, to));
             Assert.IsNull(map.PocketSkippedBy(map.Entry.Id, map.Boss.Id));
         }
 

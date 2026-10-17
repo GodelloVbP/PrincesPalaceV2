@@ -508,20 +508,38 @@ namespace PrincesPalace.Domain.Tests
             // The untyped overload with attackType.HasValue DELEGATES to the
             // typed overload above rather than rolling a second time -- see
             // both overloads' own comments on why a double roll would be
-            // wrong, not merely wasteful. Pinned here by checking the stream
-            // advanced by exactly the ONE draw a single RollDodge call
-            // consumes: a second (unwanted) roll would desync it from a
-            // parallel stream that only ever calls RollDodge once per swing.
+            // wrong, not merely wasteful. Pinned by the stream's end state:
+            // a dodge spends exactly the ONE draw RollDodge consumes (a miss
+            // cannot crit), so a second dodge roll would land one draw later.
             var actor = Fighter("Actor", true);
             var target = Fighter("Target", false);
             Give(target, new Effect(EffectKind.DodgeRating, 50));
 
+            // Seed 3's first draw is 11.35 of 100, under the 33% dodge chance.
+            var rngA = new PrincesPalace.Domain.Rng.SeededRandom(3);
+            var outcome = DamagePipeline.AfterDefences(
+                50, actor, target, attackType: DamageType.Physical,
+                affinity: ElementalAffinity.Neutral, varianceRange: 0f, rng: rngA, resolveWard: null);
+
+            Assert.IsTrue(outcome.IsMiss, "seed 3's first draw dodges at rating 50");
+            Assert.AreEqual(11400714819323198488UL, rngA.State,
+                "one draw off seed 3 (the dodge roll); a second dodge roll would make two");
+        }
+
+        [Test]
+        public void AfterDefences_UntypedOverload_WithATypedAttack_OnAHit_SpendsOneDodgeRollThenOneCritRoll()
+        {
+            var actor = Fighter("Actor", true);
+            var target = Fighter("Target", false);
+            Give(target, new Effect(EffectKind.DodgeRating, 50));
+
+            // Seed 777's first draw is 47.59 of 100, over the 33% dodge chance.
             var rngA = new PrincesPalace.Domain.Rng.SeededRandom(777);
             var outcome = DamagePipeline.AfterDefences(
                 50, actor, target, attackType: DamageType.Physical,
                 affinity: ElementalAffinity.Neutral, varianceRange: 0f, rng: rngA, resolveWard: null);
 
-            Assert.AreEqual(false, outcome.IsMiss, "seed 777's first draw does not dodge at rating 50");
+            Assert.IsFalse(outcome.IsMiss, "seed 777's first draw does not dodge at rating 50");
             Assert.AreEqual(4354685564936846131UL, rngA.State,
                 "two draws off seed 777 (one dodge roll, one crit roll on the hit); a second dodge roll would make three");
         }
