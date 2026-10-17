@@ -155,14 +155,7 @@ namespace PrincesPalace.Domain.UiKit
         // (Gold = the recommended path, Crimson = loss/danger, and so on),
         // and a second enum naming the same six things would only be able to
         // disagree with the first one.
-        //
-        // REFUSES a size whose aspect does not match the delivered art within
-        // 5% -- see ContainerArt's own header for where the measured aspect
-        // comes from. A container is drawn Simple + preserveAspect, so a
-        // mismatched size would not stretch visibly WRONG so much as pad or
-        // crop the art inside its own box, which is a quieter, harder-to-spot
-        // version of the same mistake; refusing it at declaration time is
-        // cheaper than finding it in a screenshot.
+
         // THE SAME KEY Container() BAKES ITS FRAME FROM, exposed publicly.
         // ContainerArt is internal to this assembly and ScreenRegistry (Editor)
         // carries no InternalsVisibleTo grant into it, so a caller that needs
@@ -174,6 +167,13 @@ namespace PrincesPalace.Domain.UiKit
         public static string ContainerKey(ButtonTheme theme, ContainerRatio ratio) =>
             ContainerArt.Key(ContainerKind.Container, theme, ratio);
 
+        // REFUSES a size whose aspect does not match the delivered art within
+        // 5% -- see ContainerArt's own header for where the measured aspect
+        // comes from. A container is drawn Simple + preserveAspect, so a
+        // mismatched size would not stretch visibly WRONG so much as pad or
+        // crop the art inside its own box, which is a quieter, harder-to-spot
+        // version of the same mistake; refusing it at declaration time is
+        // cheaper than finding it in a screenshot.
         public static UiNode Container(string name, ButtonTheme theme, ContainerRatio ratio, Place place, UiVec size)
         {
             ValidateContainerAspect(name, "Container", ContainerKind.Container, ratio, size);
