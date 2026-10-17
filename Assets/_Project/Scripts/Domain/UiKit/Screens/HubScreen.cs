@@ -104,10 +104,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.BuildingArt.Add((gate, "Hub/gate"));
             gate.Children.Add(gateCaption);
 
-            screen.TalentsButton = talents.Button;
-            screen.PrincipalityButton = principality.Button;
-            screen.CharacterSheetButton = characterSheet.Button;
-            screen.RelicsButton = relics.Button;
+            screen.TalentsButton = talents;
+            screen.PrincipalityButton = principality;
+            screen.CharacterSheetButton = characterSheet;
+            screen.RelicsButton = relics;
             screen.StartRunButton = gate;
             screen.StartRunCaption = gateCaption;
 
@@ -142,7 +142,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // measures the coordinates the design actually uses.
             var world = Ui.Panel("HubWorld", Place.At(0f, 0f), UiSize.Fill,
                 Ui.Sprite("HubBackground", BackgroundKey, Place.Stretch(), UiSize.Fill).AsDecor(),
-                relics.Node, talents.Node, characterSheet.Node, principality.Node, gate,
+                relics, talents, characterSheet, principality, gate,
 
                 // LAST inside the world, so every glow sits over the thing it
                 // lights rather than behind it.
@@ -215,17 +215,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
             return screen;
         }
 
-        // Node AND Button, still two fields for one object: Node is the tree
-        // node the caller goes on to hang children off, Button is the
-        // NodeRef the screen binds. The Halo third member went with the
-        // halos themselves (see this file's own note above the declarations).
-        private readonly struct BuildingNodes
-        {
-            public readonly UiNode Node;
-            public readonly NodeRef Button;
-            public BuildingNodes(UiNode node, NodeRef button) { Node = node; Button = button; }
-        }
-
         // A building is a button wearing its art, staged at depth.
         //
         // Bottom-centre pivot, so it grows upward from wherever its plot puts
@@ -241,7 +230,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // rather than dress a bare frame. That includes the gate -- its
         // "Start Run -> Gold" mapping from the brief assumes a bare button
         // this screen doesn't have.
-        private BuildingNodes Staged(string name, UiString caption, string art, HubAnchors.Plot plot)
+        private UiNode Staged(string name, UiString caption, string art, HubAnchors.Plot plot)
         {
             var position = HubAnchors.PositionFor(plot);
             float size = HubAnchors.SizeFor(plot);
@@ -274,7 +263,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             button.Children.Add(plate);
 
-            return new BuildingNodes(button, button);
+            return button;
         }
     }
 }
