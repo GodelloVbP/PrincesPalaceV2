@@ -175,8 +175,8 @@ namespace PrincesPalace
 
         // THE SPEED RULE (docs/PLAN_REWARD_SCREENS.md C10): every authored
         // duration here becomes wall time through ReckoningTime, at the battle
-        // speed read when the overlay opens, and every clock below runs at
-        // Tick, so the test seam speeds all of them at once.
+        // speed read when the overlay opens, and the clocks that advance by
+        // Tick all follow the test seam together.
         private float _preset = Domain.Combat.Session.BattleSpeed.DefaultDisplay;
 
         private float W(float authored) => ReckoningTime.Wall(authored, _preset);
@@ -705,12 +705,6 @@ namespace PrincesPalace
         private static RectTransform RectAt(RectTransform[] items, int index) =>
             items == null || index < 0 || index >= items.Length ? null : items[index];
 
-        // Width only. The icon's HEIGHT is the band ReckoningScreen fixed, and
-        // ItemIcons.Apply fits the art inside whatever box it is given, so
-        // widening the box is the whole of "make the item bigger". The labels
-        // have to follow the card for a different reason -- a long item name in
-        // a narrow row runs under the card next door, and they are decor, so
-        // nothing else would catch it.
         private static void SetHeight(RectTransform rect, float height)
         {
             if (rect == null) return;
@@ -720,6 +714,12 @@ namespace PrincesPalace
             rect.sizeDelta = size;
         }
 
+        // Width only. The icon's HEIGHT is the band ReckoningScreen fixed, and
+        // ItemIcons.Apply fits the art inside whatever box it is given, so
+        // widening the box is the whole of "make the item bigger". The labels
+        // have to follow the card for a different reason -- a long item name in
+        // a narrow row runs under the card next door, and they are decor, so
+        // nothing else would catch it.
         private static void SetWidth(RectTransform rect, float width)
         {
             if (rect == null) return;
@@ -1367,7 +1367,7 @@ namespace PrincesPalace
 
         // ---- the choices' motion ------------------------------------------------------
         //
-        // Plain tweens on placeholders (no art or real sound yet). State changes
+        // Plain tweens. State changes
         // the moment RewardPages answers; a flight only owns a card's animated
         // parts (item, ghost, spark) until it lands, and the repaint that ends it
         // draws the resting state, so a cancelled flight leaves nothing behind.

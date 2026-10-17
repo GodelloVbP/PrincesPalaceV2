@@ -351,8 +351,8 @@ namespace PrincesPalace
             bool took = _selected >= 0 && _selected < _offer.Count;
             RunOrchestrator.TakeRelic(took ? _offer[_selected].Id : null);
 
-            // ANOTHER ROUND, if the track has earned one and the player took
-            // this one.
+            // ANOTHER ROUND, if the descent's flat round count has not been met
+            // and the player took this one.
             //
             // Declining ends the whole draft rather than advancing. A player
             // who does not want the relics on offer should not have to press

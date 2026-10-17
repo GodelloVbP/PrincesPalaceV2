@@ -9,9 +9,7 @@ namespace PrincesPalace
     //
     // Separate from RunManager because the two halves of a payout live in
     // different places and have different lifetimes: GOLD belongs to the run and
-    // is lost with it, EXPERIENCE belongs to the characters and survives. v1
-    // applied both inside the fight controller, which is a large part of why
-    // ending a fight touched a save file, a run and a UI in one method.
+    // is lost with it, EXPERIENCE belongs to the characters and survives.
     public static class RewardApplier
     {
         // Applies a fight's experience to whoever was fielded, and reports what
@@ -50,8 +48,7 @@ namespace PrincesPalace
             // SQUAD SLOT ORDER, not roster order and not the order the fight
             // happened to hold them in. ActiveSquad is ordered by the player's
             // own selection and is stable, which makes row i squad slot i by
-            // construction rather than by luck -- v1 iterated a Dictionary here
-            // and relied on insertion order holding.
+            // construction rather than by luck.
             var squad = save.ActiveSquad();
             var fielded = new HashSet<string>(fieldedIds ?? new List<string>());
 
@@ -76,14 +73,9 @@ namespace PrincesPalace
                 // it rounded up (progression v2 contract 4). Nothing on the
                 // reward track scales this figure per character.
                 //
-                // ASKED OF VictoryRewards RATHER THAN COMPUTED HERE. The rule
-                // was inlined on this line and stated a second time in
-                // VictoryRewards.ExperienceFor, which nothing in production
-                // called -- two copies of one rule, one of them live and the
-                // other only ever asserted against. They agreed until the day
-                // the rule changed, which is today. The Domain seam is the one
-                // that survives, so the arithmetic is pinnable without a save
-                // and there is one place to change it next time.
+                // ASKED OF VictoryRewards RATHER THAN COMPUTED HERE: the Domain
+                // seam makes the arithmetic pinnable without a save and keeps
+                // one place to change the rule.
                 int gained = VictoryRewards.ExperienceFor(payout, isDowned);
                 if (gained > 0) character.AddExperience(gained);
 
