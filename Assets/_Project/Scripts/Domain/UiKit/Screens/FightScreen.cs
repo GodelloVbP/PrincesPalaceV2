@@ -665,7 +665,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 // filled RECTANGLE, which is what a flat quad here looked like:
                 // a red brick under each monster's feet. Same bug class as the
                 // hub's borrowed plot art, and the reason `proc:` keys exist.
-                // ASDECOR ON ALL THREE, AND IT IS ABOUT CLICKS RATHER THAN
+                // ASDECOR ON EVERY LAYER OF A FIGURE (shadow, sprite, flash,
+                // burn glow, shield prop), AND IT IS ABOUT CLICKS RATHER THAN
                 // DRAWING.
                 //
                 // A stage figure is painted, never pressed: the sprites are
@@ -1483,24 +1484,19 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // and it cannot disagree with the figure on the stage because it IS the
         // figure on the stage.
         //
-        // 34 RATHER THAN 40: BRK folding into the name row (see BuildEnemy-
-        // Plates' tag comment) needed width the icon column had to give back.
-        // 6px off the icon plus 4px off the right margin (PlateW*0.5f minus
-        // 4f rather than 8f, below) buys the 12px the name/tag/HP row needed
-        // without touching PlateW, PlatePitch or anything a test pins.
+        // 34 RATHER THAN 40: the name and HP row needs the width the icon
+        // column gives back. 6px off the icon plus 4px off the right margin
+        // (PlateW*0.5f minus 4f rather than 8f, below) buys 12px without
+        // touching PlateW, PlatePitch or anything a test pins.
         private const float PlateIconSize = 34f;
-        // 332 until the stage came up out of the HUD. The anchors' ceiling is
-        // this plate stack: the tallest actor needs 300 units above the front
-        // slot's ground line, so at Near.Y -228 its head reaches 72, and this
-        // stack's lower edge (PlateFirstY - 284) has to stay above that.
+        // The anchors' ceiling is this plate stack: the tallest actor needs
+        // 300 units above the front slot's ground line, so at Near.Y -228 its
+        // head reaches 72, and the stack's lower edge has to stay above that.
         //
-        // 392 RATHER THAN 380, and the extra 12 is the interesting part. By
-        // hand it looked like only the front slot could ever reach the plates
-        // in x, which made 380 ample. tools/measure_stage.py disagreed: slot
-        // ONE reaches x 522 against the plates' left edge at 520, so it
-        // collides too, and at 380 its head cleared by 7px rather than the 12
-        // the rest of this layout is toleranced to. The 2px x-overlap is what
-        // made it invisible to inspection.
+        // 392 gives the 12px clearance the rest of this layout is toleranced
+        // to. Slot ONE reaches x 522 against the plates' left edge at 520, so
+        // it collides in x as well as the front slot, and at 380 its head
+        // cleared by only 7px (tools/measure_stage.py).
         private const float PlateFirstY = 392f;
 
         // FULL-CANVAS, ABOVE THE STAGE AND BELOW EVERY INFORMATIONAL PANEL --
@@ -1611,46 +1607,34 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 const float topY = 8.5f;
                 const float barY = -21f;
 
-                // 72 WIDE, 11PT: BRK lives INSIDE this row (see the tag
-                // below), and the row shares its 100px of free width
-                // (textLeft..hpLeft) between the name, the tag and two 2px
-                // gaps.
+                // 118 WIDE, 14PT: the BRK tag rides the HP bar's row (below),
+                // so the name has the whole row up to the HP box.
                 //
                 // NOT AUTOSIZED: this label has no Role, so ApplyTypography's
                 // no-role branch sets a literal fontSize and returns without
-                // touching enableAutoSizing. 13pt at this box width wraps
-                // "Stone Golem" onto two lines (empirically, against
-                // tools/screenshots/runtime/status_rows_rest.png -- Domain
-                // has no font metric to derive this from, see
-                // UiTextFitAudit's own header on why), so 11pt is what buys
-                // the box its headroom for that case.
+                // touching enableAutoSizing (Domain has no font metric to
+                // derive a fit from, see UiTextFitAudit's own header).
                 //
-                // Still not enough for a long boss name -- "The Hollow Choir"
-                // measures ~83px and "Ironback Beetle" ~79px at 11pt against
-                // this 72px box, and FightHudModel.DisplayNames appends " 2"
-                // onto a duplicate, widening it further. Truncated()
-                // (C3's review) turns off word-wrap and switches to Ellipsis
-                // overflow, the same fallback a themed button's caption
-                // already gets, so a name that still doesn't fit clips to
-                // "The Hollow Cho..." on ONE line instead of wrapping a
-                // second line the 20px-tall box has no room to show.
+                // A long boss name ("The Hollow Choir") or a duplicate
+                // (FightHudModel.DisplayNames appends " 2") can still exceed
+                // the box. Truncated() turns off word-wrap and switches to
+                // Ellipsis overflow, the same fallback a themed button's
+                // caption gets, so it clips to "The Hollow Cho..." on ONE line
+                // instead of wrapping onto a second line the 24px-tall box has
+                // no room to show.
                 var name = Ui.Label($"EnemyPlate{i}Name", UiString.Runtime, new UiVec(118f, 24f), 14,
                     FightHudPalette.EnemyName, Place.At(textLeft, topY, new UiVec(0f, 0.5f)))
                     .TextAligned(UiTextAlign.Left)
                     .Truncated();
 
-                // 27 tall for a 10pt line: the audit measures "9999/9999" at
-                // 26 there, and a box that cannot hold it clips the descenders
-                // off the number the plate exists for. Width and font size are
-                // both audit-pinned (UiStrings.HealthValue is measured, unlike
-                // the runtime name/tag either side of it), so neither moved --
-                // only Y did, to the shared topY above, and the row's right
-                // edge moved 4px in with it (rowRight, from the reclaimed
+                // 74x34 AT 13PT. Width and font size are audit-pinned
+                // (UiStrings.HealthValue is measured, unlike the runtime
+                // name/tag either side of it): UiTextFitAudit measures the
+                // box against the font, so changing one without the other
+                // fails it, and a box that cannot hold "9999/9999" clips the
+                // descenders off the number the plate exists for. The row sits
+                // at the shared topY above and ends at rowRight (from the
                 // icon-column width -- see PlateIconSize's own comment).
-                // 74x34 AT 13PT, scaled from 56x27 at 10pt by the same 1.3
-                // the font moved by -- UiTextFitAudit measures the box
-                // against the font, so growing one without the other is what
-                // actually fails it. "9999/9999" is the sample it measures.
                 var hp = Ui.Label($"EnemyPlate{i}Hp", UiStrings.HealthValue, new UiVec(74f, 34f), 13,
                     FightHudPalette.EnemyHpText, Place.At(rowRight, topY, new UiVec(1f, 0.5f)))
                     .TextAligned(UiTextAlign.Right);
@@ -2866,10 +2850,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
             return statBottom + (shown - 1 - index) * DetailIconRowPitch;
         }
 
-        // A PERSISTENT third column rather than a hover tooltip: arrowing
-        // through options lets the player compare without re-hovering, and a
-        // tooltip that vanishes the moment the cursor moves cannot be compared
-        // against anything.
         // A DARK, NEAR-OPAQUE PLATE, not panel_violet: legibility over
         // ornament. #1D1226F2 is the same near-black-plum the kit's OWN
         // tooltip already uses (CharacterDossierScreen.BuildTooltip, ReckoningScreen's
@@ -3207,16 +3187,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
             return prompt;
         }
 
-        // ---- the two genuine pools ------------------------------------------------------
+        // ---- the runtime-positioned pools -----------------------------------------------
 
-        // The ONLY two runtime-positioned things on this screen, and the reason
-        // Ui.Pool exists at all. Everything the brief called a pool -- submenu
-        // rows, pips, verbs, enemy plates, initiative slots -- has a computable
-        // resting position and is fully audited above.
+        // SpellVfx, SpellGroundVfx, SpellParticles and DamagePopups are the
+        // only runtime-positioned things on this screen, and the reason
+        // Ui.Pool exists at all. Submenu rows, pips, verbs, enemy plates and
+        // initiative slots have a computable resting position and are fully
+        // audited above.
 
-        // Declared ABOVE the HUD and BELOW the popups. v1's comment claimed
-        // "below the action buttons"; its BUILT order put it here, and shipped
-        // behaviour wins over a comment describing an earlier draft.
+        // Declared ABOVE the HUD and BELOW the popups.
         private UiNode BuildSpellVfx()
         {
             // ONE PER STAGE SLOT, not one full stop.
