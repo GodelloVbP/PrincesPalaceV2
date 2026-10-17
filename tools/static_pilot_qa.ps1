@@ -39,6 +39,8 @@ $mainDir = Join-Path $mainRoot $Label
 
 if (-not (Test-Path $runnerDir)) {
     Write-Host "No frames at $runnerDir -- see the graphics_tests.ps1 output above for what went wrong."
+    # A skipped test exits 0 and leaves no frames; that is still no capture.
+    if ($code -eq 0) { exit 1 }
     exit $code
 }
 
