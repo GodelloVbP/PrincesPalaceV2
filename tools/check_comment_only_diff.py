@@ -14,7 +14,8 @@ leading/trailing whitespace, be one of:
   * blank
   * a `//` line comment (the whole line, after stripping whitespace)
   * a line lying inside a `/* ... */` block comment (opening line, interior
-    lines, and the closing line all count)
+    lines, and the closing line all count, provided nothing but a comment
+    follows the `*/`)
 
 A line that has ANY code on it fails, including a trailing `// why` comment
 on an otherwise-code line -- deliberately conservative, because this guard
@@ -36,10 +37,12 @@ Usage:
     python3 tools/check_comment_only_diff.py <rev>..<rev>      # a revision range
 
 Exit 0 if every changed *.cs line is a comment or blank; exit 1 and print
-each offending file:line otherwise.
+each offending file:line otherwise. A hunk whose blob cannot be read counts as
+an offender.
 """
 
 import argparse
+import os
 import re
 import subprocess
 import sys
@@ -56,26 +59,26 @@ def is_comment_or_blank(text, in_block):
 
     Returns (ok, in_block_after): ok is True if the line is blank, a `//`
     line comment, or part of a `/* ... */` block (including the line that
-    opens it and the one that closes it).
+    opens it and the one that closes it). Anything after a block's closing
+    `*/` must itself be blank, a `//` comment, or another block comment.
     """
-    stripped = text.strip()
+    rest = text
+    while True:
+        if in_block:
+            close = rest.find("*/")
+            if close < 0:
+                return True, True
+            rest = rest[close + 2:]
+            in_block = False
 
-    if in_block:
-        if "*/" in stripped:
+        rest = rest.strip()
+        if rest == "" or LINE_COMMENT_RE.match(rest):
             return True, False
-        return True, True
-
-    if stripped == "":
-        return True, False
-
-    if LINE_COMMENT_RE.match(stripped):
-        return True, False
-
-    if stripped.startswith("/*"):
-        after_open = stripped[2:]
-        return True, "*/" not in after_open
-
-    return False, False
+        if rest.startswith("/*"):
+            rest = rest[2:]
+            in_block = True
+            continue
+        return False, False
 
 
 def classify_all(lines):
@@ -118,6 +121,20 @@ def _strip_prefix(path):
     return path[2:] if path.startswith(("a/", "b/")) else path
 
 
+_REPO_ROOT = None
+
+
+def repo_root():
+    """git prints diff paths relative to the repo root, not to the cwd."""
+    global _REPO_ROOT
+    if _REPO_ROOT is None:
+        result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True, check=False
+        )
+        _REPO_ROOT = result.stdout.strip() if result.returncode == 0 else os.getcwd()
+    return _REPO_ROOT
+
+
 def blob_lines(rev, path):
     """Lines of `path` as it exists at `rev` (a commit-ish, INDEX, or WORKTREE).
 
@@ -125,7 +142,7 @@ def blob_lines(rev, path):
     """
     if rev == WORKTREE:
         try:
-            with open(path, "r", encoding="utf-8", errors="replace") as fh:
+            with open(os.path.join(repo_root(), path), "r", encoding="utf-8", errors="replace") as fh:
                 return fh.read().splitlines()
         except OSError:
             return None
@@ -150,7 +167,9 @@ def find_offenders(diff_text, old_spec, new_spec):
                 lines = blob_lines(old_spec, old_file)
                 old_cache[old_file] = classify_all(lines) if lines is not None else None
             classified = old_cache[old_file]
-            if classified is not None:
+            if classified is None:
+                yield (old_file, old_start, "-", "<blob unreadable, change not verified>")
+            else:
                 for lineno in range(old_start, old_start + old_count):
                     idx = lineno - 1
                     if 0 <= idx < len(classified):
@@ -163,7 +182,9 @@ def find_offenders(diff_text, old_spec, new_spec):
                 lines = blob_lines(new_spec, new_file)
                 new_cache[new_file] = classify_all(lines) if lines is not None else None
             classified = new_cache[new_file]
-            if classified is not None:
+            if classified is None:
+                yield (new_file, new_start, "+", "<blob unreadable, change not verified>")
+            else:
                 for lineno in range(new_start, new_start + new_count):
                     idx = lineno - 1
                     if 0 <= idx < len(classified):
@@ -194,7 +215,7 @@ def diff_for(cached, rev_range):
         cmd = ["git", "diff", rev_range, "--diff-filter=ACMR", "-U0", "--", "*.cs"]
     else:
         cmd = ["git", "diff", "--diff-filter=ACMR", "-U0", "--", "*.cs"]
-    result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    result = subprocess.run(cmd, capture_output=True, text=True, check=False, cwd=repo_root())
     if result.returncode not in (0, 1):
         sys.stderr.write(result.stderr)
         sys.exit(2)

@@ -102,6 +102,21 @@ class CodeChangesFailTests(CheckerRepoTestCase):
         self.assertEqual(1, code)
         self.assertIn("Foo.cs", out)
 
+    def test_code_after_a_block_comment_closes_on_the_same_line_fails(self):
+        code, out = self.check_cached(
+            "class Foo {\n    /* c */ int x = 1;\n}\n",
+            "class Foo {\n    /* c */ int x = 2;\n}\n",
+        )
+        self.assertEqual(1, code, out)
+        self.assertIn("Foo.cs:2", out)
+
+    def test_code_after_a_closing_block_line_fails(self):
+        code, out = self.check_cached(
+            "class Foo {\n/*\n   note\n*/ int x = 1;\n}\n",
+            "class Foo {\n/*\n   note\n*/ int x = 2;\n}\n",
+        )
+        self.assertEqual(1, code, out)
+
 
 class ScopeTests(CheckerRepoTestCase):
     def test_non_cs_files_are_ignored(self):
@@ -131,6 +146,26 @@ class ScopeTests(CheckerRepoTestCase):
         code, out = self.run_guard("--cached")
         self.assertEqual(1, code)
         self.assertIn("Bar.cs", out)
+
+    def test_working_tree_mode_from_a_subdirectory_still_sees_a_code_change(self):
+        os.makedirs(os.path.join(self.repo, "sub"))
+        self._write("Foo.cs", "class Foo {\n    int x = 1;\n}\n")
+        self._git("add", "Foo.cs")
+        self._git("commit", "-q", "-m", "init")
+
+        self._write("Foo.cs", "class Foo {\n    int x = 2;\n}\n")
+        result = subprocess.run([sys.executable, SCRIPT], cwd=os.path.join(self.repo, "sub"),
+                                capture_output=True, text=True)
+        self.assertEqual(1, result.returncode, result.stdout)
+        self.assertIn("Foo.cs:2", result.stdout)
+
+    def test_a_hunk_whose_blob_cannot_be_read_is_an_offender(self):
+        sys.path.insert(0, os.path.dirname(SCRIPT))
+        import check_comment_only_diff as guard
+
+        diff = "\n".join(["--- a/Gone.cs", "+++ b/Gone.cs", "@@ -1 +1 @@", "-int x = 1;", "+int x = 2;", ""])
+        offenders = list(guard.find_offenders(diff, "no-such-rev", guard.WORKTREE))
+        self.assertEqual(["Gone.cs", "Gone.cs"], [o[0] for o in offenders])
 
 
 if __name__ == "__main__":
