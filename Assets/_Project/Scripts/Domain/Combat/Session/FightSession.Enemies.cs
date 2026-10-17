@@ -1200,7 +1200,6 @@ namespace PrincesPalace.Domain.Combat.Session
             }
 
             damage = outcome.Damage;
-            if (outcome.IsCrit) NoteCrit();
 
             // Provoke T2: a goaded enemy swings wide. Applied to the PAIR rather
             // than through the target's own DamageTakenMultiplier, so it blunts
@@ -1247,6 +1246,10 @@ namespace PrincesPalace.Domain.Combat.Session
                 CommitBeat();
                 return true; // physical, for the miss branch's reason
             }
+
+            // After the cancel check: a crit flagged on a blow Kinship turned
+            // aside would play a crit on a swing that landed nothing.
+            if (outcome.IsCrit) NoteCrit();
 
             if (landed.Absorbed > 0)
             {

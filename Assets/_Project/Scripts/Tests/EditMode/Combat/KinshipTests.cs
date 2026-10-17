@@ -56,7 +56,8 @@ namespace PrincesPalace.Domain.Tests
         // one swing (speed 10 against 9 -- DodgeCoversEveryDamagePathTests'
         // fixture). Attack 30, no variance.
         private static (FightSession session, CombatantState hero, CombatantState monster) Duel(
-            DamageType monsterAttackType = DamageType.Physical, StatusEffectType? appliesStatus = null)
+            DamageType monsterAttackType = DamageType.Physical, StatusEffectType? appliesStatus = null,
+            bool authoredCrit = false)
         {
             var hero = new CombatantState("Shawn", true, 500, 100, 20, 10);
             var monster = new CombatantState("Golem", false, 1000, 10, 30, 9);
@@ -67,7 +68,9 @@ namespace PrincesPalace.Domain.Tests
 
             var kit = new PlayerKit(Bearer, CharacterRole.Tank, null, new List<ResolvedRelic> { Kinship() }, null);
             var session = new FightSession(new CombatEncounter(new[] { hero }, new[] { monster }),
-                new List<PlayerKit> { kit }, new List<EnemyKit> { new EnemyKit(source, false) },
+                new List<PlayerKit> { kit }, new List<EnemyKit> { new EnemyKit(source, false, authoredCrit
+                    ? new List<EnemyAbility> { EnemyAbility.LegacyAttack(FightSession.IntentAttack, 1f, 1f, crits: true) }
+                    : null) },
                 new SeededRandom(3)) { DamageVarianceRange = 0f };
             TestRelics.Hold(session);
             session.Begin();
@@ -112,6 +115,21 @@ namespace PrincesPalace.Domain.Tests
 
             session.ExecuteAttack(monster);
             Assert.AreEqual(470, hero.CurrentHealth, "the second swing lands for its full 30");
+        }
+
+        // A swing authored to crit that Kinship turns aside landed nothing, so it
+        // flags no crit and logs none.
+        [Test]
+        public void ACancelledCritSwingFlagsNoCritAndLogsNone()
+        {
+            var (session, hero, monster) = Duel(authoredCrit: true);
+
+            session.ExecuteAttack(monster);
+
+            Assert.AreEqual(500, hero.CurrentHealth, "fixture: the swing was cancelled");
+            var first = session.DrainBeats().First(b => b.Actor == monster);
+            Assert.IsFalse(first.Crit, "a crit drawn on a blow that did nothing");
+            CollectionAssert.AreEqual(new[] { KinshipLine }, first.Messages);
         }
 
         // A multi-packet attack: a Poison swing into a poisoned bearer
