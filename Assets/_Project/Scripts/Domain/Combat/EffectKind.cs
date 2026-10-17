@@ -301,7 +301,7 @@ namespace PrincesPalace.Domain.Combat
         // earning. The ward IS the setup step this rule exists to reward; a
         // Regen tick is not.
         //
-        // CAPPED at once per combatant per turn, in FightController — a ward
+        // CAPPED at once per combatant per turn, in FightSession.Talents — a ward
         // that paid on every hit it absorbed would return more wool than it
         // cost and the economy would run backwards.
         WoolWhenWardedAllyHit,

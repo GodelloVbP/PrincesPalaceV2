@@ -21,12 +21,8 @@ namespace PrincesPalace.Domain.Combat.Session
     // the party list in place, so a beat holding a reference to it would hold
     // the CURRENT order under a different name, and a deferred query would
     // evaluate against whatever the list holds when the view first asks.
-    // FightSessionTests.AMovesFormationSnapshotDoesNotChangeWhenTheListMoves
-    // Again is what keeps that true.
     //
-    // LIST ORDER, INCLUDING THE DEAD, and this is the one place this type
-    // deviates from what the plan sketched (§1.5 said "the LIVING combatants
-    // of each side"). Ranks compress behind a corpse the instant it falls, so
+    // LIST ORDER, INCLUDING THE DEAD, not the living alone. Ranks compress behind a corpse the instant it falls, so
     // a formation of the living alone has the survivors already compacted on
     // the very beat the kill lands -- and the view would slide them forward
     // while the body is still standing there at full opacity, before its own

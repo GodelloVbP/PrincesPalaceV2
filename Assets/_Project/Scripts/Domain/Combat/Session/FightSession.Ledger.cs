@@ -128,13 +128,7 @@ namespace PrincesPalace.Domain.Combat.Session
             return landed.Result;
         }
 
-        // ONE PACKET SETTLING, after its pools have heard it (the caller's
-        // job, because a hit's pools hear each packet and a status tick's hear
-        // each row). Everything a packet does to its target and to the relics
-        // watching lives here, so a hit and a tick cannot drift apart on any
-        // of it -- except the damage-taken row, which the caller books from
-        // the figures returned, for the reason ApplyAndCountDamage gives.
-        //
+        // What LandPacket settled, for the caller to book.
         // `Ordinary` is false on the three early exits (Kinship, an egg shell,
         // an egg hatching): each of those books its own rows or none, and the
         // caller books nothing more for them.
@@ -155,6 +149,12 @@ namespace PrincesPalace.Domain.Combat.Session
             }
         }
 
+        // ONE PACKET SETTLING, after its pools have heard it (the caller's
+        // job, because a hit's pools hear each packet and a status tick's hear
+        // each row). Everything a packet does to its target and to the relics
+        // watching lives here, so a hit and a tick cannot drift apart on any
+        // of it -- except the damage-taken row, which the caller books from
+        // the figures returned, for the reason ApplyAndCountDamage gives.
         //
         // `isHit` is true for a blow (DealDamage, DealRelicPacket) and false
         // for a status tick and a delayed-damage payment

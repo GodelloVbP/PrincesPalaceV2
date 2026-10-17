@@ -68,21 +68,11 @@ namespace PrincesPalace.Domain.Combat.Session
         // Speed would be with NONE of the relic buffs and maluses in this
         // dictionary applied, from any source.
         //
-        // FOUND AS A BUG, not designed in from the start. The first version
-        // subtracted only the CURRENT source's own Granted, which stops a
-        // relic compounding against ITSELF on a second grant, and does
-        // nothing to stop it compounding against a DIFFERENT relic's grant
-        // that landed first: Slippers +10% off 100 gives +10 (110), and Pipe's
-        // +20% then read 110 as the base and gave +22 instead of the +20 a
-        // true 20%-of-100 owes -- 132 instead of the 114 the two relics
-        // together should produce. Proven with a throwaway test before this
-        // was believed, the same way the potency funnel's compounding rule was
-        // proven rather than assumed.
-        //
-        // Summing every source's Granted and subtracting it once is what makes
-        // "against the true base" actually true regardless of how many speed
-        // relics a character is carrying -- and past level 25 a character
-        // carries more than one relic at all, so this is not an edge case.
+        // Every source's Granted is subtracted once, so a grant never compounds
+        // against another relic's: Slippers +10% off 100 gives +10, and Pipe's
+        // +20% then reads 100 as the base and gives +20, not +22 off 110.
+        // A character past level 25 carries more than one relic, so this is
+        // not an edge case.
         private int TrueBaseSpeed(CombatantState actor, Dictionary<object, SpeedBuff> forActor)
         {
             int granted = 0;
@@ -105,18 +95,13 @@ namespace PrincesPalace.Domain.Combat.Session
             // the same reason: paying the cost twice should not be strictly
             // better than paying it once and waiting.
             //
-            // HANDING THE PREVIOUS GRANT BACK FIRST is what makes that true,
-            // and for eleven months it did not: only TurnsLeft was reset while
-            // Granted and Speed both went on compounding, so two Tin-Foil Pipe
-            // casts in one turn gave 20 base + 20% + 20% = 28 rather than the
-            // 24 the relic's own card promises. Reachable, not theoretical --
-            // Fleece Ward T3 grants a free action, so a second cast lands
-            // before the turn start that would have ticked the first grant
-            // away. Same revoke-then-regrant shape RefreshNecklaceSpeed and
-            // RefreshChilledSpeed already use, and for the same reason: what
-            // a refresh owes is "the magnitude one grant would give against
-            // the current true base", which is exactly what recomputing from
-            // scratch produces and what adjusting a delta only approximates.
+            // HANDING THE PREVIOUS GRANT BACK FIRST is what makes that true:
+            // two Tin-Foil Pipe casts in one turn (Fleece Ward T3 is a free
+            // action) give 20 base + 20% = 24, not 28. Same revoke-then-regrant
+            // shape RefreshNecklaceSpeed and RefreshChilledSpeed use: a refresh
+            // owes "the magnitude one grant would give against the current
+            // true base", which recomputing from scratch produces and
+            // adjusting a delta only approximates.
             //
             // turns > 0 ONLY. A turns: 0 grant is not a timed buff and the
             // relics that use it mean what they do: Ballerina's Slippers
@@ -168,8 +153,8 @@ namespace PrincesPalace.Domain.Combat.Session
             return wanted;
         }
 
-        // THE MALUS TWIN, for a relic that SLOWS someone rather than
-        // speeding them up -- Lucky Deck's one-turn slow, on an enemy.
+        // THE MALUS TWIN, for a relic or status that SLOWS someone rather than
+        // speeding them up -- Ice Fingernail's slow and Chilled.
         //
         // A SEPARATE METHOD rather than GrantSpeedPercent taught to accept a
         // negative percent, on purpose. That method's rounding rule
@@ -189,12 +174,9 @@ namespace PrincesPalace.Domain.Combat.Session
             if (actor == null || percent <= 0 || actor.Speed <= 0) return 0;
 
             // HANDING THE PREVIOUS GRANT BACK FIRST, exactly as the buff twin
-            // does and for the same reason. This line was missing here: the
-            // "REFRESHED, NOT STACKED" comment below reset TurnsLeft while
-            // Granted and Speed both went on compounding, which is the same
-            // defect the buff side carried for eleven months and fixed with
-            // this one line. `turns > 0` only, so a turns: 0 malus keeps
-            // accumulating the way its two callers intend.
+            // does: a refresh resets Granted and Speed as well as TurnsLeft.
+            // `turns > 0` only, so a turns: 0 malus keeps accumulating the way
+            // its callers intend.
             if (turns > 0) RevokeSpeedBuff(actor, source);
 
             if (!_speedBuffs.TryGetValue(actor, out var forActor))
@@ -209,12 +191,9 @@ namespace PrincesPalace.Domain.Combat.Session
                 forActor[source] = buff;
             }
 
-            // The TRUE base -- see TrueBaseSpeed. Only relic-granted buffs and
-            // maluses ever populate this dictionary, and today a malus and a
-            // buff never land on the same combatant (Lucky Deck's slow only
-            // ever targets an enemy, the buffs only ever the player who cast
-            // them), but the fix is the same one the buff side needed and
-            // costs nothing to apply here too.
+            // The TRUE base -- see TrueBaseSpeed. Buffs and maluses share one
+            // dictionary per combatant, so a malus measures against the same
+            // base as a buff would.
             int baseSpeed = TrueBaseSpeed(actor, forActor);
             int wanted = -(baseSpeed * percent / 100);
             if (wanted >= 0) wanted = -1;

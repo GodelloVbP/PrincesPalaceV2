@@ -75,8 +75,8 @@ namespace PrincesPalace.Domain.Combat.Session
 
         // The step due on the enemy's next acting turn, or null when that turn
         // is the weighted draw's. A step whose skill the kit dropped (an id no
-        // skill matched, FightEncounterAdapter) ends its sequence there: the
-        // turn falls back to the draw rather than stalling forever.
+        // skill matched, FightEncounterAdapter) returns null: that turn falls
+        // back to the draw rather than stalling.
         private ScheduledStep? ScheduledStepFor(CombatantState enemy)
         {
             var kit = SourceFor(enemy);

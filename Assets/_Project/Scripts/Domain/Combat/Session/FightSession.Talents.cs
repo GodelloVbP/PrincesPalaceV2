@@ -1163,15 +1163,9 @@ namespace PrincesPalace.Domain.Combat.Session
         // entry would make the mode read as costing what it granted.
         private const float TransformExitShake = 0.45f;
 
-        // THE FORM RUNNING OUT IS AN EVENT, AND IT GETS ITS OWN BEAT.
-        //
-        // 651c8a79 shipped this as a quiet revert riding the post-playback
-        // resync, on the argument that a transform expires at its holder's TURN
-        // START -- which is not an action, so there was nothing to record the
-        // change on. That argument was about the beat QUEUE rather than about
-        // the player: a turn start is a moment, the queue can hold a beat for a
-        // moment, and leaving the form is exactly as much of an event as
-        // entering it was. Overruled by the owner, and this is the overrule.
+        // THE FORM RUNNING OUT IS AN EVENT, AND IT GETS ITS OWN BEAT: leaving
+        // the form is as much of an event as entering it, though it happens at
+        // a turn start, which is not an action.
         //
         // THE TWIN OF THE ENTRY ON STAGE: one beat on the holder, rooted
         // (Hold), no amount, the form cleared at its impact instant under the
@@ -1181,13 +1175,11 @@ namespace PrincesPalace.Domain.Combat.Session
         // say the change cost him something it does not.
         //
         // AND NOT AN ACTION, which is where it stops being the entry's twin.
-        // Owner, 2026-09-26: "a transform expiring should definitely not be an
-        // action". It used to open through BeginBeat like the cast that
-        // entered it, and BeginBeat is the action seam -- so a form running
-        // out told a decaying pool the turn was not idle and read as a turn
-        // taken to every IsAction reader. It opens through NewBeat with its
-        // own cause instead, the way a status tick does, and takes no cast
-        // stance (the idle below is the only pose it ever wore).
+        // BeginBeat is the action seam, so opening through it would tell a
+        // decaying pool the turn was not idle and read as a turn taken to every
+        // IsAction reader. It opens through NewBeat with its own cause, the way
+        // a status tick does, and takes no cast stance (the idle below is the
+        // only pose it ever wears).
         //
         // THE EXIT HAPPENS BEFORE CommitBeat, which is what puts the temporary
         // health's disappearance on this beat rather than on whatever played

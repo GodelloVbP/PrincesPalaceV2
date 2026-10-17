@@ -9,10 +9,7 @@ namespace PrincesPalace.Domain.Combat.Session
     // RelicsAfterSwing, RelicsOnEachKill, DealDamage) rather than any shared
     // table. See FightSession.Relics.cs's own header for why that split is a
     // decision, not an oversight: the WHEN is shared there, the WHAT is not,
-    // and stays C#. Fourteen relics across two balance passes, previously
-    // split across this file and a "BalanceRelics2" sibling by which patch
-    // added them rather than by what they do -- merged here because "when"
-    // is not a topic. Jar of Bear Urine, Magic Marker, World Ender's Crown,
+    // and stays C#. The relics here: Jar of Bear Urine, Magic Marker, World Ender's Crown,
     // Cursed Idol, Amassing Star, Rampaging Bull's Horn, Ice Fingernail,
     // Loaded Dice, Sparring Saber, Sparring Buckler, Dancer's Anklet,
     // Essence Siphon, Disgruntled Lackey, Inconspicuous Key, and Phoenix
@@ -159,8 +156,8 @@ namespace PrincesPalace.Domain.Combat.Session
         private readonly System.Collections.Generic.HashSet<CombatantState> _crownFired =
             new System.Collections.Generic.HashSet<CombatantState>();
 
-        // Called from DealDamage (FightSession.Ledger.cs) after EVERY hit
-        // that changes a player's health -- the one funnel every damage
+        // Called from LandPacket (FightSession.Ledger.cs) after EVERY packet
+        // that changes a player's health, and from HealAndCount -- the one funnel every damage
         // path already shares, so a crossing can never be missed because
         // one of several damage call sites forgot to check for it.
         private void WorldEndersCrownCheck(CombatantState target)
@@ -191,7 +188,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // ---- cursed idol --------------------------------------------------------------
 
         // Every hit the wearer lands on an enemy adds a stack (mechanic c),
-        // called from DealDamage. AddStack no-ops past the cap on its own.
+        // called from LandPacket. AddStack no-ops past the cap on its own.
         private void CursedIdolOnHit(CombatantState actor, CombatantState target)
         {
             if (actor == null || target == null || target.IsPlayerSide) return;
@@ -520,7 +517,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // ---- phoenix egg -----------------------------------------------------------------
 
         // The fatal blow that would have ended the fight instead turns the
-        // wearer into a shell. Called from DealDamage BEFORE Cursed Idol's
+        // wearer into a shell. Called from LandPacket BEFORE Cursed Idol's
         // bonus or CombatMath ever sees the figure -- the egg replaces the
         // blow outright rather than softening it. CurrentHealth is pinned
         // to 1 (never 0) for the WHOLE egg duration, which is what keeps

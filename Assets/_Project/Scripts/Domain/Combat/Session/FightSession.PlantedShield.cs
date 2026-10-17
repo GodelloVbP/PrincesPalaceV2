@@ -185,7 +185,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 remaining -= wallAbsorbed;
             }
 
-            // ---- 4. the reactive hooks, on "him or the shield"
+            // ---- 3. the reactive hooks, on "him or the shield"
             if (!_settlingShieldAnswers && attacker != null && damage > 0)
             {
                 // A hit on the holder himself, planted or not: the whole

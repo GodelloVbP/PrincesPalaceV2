@@ -32,9 +32,7 @@ namespace PrincesPalace.Domain.Combat.Session
     //
     // Which needs no clearing: FightEncounterAdapter builds one FightSession per
     // encounter and Begin() refuses a second call, so these tallies are born
-    // empty and die with the fight. A Reset method was written here first and
-    // deleted -- it had no caller, and a dead one would read as evidence that
-    // sessions ARE reused.
+    // empty and die with the fight.
     public partial class FightSession
     {
         private readonly Dictionary<CombatantState, int> _spellsCast =

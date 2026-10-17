@@ -1019,7 +1019,7 @@ namespace PrincesPalace.Domain.Combat
         public static int EmpowermentWorth(CombatantState attacker) =>
             attacker?.Statuses.FirstOrDefault(s => s.Type == StatusEffectType.Empowered)?.Magnitude ?? 0;
 
-        // WHAT A DAMAGING STATUS'S DAMAGE IS MADE OF, and null for the ten
+        // WHAT A DAMAGING STATUS'S DAMAGE IS MADE OF, and null for the rest
         // that deal none.
         //
         // Keyed on the status TYPE because that is what the element is a

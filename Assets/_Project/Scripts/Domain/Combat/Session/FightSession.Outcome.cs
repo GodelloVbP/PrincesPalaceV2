@@ -108,15 +108,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 // the dismissed are not kills and are filtered out below.
                 _encounter.DismissFollowers();
 
-                // PLUS THE BOUNTY, which nothing collected until now.
-                //
-                // The Bounty Hunter Contract paid into BountyEarned on every
-                // kill, printed "collects on the Giant Rat - 3 gold" in the
-                // log, and stopped there: no production code read the property.
-                // The relic was implemented, covered by EditMode tests that
-                // assert on BountyEarned directly, and worth exactly zero gold
-                // in a real run. Same shape as AUDIT #42 and as the
-                // DifficultyCurve that was written, tested and never called.
+                // PLUS THE BOUNTY the Bounty Hunter Contract earned per kill.
                 //
                 // Added to the PAYOUT rather than banked separately, so it
                 // reaches the wallet by the one route every other coin takes

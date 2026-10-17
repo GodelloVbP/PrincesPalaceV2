@@ -150,12 +150,8 @@ namespace PrincesPalace.Domain.Combat.Session
         // once per ability per AI draw; EligibleTargets below is the filter
         // for callers who genuinely want a list.
         //
-        // RENAMED FROM CanReach when single-ally targeting landed. The old
-        // name had been unambiguous only while nothing on the caster's own
-        // side could be pointed at; with an ally picker on the screen,
-        // "CanReach(ally)" answering false reads as a bug rather than as the
-        // category refusal it is. CanReachAlly below is the same question
-        // asked of the other side, and the two share ReachAllows.
+        // CanReachAlly below is the same question asked of the other side,
+        // and the two share ReachAllows.
         //
         // Evaluation order is fixed and each step is load-bearing:
         public bool CanReachEnemy(CombatantState actor, Reach reach, CombatantState target)
@@ -937,25 +933,15 @@ namespace PrincesPalace.Domain.Combat.Session
                     continue;
                 }
 
-                // BUG (found investigating "Astral only added 4 damage to a
-                // 117-damage arcane spell"): when the affix's own element IS
-                // the element the hit already was -- an Astral (Arcane) affix
-                // riding an ARCANE spell, not a Fiery (Fire) affix riding a
-                // Physical sword -- the +% describes how much bigger THAT hit
-                // itself should have been, not a second, foreign-element proc.
-                // The proc math below is `Magnitude% of Attack`, which is
-                // correct for a foreign-element rider (a small extra tick
-                // alongside the swing) but floors a same-element bonus to a
-                // few points regardless of how large the hit it is supposed
-                // to be boosting was -- 41% of an Attack of 10 is 4, whether
-                // the swing it rode in on hit for 12 or the spell it rode in
-                // on hit for 117. Applied straight to `damage`, the hit's own
-                // already-mitigated landed figure, the same convention
-                // Vampiric's lifesteal just below already uses for
-                // percent-of-this-hit math -- not re-run through
-                // DamagePipeline.AfterDefences, because it is the SAME
-                // element as `damage` already paid its one mitigation pass
-                // as; re-mitigating it a second time would tax it twice.
+                // A same-element affix (an Arcane affix on an Arcane spell) says
+                // how much bigger THAT hit should have been, not a second,
+                // foreign-element proc. The proc math below (`Magnitude% of
+                // Attack`) suits a foreign-element rider but would floor a
+                // same-element bonus to a few points whatever the hit was. So
+                // the bonus is a percent of `damage`, the hit's own
+                // already-mitigated figure, as Vampiric's lifesteal just below
+                // does, and is not re-run through DamagePipeline.AfterDefences:
+                // the same element already paid its one mitigation pass.
                 if (effect.Against.Value == hitType)
                 {
                     int matchingBonus = Rounding.AwayFromZero(damage * effect.Magnitude / 100f);

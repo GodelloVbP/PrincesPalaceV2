@@ -6,20 +6,15 @@ namespace PrincesPalace.Domain.Combat.Session
 {
     // WHEN A RELIC GETS TO ACT, in one place.
     //
-    // Every relic effect in the game reaches into combat at exactly one moment,
-    // and until this file existed each one found its own: Dual Wield at line 186
-    // of FightSession, Magical Shield at 565 of Skills, Bloodlust at 75 of
-    // Riders, and the two counting relics at two more. Five effects, five
-    // hand-picked lines across four files, and no list anywhere of what the
-    // available moments even were.
+    // Every relic effect in the game reaches into combat at exactly one moment.
     //
-    // That is the actual cost of a relic. The mechanic is rarely hard -- "gain a
+    // The cost of a relic is rarely the mechanic -- "gain a
     // shield", "swing twice", "take another turn" are a few lines each -- and
     // the expensive part is reading a large combat flow to work out where it
     // hooks, and being sure the place chosen fires exactly once, after the thing
     // it reacts to, and on every path that reaches it.
     //
-    // THE MOMENTS ARE NOW NAMED AND THERE ARE FIVE. A new relic picks one and
+    // THE MOMENTS ARE NAMED AND THERE ARE FIVE. A new relic picks one and
     // adds a branch; it does not go looking.
     //
     //     BeforeSwing   -- the actor is about to make a plain attack
@@ -28,11 +23,8 @@ namespace PrincesPalace.Domain.Combat.Session
     //     AfterCast     -- a cast has finished resolving
     //     OnKill        -- the actor's action killed something
     //
-    // FIVE AND NOT SIX. An OnTurnStart was written here and deleted before it
-    // shipped: nothing called it, and a moment nobody reacts to is a
-    // maintenance burden pretending to be an abstraction. The list grows when a
-    // relic needs it to, which costs one method and one call -- far less than
-    // the confidence lost by a surface that is half real.
+    // The list grows when a relic needs a new moment, which costs one method
+    // and one call; a moment nobody reacts to is not kept.
     //
     // WHAT THIS IS NOT is a data-driven relic language. EffectKind's own header
     // makes that argument and it is right: "strike twice", "halve the next hit"

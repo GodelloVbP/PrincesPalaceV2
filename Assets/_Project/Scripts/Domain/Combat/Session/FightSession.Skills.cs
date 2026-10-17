@@ -6,8 +6,8 @@ using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.Combat.Session
 {
-    // Everything the player can do that is not a plain swing: the fourteen
-    // authored skill effects. (The generic, nameless "Skill" action every
+    // Everything the player can do that is not a plain swing: the authored
+    // skill effects. (The generic, nameless "Skill" action every
     // character used to get for free is gone -- see the note below.)
     //
     // Ported from v1's FightController.Actions.cs. Every number and every
@@ -327,18 +327,6 @@ namespace PrincesPalace.Domain.Combat.Session
 
             ResolveCharacterSkill(actor, skill, targets, PointsSpent(skill, resourceSpent, primarySpent), poolTier,
                 destinationSeat);
-
-            // SOURCED by the actor. The relic's shield and the Lamb's Ward are
-            // the same status, and an unsourced one would be a ward whose
-            // caster nobody can name -- fine for the reduction, wrong for
-            // everything the Lamb hangs off it. This does mean a relic shield
-            // on a Lamb pays her engine; that reads correctly (she warded
-            // herself, by another route) and is worth saying out loud rather
-            // than discovering.
-            // The shield rose inside ResolveCharacterSkill's own relic moment
-            // -- see FightSession.Relics.RelicsAfterCast. It used to be raised
-            // here as well, which was harmless only because Apply refreshes
-            // rather than stacks.
 
             // A CAST THAT DOES NOT END THE TURN. Two sources say so and they
             // are ONE flag (see IsFreeAction): a skill authored freeAction --
@@ -1724,16 +1712,6 @@ namespace PrincesPalace.Domain.Combat.Session
         private static float SpellScalingMultiplierFor(CombatantState actor) =>
             actor.SkillScaling.MultiplierFor(actor.AbilityScores);
 
-        // `dodged` is true when the WHOLE cast was evaded -- rolled exactly
-        // ONCE here, before the packet loop, rather than once per packet.
-        // See DamagePipeline.AfterDefences' `dodgeAlreadyResolved` param for
-        // the full reasoning: a multi-element spell is one swing the target
-        // either evades entirely or is hit by, so every packet below reuses
-        // this single roll (dodgeAlreadyResolved: true) instead of each
-        // rolling its own. `total` is 0 and `detail` is left untouched on a
-        // dodge -- the caller must check `dodged` rather than infer a miss
-        // from `total == 0`, the identical discipline
-        // DamagePipeline.Outcome.IsMiss already enforces one level down.
         // Sums EffectKind.ElementalDamagePercent across every source that
         // grants it for this element (EffectStacking.Summed): a typed rider
         // meant to combine across sources, folded per element.
@@ -1871,7 +1849,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // the following cast applied, and still quoting a Gift: Fury that cast
         // had already spent. The honest figure comes from AttackBonusFor, the
         // read-only half of the same rule, asked with the same `spendingGift`
-        // predicate the real cast passes at :109.
+        // predicate CastCore's RefreshAttackBonus call passes.
         //
         // BORROWED AND PUT BACK rather than passed down: CombatMath.ScaledAttack
         // folds the percentage into the ATTACK term before SkillResolution's
@@ -1949,17 +1927,6 @@ namespace PrincesPalace.Domain.Combat.Session
         }
 
         // ---- riders on a resolved skill --------------------------------------
-
-        // ApplySkillRoleEffect (Tank lifesteal, CrowdControl defense-shred,
-        // Support party-heal, Utility signature-gain, Assassin execute
-        // messaging) was removed with the BasicSpell cut (docs/PLAN_SHOP.md
-        // Gate 4). Its only caller anywhere in the codebase was the deleted
-        // ExecuteSkillInner -- these five role riders never fired on an
-        // authored/named skill cast, only on the old free "Skill" action, so
-        // there is no remaining entry point to preserve them through. Decided
-        // 2026-09-03: let them go rather than silently extend five class-role
-        // bonuses onto every authored skill, which would have been a real
-        // balance change nobody asked for.
 
         // Headbutt's shove, and the intent it can take with it.
         //
@@ -2137,6 +2104,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // shield raised over a Bulwark adds to it rather than arguing with
             // it. It dissipates like any skill's ward: the one-turn default,
             // not the whole-fight duration the standing relic wards carry.
+            // Sourced by the actor, like the Lamb's Ward, so her engine reads it.
             RaiseWard(actor, actor.Effects.Magnitude(EffectKind.MagicalShield), FightTuning.DefaultWardTurns, actor);
             AppendMessage($"{actor.Name}'s Magical Shield rises!");
         }

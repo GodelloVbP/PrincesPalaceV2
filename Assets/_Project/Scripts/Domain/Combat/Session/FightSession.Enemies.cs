@@ -174,7 +174,7 @@ namespace PrincesPalace.Domain.Combat.Session
                     // keeps being telegraphed with it, and fizzles on "there is
                     // no room left on the field" turn after turn -- which is
                     // precisely what the draw-time check exists to prevent
-                    // (Skills.cs:383-387 says so in writing).
+                    // (ResolveSummon makes the same cap check at cast time).
                     //
                     // Zero-weighted, not removed, exactly like the two arms
                     // below it: "capped this turn does not mean gone". A slot
