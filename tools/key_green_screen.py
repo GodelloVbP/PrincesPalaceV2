@@ -1,6 +1,6 @@
 """Cut a green screen off generated art and emit game-ready sprites.
 
-The Hub buildings (and now the Relic icons and Talent Tree kit) are generated
+The Hub buildings, the Relic icons and the Talent Tree kit are generated
 on flat green rather than on transparency, because
 image generators are unreliable at real alpha and the obvious alternative --
 keying alpha from BRIGHTNESS, which is how the spell frames are cut -- is
@@ -18,8 +18,7 @@ of aborting the run, so you can drop art for one kit at a time.
 
 ## The two grouping modes
 
-**Hub uses "grouped" mode**, unchanged from before this file supported more
-than one kit: sources are grouped by name with any trailing `_<number>`
+**Hub uses "grouped" mode**: sources are grouped by name with any trailing `_<number>`
 stripped -- `talents_1.png`, `talents_2.png`, `talents_3.png` become one
 `talents` building with three animation frames (`f0.png`, `f1.png`, ...),
 resampled to that building's DELIVERY_SIZE. That grouping is what lets
@@ -251,22 +250,14 @@ def key_out(image, key="green", opaque_below=FULLY_OPAQUE_BELOW, transparent_abo
     otherwise key to alpha 255, painting the transparent corners solid
     black. Taking the min keeps them at 0.
 
-    VECTORISED with numpy (S13's review) -- the per-pixel Python loop this
-    replaced took noticeably longer per master the bigger the source got,
-    for arithmetic that has no actual per-pixel dependency (every pixel's
-    result depends only on that same pixel's own r/g/b/a). Equivalence
-    against the old loop is checked directly, not just argued: run both
-    against a flat-green master with an outlined shape and a real-alpha
-    master and diff the output arrays -- see the S13 commit message for
-    that result. Every rule the loop enforced is preserved exactly:
-    FULLY_OPAQUE_BELOW/FULLY_TRANSPARENT_ABOVE, the same linear ramp
-    (computed the same order -- 255 * numerator, THEN divided, THEN
-    truncated -- so no float rounding differs from the original int(...)
-    call), the min(input_alpha, keyed_alpha) rule, and spill suppression
-    (g = max(r, b) wherever dominance > 0) applied before the fully-
-    transparent pixels are forced back to (0, 0, 0, 0) -- the loop's own
-    `continue` skipped spill suppression for those pixels, but their RGB is
-    thrown away by the zeroing either way, so the order cannot be observed.
+    Vectorised with numpy: every pixel's result depends only on that same
+    pixel's own r/g/b/a. The rules: FULLY_OPAQUE_BELOW/FULLY_TRANSPARENT_ABOVE,
+    a linear ramp computed in the order 255 * numerator, THEN divided, THEN
+    truncated (so rounding matches a per-pixel int(...) call), the
+    min(input_alpha, keyed_alpha) rule, and spill suppression (g = max(r, b)
+    wherever dominance > 0) applied before the fully-transparent pixels are
+    forced back to (0, 0, 0, 0); their RGB is discarded either way, so that
+    order cannot be observed.
     """
     rgba = image.convert("RGBA")
     arr = np.asarray(rgba).astype(np.int32)
@@ -306,14 +297,8 @@ def key_out(image, key="green", opaque_below=FULLY_OPAQUE_BELOW, transparent_abo
     return Image.fromarray(out, mode="RGBA")
 
 
-# Moved here VERBATIM from tools/slice_actor_sheet.py (~508, S13's review),
-# under its own existing name -- it duplicated this module's own (now
-# deleted) resize_alpha_aware almost line for line, and slice_actor_sheet.py
-# already imports key_out_green from this module, so this is the one shared
-# home rather than two hand-copies drifting apart. slice_actor_sheet.py's
-# own byte-identical output (HandAssembledArtTests, the recipe replay) is
-# unaffected: it is the exact same code, only relocated, and only imported
-# back where it used to be defined.
+# The one shared home of the alpha-aware resize: slice_actor_sheet.py imports
+# it from here, as it does key_out_green, so the two cannot drift apart.
 def resize_premultiplied(image, new_size):
     """LANCZOS resize with alpha premultiplied first, so a transparent
     pixel's own RGB cannot bleed a dark fringe into the resized edge."""

@@ -72,10 +72,9 @@ $log = Join-Path $env:TEMP "pp-gfx-$PID.log"
 if (Test-Path $results) { Remove-Item $results }
 
 # Every path QUOTED, as run_tests_parallel.ps1 quotes its own. Start-Process
-# joins the list into one command line and re-splits it on spaces, so the
-# runner copy's "Prince's Palace-v2-TestRunner" arrived as two arguments and
-# Unity refused the project path -- the call operator this replaced passed
-# each element intact and never had the problem.
+# joins the list into one command line and re-splits it on spaces, so an
+# unquoted runner copy path like "Prince's Palace-v2-TestRunner" would arrive
+# as two arguments and Unity would refuse the project path.
 $unityArgs = @(
     "-projectPath", "`"$Target`"",
     "-batchmode", "-silent-crashes",
@@ -106,11 +105,10 @@ if (-not $proc.WaitForExit(1800 * 1000)) {
     exit 1
 }
 
-# Unity has been seen to return from a clean, completed run a moment before
-# its results file lands on disk -- the log said "Exiting with code 0 (Ok)"
-# and the XML appeared afterwards, so the run was reported as a failure with
-# nothing wrong with it. Waited out rather than trusted, and briefly: a run
-# that genuinely produced nothing still reports within seconds.
+# Unity can return from a clean, completed run a moment before its results
+# file lands on disk, so the file is waited for rather than trusted to exist,
+# and only briefly: a run that genuinely produced nothing still reports
+# within seconds.
 for ($waited = 0; $waited -lt 30 -and -not (Test-Path $results); $waited++) {
     Start-Sleep -Seconds 1
 }
@@ -134,10 +132,9 @@ foreach ($tc in $xml.SelectNodes("//test-case")) {
 if ($failed -gt 0) { exit 1 }
 Write-Host "All graphics tests passed."
 
-# STATED, not left to whatever the last native call set. A wrapper reading
-# $LASTEXITCODE after "& graphics_tests.ps1" got Unity's own exit code, which
-# is not zero on a passing batchmode run -- so tools/static_pilot_qa.ps1 threw
-# away a capture that had in fact succeeded.
+# STATED, not left to whatever the last native call set: a wrapper reading
+# $LASTEXITCODE after "& graphics_tests.ps1" would get Unity's own exit code,
+# which is not zero on a passing batchmode run.
 exit 0
 
 } finally {
