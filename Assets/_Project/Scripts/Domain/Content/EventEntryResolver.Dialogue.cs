@@ -5,13 +5,13 @@ using PrincesPalace.Domain.Events;
 
 namespace PrincesPalace.Domain.Content
 {
-    // The dialogue stage's half of event validation (docs/PLAN_DIALOGUE_STAGE.md,
-    // phase D1): backdrops, a page's cast and lines, and the presence check.
+    // The dialogue stage's half of event validation (docs/PLAN_DIALOGUE_STAGE.md):
+    // backdrops, a page's cast and lines, and the presence check.
     // Its own file so the rest of the resolver can grow (new effect and
     // requirement kinds) without the two changes meeting in one hunk.
     public static partial class EventEntryResolver
     {
-        // Contract 13. D2 re-pins MaxLineLength by measuring the longest line
+        // Contract 13. MaxLineLength is pinned by measuring the longest line
         // at 4:3 and 21:9; the cap counts the raw string, tags included, so a
         // line's visible text is never longer than what gets measured.
         public const int MaxLinesPerPage = 12;
@@ -273,8 +273,7 @@ namespace PrincesPalace.Domain.Content
             return true;
         }
 
-        // A RESULT THAT PLAYS ON THE STAGE TAKES THE LINE CAP (owner's call,
-        // D4). The stage shows an outcome's result as a narration beat in the
+        // A RESULT THAT PLAYS ON THE STAGE TAKES THE LINE CAP. The stage shows an outcome's result as a narration beat in the
         // dialogue box (contract 3), which is measured for MaxLineLength, not
         // the legacy body column's MaxBodyLength. It plays there when the page
         // the choice sits on has lines (the pick is made on the stage) or when

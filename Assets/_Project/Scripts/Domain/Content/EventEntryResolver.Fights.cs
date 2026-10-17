@@ -8,9 +8,9 @@ using PrincesPalace.Domain.Events;
 namespace PrincesPalace.Domain.Content
 {
     // Returning events, event fights and event speakers
-    // (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md 1.1-1.3 and 3.5, Stage A). Its own
-    // file for the reason the Dialogue half has one: the Caravan's shelves
-    // (Stage B) land beside these without meeting the page/choice code.
+    // (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md 1.1-1.3 and 3.5). Its own file for
+    // the reason the Dialogue half has one: the Shelves half sits beside these
+    // without meeting the page/choice code.
     //
     // WHAT IS REFUSED, and why each is a build error rather than a runtime
     // guess:
@@ -33,7 +33,7 @@ namespace PrincesPalace.Domain.Content
     //   - a line naming an expression its event speaker did not declare.
     public static partial class EventEntryResolver
     {
-        // The round counter's word ("Toll"). M6 measures the counter's box
+        // The round counter's word ("Toll"). The counter's box is measured
         // against this; raising it is a layout change, like every cap here.
         public const int MaxRoundLabelLength = 12;
 
@@ -46,7 +46,7 @@ namespace PrincesPalace.Domain.Content
 
         // What every page, choice and outcome of one event resolves against.
         // One object rather than nine parameters threaded through five
-        // methods, so a new per-event fact (Stage B's shelves) is one field.
+        // methods, so a new per-event fact (ShelfIds) is one field.
         private sealed class EventScope
         {
             public string EventId = "";
@@ -497,7 +497,7 @@ namespace PrincesPalace.Domain.Content
         }
 
         // An outcome whose effects start `fightEffects` fights: exactly one,
-        // with no goTo of its own, and never from a fight's own result (M2's
+        // with no goTo of its own, and never from a fight's own result (the
         // settlement applies a result once, with one save; a chained fight is
         // not in that contract).
         private static bool TryCheckFightStart(string label, string goTo, int fightEffects, bool isFightResult,

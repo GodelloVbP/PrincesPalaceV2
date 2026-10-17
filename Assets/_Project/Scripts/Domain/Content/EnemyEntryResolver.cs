@@ -39,11 +39,9 @@ namespace PrincesPalace.Domain.Content
         // depletion rates (1 per ordinary hit, 2 on a weakness match) so a
         // party WITHOUT the right element still breaks a boss in roughly a
         // dozen ordinary hits rather than needing dozens, while a party that
-        // found the matchup roughly halves that. At this project's health
-        // scale that lands the Dungeon Warden (600 HP) around 60 and the
-        // weakest active monster, the Bog Witch (160 HP), around 16. The old
-        // 1/40 rate let a three-character party break ordinary enemies every
-        // round; four times the meter quarters that stagger frequency.
+        // found the matchup roughly halves that. The meter is maxHealth / 10,
+        // floored at MinimumBreakShieldPoints: a 150 HP monster gets 15, and
+        // the Bog Witch (48 HP) rounds to 5 and takes the floor of 8.
         private const float BreakShieldPerHealth = 1f / 10f;
 
         // However low maxHealth is authored, a stagger meter this thin would
@@ -545,11 +543,6 @@ namespace PrincesPalace.Domain.Content
             return true;
         }
 
-        // Deterministic (same id -> same pair, every regeneration) so
-        // omitting weakness/resistance doesn't make the build non-
-        // reproducible. Guarantees the two values differ.
-        // One array, not one per call: Enum.GetValues allocates through
-        // reflection and both derivers below run once per authored enemy.
         // Empty means "leave it at the sensible default" rather than
         // "invalid" -- an unauthored monster should not have to spell out
         // Physical. Same shape as CharacterEntryResolver's own overload of
@@ -566,9 +559,14 @@ namespace PrincesPalace.Domain.Content
             return ContentEnum.TryParseName(raw, out value);
         }
 
+        // One array, not one per call: Enum.GetValues allocates through
+        // reflection and both derivers below run once per authored enemy.
         private static readonly DamageType[] AllDamageTypes =
             (DamageType[])Enum.GetValues(typeof(DamageType));
 
+        // Deterministic (same id -> same pair, every regeneration) so
+        // omitting weakness/resistance doesn't make the build non-
+        // reproducible. Guarantees the two values differ.
         private static void DeriveDamageTypePair(string id, out DamageType weakness, out DamageType resistance)
         {
             var values = AllDamageTypes;

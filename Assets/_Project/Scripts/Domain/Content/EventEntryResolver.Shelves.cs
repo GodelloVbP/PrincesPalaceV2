@@ -6,8 +6,8 @@ using PrincesPalace.Domain.Rewards;
 
 namespace PrincesPalace.Domain.Content
 {
-    // Merchant shelves (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md 1.5, 3.4, 3.5,
-    // Stage B): an event's `shelves[]` and the `shelf` / `takeShelf` effects
+    // Merchant shelves (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md 1.5, 3.4, 3.5):
+    // an event's `shelves[]` and the `shelf` / `takeShelf` effects
     // that name them. Beside the fights for the reason the Fights file gives:
     // one per-event fact, one file, no reach into the page/choice code beyond
     // the hooks that call here.
@@ -32,7 +32,7 @@ namespace PrincesPalace.Domain.Content
     //     opens a second shelf: leaving the shelf returns to the event, so
     //     the event must still be open and nothing else may claim the screen.
     //   - a shelf opened from a fight's result: the fight's own screens come
-    //     first, and a result applies once, with one save (M2's contract).
+    //     first, and a result applies once, with one save.
     public static partial class EventEntryResolver
     {
         public const string GearSectionName = "gear";
