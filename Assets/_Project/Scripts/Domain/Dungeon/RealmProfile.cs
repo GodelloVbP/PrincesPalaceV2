@@ -63,9 +63,8 @@ namespace PrincesPalace.Domain.Dungeon
         // The chip a Fight node gets. All zero gives None.
         public List<PrizeWeight> prizeWeights = new List<PrizeWeight>();
 
-        // The chip an anchor gets. All zero (the default until item phase I3)
-        // means an anchor pays exp and gold only (docs/PLAN_ITEMS.md section 5,
-        // amendment 2).
+        // The chip an anchor gets. All zero means an anchor pays exp and gold
+        // only (docs/PLAN_ITEMS.md section 5, amendment 2).
         public List<PrizeWeight> anchorPrizeWeights = new List<PrizeWeight>();
 
         // Enemy ids the boss is drawn from at realm open. Empty means every

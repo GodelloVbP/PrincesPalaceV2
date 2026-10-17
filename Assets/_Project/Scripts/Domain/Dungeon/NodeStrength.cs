@@ -40,8 +40,8 @@ namespace PrincesPalace.Domain.Dungeon
         public const double T1 = 0.27;
         public const double T2 = 0.48;
 
-        // The starting squad's weight as RealmOpening logs it: max HP x attack
-        // summed over the fielded characters with their starting kit.
+        // The party weight T1 and T2 are tuned for, in the units RealmOpening
+        // logs: max HP x attack summed over the fielded characters.
         public const double ReferencePartyWeight = 5760;
 
         public const int Min = 1;

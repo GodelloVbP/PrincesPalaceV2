@@ -87,9 +87,8 @@ namespace PrincesPalace.Domain.Dungeon
                 case RoomType.Rest:
                     return new Outcome(Kind.Rest, healsPartyToFull: true);
 
-                // Shop is not a placeholder any more -- it resolves into a
-                // screen. RunOrchestrator.ArriveAt handles RoomType.Shop
-                // itself, BEFORE this method is ever called, so this case
+                // Shop resolves into a screen. RunOrchestrator.ArriveAt handles
+                // RoomType.Shop itself, BEFORE this method is ever called, so this case
                 // must never run. Throwing rather than returning an Outcome
                 // makes a caller that skips ArriveAt fail loudly instead of
                 // quietly resolving a shop as if it had nothing behind it.
@@ -106,15 +105,9 @@ namespace PrincesPalace.Domain.Dungeon
                 case RoomType.Cache:
                     return new Outcome(Kind.Empty);
 
-                // Placeholders. They generate, they draw on the map, they can
-                // be entered and cleared -- only the content behind them is
-                // missing, and each says so rather than resolving in silence.
-                //
-                // Event is a REGRESSION against v1 knowingly left standing: v1
-                // ran a wandering-mage event that taught an event-gated spell.
-                // Porting it needs the spell-teaching path, which is a larger
-                // job than restoring the rooms; until then an honest placeholder
-                // beats a silent one.
+                // The no-content fall-through. Event and ItemSpawn rooms that
+                // reach here have nothing behind them, and each says so rather
+                // than resolving in silence.
                 case RoomType.Event:
                     return new Outcome(Kind.EventNotBuilt);
 

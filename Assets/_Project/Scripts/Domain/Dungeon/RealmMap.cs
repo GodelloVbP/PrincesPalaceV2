@@ -173,8 +173,8 @@ namespace PrincesPalace.Domain.Dungeon
         }
 
         // Rooms walked on the shortest and longest entry-to-heart route (the
-        // entry is not a room). Nodes are stored in id order along edges, so
-        // one backwards pass is a topological order.
+        // entry is not a room). Every edge runs forward in id order, so one
+        // pass over the nodes by id is a topological order.
         public void RouteLengths(out int shortest, out int longest)
         {
             var order = Nodes.OrderBy(n => n.Id).ToList();

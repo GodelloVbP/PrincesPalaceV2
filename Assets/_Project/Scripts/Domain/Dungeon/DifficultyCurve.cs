@@ -46,7 +46,7 @@ namespace PrincesPalace.Domain.Dungeon
         private const int HealthPermillePerStep = 75;
         private const int AttackPermillePerStep = 38;
 
-        // Three rates now, and the third is not a threat rate at all.
+        // Three rates, and the third is not a threat rate at all.
         //
         // Experience rides its own rate rather than the health rate
         // (docs/handoffs/progression_v2/PLAN_PROGRESSION_V2.md §2) because a
@@ -186,8 +186,9 @@ namespace PrincesPalace.Domain.Dungeon
             double scaled = amount * RawMultiplier(step, permille);
 
             // Clamped hard. `step` comes off a save, nothing else bounds it,
-            // and a compounding curve overflows int far faster than a linear
-            // one did -- 7.5% a step passes two billion around step 300.
+            // and amount x multiplier compounds -- 7.5% a step passes two
+            // billion around step 300 -- so the product is clamped before it
+            // reaches int.
             if (scaled > MaxScaledValue) return MaxScaledValue;
             if (scaled < -MaxScaledValue) return -MaxScaledValue;
 

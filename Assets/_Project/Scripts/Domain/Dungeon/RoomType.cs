@@ -22,12 +22,11 @@ namespace PrincesPalace.Domain.Dungeon
         Rest,
         Boss,
 
-        // Placeholders with no bespoke behaviour yet. They generate, they
-        // render, they can be entered and cleared — the content behind them
-        // lands later. Present now so the map does not have to change shape
-        // when it does.
         Event,
         Shop,
+
+        // A placeholder with no bespoke behaviour yet: it generates, renders,
+        // and can be entered and cleared, with nothing behind it.
         ItemSpawn,
 
         // Unscouted: the map shows a "?" and nothing else until the room is
