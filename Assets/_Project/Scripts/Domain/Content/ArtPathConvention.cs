@@ -27,11 +27,8 @@ namespace PrincesPalace.Domain.Content
     // and the slot then renders whatever the missing-art fallback is. The art
     // simply does not appear, with nothing logged and nothing failing.
     //
-    // Stating it once, here, is the point. Before this the rule lived in
-    // CharacterEntryResolver as a hand-written pair of checks covering two of
-    // the nine fields, so the other seven accepted either convention in any
-    // field. A rule spelled per-resolver is a rule that only holds where
-    // somebody remembered it.
+    // Stating it once, here, is the point: a rule spelled per-resolver only
+    // holds where somebody remembered it.
     //
     // ADDING A FIELD: put it in the table below, and call Check from that
     // field's resolver. ArtPathConventionTests fails if a Raw*Entry gains a
@@ -115,18 +112,16 @@ namespace PrincesPalace.Domain.Content
                 { "roundSfx", ArtPathKind.RuntimeLoaded },
                 { "ambience", ArtPathKind.RuntimeLoaded },
                 { "roundOverlay.path", ArtPathKind.EditorBaked },
-                // DOTTED, because the field moved inside a nested block and the
+                // DOTTED, because the field sits inside a nested block and the
                 // key is what an author types. A spell's presentation is one
-                // "vfx" object now -- see SpellPresentation -- so the JSON reads
+                // "vfx" object -- see SpellPresentation -- so the JSON reads
                 // "vfx": { "path": ... } and an error naming "vfxPath" would
                 // send someone looking for a field that is not in the file.
                 { "vfx.path", ArtPathKind.RuntimeLoaded },
                 { "vfx.sfxPath", ArtPathKind.RuntimeLoaded },
 
                 // The shared ground layer and the cue that leads into it --
-                // same block, same convention, and classified here on the day
-                // they were added rather than on the day one of them silently
-                // showed nothing. See SpellPresentation.groundPath.
+                // same block, same convention. See SpellPresentation.groundPath.
                 { "vfx.groundPath", ArtPathKind.RuntimeLoaded },
                 { "vfx.castSfxPath", ArtPathKind.RuntimeLoaded },
                 { "vfx.secondSfxPath", ArtPathKind.RuntimeLoaded },

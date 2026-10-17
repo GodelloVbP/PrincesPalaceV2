@@ -9,12 +9,8 @@ namespace PrincesPalace.Domain.Content
 {
     // Generates docs/CONTENT_SCHEMA.md from the Raw*Entry types themselves,
     // so the field list committed there cannot drift from what the
-    // resolvers actually read -- the failure mode this replaces is exactly
-    // the one the content-chain audit found: 82 of 176 fields undocumented
-    // in the hand-written _readme strings, and five readme claims stale
-    // against the code (enemies.json still naming six DamageTypes after
-    // af1ef62 added five more, skills.json's effect list missing Transform
-    // and Summon).
+    // resolvers actually read. A hand-written _readme string can go stale
+    // against the code unnoticed; a table generated from the types cannot.
     //
     // ENGINE-FREE, BCL ONLY, same rule as everything else in Domain -- this
     // is what lets ContentSchemaTests (Tests/EditMode) run it under

@@ -262,21 +262,13 @@ namespace PrincesPalace.Domain.Content
                 }
             }
 
+            // Each art field is checked against its ArtPathConvention kind.
             // Two path conventions coexist in this project and they are not
-            // interchangeable, so both of these are checked even though a
-            // character's two art fields now happen to share one convention:
-            // an Assets-relative path is baked into a scene at build time by
-            // AssetDatabase, a Resources-relative one (no extension) is
-            // Resources.Load'ed at runtime. Swapping them fails SILENTLY — the
-            // loader just returns null. portraitPath was the baked kind until
-            // 2026-09-06 and is RuntimeLoaded now, which is why the rule lives
-            // in a table and not in a sentence here.
-            //
-            // These two checks used to be written out here, and were the ONLY
-            // ones in the codebase: the other seven art fields across six
-            // resolvers accepted either convention in any field. The rule moved
-            // to ArtPathConvention so there is one statement of it rather than
-            // one per resolver that remembered.
+            // interchangeable: an Assets-relative path is baked into a scene at
+            // build time by AssetDatabase, a Resources-relative one (no
+            // extension) is Resources.Load'ed at runtime. Swapping them fails
+            // SILENTLY -- the loader just returns null -- so the rule lives in
+            // that table, not in a sentence here.
             if (!ArtPathConvention.Check(label, "portraitPath", raw.portraitPath, out error)) return false;
             if (!ArtPathConvention.Check(label, "battleSpritePath", raw.battleSpritePath, out error)) return false;
             if (!ArtPathConvention.Check(label, "plateArt", raw.plateArt, out error)) return false;

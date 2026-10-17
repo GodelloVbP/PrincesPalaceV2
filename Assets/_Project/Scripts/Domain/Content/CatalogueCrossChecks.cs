@@ -8,17 +8,13 @@ namespace PrincesPalace.Domain.Content
     // ValidateContent reads ContentDatabase's Resources-loaded catalogue, and
     // Core's InternalsVisibleTo names only the Editor assembly, so no test
     // assembly can build a synthetic *Definition to feed it a broken catalogue.
-    // Six rules there had no test at all as a result (AUDIT #77): any of them
-    // could have regressed to "never fires" and every build would still have
-    // passed. The same fix shape as AchievementProgress.
-    // ValidateDefeatSpecificBossParameter: the decision lives here and is
-    // EditMode-tested against fixtures that break exactly one rule each;
-    // ValidateContent is only the wiring that hands each predicate the real
-    // catalogue, and one PlayMode test proves the wiring on shipped content.
+    // The decision lives here over primitives and is EditMode-tested against
+    // fixtures that break exactly one rule each (AUDIT #77); ValidateContent
+    // is only the wiring that hands each predicate the real catalogue, and one
+    // PlayMode test proves the wiring on shipped content.
     //
     // Every predicate returns null when the rule holds and the refusal text
-    // when it does not -- the text ValidateContent has always emitted, so a
-    // content author sees the same message as before.
+    // when it does not.
     public static class CatalogueCrossChecks
     {
         // One id space across every catalogue: ids are what saves store, so a

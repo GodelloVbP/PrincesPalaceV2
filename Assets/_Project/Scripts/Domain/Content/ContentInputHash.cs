@@ -13,21 +13,13 @@ namespace PrincesPalace.Domain.Content
     // ContentFreshnessTests, so "is the generated tree current?" is one string
     // comparison rather than a guess about what has been touched since.
     //
-    // THIS LIST WAS THE WHOLE OF Scripts/Domain, and the reason it is not any
-    // more is worth having in front of whoever next reaches to widen it.
-    //
-    // The original argument was that a content record references enums from
-    // all over Domain -- DamageType, SkillEffect, Effect,
-    // EquipmentSlot -- so enumerating the reachable set by hand would drift,
-    // and a freshness check that misses an input is worse than none. Both
-    // halves of that are true. What it left out is the price: 267 files in the
-    // hash means ANY Domain edit marks the content stale, so the 4-second
-    // dotnet loop went red on a combat formula, a map generator, a renamed
-    // local -- work that cannot change a single generated asset -- and stayed
-    // red until somebody spent 14 seconds rebuilding. A check that reddens the
-    // fast loop for unrelated work is a check people learn to ignore.
-    //
-    // So the drift is mechanised instead of avoided.
+    // THE SET IS NARROW ON PURPOSE. A content record references enums from all
+    // over Domain -- DamageType, SkillEffect, Effect, EquipmentSlot -- but
+    // hashing all of Scripts/Domain would mark the content stale on any Domain
+    // edit (a combat formula, a map generator, a renamed local) that cannot
+    // change a generated asset, and a check that reddens the fast dotnet loop
+    // for unrelated work is a check people learn to ignore. Listing the
+    // reachable set by hand would drift, so the drift is mechanised instead.
     // Tests/EditMode/Content/ContentInputCoverageTests walks from every Raw*
     // and Resolved* type under Domain/Content through every public field and
     // property, transitively, and fails NAMING THE FILE if anything that walk
@@ -35,7 +27,7 @@ namespace PrincesPalace.Domain.Content
     // a 4-second test with the exact line to paste, instead of silently
     // producing a hash that agrees with a tree it should not.
     //
-    // Domain/Content is still hashed WHOLESALE, and that is deliberate: it
+    // Domain/Content is hashed WHOLESALE, and that is deliberate: it
     // holds the resolvers themselves, and a resolver reads more than the field
     // types it writes into. Core/Content/ likewise -- ContentDatabase's
     // ValidateContent decides whether a build is allowed to finish at all.
@@ -44,6 +36,9 @@ namespace PrincesPalace.Domain.Content
     // output), Art/ (an asset the content merely names by path), and every
     // .meta (a GUID is assigned by whichever Unity imported it first and says
     // nothing about the content).
+    //
+    // Editing a hashed file, comments included, needs -BuildContent
+    // (.claude/rules/content.md).
     public static class ContentInputHash
     {
         // Repo-root-relative, forward slashes. Each entry is either a single
@@ -98,10 +93,8 @@ namespace PrincesPalace.Domain.Content
         // the failure mode this project's lint tests all carry a guard for:
         // it would agree with itself perfectly while covering nothing.
         //
-        // Sixty, not the old hundred: the narrowed set is ~110 files where the
-        // wholesale one was ~300, and this guard only has to catch "the root
-        // is wrong" or "a source folder moved", both of which take the count
-        // to near zero. ContentInputCoverageTests is what checks the set is
+        // Sixty: this guard only has to catch "the root is wrong" or "a source
+        // folder moved", both of which take the count to near zero. ContentInputCoverageTests is what checks the set is
         // the RIGHT one; this only checks it exists.
         public const int MinimumFilesHashed = 60;
 

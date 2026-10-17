@@ -37,7 +37,7 @@ namespace PrincesPalace.Domain.Content
         // written into it. Asset NAMES, not record ids, and the distinction
         // matters for exactly one type: a spell tier has no id of its own and
         // is written as "level_3", so names are what a reader can check
-        // against the files on disk. For the other ten the name IS the id.
+        // against the files on disk. For every other type the name IS the id.
         public SortedDictionary<string, List<string>> IdsByFolder { get; }
             = new SortedDictionary<string, List<string>>(StringComparer.Ordinal);
 
