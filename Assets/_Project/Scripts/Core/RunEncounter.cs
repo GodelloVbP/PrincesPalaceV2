@@ -165,8 +165,23 @@ namespace PrincesPalace
             int floor = RunDepth.FloorFor(run?.legStartStep ?? 0);
             return roomType == RoomType.EliteFight
                 ? EncounterRoll.RollAnchor(Pool(), rng, floor)
-                : EncounterRoll.Roll(roomType, Pool(), rng, run?.bossEnemyId, floor);
+                : EncounterRoll.Roll(roomType, BossPoolFor(roomType, run), rng, run?.bossEnemyId, floor);
         }
+
+        // A realm's bossPool narrows which bosses its boss room can field
+        // (RealmProfile.bossPool). Empty, or naming no boss on offer, keeps
+        // every boss: a misauthored pool must not empty the room.
+        public static IReadOnlyList<EnemyCandidate> WithBossPool(
+            IReadOnlyList<EnemyCandidate> pool, IReadOnlyList<string> bossPool)
+        {
+            if (bossPool == null || bossPool.Count == 0) return pool;
+
+            var kept = pool.Where(c => !c.IsBoss || bossPool.Contains(c.Id)).ToList();
+            return kept.Any(c => c.IsBoss) ? kept : pool;
+        }
+
+        private static IReadOnlyList<EnemyCandidate> BossPoolFor(RoomType roomType, RunSnapshot run) =>
+            roomType == RoomType.Boss ? WithBossPool(Pool(), run?.realmProfile?.bossPool) : Pool();
 
         // WHAT A ROOM NOT YET ENTERED WILL FIELD, from the same stream and the
         // same roll For() uses once the party is standing in it: MoveTo writes

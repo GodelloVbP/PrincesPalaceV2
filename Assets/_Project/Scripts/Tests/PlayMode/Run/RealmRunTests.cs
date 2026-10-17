@@ -6,6 +6,7 @@ using UnityEngine;
 using PrincesPalace.Content;
 using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Dungeon;
+using PrincesPalace.Domain.Rng;
 using PrincesPalace.Domain.Rewards;
 
 namespace PrincesPalace.PlayModeTests
@@ -267,6 +268,42 @@ namespace PrincesPalace.PlayModeTests
             }
 
             Assert.Greater(compared, 1000, "vacuity: almost no fights compared");
+        }
+
+        // Two bosses in band, because the shipped content has one rollable boss
+        // and a restriction cannot show against a single candidate.
+        [Test]
+        public void ARealmsBossPoolRestrictsWhichBossItsBossRoomFields()
+        {
+            var pool = new List<EnemyCandidate>
+            {
+                new EnemyCandidate("rat", false, false, 1, 1),
+                new EnemyCandidate("boss_a", true, false, 1, 1),
+                new EnemyCandidate("boss_b", true, false, 1, 1),
+            };
+
+            for (ulong seed = 1; seed <= 30; seed++)
+            {
+                var rng = new SeededRandom(seed);
+                var roll = EncounterRoll.Roll(RoomType.Boss, RunEncounter.WithBossPool(pool, new[] { "boss_b" }), rng);
+                CollectionAssert.AreEqual(new[] { "boss_b" }, roll.EnemyIds.ToArray(),
+                    $"seed {seed}: the boss room fielded a boss outside the realm's bossPool");
+            }
+        }
+
+        [Test]
+        public void AnEmptyBossPoolKeepsEveryBossAndAPoolNamingNoBossHereKeepsThemToo()
+        {
+            var pool = new List<EnemyCandidate>
+            {
+                new EnemyCandidate("boss_a", true, false, 1, 1),
+                new EnemyCandidate("boss_b", true, false, 1, 1),
+            };
+
+            Assert.AreEqual(2, RunEncounter.WithBossPool(pool, new string[0]).Count);
+            Assert.AreEqual(2, RunEncounter.WithBossPool(pool, null).Count);
+            Assert.AreEqual(2, RunEncounter.WithBossPool(pool, new[] { "elsewhere" }).Count,
+                "a pool that names no boss on offer emptied the boss room");
         }
 
         // ---- chips --------------------------------------------------------
