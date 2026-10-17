@@ -21,7 +21,8 @@ namespace PrincesPalace
     // - Every spine room up to the party is walked. Pockets behind it are
     //   walked past with no skip heal, and their anchors (and fork anchors
     //   behind it) are slain, paying nothing, so none joins the boss unearned.
-    // - Open-room state is cleared; HP, gold and leg buffs are kept.
+    // - Open-room state and promised events (keyed on old node ids) are
+    //   cleared; HP, gold and leg buffs are kept.
     //
     // The entry (offset 0) is never marked cleared: it is not a room, and a
     // cleared entry would read as a descent under way when nothing was walked.
@@ -51,6 +52,7 @@ namespace PrincesPalace
             run.roomsWalked = run.step;
             if (run.step > run.deepestStep) run.deepestStep = run.step;
 
+            run.nodeEvents = new List<NodeEventEntry>();
             run.eventId = "";
             run.eventNodeId = -1;
             run.eventPageId = "";

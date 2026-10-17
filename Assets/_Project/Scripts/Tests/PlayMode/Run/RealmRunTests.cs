@@ -458,6 +458,21 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [Test]
+        public void Migration_DropsPromisedEventsKeyedOnOldNodeIds()
+        {
+            var save = AVersion8Save(8, 13, resolved: true);
+            save.activeRun.nodeEvents = new List<NodeEventEntry>
+            {
+                new NodeEventEntry { step = 13, nodeId = 7, eventId = "petting_zoo" },
+            };
+
+            Assert.IsTrue(save.Migrate());
+
+            Assert.IsEmpty(save.activeRun.nodeEvents,
+                "an old-map node id is meaningless on the realm map; a kept promise answers a different room");
+        }
+
+        [Test]
         public void Migration_TheBossRoom_IsNeverSkipped()
         {
             var save = AVersion8Save(8, 16, resolved: false);
