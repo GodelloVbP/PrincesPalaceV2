@@ -5,10 +5,9 @@ namespace PrincesPalace.Domain.Combat
 {
     // ONE CLAMPED COUNTER WITH A CAPACITY, THREE GAIN TRIGGERS AND A DECAY.
     // Every combat resource in the game is this: mana, Shawn's Wool, and
-    // whatever a character trades mana for. Was `SignatureResource` -- renamed
-    // rather than copied, because the runtime it already was is the runtime a
-    // primary pool needs, and a second class would have meant two answers to
-    // "what does spending look like".
+    // whatever a character trades mana for. One class serves the primary and
+    // signature slots, so there is one answer to "what does spending look
+    // like".
     //
     // A combatant carries at most two of these in two NAMED slots (see
     // CombatantState.PrimaryPool / .SignaturePool) rather than a keyed list:
@@ -102,11 +101,10 @@ namespace PrincesPalace.Domain.Combat
 
         // Whether this resource soaks damage at all.
         //
-        // FALSE for Wool as of the talent rework (handoff §2): wool stopped
-        // being a damage sponge and became the thing the talent tree's
-        // abilities spend. The two jobs were always in tension — banking for
-        // armour and banking to spend are the same decision made twice — and
-        // the tree only becomes a real set of choices once the resource has
+        // FALSE for Wool: wool is the thing the talent tree's abilities
+        // spend, not a damage sponge. The two jobs are in tension — banking
+        // for armour and banking to spend are the same decision made twice —
+        // and the tree is a real set of choices only while the resource has
         // exactly one use.
         //
         // The soak machinery below is deliberately KEPT rather than deleted.
@@ -127,8 +125,9 @@ namespace PrincesPalace.Domain.Combat
         private bool _dealtOrTookDamage;
         private bool _acted;
 
-        // THE COMPATIBILITY SHAPE, and the one 21 call sites still build a
-        // signature resource through. Starts EMPTY (the arc), no decay, and
+        // THE COMPATIBILITY SHAPE, and the one the signature-resource call
+        // sites (ContentDatabase, FightEncounterAdapter, CombatantState and
+        // tests) build through. Starts EMPTY (the arc), no decay, and
         // mana-shaped defaults for everything a signature resource has never
         // had an opinion about.
         public ResourcePool(string id, string displayName, int max, int gainPerTurn, int gainOnAttack, int gainOnDamageTaken, int absorbPerPoint = 1, bool absorbsDamage = false)

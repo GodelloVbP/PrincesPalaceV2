@@ -8,18 +8,15 @@ namespace PrincesPalace.Domain.Combat.Session
     // loses.
     //
     // ONE funnel, called by every damage path, because these steps have to
-    // travel together. There are five places that deal damage and a sixth is
+    // travel together. Several places deal damage and another is
     // one feature away; each applying effectiveness by hand and remembering
     // resistance (and Protect/Vulnerable, and the poison combo, and the
     // variance roll, and the ward) separately is precisely how a suit of plate
     // ends up working against a sword and not against a spell -- and nothing
     // would fail, the number would just be quietly wrong.
     //
-    // This is v1's FightController.AfterDefences, moved to Domain. It is the
-    // highest-value extraction in the fight rebuild for one reason: every
-    // damage path in the game shares it, and its COMPOSITION ORDER has never
-    // had a test. The order below is load-bearing and each position is argued
-    // in place.
+    // Every damage path in the game shares it, so its COMPOSITION ORDER is
+    // load-bearing; each position is argued in place.
     //
     // Ward resolution arrives as a delegate rather than being inlined: the
     // Fragile Lamb's engine payout, heal-on-spend and grace period are talent
@@ -77,8 +74,8 @@ namespace PrincesPalace.Domain.Combat.Session
     // one of them, which is exactly the shape of bug a prior balance-
     // redesign phase hit (a multiplier removed from two of three real
     // damage entry points, silently missed the third). Putting RollDodge
-    // INSIDE AfterDefences means any call to AfterDefences — today's six
-    // real damage paths, or a seventh this codebase adds next year — gets
+    // INSIDE AfterDefences means any call to AfterDefences — every
+    // real damage path, present or future — gets
     // the dodge gate for free. A future direct RollDodge-then-AfterDefences
     // pattern at a new call site would reintroduce exactly that risk.
     //
@@ -184,8 +181,7 @@ namespace PrincesPalace.Domain.Combat.Session
 
         // THE ONE ROLL every real damage path shares — see this class' own
         // header for the full argument on why it lives here instead of at
-        // each call site. `attacker` is accepted (matching the plan's own
-        // named signature) but UNUSED today: nothing in this codebase's
+        // each call site. `attacker` is accepted but UNUSED today: nothing in this codebase's
         // EffectKind vocabulary grants an attacker "anti-dodge" or
         // accuracy rule yet, so this is a future-proofing parameter rather
         // than dead weight to be trimmed — the day an accuracy-style effect
@@ -476,18 +472,15 @@ namespace PrincesPalace.Domain.Combat.Session
         // produced this number was, which is a different promise than
         // "resists a percentage of it" (PhysicalDefense).
         //
-        // IT USED TO RUN AFTER THE WARD, and had to move when the ward became
-        // a shield POOL. Two things broke at once in the old order. The floor
-        // of 1 below fires on any number at or under the reduction, so a hit
-        // the pool swallowed whole -- a 0 -- came back out of this method as
-        // a 1, which is a fully-absorbed blow that still hurt. And a pool
-        // paying for damage that plating was about to erase anyway is the
-        // wearer's shield being spent on nothing: plating is a property of
-        // the armour and the ward is the last thing between the finished
+        // IT RUNS BEFORE THE WARD, because the ward is a shield POOL. The
+        // floor of 1 below fires on any number at or under the reduction, so
+        // after the pool a hit swallowed whole -- a 0 -- would come back out
+        // of this method as a 1, a fully-absorbed blow that still hurt. And a
+        // pool paying for damage that plating was about to erase anyway is
+        // the wearer's shield being spent on nothing: plating is a property
+        // of the armour and the ward is the last thing between the finished
         // number and the wearer (StatusEffects' own WARDS header states the
-        // whole order). The old comment's argument for going last does not
-        // survive the model change either -- it rested on the ward being "a
-        // percentage of the incoming number", and a pool is not.
+        // whole order).
         //
         // Floored at 1, the same damage floor every other step in this
         // pipeline already enforces (CombatMath.AfterResistance's own

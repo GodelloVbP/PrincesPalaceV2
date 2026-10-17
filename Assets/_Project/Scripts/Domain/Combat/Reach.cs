@@ -34,7 +34,7 @@ namespace PrincesPalace.Domain.Combat
     // -1; `Ranks` is everyone else's and does not. A test is written in the
     // convention of whichever door it came through.
     //
-    // A MUTABLE STRUCT, WHICH THE PLAN'S SKETCH WROTE AS `readonly struct`.
+    // A MUTABLE STRUCT, NOT A `readonly struct`.
     // Unity's serialiser skips readonly fields outright, and ResolvedSkill --
     // which carries one of these -- is stored INSIDE a ScriptableObject
     // (SkillDefinition.data). A readonly Reach would round-trip through the
@@ -63,9 +63,9 @@ namespace PrincesPalace.Domain.Combat
         // and an authored slot above this is a build refusal rather than a
         // rule nothing can ever satisfy.
         //
-        // DERIVED, NOT RESTATED. This was `= 3` sitting directly under a
-        // comment naming the constant it was copying, with nothing that would
-        // fire when the two disagreed -- and the disagreement is silent in
+        // DERIVED, NOT RESTATED. A literal `= 3` under a comment naming the
+        // constant it copies would have nothing to fire when the two
+        // disagreed -- and the disagreement is silent in
         // both directions. Raise the stage to four slots and SkillEntryResolver
         // (which reads its authored 1..N bound off MaxRanks, and is the only
         // place that bound is stated) starts refusing a reachSlots of 4 as

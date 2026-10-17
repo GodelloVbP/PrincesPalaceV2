@@ -194,7 +194,7 @@ namespace PrincesPalace.Domain.Combat.Presentation
     // path rather than two, and it is the thing that disappears the day the
     // last pre-layer block is re-authored.
     //
-    // IN DOMAIN RATHER THAN CORE, which the plan placed the other way. Every
+    // IN DOMAIN RATHER THAN CORE. Every
     // line of it is arithmetic over authored content and a frame count, and the
     // frame count arrives as a function rather than as a folder read -- so
     // putting it here costs nothing and buys the whole of it an EditMode test,
@@ -222,10 +222,9 @@ namespace PrincesPalace.Domain.Combat.Presentation
 
         // THE ONE INSTANT THE BLOW LANDS, and the only number the beat player
         // reads off a presentation. A version-1 block authors it; a version-0
-        // block derives it from impactFrame over the frame count, which is the
-        // identical expression ImpactDelayFor used before this existed --
-        // preserved deliberately, because changing it would retime five shipped
-        // spells.
+        // block derives it from impactFrame over the frame count
+        // (CombatBeat.ImpactFraction); changing that expression would retime
+        // every version-0 spell.
         public float HitCueSeconds { get; private set; }
 
         // How long until nothing of this cast is drawn. What a player reads to
@@ -683,12 +682,12 @@ namespace PrincesPalace.Domain.Combat.Presentation
         {
             if (!vfx.HasAnimation) return 0f;
 
-            // The identical expression ImpactDelayFor used before this existed,
-            // including its fallback: a folder that failed to load reports 0
+            // The version-0 expression, including its fallback: a folder
+            // that failed to load reports 0
             // frames and ImpactFraction answers 0.5, so the blow lands halfway
             // through an animation that is not playing. That is an accident
-            // rather than a design -- and it is preserved on purpose here,
-            // because removing it would retime a shipped spell whose art went
+            // rather than a design -- and it is kept on purpose,
+            // because removing it would retime a spell whose art went
             // momentarily unreadable. A version-1 spell authors its cue in
             // seconds and has no such accident to inherit.
             int frames = FramesOf(frameCountOf, vfx.path);

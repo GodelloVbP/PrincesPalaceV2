@@ -16,13 +16,12 @@ namespace PrincesPalace.Domain.Combat.Session
     // meant to cost one line, and it only stays one line if there is nothing
     // else to keep consistent with it.
     //
-    // THE BASELINE IS 1.5, NOT 1. Today's shipped pace -- the one the fight
-    // has always run at, internally a factor of 1.0 -- reads to the owner as
-    // too fast, and is being relabelled "1.5x" so the player's honest
-    // complaint ("turn it down to 1x") lands on a slower row
-    // instead of on the number that was already running. Multiplier is
+    // THE BASELINE IS 1.5, NOT 1. The pace the fight runs at internally (a
+    // factor of 1.0) is labelled "1.5x", so a player who wants it slower
+    // picks a lower row rather than finding the running pace already
+    // labelled 1x. Multiplier is
     // Display / TodaysPaceDisplay for exactly this reason: the row that
-    // reproduces today's speed is the one whose multiplier comes out to 1,
+    // reproduces that pace is the one whose multiplier comes out to 1,
     // wherever it sits in the table.
     //
     // NEAREST TIES TO THE SLOWER ROW because migrating a stored value that

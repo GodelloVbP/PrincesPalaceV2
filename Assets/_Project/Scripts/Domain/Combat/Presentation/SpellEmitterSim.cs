@@ -207,16 +207,15 @@ namespace PrincesPalace.Domain.Combat.Presentation
         }
 
         // WHICH STILL OF THE FOLDER THIS PARTICLE DRAWS, over the SAME
-        // hash(seed, index, 6) an unweighted emitter always used -- not a
+        // hash(seed, index, 6) an unweighted emitter uses -- not a
         // second random draw, so a preview or a test stays repeatable
         // whichever branch below runs, and turning `weights` off for an
-        // emitter that shipped without it changes nothing about the picture
-        // (AUDIT #108's whole compatibility promise).
+        // emitter changes nothing about the picture
+        // (AUDIT #108's compatibility promise).
         //
-        // ABSENT OR EMPTY IS THE OLD MODULUS RULE, uniform across the folder
-        // -- unchanged arithmetic, not merely an equivalent one, because
-        // "equivalent" would still have re-seeded every existing preview's
-        // stills the moment weights shipped.
+        // ABSENT OR EMPTY IS THE MODULUS RULE, uniform across the folder
+        // -- the same arithmetic, not merely an equivalent one, because
+        // "equivalent" would re-seed every preview's stills.
         //
         // A weighted PICK is a cumulative sum walked against one hash sample
         // scaled to the weights' own total, which is the standard weighted
@@ -251,10 +250,10 @@ namespace PrincesPalace.Domain.Combat.Presentation
                 // is content, and content can author more cells than the
                 // folder a path resolves to actually has (or fewer -- the
                 // fallthrough below already handles that end). Indexing
-                // `frames[FrameOf(...)]` with an unclamped `i` was reachable
-                // the moment weights.Length > frameCount and threw out of
-                // SpellPerformancePlayer.Tick's loop, which is the class of
-                // mistake a clamp removes rather than one call site's fix.
+                // `frames[FrameOf(...)]` with an unclamped `i` would be reachable
+                // once weights.Length > frameCount and would throw out of
+                // SpellPerformancePlayer.Tick's loop; a clamp removes that
+                // class of mistake rather than one call site's.
                 if (r < cumulative) return i < frameCount ? i : frameCount - 1;
             }
 
