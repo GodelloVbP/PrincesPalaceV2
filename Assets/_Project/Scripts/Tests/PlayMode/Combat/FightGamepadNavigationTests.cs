@@ -237,6 +237,39 @@ namespace PrincesPalace.PlayModeTests
             pad.MoveFocus(1);
             Assert.AreEqual("EnemyHitArea0", FocusName(pad), "Down returns to the same pending target");
             Assert.IsTrue(IsShown("TargetPrompt"), "returning from intent must not cancel the pending attack");
+        // S04-001: a dead _inspectedActor reads as no pointer, so its status code
+        // must not light the same row on the pad-focused actor.
+        [UnityTest]
+        public IEnumerator ADeadInspectedActorLeavesNoRowHighlightedOnTheFocusedActor()
+        {
+            yield return StandUpAFight();
+
+            var session = _fight.SessionForTest;
+            var focused = session.Encounter.Enemies[0];
+            var corpse = session.Encounter.Enemies[1];
+            var rows = FightHudModel.StatusRowsFor(session, focused);
+            Assert.AreEqual(2, rows.Count, "fixture: the focused enemy carries Poison and Vulnerable");
+
+            var pad = (IFightNavigationTarget)_fight;
+            pad.ConfirmFocus();
+            yield return null;
+            Assert.IsTrue(StatusBoxIsShown(), "fixture: the focused enemy's box is up");
+
+            var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+            typeof(FightController).GetField("_inspectedActor", flags).SetValue(_fight, corpse);
+            typeof(FightController).GetField("_inspectedCode", flags).SetValue(_fight, rows[0].Code);
+            corpse.CurrentHealth = 0;
+            _fight.RefreshUi();
+            yield return null;
+
+            Assert.IsTrue(ColorUtility.TryParseHtmlString("#FFC45A", out var amber));
+            for (int i = 0; i < FightScreen.StatusBoxRows; i++)
+            {
+                var row = Node($"StatusBoxText{i}");
+                if (row == null || !row.activeInHierarchy) continue;
+                Assert.AreNotEqual(amber, row.GetComponent<TMPro.TMP_Text>().color,
+                    $"row {i} is highlighted for a pointer that names a dead actor");
+            }
         }
 
         [UnityTest]

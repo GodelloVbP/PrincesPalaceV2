@@ -2635,8 +2635,10 @@ namespace PrincesPalace
             statusBox.SetShown(true);
 
             // The badge's own status is only highlighted while the POINTER is
-            // what opened the box: the pad names an actor, never a row.
-            float height = PaintStatusBox(rows, _inspectedActor != null ? _inspectedCode : null);
+            // what opened the box: the pad names an actor, never a row. A dead
+            // pointer target fell through to the pad's actor above, so its code
+            // names nothing on that actor.
+            float height = PaintStatusBox(rows, actor == _inspectedActor ? _inspectedCode : null);
 
             PlaceStatusBox(actor, height);
         }
