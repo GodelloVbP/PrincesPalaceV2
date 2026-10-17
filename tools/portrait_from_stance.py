@@ -28,9 +28,8 @@ own width (plus a small margin) sets the crop width, and the target aspect
 sets the crop height from that -- so the band is always whole and centred.
 Below the band the figure is free to run wider than the crop (pauldrons,
 an out-held hammer): rather than growing the box to keep chasing that
-content in frame (for a
-broad-built figure the box would grow to take in almost the entire pose), the
-body is simply allowed to clip at the left/right edges. A dossier plate
+content in frame (for a broad-built figure the box would grow to take in
+almost the entire pose), the body is simply allowed to clip at the left/right edges. A dossier plate
 this small reads by the face, not by whether a hammer head is intact at
 the bottom corner. See `crop_box`'s docstring for the mechanics.
 
