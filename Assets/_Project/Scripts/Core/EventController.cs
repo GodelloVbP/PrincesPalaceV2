@@ -592,7 +592,7 @@ namespace PrincesPalace
             if (stageBusts == null) return;
 
             float progress = _playback.SlideProgress;
-            float t = Mathf.SmoothStep(0f, 1f, progress);
+            float t = Easing.SmoothStep(progress);
             var cue = _playback.Cue;
 
             OffsetBust(_activeBust, cue == BustCue.SlideIn || cue == BustCue.SlideOutIn ? 1f - t : 0f);
