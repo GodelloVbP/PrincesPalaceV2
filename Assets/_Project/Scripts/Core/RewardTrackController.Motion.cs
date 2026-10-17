@@ -154,7 +154,7 @@ namespace PrincesPalace
 
                 if (i < (milestoneAuras?.Length ?? 0) && milestoneAuras[i] != null)
                 {
-                    // 0.22 TO 0.55, which is far higher than it looks on the
+                    // 0.18 TO 0.45, which is far higher than it looks on the
                     // screen: the glow's bright middle is behind an opaque
                     // disc, so what shows is its outer half, already down to
                     // about a third. Authored at what it should look like, it
@@ -205,7 +205,7 @@ namespace PrincesPalace
             collectPip.rectTransform.localScale = Vector3.one * Mathf.Lerp(1f, 1.13f, phase);
         }
 
-        // 300px of gold crossing the player's own node, linear and infinite.
+        // Gold crossing the player's own node, linear and infinite.
         // Linear rather than eased because it never stops: an eased loop has a
         // visible seam where it restarts, which is exactly what a shimmer must
         // not do.
@@ -313,8 +313,7 @@ namespace PrincesPalace
 
         // Starts a panel animation, or does not.
         //
-        // EVERY start in this file goes through here rather than the two that
-        // were reachable from a hover, because "which of these can OnDisable
+        // EVERY start in this file goes through here, because "which of these can OnDisable
         // reach" is a question about call graphs that changes whenever somebody
         // wires a new control -- and the answer for all of them while the panel
         // is offscreen is the same anyway: there is nothing to animate on a
@@ -568,7 +567,7 @@ namespace PrincesPalace
         }
 
         // The seal landing on the node it was just earned by: 2.4x down to 1
-        // with a little overshoot, over the burst's first quarter.
+        // with a little overshoot, over the burst's first third.
         //
         // A pip that simply appears is a pip the player never sees appear --
         // it is nine pixels across and it arrives during an explosion. Stamped,

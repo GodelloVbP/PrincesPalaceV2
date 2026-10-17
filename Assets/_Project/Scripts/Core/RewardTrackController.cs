@@ -290,16 +290,6 @@ namespace PrincesPalace
             if (!first && _level > before) OnLevelGained(before, _level);
         }
 
-        // THE SELECTED CHARACTER, resolved against the CURRENT save every
-        // call rather than cached -- the save can be replaced by a slot load
-        // while this panel sits open, and a stale reference would go on
-        // painting a character who is no longer there.
-        //
-        // NO ID SET falls back to the first fielded squad member: a
-        // screenshot fixture or a test that shows the section directly, with
-        // no dossier in between to call ShowFor, still gets a character
-        // rather than a blank screen. An id is looked up across the whole
-        // roster, because the dossier shows benched characters too.
         // WHAT DEPTH TO PRICE THE ESTIMATE AT -- not what depth the next real
         // fight literally opens at. A level-15 character sitting in the hub
         // between descents does not fight their next level at room 0 -- they
@@ -315,6 +305,16 @@ namespace PrincesPalace
         private static int DepthStep(Character character) =>
             RunManager.HasRun ? RunManager.Run.step : character?.lastRunDeepestStep ?? 0;
 
+        // THE SELECTED CHARACTER, resolved against the CURRENT save every
+        // call rather than cached -- the save can be replaced by a slot load
+        // while this panel sits open, and a stale reference would go on
+        // painting a character who is no longer there.
+        //
+        // NO ID SET falls back to the first fielded squad member: a
+        // screenshot fixture or a test that shows the section directly, with
+        // no dossier in between to call ShowFor, still gets a character
+        // rather than a blank screen. An id is looked up across the whole
+        // roster, because the dossier shows benched characters too.
         private Character ResolveCharacter()
         {
             var save = SaveSlotManager.CurrentSave;
@@ -548,12 +548,10 @@ namespace PrincesPalace
         // otherwise the next reward.
         //
         // level+1 RATHER THAN NextRewardLevel, and the difference matters
-        // exactly once. NextRewardLevel skips levels that pay nothing, which
-        // was the right answer for the summary line when the filler mix had
-        // holes in it; it has none now (the five counts sum to 87, which is
-        // every filler level), so the two agree -- and when they disagree, the
-        // card is pointing at the node the caret is over, which has to be the
-        // literal next one.
+        // exactly once. NextRewardLevel skips levels that pay nothing; every
+        // filler level pays today (the five counts sum to 87), so the two
+        // agree -- and if one ever pays nothing, the card is pointing at the
+        // node the caret is over, which has to be the literal next one.
         private int CardLevel()
         {
             if (_hovered >= RewardTrackLayout.FirstLevel) return _hovered;

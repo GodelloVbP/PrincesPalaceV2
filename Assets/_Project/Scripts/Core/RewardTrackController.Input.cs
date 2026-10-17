@@ -62,12 +62,9 @@ namespace PrincesPalace
                 hover.Index = level;
                 hover.Changed = OnHover;
 
-                // Selecting a node is a distinct action from hovering it
-                // The module drives this one through Move alone, calling
-                // the same ScrollTo(level) a mouse hover already triggers
-                // through OnHover above -- one input (Move) moves
-                // selection, selection alone drives the reveal, so there is
-                // no second poll that could double-drive it.
+                // Selecting a node is a distinct action from hovering it: Move
+                // alone selects, and selection drives the same ScrollTo(level)
+                // a mouse hover triggers through OnHover above.
                 var select = dots[i].gameObject.GetComponent<SelectIndex>()
                              ?? dots[i].gameObject.AddComponent<SelectIndex>();
                 select.Index = level;
@@ -143,9 +140,8 @@ namespace PrincesPalace
         }
 
         // A disc gaining or losing pad focus. The card follows it exactly as
-        // it follows the pointer -- before this, selection only scrolled, so
-        // the marker sat on one disc while the card went on describing the
-        // next reward, and nothing a pad player could do ever changed it.
+        // it follows the pointer, so the marker and the card describe the same
+        // disc.
         //
         // PAD ONLY for the card. OnEnable selects the current disc for every
         // player, and for a mouse player that selection is invisible; letting
@@ -396,19 +392,13 @@ namespace PrincesPalace
 
         // ---- the keyboard --------------------------------------------------------
 
-        // ONE Update for the whole controller, which C# requires and which is
-        // also the right shape: the ambient cues are four lines of arithmetic
-        // over Time.time, and four coroutines that never finish would be four
-        // objects doing the same work with more ceremony.
-        // No raw LeftArrow/RightArrow poll lives here: keyboard arrow
-        // support comes for free, because the stock "Horizontal" axis
-        // already binds left/right (InputManager.asset), driving ordinary
-        // Selectable navigation across the Rail WireNodes just wired
-        // instead of a
-        // second, raw pixel-scroll poll racing it. Selecting a disc reveals
-        // it through the exact same ScrollTo(level) a mouse hover already
-        // calls (SelectIndex.Changed, wired in WireNodes) -- one input
-        // (Move) drives selection, selection alone drives the reveal.
+        // ONE Update for the whole controller: the ambient cues are four lines
+        // of arithmetic over Time.time, and four coroutines that never finish
+        // would be four objects doing the same work with more ceremony.
+        //
+        // No arrow polling here: the arrows are ordinary Selectable
+        // navigation across the nodes WireNodes wired, and selecting a disc
+        // drives ScrollTo(level) through SelectIndex.Changed.
         private void Update()
         {
             Animate();

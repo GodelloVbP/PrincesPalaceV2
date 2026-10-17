@@ -35,11 +35,10 @@ namespace PrincesPalace
         // authored track gets the generated default, which is the project's
         // graceful-degradation posture (§5).
         //
-        // No SHIPPED character rides that default any more. `bear` did until
-        // f432a366 authored him a track; reward_tracks.json now carries all
-        // three of sheep, bear and owl. The default's live job is a character
-        // added to characters.json before anyone writes his track, and the
-        // placeholder rosters the tests stand up.
+        // No SHIPPED character rides that default: reward_tracks.json carries
+        // sheep, bear and owl. The default's live job is a character added to
+        // characters.json before anyone writes his track, and the placeholder
+        // rosters the tests stand up.
         public static RewardTrackDefinition For(string characterId)
         {
             string key = characterId ?? "";
