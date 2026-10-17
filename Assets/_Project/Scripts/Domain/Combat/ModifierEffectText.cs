@@ -13,8 +13,8 @@ namespace PrincesPalace.Domain.Combat
     // hand -- the item-modifier plan's Phase E asks for exactly this shape.
     //
     // TAKES AN ALREADY-SCALED EFFECT. Every Magnitude here is read as the
-    // final number a combat hook would see -- base x TierMultiplier x
-    // RiftMultiplier already applied (see Effect's own header on
+    // final number a combat hook would see -- base x TierMultiplier
+    // already applied (see Effect's own header on
     // where that happens: ContentDatabase.CharacterEffects /
     // ModifierEffectsForItem, never here). This class only maps a TYPE to a
     // sentence FRAGMENT; it holds no scaling logic of its own to keep in sync

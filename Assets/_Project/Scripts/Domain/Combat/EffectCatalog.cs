@@ -99,7 +99,7 @@ namespace PrincesPalace.Domain.Combat
         public readonly EffectStacking Stacking;
         public readonly EffectHolders Holders;
 
-        // An affix's magnitude rides ModifierMagnitude's tier x rift curve.
+        // An affix's magnitude rides ModifierMagnitude's item-tier curve.
         public readonly bool TierScaled;
         public readonly AffixPool Pool;
 
