@@ -129,7 +129,7 @@ namespace PrincesPalace.PlayModeTests
 
                     run.currentNodeId = node.Id;
                     run.step = run.legStartStep + node.Offset;
-                    RoomResolver.Resolve(run, RoomType.Treasure);
+                    RoomResolver.Resolve(RoomType.Treasure);
 
                     Assert.AreEqual(RoomResolver.Last.Gold, facts.StashGold, $"seed {seed} node {node.Id}");
                     Assert.That(facts.StashGold, Is.InRange(2, 5));

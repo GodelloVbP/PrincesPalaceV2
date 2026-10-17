@@ -661,16 +661,26 @@ namespace PrincesPalace
         // query: Refresh, the walk and every hover ask it.
         private MapGraph _graph;
         private RealmMap _graphMap;
+        private Dictionary<long, int> _seeds;
 
         private MapGraph Graph(RealmMap map)
         {
             if (_graph == null || !ReferenceEquals(_graphMap, map))
             {
                 _graph = MapGraph.Of(map);
+                _seeds = LinkSeeds(map);
                 _graphMap = map;
             }
 
             return _graph;
+        }
+
+        // The link jitter seeds for the cached map: every focus move repaints
+        // the trails, and the seeds only change with the map.
+        private Dictionary<long, int> Seeds(RealmMap map)
+        {
+            Graph(map);
+            return _seeds;
         }
 
         // What the last Refresh painted from, kept so a focus change can
@@ -881,7 +891,7 @@ namespace PrincesPalace
         {
             if (trailSegments == null || trailSegments.Length == 0) return;
 
-            var seeds = LinkSeeds(map);
+            var seeds = Seeds(map);
             int segment = 0;
 
             foreach (var node in map.Nodes)
@@ -1152,7 +1162,10 @@ namespace PrincesPalace
             var map = RunManager.Map;
             if (map == null || _current == null) return;
 
-            _veiled = closed ?? new HashSet<int>();
+            closed ??= new HashSet<int>();
+            if (_veiled.SetEquals(closed)) return;
+
+            _veiled = closed;
             var graph = Graph(map);
             for (int i = 0; i < nodeVeils.Length; i++) nodeVeils[i].gameObject.SetShown(false);
             foreach (int id in _veiled)

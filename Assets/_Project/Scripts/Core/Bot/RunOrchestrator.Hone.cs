@@ -79,7 +79,7 @@ namespace PrincesPalace
             if (!RestIsOpenOn(run)) return false;
 
             run.restOpen = false;
-            RoomResolver.Resolve(run, RoomType.Rest);
+            RoomResolver.Resolve(RoomType.Rest);
             RunManager.ClearCurrentRoom();
             return true;
         }

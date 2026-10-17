@@ -85,6 +85,12 @@ namespace PrincesPalace
         // Per row, from the schedule: the build, the flip and the landing.
         private RowTimes[] _rowTimes = new RowTimes[0];
         private float _effectsEnd;
+
+        // Every card's effects are already at rest, so the settled tail
+        // (guard, linger, flare) does not re-pose them each frame. Cleared by
+        // an active draw and by a card repaint mid-reveal, which sets the glow
+        // the next rest applies.
+        private bool _effectsRested;
         private bool[] _pulseRested = new bool[0];
 
         // The landing's and the build's particles per row, sized to the card.
@@ -203,6 +209,7 @@ namespace PrincesPalace
         {
             _rowTimes = new RowTimes[n];
             _pulseRested = new bool[n];
+            _effectsRested = false;
             _landEmitters = new SpellEmitter[n];
             _buildEmitters = new SpellEmitter[n];
             _effectsEnd = 0f;
@@ -590,9 +597,11 @@ namespace PrincesPalace
             if (_reveal == null) return;
             if (_reveal.Skipped || t >= _effectsEnd + 0.0001f)
             {
-                RestEffects();
+                if (!_effectsRested) RestEffects();
                 return;
             }
+
+            _effectsRested = false;
 
             float scale = Mathf.Max(0.0001f, FeelScale);
             int mote = 0;
@@ -719,6 +728,7 @@ namespace PrincesPalace
         // its resting level, no particles.
         private void RestEffects()
         {
+            _effectsRested = true;
             for (int i = 0; i < offerButtons.Length; i++)
             {
                 PoseCard(i, Vector2.zero, Vector3.one);
@@ -793,6 +803,7 @@ namespace PrincesPalace
             float rest = RevealFeel.RestGlow(tier);
             _underRest[i] = WithAlpha(colour, open ? rest : spent ? 0f : rest * 0.5f);
             if (_revealRoutine == null) RestUnderGlow(i);
+            else _effectsRested = false;
         }
 
         // The tree is emitted at the five-card row; a shorter row's wider

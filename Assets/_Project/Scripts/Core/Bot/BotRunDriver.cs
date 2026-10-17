@@ -992,7 +992,7 @@ namespace PrincesPalace
             {
                 result.Hits.Add(new InvariantHit("ForcedEventMissing",
                     $"-ForceEvent '{_probe.ForceEventId}' is not in the built content"));
-                RoomResolver.Resolve(RunManager.Run, node.Type);
+                RoomResolver.Resolve(node.Type);
                 RunManager.ClearCurrentRoom();
                 return RunOrchestrator.Arrival.Resolved;
             }

@@ -279,7 +279,7 @@ namespace PrincesPalace
             // where the next choice lives anyway: RoomResolver.Resolve pays
             // out treasure, heals a rest, and reports what happened, rather
             // than a bare ClearCurrentRoom that would clear the room silently.
-            RoomResolver.Resolve(RunManager.Run, target.Type);
+            RoomResolver.Resolve(target.Type);
 
             RunManager.ClearCurrentRoom();
             return Arrival.Resolved;

@@ -48,8 +48,11 @@ namespace PrincesPalace
         // fight type -- would need it, and silently clearing a fight room is
         // how a fight gets skipped. If you are writing that caller, honour the
         // return.
-        public static bool Resolve(RunSnapshot run, RoomType roomType)
+        public static bool Resolve(RoomType roomType)
         {
+            // The run the payout lands on is RunManager.Run (BankPayout writes
+            // it), so the heal and the stash stream read the same one.
+            var run = RunManager.Run;
             // Keyed to the NODE, so re-entering the same treasure room after a
             // quit finds the same stash rather than rerolling for a better one.
             // A separate stream from the fight's: two rooms at one step must

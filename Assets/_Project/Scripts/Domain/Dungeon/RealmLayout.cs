@@ -3,23 +3,12 @@ using System.Linq;
 
 namespace PrincesPalace.Domain.Dungeon
 {
-    public enum RealmOrientation
-    {
-        // Entry at the top, the heart at the bottom: scrolling down is going
-        // deeper (docs/PLAN_RUN_MAP.md section 2, Orientation).
-        TopToBottom,
-        BottomToTop,
-    }
-
     // Normalised positions for a RealmMap, 0..1 on both axes with y = 0 at the
     // top. The view scales these to its canvas; nothing here knows pixels.
-    //
-    // Orientation is the one constant. Flipping it changes y and costs art,
-    // not code.
+    // The entry sits at the top and the heart at the bottom, so scrolling down
+    // is going deeper (docs/PLAN_RUN_MAP.md section 2).
     public static class RealmLayout
     {
-        public const RealmOrientation Orientation = RealmOrientation.TopToBottom;
-
         // Lateral positions (0 = left). Pockets hang to alternating sides by
         // stretch so neighbouring pockets never share a side.
         private const float SpineAcross = 0.5f;
@@ -80,8 +69,7 @@ namespace PrincesPalace.Domain.Dungeon
             {
                 float along = last == 0 ? 0f : rows[node.Id] / (float)last;
                 float across = AcrossOf(map, node);
-                float y = Orientation == RealmOrientation.TopToBottom ? along : 1f - along;
-                result.Nodes[node.Id] = new Placement(rows[node.Id], along, across, across, y);
+                result.Nodes[node.Id] = new Placement(rows[node.Id], along, across, across, along);
             }
 
             return result;

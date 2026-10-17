@@ -14,8 +14,6 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void OrientationIsTopToBottom()
         {
-            Assert.AreEqual(RealmOrientation.TopToBottom, RealmLayout.Orientation);
-
             var map = Make(3, 10);
             var layout = RealmLayout.Place(map);
 

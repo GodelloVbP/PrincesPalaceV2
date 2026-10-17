@@ -84,7 +84,7 @@ namespace PrincesPalace
             var from = PositionOf(current);
             var to = PositionOf(target);
 
-            int seed = LinkSeeds(RunManager.Map).TryGetValue(LinkKey(current.Id, target.Id), out var s) ? s : 1;
+            int seed = Seeds(RunManager.Map).TryGetValue(LinkKey(current.Id, target.Id), out var s) ? s : 1;
             float duration = MapWalk.DurationFor(from, to);
 
             // A camera the player scrolled away comes back to the party's room

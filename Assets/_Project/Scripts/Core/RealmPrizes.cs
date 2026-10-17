@@ -20,11 +20,16 @@ namespace PrincesPalace
     // pays gold instead, read live on the card and again at settlement.
     public static class RealmPrizes
     {
-        public static MapNodeChip ChipOf(RunSnapshot run, RealmNode node)
+        public static MapNodeChip ChipOf(RunSnapshot run, RealmNode node) =>
+            ChipOf(SaveSlotManager.CurrentSave, run, node);
+
+        // The squad the book pool is filtered against comes from `save`, so a
+        // payment reads the save it was handed.
+        private static MapNodeChip ChipOf(SaveData save, RunSnapshot run, RealmNode node)
         {
             if (run == null || node == null || node.Prize == PrizeKind.None) return default;
 
-            var kind = RealmPrize.Effective(node.Prize, PoolHasAny(run, node.Prize));
+            var kind = RealmPrize.Effective(node.Prize, PoolHasAny(save, run, node.Prize));
             int strength = RealmOpening.StrengthOf(run, node.Id);
             switch (kind)
             {
@@ -54,7 +59,9 @@ namespace PrincesPalace
             List<PaidPrize> record = null)
         {
             var notices = new List<string>();
-            var chip = ChipOf(run, node);
+            // A null save still filters books against the loaded squad.
+            var bookSave = save ?? SaveSlotManager.CurrentSave;
+            var chip = ChipOf(bookSave, run, node);
             var ids = new List<string>();
 
             switch (chip.Kind)
@@ -73,7 +80,7 @@ namespace PrincesPalace
                     break;
 
                 case PrizeKind.Book:
-                    notices.AddRange(PayBook(run, node, ids));
+                    notices.AddRange(PayBook(bookSave, run, node, ids));
                     Record(record, node, ids.Count > 0 ? PrizeKind.Book : PrizeKind.None, 0, ids);
                     break;
 
@@ -126,9 +133,9 @@ namespace PrincesPalace
         // One book from the spell pool into unassignedSpellBooks, no
         // recipient. Drawn on the SpellDrop stream keyed to the node, so a
         // reload mid-settlement pays the same one.
-        private static IEnumerable<string> PayBook(RunSnapshot run, RealmNode node, List<string> drawn)
+        private static IEnumerable<string> PayBook(SaveData save, RunSnapshot run, RealmNode node, List<string> drawn)
         {
-            var pool = BookPool(run);
+            var pool = BookPoolQuery(save, run).ToList();
             var rng = RngStreams.Open(run.runSeed, RngStreams.SpellDrop, run.legStartStep + node.Offset, node.Id);
             string id = VictoryRewards.DrawSpell(pool, rng);
             if (id == null) yield break;
@@ -158,11 +165,11 @@ namespace PrincesPalace
             }
         }
 
-        private static bool PoolHasAny(RunSnapshot run, PrizeKind kind)
+        private static bool PoolHasAny(SaveData save, RunSnapshot run, PrizeKind kind)
         {
             switch (kind)
             {
-                case PrizeKind.Book: return BookPoolHasAny(run);
+                case PrizeKind.Book: return BookPoolQuery(save, run).Any();
                 case PrizeKind.Relic: return RunOrchestrator.AvailableRelicOptions().Count > 0;
                 default: return true;
             }
@@ -170,13 +177,9 @@ namespace PrincesPalace
 
         // The spell-drop pool (bookTier > 0) less books already waiting
         // unassigned and books every squad member has learned.
-        private static List<string> BookPool(RunSnapshot run) => BookPoolQuery(run).ToList();
-
-        private static bool BookPoolHasAny(RunSnapshot run) => BookPoolQuery(run).Any();
-
-        private static IEnumerable<string> BookPoolQuery(RunSnapshot run)
+        private static IEnumerable<string> BookPoolQuery(SaveData save, RunSnapshot run)
         {
-            var squad = SaveSlotManager.CurrentSave?.ActiveSquad()?
+            var squad = save?.ActiveSquad()?
                 .Where(c => c != null).Select(c => c.definitionId).ToList() ?? new List<string>();
             var waiting = new HashSet<string>(run.unassignedSpellBooks ?? new List<string>());
             var learned = run.learnedSpells ?? new List<LearnedSpellEntry>();

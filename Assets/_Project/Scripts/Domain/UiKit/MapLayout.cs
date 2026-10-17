@@ -9,7 +9,7 @@ namespace PrincesPalace.Domain.UiKit
     // function. Which node owns which position is MapGraph.
     //
     // The screen scrolls vertically: the entry sits at the top and the heart at
-    // the bottom (RealmLayout.Orientation), so scrolling down is going deeper.
+    // the bottom (RealmLayout), so scrolling down is going deeper.
     //
     // CONTENT-LOCAL COORDINATES, Unity-style: x from the content's horizontal
     // centre (+ right), y from the content's top edge, NEGATIVE going down.
