@@ -191,14 +191,14 @@ namespace PrincesPalace.PlayModeTests
 
             // Climbing at all is the premise; without it every assertion below
             // is satisfied by a tracker that does nothing.
-            float before = SaveSlotManager.CurrentSave.totalPlaySeconds;
+            double before = SaveSlotManager.CurrentSave.totalPlaySeconds;
             yield return null;
             yield return null;
-            float running = SaveSlotManager.CurrentSave.totalPlaySeconds;
+            double running = SaveSlotManager.CurrentSave.totalPlaySeconds;
             Assert.Greater(running, before, "fixture: the tracker is not ticking, so nothing below is tested");
 
             tracker.enabled = false;
-            float atTheGap = SaveSlotManager.CurrentSave.totalPlaySeconds;
+            double atTheGap = SaveSlotManager.CurrentSave.totalPlaySeconds;
 
             for (int i = 0; i < 5; i++) yield return null;
 
@@ -209,7 +209,7 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
             yield return null;
 
-            float after = SaveSlotManager.CurrentSave.totalPlaySeconds;
+            double after = SaveSlotManager.CurrentSave.totalPlaySeconds;
             Assert.Greater(after, atTheGap, "the tracker never resumed after being re-enabled");
 
             // THE GAP ITSELF IS NOT CREDITED. Five frames were skipped; if the
@@ -254,9 +254,9 @@ namespace PrincesPalace.PlayModeTests
             menu.Open();
             Assert.AreEqual(0f, Time.timeScale, "fixture: the menu did not pause the game");
 
-            float before = SaveSlotManager.CurrentSave.totalPlaySeconds;
+            double before = SaveSlotManager.CurrentSave.totalPlaySeconds;
             for (int i = 0; i < 5; i++) yield return null;
-            float after = SaveSlotManager.CurrentSave.totalPlaySeconds;
+            double after = SaveSlotManager.CurrentSave.totalPlaySeconds;
 
             menu.Close();
 

@@ -131,7 +131,6 @@ namespace PrincesPalace
         // forfeited whole (RunSettlement.cs, GoldLost). A head-start reward
         // must add its own field and its own settlement rule.
 
-        public List<InventoryEntry> inventory = new List<InventoryEntry>();
         public List<RunHealthEntry> currentHealth = new List<RunHealthEntry>();
 
         // ---- the run's own history ------------------------------------------

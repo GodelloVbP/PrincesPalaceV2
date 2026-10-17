@@ -66,19 +66,8 @@ namespace PrincesPalace.PlayModeTests
         [Test]
         public void EndRun_TakesTheInventoryWithIt()
         {
-            // THE REAL INVENTORY, which is stockpiledItems.
-            //
-            // The first version of this test added an entry to
-            // activeRun.inventory and asserted the replaced snapshot's list was
-            // empty. It passed, and it proved nothing: RunSnapshot.inventory is
-            // vestigial -- one stats readout reads it and no loot is ever put
-            // there. The list the player actually sees is stockpiledItems, which
-            // the pack draws, the fight satchel is built from, and the Reckoning
-            // drops loot into, and it was surviving every run.
-            //
-            // Third tautology of the day and the only one that hid a live bug,
-            // which is the argument for asking of every test: what does this
-            // fail on?
+            // The pack is stockpiledItems: the pack pane draws it, the fight
+            // satchel is built from it and the Reckoning drops loot into it.
             GiveTheSaveARunWorthSettling();
 
             Save.stockpiledItems.Add(new InventoryEntry("health_potion", 2));

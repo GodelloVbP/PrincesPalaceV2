@@ -298,7 +298,7 @@ namespace PrincesPalace.PlayModeTests
         // ---- Tools ----------------------------------------------------------------
         //
         // Row order is ToolActions' declared order: 0 heal, 1 jump to boss,
-        // 2 next leg, 3 clear stash, 4 clear run bag, 5 respec, 6 reset tracks.
+        // 2 next leg, 3 clear stash, 4 respec, 5 reset tracks.
 
         [UnityTest]
         public IEnumerator JumpToBossPutsTheBossOnTheNextChoice()
@@ -365,13 +365,13 @@ namespace PrincesPalace.PlayModeTests
             foreach (var character in Save.roster) character.claimedTrackLevel = 3;
 
             Select(DebugCategory.Tools);
-            Click("DebugRow6");
+            Click("DebugRow5");
             yield return null;
 
             Assert.IsTrue(Save.roster.All(c => c.claimedTrackLevel == 0));
         }
 
-        // Rows 7.. are the event rows, after the seven above: one "open" per
+        // Rows 6.. are the event rows, after the six above: one "open" per
         // authored event, then an add and a reset per known counter -- found
         // by label (RowLabelled), since each new event shifts them.
 

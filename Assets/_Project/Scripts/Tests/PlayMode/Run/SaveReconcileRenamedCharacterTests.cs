@@ -192,8 +192,8 @@ namespace PrincesPalace.PlayModeTests
 
         // ---- the two lists Reconcile walked past ---------------------------
         //
-        // Reconcile prunes stockpiledItems, activeRun.inventory,
-        // activeRun.currentHealth, learnedSpells, unassignedSpellBooks,
+        // Reconcile prunes stockpiledItems, activeRun.currentHealth,
+        // learnedSpells, unassignedSpellBooks,
         // shopStock, unlockedTalentIds twice over, equipment,
         // purchasedUpgradeIds and selectedCharacterIds -- and then stopped
         // short of activeRun.relicIds and Character.unlockedSkillIds.

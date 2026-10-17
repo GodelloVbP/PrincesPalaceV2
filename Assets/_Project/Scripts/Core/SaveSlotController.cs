@@ -88,12 +88,11 @@ namespace PrincesPalace
             _hold.Completed = Confirmed;
 
             confirmNoButton.onClick.AddListener(Dismiss);
-
-            Refresh();
         }
 
-        // Refreshed on every OPEN, not only once at Start: the list must not
-        // keep advertising a save that was deleted since it last showed.
+        // Refreshed on every OPEN: the list must not keep advertising a save
+        // that was deleted since it last showed. Start has no Refresh of its
+        // own; it always follows the first OnEnable, which already drew.
         private void OnEnable()
         {
             if (slotButtons != null) Refresh();

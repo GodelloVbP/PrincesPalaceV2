@@ -220,22 +220,18 @@ namespace PrincesPalace
         // grows while a scene that is actually PLAYING is loaded (see the
         // tracker's own header for why the main menu itself does not count).
         //
-        // A float rather than the `long` lifetimeDamageDealt uses: seconds
-        // over any survivable play history stay well inside a float's exact-
-        // integer range, and this is a slot-card display number, never
-        // compared for equality or fed into a formula the way damage is.
-        public float totalPlaySeconds;
+        // A double: a float's ulp passes 16 ms (one frame) near 145 h, after
+        // which every frame delta rounds away and the counter freezes. An old
+        // save's float literal reads into a double unchanged.
+        public double totalPlaySeconds;
 
         // There is no per-character relic assignment on the save: a character's
         // relic is RunSnapshot.relicIds plus FightEncounterAdapter.ResolveRelics,
         // run-scoped rather than save-scoped.
 
-        // Items bought in the Divine Principality store with permanent
-        // currency. GameplayManager.StartRun() copies these into the fresh
-        // RunState.inventory and clears this list — same "granted fresh,
-        // not banked" rule RunState already applies to a starting-item
-        // talent's grant, so there's only ever one rule for "what's in my
-        // inventory this run" regardless of where an item came from.
+        // The pack: what the pack pane draws, what the fight satchel is
+        // built from and where the Reckoning drops loot. RunManager.EndRun
+        // clears it, so nothing survives a death or an abandon.
         public List<InventoryEntry> stockpiledItems = new List<InventoryEntry>();
 
         // The run in progress, if there is one. Always non-null; ask
@@ -756,7 +752,6 @@ namespace PrincesPalace
             // because it is regenerated rather than stored, and generation
             // reads no content at all.
             activeRun ??= new RunSnapshot();
-            activeRun.inventory ??= new List<InventoryEntry>();
             activeRun.currentHealth ??= new List<RunHealthEntry>();
             activeRun.clearedNodeIds ??= new List<int>();
             activeRun.relicIds ??= new List<string>();
@@ -768,7 +763,6 @@ namespace PrincesPalace
             // as the only ones nothing checked.
             activeRun.bossesKilled ??= new List<string>();
             activeRun.ledger ??= new List<RunLedgerEntry>();
-            activeRun.inventory.RemoveAll(entry => entry == null || ContentDatabase.GetItem(entry.itemId) == null);
             activeRun.currentHealth.RemoveAll(entry => entry == null || ContentDatabase.GetCharacter(entry.characterId) == null);
 
             // The run's own relics, which this method pruned everything but.

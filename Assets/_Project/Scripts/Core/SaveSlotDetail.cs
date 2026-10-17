@@ -56,7 +56,7 @@ namespace PrincesPalace
 
             int floor = RunDepth.FloorFor(save.lifetimeDeepestStep);
 
-            return new SaveSlotFacts(true, name, floor, save.totalPlaySeconds, save.Gold);
+            return new SaveSlotFacts(true, name, floor, (float)save.totalPlaySeconds, save.Gold);
         }
     }
 }

@@ -36,7 +36,7 @@ namespace PrincesPalace.PlayModeTests
             save.Gold = 555;
             save.activeRun.hasRun = true;
             save.activeRun.gold = 41;
-            InventoryOps.Add(save.activeRun.inventory, OldBootsId, 1);
+            InventoryOps.Add(save.stockpiledItems, OldBootsId, 1);
             character.equipment.Set(EquipmentSlot.Weapon1, OldSwordId);
             save.activeRun.shopStock.Add(new ShopStockEntry
             {
@@ -63,7 +63,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(loaded.activeRun.slotHoning, "a missing list loads as a real empty one");
             CollectionAssert.IsEmpty(loaded.activeRun.slotHoning);
 
-            foreach (var entry in loaded.activeRun.inventory)
+            foreach (var entry in loaded.stockpiledItems)
             {
                 Assert.IsNotNull(ContentDatabase.GetItem(entry.itemId), $"bag kept '{entry.itemId}', which does not resolve");
                 Assert.AreEqual(0, entry.tier, "a missing tier loads as 0");
@@ -82,7 +82,37 @@ namespace PrincesPalace.PlayModeTests
 
             // The pruned sword leaves Weapon1 empty.
             Assert.IsTrue(wearer.equipment.IsEmpty(EquipmentSlot.Weapon1));
-            Assert.IsEmpty(loaded.activeRun.inventory);
+            Assert.IsEmpty(loaded.stockpiledItems);
+        }
+
+        // totalPlaySeconds was a float; a slot keeps counting past the 145 h
+        // where a float swallows a 16 ms frame.
+        [Test]
+        public void PlaySecondsKeepClimbingPastOneHundredFortyFiveHours()
+        {
+            var save = new SaveData { totalPlaySeconds = 600000 };
+
+            save.totalPlaySeconds += 0.016f;
+
+            Assert.Greater(save.totalPlaySeconds, 600000.0,
+                "a frame delta was rounded away: the play counter is frozen at this size");
+        }
+
+        // A save written when the field was a float and run.inventory existed.
+        [Test]
+        public void ASaveWithAFloatPlayTimeAndTheDeadRunInventoryKey_StillLoads()
+        {
+            const string oldJson =
+                "{\"version\":9,\"totalPlaySeconds\":3725.5,\"activeRun\":{\"hasRun\":false," +
+                "\"inventory\":[{\"itemId\":\"health_potion\",\"count\":2}]}}";
+
+            SaveData loaded = null;
+            Assert.DoesNotThrow(() => loaded = JsonUtility.FromJson<SaveData>(oldJson));
+            Assert.DoesNotThrow(() => loaded.Migrate());
+            Assert.DoesNotThrow(() => loaded.Reconcile());
+
+            Assert.AreEqual(3725.5, loaded.totalPlaySeconds, 0.0, "the float literal reads into the double exactly");
+            Assert.IsFalse(loaded.activeRun.hasRun);
         }
     }
 }

@@ -384,7 +384,6 @@ namespace PrincesPalace
         private IEnumerable<DebugAction> ToolActions()
         {
             var save = Save;
-            var run = LiveRun;
 
             yield return Verb(UiStrings.DebugHealParty.Format(), () => RunEncounter.HealPartyToFull(LiveRun),
                 needsRun: true);
@@ -393,8 +392,6 @@ namespace PrincesPalace
 
             yield return Verb(UiStrings.DebugClearStash.Format(save?.stockpiledItems?.Count ?? 0),
                 () => Save?.stockpiledItems?.Clear());
-            yield return Verb(UiStrings.DebugClearRunBag.Format(run?.inventory?.Count ?? 0),
-                () => LiveRun.inventory?.Clear(), needsRun: true);
 
             yield return Verb(UiStrings.DebugResetTalents.Format(), () =>
             {
