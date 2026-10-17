@@ -36,11 +36,10 @@ namespace PrincesPalace
         [SerializeField] internal Image shadow;
 
         // The soft bloom under the ring (FootGlow, a child of the shadow --
-        // see FightScreen.BuildStage) -- C2. Left out of the fade until now:
-        // the sprite and the ring both dimmed with a kill, but the glow sat
-        // at full brightness under a body that had otherwise faded away,
-        // which read as a smudge of light left behind rather than as part
-        // of the same death.
+        // see FightScreen.BuildStage). Faded with the sprite and the ring: a
+        // glow left at full brightness under a body that had otherwise faded
+        // away would read as a smudge of light left behind rather than as
+        // part of the same death.
         [SerializeField] internal Image glow;
 
         // Each image's own resting alpha — the shadow ring is baked at
@@ -173,8 +172,7 @@ namespace PrincesPalace
 
             // Scaled like the hold above and like every other fight animator:
             // anything driven by a beat runs on the beat's clock, or it
-            // desynchronises from the thing it illustrates. The lunge learned
-            // this the hard way.
+            // desynchronises from the thing it illustrates.
             float fadeSeconds = FightBeatPlayer.Scaled(FadeSeconds * Slowness);
             for (float t = 0f; t < fadeSeconds; t += Time.deltaTime)
             {

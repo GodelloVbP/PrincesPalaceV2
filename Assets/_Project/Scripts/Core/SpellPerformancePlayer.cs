@@ -95,18 +95,14 @@ namespace PrincesPalace
 
         internal static float Now() => ClockOverride != null ? ClockOverride() : Time.time;
 
-        // T4's test seam, not in the plan's own
-        // stated Seams line ranges (98-105,152-164,196-208) because it
-        // touches Advance instead, which sits outside them -- recorded as a
-        // deviation in the plan's own Deviations section. HitCue is "the one
-        // authoritative impact cue, delivered exactly once per cast"
-        // (SpellEventKind.HitCue's own header), but Advance's switch below
-        // has never acted on it: the beat player owns the impact block
-        // through its OWN independent wait, entirely disconnected from this
-        // module's schedule crossing. Proving that the crossing THIS module
-        // computes happens exactly once, and only inside the right window,
-        // needs a hook nothing else reads. Public rather than internal for
-        // the same reason ClockOverride above is.
+        // A test hook fired once per HitCue crossing, in Advance. HitCue is
+        // "the one authoritative impact cue, delivered exactly once per cast"
+        // (SpellEventKind.HitCue's own header); Advance records the crossing
+        // (CueFired) and the beat player gates the impact block on
+        // HasCueFired. Proving that the crossing happens exactly once, and
+        // only inside the right window, needs a hook nothing else reads.
+        // Public rather than internal for the same reason ClockOverride above
+        // is.
         public Action<CastHandle> HitCueCrossedForTest;
 
         // A drop born by an emitter: which particle-pool member it drew (or
@@ -261,10 +257,9 @@ namespace PrincesPalace
                     : _castsBegun * 7919 + i;
             }
 
-            // THE OPENING WINDOW IS DELIVERED HERE, not on the next Update.
-            // What this replaces drew on the frame the beat opened, and a beat
-            // whose art appeared one frame later would be a retiming of every
-            // spell in the game for no stated reason.
+            // THE OPENING WINDOW IS DELIVERED HERE, not on the next Update:
+            // art must draw on the frame the beat opens, since appearing one
+            // frame later would retime every spell in the game.
             //
             // GUARDED THE WAY Tick IS: Advance releases a cast that has nothing
             // left to draw or fire (every instance unplaced, a zero-length

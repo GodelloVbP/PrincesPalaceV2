@@ -23,10 +23,10 @@ namespace PrincesPalace
     public class StageHitFlash : MonoBehaviour
     {
         // THE HIT'S FLASH IS ONE PULSE IN THE DAMAGE TYPE'S OWN LIGHT, on the
-        // outline. A full-white silhouette was the loudest frame of every spell
-        // and identical for all of them, which erased the element at the moment
-        // it should read; an afterglow behind it was a second large flash per
-        // cast (SPELL_FEEL.md, Communication and Guards). So the peak is the
+        // outline. A full-white silhouette would be the loudest frame of every
+        // spell and identical for all of them, which erases the element at the
+        // moment it should read; an afterglow behind it would be a second large
+        // flash per cast (SPELL_FEEL.md, Communication and Guards). So the peak is the
         // type's palette colour lightened toward white, held for a couple of
         // frames, then faded fast. Every tunable of it is here or in BodyLight.
         //

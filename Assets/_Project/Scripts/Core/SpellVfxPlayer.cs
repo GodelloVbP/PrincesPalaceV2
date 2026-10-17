@@ -31,7 +31,7 @@ namespace PrincesPalace
 
         // Whether anything is on screen. What the module sets and what a test
         // waiting out a flight reads -- the renderer has no schedule of its own
-        // to be "playing" against any more, so this is state rather than a
+        // to be "playing" against, so this is state rather than a
         // coroutine handle.
         public bool IsPlaying { get; private set; }
 
@@ -159,9 +159,8 @@ namespace PrincesPalace
 
         // Exposed so a test can assert a spell's frames actually load, rather
         // than discovering a bad path by seeing nothing happen. Discovery and
-        // caching belong to FrameSequenceLoader -- v1 had this cache
-        // per-INSTANCE while its two siblings were static, so every fight-scene
-        // reload re-probed every spell folder from disk for no reason.
+        // caching belong to FrameSequenceLoader, whose cache is static so a
+        // fight-scene reload does not re-probe every spell folder from disk.
         public Sprite[] Frames(string vfxPath) => FrameSequenceLoader.Load(vfxPath);
 
         // ---- the one thing on this stage that can be brighter than white ----------
@@ -183,8 +182,8 @@ namespace PrincesPalace
         // CanvasRenderer batches by material and ignores per-renderer blocks.
         //
         // DEGRADES TO NOTHING. A missing shader leaves the Image on its default
-        // material and the layer draws flat, which is what it drew before this
-        // existed -- the same posture LoadSprite and StageHitFlash take.
+        // material and the layer draws flat -- the same posture LoadSprite and
+        // StageHitFlash take.
         private const string GlowShaderPath = "Shaders/UISpellGlow";
         private static readonly int BoostId = Shader.PropertyToID("_Boost");
         private static readonly int KneeId = Shader.PropertyToID("_Knee");

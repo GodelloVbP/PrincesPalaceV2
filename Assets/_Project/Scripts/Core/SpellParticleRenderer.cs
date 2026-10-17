@@ -30,9 +30,8 @@ namespace PrincesPalace
         // "the component would draw" and "anything is on screen". Every pool
         // member is built Inactive (FightScreen.BuildSpellParticles), so an
         // `enabled` Image on a deactivated GameObject reports itself as drawing
-        // and renders nothing -- which is exactly what the Water pilot's first
-        // two captures showed: a perfect crown, no droplets, and four green
-        // emitter tests asserting on `enabled`.
+        // and renders nothing, so a test asserting on `enabled` passes while
+        // the screen shows no droplets.
         public bool IsDrawing(int member) =>
             member >= 0 && member < Capacity && particles[member] != null &&
             particles[member].isActiveAndEnabled;

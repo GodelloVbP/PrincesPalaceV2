@@ -224,7 +224,7 @@ namespace PrincesPalace
         // WHERE THE FIGURE IS HEADED, which is the same thing as Home except
         // while a glide is in flight.
         //
-        // AnchorOne' whole correctness rests on "only when it actually
+        // AnchorOne's whole correctness rests on "only when it actually
         // moved" (see its own header), and it compares the mark it is about to
         // assign against the animator's. Compared against Home mid-glide that
         // test is true on every frame of the walk, so every repaint would
@@ -401,7 +401,7 @@ namespace PrincesPalace
             _artFolder = artFolder;
         }
 
-        // Measured once per (folder, stance) for the life of the process. The
+        // Measured once per Sprite for the life of the process. The
         // art is on disk and does not change; the alternative is a texture
         // rect lookup on every beat of every fight.
         private static readonly Dictionary<Sprite, OpaqueSpan> SpanCache =
@@ -711,7 +711,7 @@ namespace PrincesPalace
 
         // Snaps home immediately, for a fight ending or the panel closing
         // mid-animation — otherwise a figure could be left parked off-mark
-        // for the next encounter, since _home is only captured in Awake.
+        // for the next encounter.
         public void ResetToHome()
         {
             if (_running != null)
