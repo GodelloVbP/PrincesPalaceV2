@@ -125,7 +125,7 @@ namespace PrincesPalace.Domain.Tests
             // catch the two being wired back together.
             var payout = VictoryRewards.For(new[] { Kit(100, 1000) }, isElite: false, depthStep: 25);
 
-            Assert.AreEqual(DifficultyCurve.ScaleExperience(100, 25), payout.Experience);
+            Assert.AreEqual(185, payout.Experience);
             Assert.Less(payout.Experience, payout.Gold,
                 "experience and gold are on the same rate again");
         }
