@@ -63,6 +63,17 @@ namespace PrincesPalace
             if (Has(orbGlows, index)) orbGlows[index].rectTransform.localScale = Vector3.one;
         }
 
+        // Ends the beat early (a respec, a page to another character): the stone
+        // is settled first because the end-of-beat reset in DriveKindling will
+        // never run for it.
+        private void ClearKindling()
+        {
+            if (_kindlingSlot >= 0) SettleStone(TalentScreen.OrbIndex(_kindlingPath, _kindlingSlot));
+
+            _kindlingSlot = -1;
+            _kindlingPath = -1;
+        }
+
         // A second kindle re-points the beat, so the stone it stops owning is
         // settled here, before the beat moves on.
         private void BeginKindling(int path, int slot)
@@ -278,7 +289,7 @@ namespace PrincesPalace
             if (Has(orbAuras, index))
             {
                 var a = orbAuras[index].color;
-                orbAuras[index].color = new Color(a.r, a.g, a.b, a.a * edge);
+                orbAuras[index].color = new Color(a.r, a.g, a.b, AuraLit.a * edge);
             }
 
             // The drop-shadow growing from the centre out, so the stone reads

@@ -205,5 +205,86 @@ namespace PrincesPalace.PlayModeTests
                 "should have been snapped back to full size by the page, not left mid-ramp under the new " +
                 "character");
         }
+
+        // ---- a respec mid-beat settles the stone it ends --------------------
+        //
+        // ConfirmRespec cleared _kindlingSlot without settling the stone, so an
+        // orb and its glow stayed at their mid-catch scale as ash until the
+        // screen was rebuilt (PaintOrbs never writes rect scale).
+        [UnityTest]
+        public IEnumerator ARespecMidKindleSettlesTheStoneAndItsGlow()
+        {
+            TalentController.MotionSpeedMultiplier = 1f;
+
+            yield return OpenTheTree();
+
+            var talents = Object.FindAnyObjectByType<TalentController>();
+            var character = SaveSlotManager.CurrentSave.ActiveSquad().First(c => c != null);
+            character.level = 20;
+            character.claimedTrackLevel = 20;
+            character.embers = 99;
+            character.unlockedTalentIds.Clear();
+            talents.Refresh();
+            yield return null;
+
+            var orb = (RectTransform)ButtonNamed(talents, "Orb0_0").transform;
+            var glow = GlowNamed(talents, "Orb0_0Glow");
+            Assert.IsNotNull(glow, "path 0's root stone has no glow child -- wiring drifted");
+
+            Press(talents, "Orb0_0");
+            yield return null;
+            Press(talents, "InvestButton");
+
+            TalentController.DeltaOverride = () => 1f / 60f;
+            for (int i = 0; i < 12; i++) yield return null;
+
+            Assert.Greater(orb.localScale.x, 1.001f,
+                "fixture: the stone is not mid-catch, so the respec interrupts nothing");
+
+            Press(talents, "TalentRespecButton");
+            yield return null;
+            Press(talents, "RespecConfirmButton");
+            TalentController.DeltaOverride = null;
+
+            Assert.IsEmpty(character.unlockedTalentIds, "fixture: the respec left the stone kindled");
+            Assert.AreEqual(1f, orb.localScale.x, 0.0001f,
+                "a respec inside the kindle beat left the now-ash stone at its mid-catch size");
+            Assert.AreEqual(1f, glow.localScale.x, 0.0001f,
+                "a respec inside the kindle beat left the now-ash stone's glow at its mid-ramp size");
+        }
+
+        // The aura arrives with the edge run. DriveKindling scaled the colour it
+        // read back by the edge phase every frame, which compounds to nothing,
+        // so the aura stayed invisible for the whole beat and popped in after.
+        [UnityTest]
+        public IEnumerator TheAuraIsLitOnceTheEdgeRunHasArrived()
+        {
+            TalentController.MotionSpeedMultiplier = 1f;
+
+            yield return OpenTheTree();
+
+            var talents = Object.FindAnyObjectByType<TalentController>();
+            var character = SaveSlotManager.CurrentSave.ActiveSquad().First(c => c != null);
+            character.embers = 99;
+            character.unlockedTalentIds.Clear();
+            talents.Refresh();
+            yield return null;
+
+            var aura = talents.GetComponentsInChildren<Image>(true).FirstOrDefault(i => i.name == "Orb0_0Aura");
+            Assert.IsNotNull(aura, "path 0's root stone has no aura child -- wiring drifted");
+
+            Press(talents, "Orb0_0");
+            yield return null;
+            Press(talents, "InvestButton");
+
+            TalentController.DeltaOverride = () => 1f / 60f;
+            int frames = Mathf.CeilToInt((ConstellationLayout.KindleEdgeSeconds + 0.1f) * 60f);
+            for (int i = 0; i < frames; i++) yield return null;
+            float alpha = aura.color.a;
+            TalentController.DeltaOverride = null;
+
+            Assert.AreEqual(0.55f, alpha, 0.01f,
+                "the aura is not at its lit alpha once the edge run has landed, while the beat is still running");
+        }
     }
 }

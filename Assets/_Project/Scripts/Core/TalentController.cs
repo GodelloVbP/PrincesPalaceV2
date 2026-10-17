@@ -413,14 +413,7 @@ namespace PrincesPalace
             // left to ButtonPressAnimator, which has nothing to animate here
             // since no button was pressed on the new character), so a scale
             // frozen mid-catch would otherwise ride along untouched.
-            if (_kindlingSlot >= 0)
-            {
-                int kindledIndex = TalentScreen.OrbIndex(_kindlingPath, _kindlingSlot);
-                SettleStone(kindledIndex);
-
-                _kindlingSlot = -1;
-                _kindlingPath = -1;
-            }
+            ClearKindling();
 
             AimPushIn();
             Refresh();
@@ -678,7 +671,7 @@ namespace PrincesPalace
             // Every resting loop belonged to stones that are now ash, and the
             // selection describes one of them. Both go with the embers.
             _selectedSlot = -1;
-            _kindlingSlot = -1;
+            ClearKindling();
 
             // Written immediately, for the same reason Kindle writes
             // immediately: a tree that loses its state to a crash is the least
