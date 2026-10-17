@@ -82,6 +82,22 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
+        public IEnumerator AFormationLayerWithNoWidthIsNotPlacedSoNoRendererIsSpentOnIt()
+        {
+            yield return LoadFight(1);
+
+            // An overhang of -2 pulls each edge in past the body's centre: the span has no width.
+            foreach (string align in new[] { "span", "level" })
+            {
+                var instance = Place(new CombatBeat(),
+                    Layer("fault", "formation", l => { l.align = align; l.overhang = -2f; }))
+                    .Instances[0];
+
+                Assert.IsFalse(instance.Placed, $"align {align}: a zero-width fault would draw a zero box at the stage origin");
+            }
+        }
+
+        [UnityTest]
         public IEnumerator AFollowingLayerMovesWithItsBodyAndAnotherDoesNot()
         {
             yield return LoadFight(1);

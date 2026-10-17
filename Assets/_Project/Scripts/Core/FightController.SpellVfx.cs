@@ -1004,11 +1004,20 @@ namespace PrincesPalace
                 ground += foot.Ground;
             }
 
-            if (right <= left) return;
+            if (right <= left)
+            {
+                instance.Placed = false;
+                return;
+            }
+
             ground /= stood.Count;
 
             var box = GroundBoxFor(instance.Layer, right - left);
-            if (box.x <= 0f || box.y <= 0f) return;
+            if (box.x <= 0f || box.y <= 0f)
+            {
+                instance.Placed = false;
+                return;
+            }
 
             // The sheet's own ground line onto the formation's, against the
             // RENDERED size rather than the box, because a box whose aspect the
@@ -1060,7 +1069,11 @@ namespace PrincesPalace
                 last.Right - last.Centre);
 
             var box = GroundBoxFor(instance.Layer, span.Length);
-            if (box.x <= 0f || box.y <= 0f) return;
+            if (box.x <= 0f || box.y <= 0f)
+            {
+                instance.Placed = false;
+                return;
+            }
 
             // THE GROUND-LINE CORRECTION MOVES ALONG THE BOX'S OWN UP, not
             // along world +Y. The box is rotated, so its vertical axis is
