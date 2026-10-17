@@ -375,9 +375,8 @@ namespace PrincesPalace
             // log, the way every other accommodation a preview makes is
             // (PreviewFight.Notes).
             //
-            // NOT ELEMENT ZERO, which is what this took before and what made
-            // the Water pilot unphotographable: the orb's first element is
-            // Earth, Earth authored no art, and the capture came back as an
+            // NOT ELEMENT ZERO: the orb's first element is Earth, Earth
+            // authored no art, and the capture would come back as an
             // empty stage with a damage number on it. PreviewFight owns the
             // choice so the headless route times its samples against the same
             // element this presses.
@@ -1146,9 +1145,10 @@ namespace PrincesPalace
 
         public void LeaveFightForTest() => LeaveFight();
 
-        // Leaving the fight for good. Called by the fight's own Continue on a
-        // defeat, and by the Reckoning's on a victory -- ONE exit, so the two
-        // paths cannot drift into disagreeing about where a fight goes next.
+        // Leaving the fight for good. Called by the defeat screen's Dismissed,
+        // by the Reckoning's Dismissed, and by OnContinuePressed for a fight
+        // with no run behind it -- ONE exit, so those paths cannot drift into
+        // disagreeing about where a fight goes next.
         //
         // Back to the descent if one is still live, and to the hub if it is not
         // -- which is what a defeat leaves behind, since losing ends the run
@@ -1166,10 +1166,10 @@ namespace PrincesPalace
 
         // Raised once, the moment the last beat of a finished fight has played.
         //
-        // MOVED here from the Continue press. The Reckoning has to show what
-        // the fight paid, and the payout does not exist until this fires --
-        // RewardApplier runs inside the subscriber. Raising it on dismissal
-        // meant the only screen that wants the numbers opened before they were
+        // Raised here, not on the Continue press: the Reckoning has to show
+        // what the fight paid, and the payout does not exist until this fires
+        // -- RewardApplier runs inside the subscriber. Raising it on dismissal
+        // would open the only screen that wants the numbers before they were
         // computed.
         //
         // An event rather than a direct call into a run manager: the fight
@@ -1504,8 +1504,8 @@ namespace PrincesPalace
             // The survivors whoop, once, after the last beat has played.
             //
             // The session COLLECTED these rather than playing them, because
-            // Domain has no audio -- and until now nothing on this side drained
-            // the list, so the celebration was decided and never heard.
+            // Domain has no audio, so this side drains the list here;
+            // otherwise the celebration is decided and never heard.
             // An endure is not a kill: no sting, no voices (O2).
             if (_session != null && !_spokeVictory && _session.PlayerWon
                 && _session.EndReason != FightEndReason.Survived)
@@ -1693,7 +1693,7 @@ namespace PrincesPalace
         // (plan section 3) -- MoveFocus/ConfirmFocus/OnBackPressed stay
         // public/private exactly as before, called directly by every
         // existing test; these three explicit members exist only to
-        // reinstate PollGamepadNavigation's own busy guard, which the
+        // apply the busy guard, which the
         // dispatcher itself has no reason to know about (Fight's model, not
         // the dispatch mechanism, owns "is this action legal right now").
         // WHERE INSPECT IS LAYERED IN, and why it is here rather than inside
@@ -1960,8 +1960,9 @@ namespace PrincesPalace
 
                     var enemies = Enemies;
 
-                    // A DEAD HOVER READS AS NO HOVER, same as FocusedActor and
-                    // ConfirmFocus's own no-hover branch (~2496-2502): the
+                    // A DEAD HOVER READS AS NO HOVER, same as FocusedActor
+                    // (ConfirmFocus itself presses the hovered index without
+                    // an alive check; ConfirmTarget refuses a dead target): the
                     // pointer can still be sitting on a plate/figure whose
                     // monster died under it (AddEnemyHover wires PointerEnter
                     // straight to OnEnemyHovered with no alive check), and the
@@ -2089,9 +2090,9 @@ namespace PrincesPalace
         }
 
         // Pushed once per scene load, the moment a session becomes active --
-        // the same "_session != null" half of PollGamepadNavigation's own
-        // guard, just moved from a per-frame check to a one-time
-        // registration. Idempotent: Bind() can in principle run more than
+        // the "_session != null" guard the dispatcher cannot know about,
+        // applied as a one-time registration rather than a per-frame
+        // check. Idempotent: Bind() can in principle run more than
         // once against a live controller (a rebind), and pushing a second
         // Fight context for the same controller would leave a stale entry
         // under the stack no Close() will ever reach.
@@ -2153,7 +2154,7 @@ namespace PrincesPalace
             at < 0 ? (delta > 0 ? 0 : count - 1) : Wrap(at + delta, count);
 
         // internal, not private -- legacy Input cannot be simulated
-        // headlessly (see PollGamepadNavigation's own comment), so a test
+        // headlessly (the dispatcher polls it), so a test
         // that had to press a stick to reach this could not exist. Tests
         // drive it directly, the same way ToggleCharacterSheet already does.
         public void MoveFocus(int delta)
@@ -2209,10 +2210,9 @@ namespace PrincesPalace
         // left for the mirrored ally one), -1 steps one slot nearer.
         //
         // MoveFocus' own Target case above calls this with delta UNCHANGED
-        // (preserving every existing direct-call test's literal indices --
-        // FightGamepadNavigationTests and AllyTargetPickerTests both drive
+        // (FightGamepadNavigationTests and AllyTargetPickerTests both drive
         // MoveFocus directly, bypassing the interface wrapper entirely) AND
-        // with WrapFromNoHover's OLDER "first press is index 0" no-hover
+        // with WrapFromNoHover's "first press is index 0" no-hover
         // rule, via the shared FromPad=false core below. InspectMove and the
         // IFightNavigationTarget.MoveFocus wrapper are the two pad entry
         // points and go through CycleTargetFromPad instead, which resolves
