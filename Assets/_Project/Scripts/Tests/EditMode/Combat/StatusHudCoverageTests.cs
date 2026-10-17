@@ -395,8 +395,8 @@ namespace PrincesPalace.Domain.Tests
             var rows = FightHudModel.StatusRowsFor(session, target);
 
             Assert.AreEqual(2, rows.Count);
-            Assert.AreEqual(StatusHud.CodeFor(StatusEffectType.Rooted), rows[0].Code);
-            Assert.AreEqual(StatusHud.CodeFor(StatusEffectType.Poison), rows[1].Code);
+            Assert.AreEqual("RTD", rows[0].Code);
+            Assert.AreEqual("PSN", rows[1].Code);
         }
 
         // ---- the Drowned Lantern's mark (C2) --------------------------------------
