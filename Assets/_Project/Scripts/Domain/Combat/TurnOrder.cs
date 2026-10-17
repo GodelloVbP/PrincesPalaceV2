@@ -747,6 +747,11 @@ namespace PrincesPalace.Domain.Combat
                 result.Add(simCurrent.Actor);
             }
 
+            // Nobody in the list passes `include` (everyone is dead): once the
+            // current actor's extras are drained nothing more can be added, so
+            // the loop stops rather than charging out to MaxTicks.
+            bool anyWanted = sim.Exists(e => Wanted(e.Actor));
+
             const int MaxTicks = 1_000_000;
             int ticks = 0;
             while (result.Count < count && ticks < MaxTicks)
@@ -760,6 +765,11 @@ namespace PrincesPalace.Domain.Combat
                     }
 
                     continue;
+                }
+
+                if (!anyWanted)
+                {
+                    break;
                 }
 
                 Entry ready = null;

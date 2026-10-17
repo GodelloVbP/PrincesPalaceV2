@@ -181,7 +181,7 @@ namespace PrincesPalace.Domain.Tests
 
             session.ExecuteAttack(session.Encounter.Enemies[0]);
 
-            Assert.IsTrue(EnemyBeats(session)[0].ActorHoldsPosition);
+            Assert.AreEqual(StageApproach.Hold, EnemyBeats(session)[0].Approach);
         }
 
         [Test]

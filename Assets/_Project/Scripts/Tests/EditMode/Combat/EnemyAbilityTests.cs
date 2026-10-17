@@ -446,7 +446,7 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.IsNotNull(cast);
             Assert.AreEqual(approach, cast.Approach);
-            Assert.IsFalse(cast.ActorHoldsPosition,
+            Assert.AreNotEqual(StageApproach.Hold, cast.Approach,
                 "a swing that stays where it is connects from across the stage");
         }
 
@@ -464,7 +464,6 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.IsNotNull(cast);
             Assert.AreEqual(StageApproach.Hold, cast.Approach);
-            Assert.IsTrue(cast.ActorHoldsPosition);
         }
 
         // A BLOW THE STAGE HAS TO FEEL WITHOUT LANDING.

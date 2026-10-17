@@ -649,22 +649,11 @@ namespace PrincesPalace.Domain.Combat.Session
 
         // WHETHER THE ACTOR CROSSES THE STAGE, AND HOW FAR.
         //
-        // Was a bool, ActorHoldsPosition, and a bool could only ever answer one
-        // of the two questions a blow asks. "Does it move" was enough while
-        // every skill was a spell -- a cast stands still, a swing leans in --
-        // and stopped being enough the moment monsters got melee skills: the
-        // Warden's Grapple and the Treant's Trunk Slam both resolve through the
-        // cast path, so both inherited "hold" and both connected from across
-        // the stage without leaving their mark.
-        //
-        // Set by the ACTION rather than inferred, as the bool was and for the
-        // same reason: it must still be right for a skill with no art at all.
+        // A melee skill (the Warden's Grapple, the Treant's Trunk Slam) resolves
+        // through the cast path, so "does it move" cannot be read off the path
+        // taken; it is set by the ACTION, which keeps it right for a skill with
+        // no art at all.
         public StageApproach Approach;
-
-        // Kept as the reading it always was, so the one call site that asks the
-        // yes/no question does not have to learn a third answer it does not
-        // care about.
-        public bool ActorHoldsPosition => Approach == StageApproach.Hold;
 
         // A FLOOR UNDER HOW HARD THIS BEAT KICKS THE STAGE, 0..1.
         //
