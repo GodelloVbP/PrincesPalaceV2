@@ -68,9 +68,21 @@ namespace PrincesPalace.PlayModeTests
             _stingTraces.Count == 0 ? "" : System.Environment.NewLine + "--- VictorySting plays ---" + System.Environment.NewLine
                 + string.Join(System.Environment.NewLine + "---" + System.Environment.NewLine, _stingTraces);
 
-        [TearDown]
-        public void Restore()
+        // Most tests end right after the killing blow, with the run-up still
+        // owing its sting. Skipping it here lets it finish into this test's
+        // observer; left running it would sting during the NEXT test, while the
+        // old scene is still unloading.
+        [UnityTearDown]
+        public IEnumerator Restore()
         {
+            if (_fight != null && _fight.RunUpActive)
+            {
+                ((IFightNavigationTarget)_fight).OnBackPressed();
+                float drain = Time.time + 2f;
+                while (_fight.RunUpActive && Time.time < drain) yield return null;
+                Assert.IsFalse(_fight.RunUpActive, "fixture: the run-up outlived the skip");
+            }
+
             if (_fight != null && _onEnded != null) _fight.FightEnded -= _onEnded;
             SoundController.Observer = null;
             Navigation.LoadOverride = null;
