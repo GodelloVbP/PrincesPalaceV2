@@ -187,21 +187,13 @@ namespace PrincesPalace.Domain.Tests
         [TestCase(10)]
         [TestCase(11)]
         [TestCase(200)]
-        public void StrengthDerivesNothing_AtAnyScore(int str)
+        public void StrengthAndIntelligenceDeriveNothing_AtAnyScore(int score)
         {
-            Assert.AreEqual(new StatBlock(0, 0, 0, manaRegen: 2),
-                AbilityDerivation.DerivedStats(Scores(str: str, dex: 10, con: 10, wis: 10, intel: 10, cha: 10)));
-        }
-
-        [TestCase(0)]
-        [TestCase(9)]
-        [TestCase(10)]
-        [TestCase(11)]
-        [TestCase(200)]
-        public void IntelligenceDerivesNothing_AtAnyScore(int intel)
-        {
-            Assert.AreEqual(new StatBlock(0, 0, 0, manaRegen: 2),
-                AbilityDerivation.DerivedStats(Scores(str: 10, dex: 10, con: 10, wis: 10, intel: intel, cha: 10)));
+            var zero = new StatBlock(0, 0, 0, manaRegen: 2);
+            Assert.AreEqual(zero,
+                AbilityDerivation.DerivedStats(Scores(str: score, dex: 10, con: 10, wis: 10, intel: 10, cha: 10)));
+            Assert.AreEqual(zero,
+                AbilityDerivation.DerivedStats(Scores(str: 10, dex: 10, con: 10, wis: 10, intel: score, cha: 10)));
         }
 
         // ---- DerivedStats combines correctly, attack always 0 -------------
