@@ -7,12 +7,11 @@ get punched transparent just for sharing a similar color with the backdrop —
 they're only removed if they're actually *connected* to the border through
 matching-color pixels.
 
-Which folders have been processed, and at what tolerance, is recorded in the
+Which folders are processed, and at what tolerance, is recorded in the
 PORTRAITS manifest below rather than left to whoever last typed the command
 - the same reason slice_actor_sheet.py has ACTORS. A non-default tolerance
 is a real per-subject decision (how close the backdrop sits to the
-character's own colours) and is exactly the kind of thing that used to
-survive only in shell history.
+character's own colours).
 
 Usage:
     python tools/remove_portrait_backgrounds.py                  # every entry in PORTRAITS
@@ -23,14 +22,14 @@ CAUTION: this always regenerates Processed/<name>.png fresh from
 <source_dir>/<name>.png. If a file in Processed/ was hand-edited or
 replaced directly (rather than its un-processed source in <source_dir>),
 re-running this over the whole folder will silently overwrite that edit
-with a freshly-reprocessed copy of the old source. That hazard used to be
-documented here and enforced nowhere; --check now reports which outputs
-would change WITHOUT writing, so the batch can be run safely over a folder
-someone may have touched.
+with a freshly-reprocessed copy of the old source. --check reports which
+outputs would change WITHOUT writing, so the batch can be run safely over a
+folder someone may have touched.
 """
 
 import argparse
 import os
+import tempfile
 from collections import deque
 
 import numpy as np
@@ -42,29 +41,22 @@ CROP_PADDING = 10
 
 SOURCE_ROOT = "Assets/_Project/Art/Portraits"
 
-# Every portrait folder that has been processed, and with what. Add an entry
-# when a new character's portraits land; the default tolerance is the right
-# starting point and only needs changing if the backdrop is close in colour
-# to the character themselves.
+# Every portrait folder that is processed, and with what. Add an entry when a
+# new character's portraits land; the default tolerance is the right starting
+# point and only needs changing if the backdrop is close in colour to the
+# character themselves.
 #
-# `reproduces` records whether a fresh run actually rebuilds what is
-# committed. Sheep does NOT: the shipped Shawn_neutral.png is 1122x1402
-# while this tool produces 1122x1360 from the same source at the documented
-# tolerance -- a 42px difference in the crop, so the committed portraits came
-# from different settings, a different version of this tool, or a hand edit.
-# Nobody recorded which, and the CAUTION above was the only thing standing
-# between that and a batch run silently replacing all six.
+# `reproduces` records whether a fresh run rebuilds what is committed. Sheep
+# does NOT: the committed Shawn_neutral.png is 1122x1402 while this tool
+# produces 1122x1360 from the same source at the documented tolerance, so the
+# committed portraits came from other settings or a hand edit. The committed
+# art is what ships and looks right, so it is not regenerated; run --check
+# before ever running this over Sheep.
 #
-# Left alone deliberately rather than "fixed" by regenerating: the committed
-# art is what ships and looks right. Run --check before ever running this
-# over Sheep.
-#
-# AND SHAWN'S NEUTRAL PORTRAIT IS NO LONGER IN Processed/. The dossier loads
-# portraits off Resources now (characters.json portraitPath, Resources-relative),
-# so that one file moved to Assets/_Project/Resources/Portraits/sheep.png and a
-# run of this tool will happily rebuild a Processed/Shawn_neutral.png that
-# nothing consumes. The output that ships is the one under Resources; copy it
-# there deliberately, do not assume Processed/ is what the game reads.
+# The dossier loads portraits off Resources (characters.json portraitPath,
+# Resources-relative), not off Processed/. This tool writes Processed/; what
+# ships is the copy under Assets/_Project/Resources/Portraits/, which is
+# copied there deliberately.
 PORTRAITS = {
     "Sheep": {"tolerance": DEFAULT_TOLERANCE, "reproduces": False},
     "Bear": {"tolerance": DEFAULT_TOLERANCE, "reproduces": True},
@@ -145,7 +137,8 @@ def process_folder(source_dir, tolerance, check_only=False):
         raise SystemExit(f"No such portrait folder: {source_dir}")
 
     out_dir = os.path.join(source_dir, "Processed")
-    os.makedirs(out_dir, exist_ok=True)
+    if not check_only:
+        os.makedirs(out_dir, exist_ok=True)
 
     changed = []
     for fname in sorted(os.listdir(source_dir)):
@@ -157,13 +150,14 @@ def process_folder(source_dir, tolerance, check_only=False):
         if check_only:
             # Render to a scratch path and compare, so an output that a human
             # replaced by hand shows up BEFORE this overwrites it.
-            # Keeps the .png extension: PIL picks its encoder from the
-            # extension, and anything else raises rather than writing.
-            scratch = dst + ".check.png"
-            process_image(src, scratch, tolerance)
+            # The scratch lives in a temp dir so --check writes nothing under
+            # the art tree; it keeps the .png extension because PIL picks its
+            # encoder from the extension.
+            with tempfile.TemporaryDirectory() as scratch_dir:
+                scratch = os.path.join(scratch_dir, fname)
+                process_image(src, scratch, tolerance)
+                fresh = open(scratch, "rb").read()
             existing = open(dst, "rb").read() if os.path.exists(dst) else None
-            fresh = open(scratch, "rb").read()
-            os.remove(scratch)
             if existing != fresh:
                 changed.append(fname)
                 print(f"  WOULD CHANGE  {fname}" + ("" if existing else "  (no output yet)"))

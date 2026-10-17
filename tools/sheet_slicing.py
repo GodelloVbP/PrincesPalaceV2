@@ -4,14 +4,8 @@
 `slice_actor_sheet.py` and `slice_item_sheet.py` solve different problems --
 one composites poses onto a shared anchored canvas, the other cuts an item
 grid into per-level icons -- but they cut cells out of a sheet the same way,
-and until this module existed they did it with four byte-identical copies of
-the same functions plus three redeclared constants. That is the setup for a
-silent drift: a fix to `best_cut`'s tie-breaking in one slicer would leave the
-other on the old behaviour, with nothing to say so.
-
-Per `docs/CODE_STANDARDS.md` "Reuse", the second copy-paste of a pattern is
-the signal to promote it. This is that promotion, for the cell-cutting layer
-only -- anchoring, keying and canvas composition stay with whichever slicer
+so the cell-cutting layer lives here once: a fix to `best_cut`'s tie-breaking
+reaches both. Anchoring, keying and canvas composition stay with whichever slicer
 owns them, because those genuinely differ.
 
 Nothing here loads or writes a file; it is pure measurement over a PIL image
