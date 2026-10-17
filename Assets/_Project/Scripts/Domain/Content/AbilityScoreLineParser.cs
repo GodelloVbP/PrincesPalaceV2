@@ -24,6 +24,7 @@ namespace PrincesPalace.Domain.Content
         {
             scores = AbilityScoreBlock.Zero;
             bool ok = true;
+            var seen = new HashSet<AbilityScore>();
 
             if (lines == null)
             {
@@ -59,7 +60,7 @@ namespace PrincesPalace.Domain.Content
                     continue;
                 }
 
-                if (scores[score] != 0)
+                if (!seen.Add(score))
                 {
                     errors?.Add($"{label}: names {AbilityScores.ShortName(score)} twice, so one of the two requirements would be silently discarded.");
                     ok = false;

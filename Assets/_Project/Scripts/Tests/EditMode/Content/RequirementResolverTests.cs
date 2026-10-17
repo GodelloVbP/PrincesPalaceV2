@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
+using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Equipment;
 using PrincesPalace.Domain.Stats;
 
@@ -164,6 +165,18 @@ namespace PrincesPalace.Domain.Tests
             var cursed = new RequirementCandidate(EquipmentSlot.Head, Str(-3), AbilityScoreBlock.Zero);
 
             Assert.DoesNotThrow(() => RequirementResolver.Resolve(Floor, new[] { cursed }));
+        }
+
+        [Test]
+        public void ARequirementNamedTwice_IsRefusedEvenWhenTheFirstAmountIsZero()
+        {
+            var errors = new List<string>();
+
+            bool ok = AbilityScoreLineParser.TryParse(new[] { "strength 0", "strength 15" }, "item 'x'", out _, errors);
+
+            Assert.IsFalse(ok, "the second strength line silently replaced the first");
+            Assert.AreEqual(1, errors.Count);
+            StringAssert.Contains("twice", errors[0]);
         }
     }
 }
