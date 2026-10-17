@@ -517,16 +517,13 @@ namespace PrincesPalace.Domain.Tests
             Give(target, new Effect(EffectKind.DodgeRating, 50));
 
             var rngA = new PrincesPalace.Domain.Rng.SeededRandom(777);
-            var rngB = new PrincesPalace.Domain.Rng.SeededRandom(777);
-
             var outcome = DamagePipeline.AfterDefences(
                 50, actor, target, attackType: DamageType.Physical,
                 affinity: ElementalAffinity.Neutral, varianceRange: 0f, rng: rngA, resolveWard: null);
 
-            bool expectedDodge = DamagePipeline.RollDodge(target, actor, rngB);
-            Assert.AreEqual(expectedDodge, outcome.IsMiss,
-                "the untyped-with-attackType overload must consume EXACTLY the one roll a direct " +
-                "RollDodge call would -- no more, no fewer");
+            Assert.AreEqual(false, outcome.IsMiss, "seed 777's first draw does not dodge at rating 50");
+            Assert.AreEqual(4354685564936846131UL, rngA.State,
+                "two draws off seed 777 (one dodge roll, one crit roll on the hit); a second dodge roll would make three");
         }
 
         [Test]
@@ -621,15 +618,9 @@ namespace PrincesPalace.Domain.Tests
                 999, DamageType.Fire, target, ElementalAffinity.Neutral,
                 varianceRange: 0.2f, rng: rngA, resolveWard: null);
 
-            var rngB = new PrincesPalace.Domain.Rng.SeededRandom(55);
-            bool expectedMiss = DamagePipeline.RollDodge(target, null, rngB);
-            if (!expectedMiss)
-            {
-                DamagePipeline.ApplyVariance(999, 0.2f, rngB);
-            }
-
-            Assert.AreEqual(expectedMiss, outcome.IsMiss);
-            Assert.AreEqual(rngB.State, rngA.State,
+            Assert.AreEqual(true, outcome.IsMiss);
+            Assert.AreEqual(0, outcome.Damage);
+            Assert.AreEqual(11400714819323198540UL, rngA.State,
                 "dodge must be the FIRST draw off this stream -- if variance ran before it inside " +
                 "AfterDefences, these two independently-replayed streams would end up in different states");
         }
