@@ -129,7 +129,8 @@ def repo_root():
     global _REPO_ROOT
     if _REPO_ROOT is None:
         result = subprocess.run(
-            ["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True, check=False
+            ["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True,
+            encoding="utf-8", errors="replace", check=False,
         )
         _REPO_ROOT = result.stdout.strip() if result.returncode == 0 else os.getcwd()
     return _REPO_ROOT
@@ -149,7 +150,8 @@ def blob_lines(rev, path):
 
     spec = ":{}".format(path) if rev == INDEX else "{}:{}".format(rev, path)
     result = subprocess.run(
-        ["git", "show", spec], capture_output=True, text=True, check=False
+        ["git", "show", spec], capture_output=True, text=True,
+        encoding="utf-8", errors="replace", check=False,
     )
     if result.returncode != 0:
         return None
@@ -215,7 +217,10 @@ def diff_for(cached, rev_range):
         cmd = ["git", "diff", rev_range, "--diff-filter=ACMR", "-U0", "--", "*.cs"]
     else:
         cmd = ["git", "diff", "--diff-filter=ACMR", "-U0", "--", "*.cs"]
-    result = subprocess.run(cmd, capture_output=True, text=True, check=False, cwd=repo_root())
+    result = subprocess.run(
+        cmd, capture_output=True, text=True, encoding="utf-8", errors="replace",
+        check=False, cwd=repo_root(),
+    )
     if result.returncode not in (0, 1):
         sys.stderr.write(result.stderr)
         sys.exit(2)
@@ -256,4 +261,6 @@ def main(argv=None):
 
 
 if __name__ == "__main__":
+    # Offending lines are source text; print them as UTF-8 whatever the console codepage.
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     sys.exit(main())
