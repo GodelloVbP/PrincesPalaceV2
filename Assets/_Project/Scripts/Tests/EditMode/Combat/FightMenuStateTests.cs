@@ -1270,8 +1270,7 @@ namespace PrincesPalace.Domain.Tests
 
             var panel = FightHudModel.DetailForSkill(session, hero, skill);
 
-            int expected = HealthCost.AmountFor(hero.MaxHealth, 5);
-            Assert.AreEqual($"{expected} HP", StatValue(panel, "COST"));
+            Assert.AreEqual("10 HP", StatValue(panel, "COST"));
             Assert.IsFalse(HasStat(panel, "MANA"), "this skill spends no mana; MANA must not appear");
         }
 
