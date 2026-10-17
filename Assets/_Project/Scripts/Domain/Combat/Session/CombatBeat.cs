@@ -25,10 +25,9 @@ namespace PrincesPalace.Domain.Combat.Session
     // numbers jump to their final values the moment you act, while the sprites
     // are still mid-swing, which reads worse than no animation at all.
     //
-    // This is v1's StageBeat, moved whole. It was already engine-free apart
-    // from using Vector3Int as an (hp, mana, signature) tuple, which is now
-    // Vitals -- so the recording half of the beat system needs no Unity at all,
-    // and the whole of it becomes testable in EditMode.
+    // The recording half of the beat system needs no Unity at all (Vitals is
+    // the (hp, mana, signature) tuple), so the whole of it is testable in
+    // EditMode.
     //
     // WHAT RECORDED A BEAT. One value rather than a nullable marker per kind,
     // because "was this an action" is a question about the beat's cause and a
@@ -112,8 +111,6 @@ namespace PrincesPalace.Domain.Combat.Session
         // them.
         public int Absorbed;
 
-        // THE ONE FIELD THIS CLASS DID NOT CARRY UNTIL THE POPUP NEEDED IT.
-        //
         // FILLED FROM OUTSIDE FOR NEARLY EVERY BEAT, in
         // FightController.AfterResolution -- the one place every drained
         // batch of beats already passes through: that call already has
@@ -184,7 +181,7 @@ namespace PrincesPalace.Domain.Combat.Session
             _damageTypeDeclared = true;
         }
 
-        // PHASE D1: the single-target swing or cast this beat represents was
+        // The single-target swing or cast this beat represents was
         // DODGED — Amount stays 0 (RecordBeatAmount already no-ops for a
         // non-positive amount, so nothing here forces it) but that 0 must
         // not read as "landed for nothing", which is what a beat with no
@@ -693,7 +690,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // FightBeatPlayer.HitStopFor takes the larger of the blow's own weight
         // and this. Zero for everything that authored none.
         //
-        // NOT ONLY A WORN FORM'S ANY MORE, despite the name -- a poolTiers
+        // NOT ONLY A WORN FORM'S, despite the name -- a poolTiers
         // skill's fired tier floors this exact field through the same rule
         // (FightSession.Beats.ApplyHitCueFloor). Kept as one slot rather than
         // a second "PoolTierHitStopSeconds" beside it: the question this

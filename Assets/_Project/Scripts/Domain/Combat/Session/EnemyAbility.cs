@@ -6,21 +6,13 @@ namespace PrincesPalace.Domain.Combat.Session
 {
     // ONE THING A MONSTER CAN DO, and a weight saying how often it does it.
     //
-    // A monster used to have exactly two actions: its basic attack, and ONE
-    // "skill" described by three loose scalars -- a name string, a multiplier
-    // on that same basic attack, and a chance. So every ability in the game,
-    // on every monster, resolved to a single line:
-    //
-    //     damage = Max(1, Round(damage * SkillPower));
-    //
-    // A boss and a rat differed by a number. Nothing could heal its own side,
-    // shield an ally, hit the whole party, or apply a status that belonged to
-    // the ability rather than to the monster.
-    //
-    // An ability is a REAL ResolvedSkill now -- the same type a player's kit
+    // An ability is a REAL ResolvedSkill -- the same type a player's kit
     // carries, resolved through the same content path -- so the entire
-    // SkillEffect vocabulary is available to monsters and every skill written
-    // for a character in future is available to them for free.
+    // SkillEffect vocabulary is available to monsters (heal its own side,
+    // shield an ally, hit the whole party, apply a status that belongs to the
+    // ability) and every skill written for a character is available to them
+    // for free. The other kind of entry is the monster's plain basic attack,
+    // which carries no skill.
     public readonly struct EnemyAbility
     {
         // The skill itself, and null on a legacy attack.
@@ -92,9 +84,8 @@ namespace PrincesPalace.Domain.Combat.Session
         // rather than by Power == 1f: a legacy skill authored at power 1.0
         // wears the same numeric shape as the plain swing but is still an
         // authored ability with its own telegraph, and Power-based detection
-        // used to swallow it into the swing's plain "Attack" intent. Same
-        // rule EnemyShowcase used privately for exactly this reason before
-        // the two were unified onto this one property.
+        // would swallow it into the swing's plain "Attack" intent. EnemyShowcase
+        // uses this same property.
         public bool IsPlainSwing => IsLegacyAttack && Label == FightSession.IntentAttack;
 
         // WHETHER ROOTED FORBIDS THIS ENTRY (plan 1.10). An authored ability

@@ -5,11 +5,9 @@ namespace PrincesPalace.Domain.Combat.Session
     // What a monster has committed to doing on its next turn, in enough detail
     // for the player to plan against it.
     //
-    // Before this, an intent was a bare string and only skills were telegraphed
-    // at all -- a plain attack showed nothing, and NOTHING ever said who was
-    // going to be hit or for roughly how much. So the one decision the player
-    // actually makes each turn (who needs healing, who can afford to be hit,
-    // whether to kill this one first) had to be guessed.
+    // An intent says who is going to be hit and for roughly how much, so the
+    // one decision the player makes each turn (who needs healing, who can
+    // afford to be hit, whether to kill this one first) is not a guess.
     //
     // The target is committed HERE rather than picked at resolution time, which
     // is the change that makes the display honest: a telegraph that says
@@ -35,10 +33,10 @@ namespace PrincesPalace.Domain.Combat.Session
         // ANOTHER BODY ON THE FIELD, which is not a kind of damage and is the
         // reason it needs its own badge. Every other kind above answers "what
         // is about to happen to someone"; this one answers "the shape of this
-        // fight is about to change", and it read as the generic Skill icon --
-        // the badge that means "something is coming" -- on the one turn where
-        // knowing what is coming would change whether the player spends their
-        // burst now or saves it for the two enemies about to exist.
+        // fight is about to change". The generic Skill icon means "something
+        // is coming", which would hide the one turn where knowing what is
+        // coming changes whether the player spends their burst now or saves
+        // it for the enemies about to exist.
         Summon,
 
         // THE BELLWETHER'S VOCABULARY (PLAN_BELLWETHER_KIT 3.8), each derived
@@ -54,11 +52,9 @@ namespace PrincesPalace.Domain.Combat.Session
     // player's decision most.
     //
     // "It will hit Shawn for 40" and "it will heal its whole side for 40" are
-    // opposite problems and used to be indistinguishable, because a monster
-    // could only ever do one thing: damage the person it was pointed at. Now
-    // that a monster casts real skills, the scope has to be said or the
-    // telegraph is worse than none -- it would name a single target for an
-    // effect that hits everybody.
+    // opposite problems. A monster casts real skills, so the scope has to be
+    // said or the telegraph is worse than none -- it would name a single
+    // target for an effect that hits everybody.
     public enum EnemyIntentScope
     {
         // The one combatant named in the intent.
@@ -106,9 +102,8 @@ namespace PrincesPalace.Domain.Combat.Session
 
         // WHICH ABILITY, by index into the kit's pool.
         //
-        // Resolution used to recover this by comparing the intent's Label back
-        // against the monster's single skill name. That worked while there was
-        // exactly one skill and its name was therefore unique. With a weighted
+        // Comparing the intent's Label back against a skill name would not
+        // identify the ability: with a weighted
         // pool two abilities may share a display name -- two flavours of the
         // same spell, a placeholder authored twice -- and a comparison on text
         // would resolve the wrong one while the telegraph looked right.
@@ -322,20 +317,14 @@ namespace PrincesPalace.Domain.Combat.Session
             }
         }
 
-        // Which kind an authored enemy skill reads as. Statuses win over the
-        // generic Skill because what a monster is about to APPLY changes the
-        // player's decision more than the fact that it is a skill at all.
-        // THE EFFECT FIRST, then the status.
-        //
-        // KindFor below reads only the status a monster applies, which was the
-        // whole vocabulary while a monster's "skill" was a scaled attack that
-        // might poison. A real skill says what it does in its own Effect, and a
-        // heal with no Regen attached would otherwise telegraph as a generic
-        // "skill" -- the icon that means "something is coming" on the one turn
-        // the player most needs to know it is not coming for them.
-        // A real skill's kind, from the skill itself. The seat-sized hit wins
-        // over its effect and status: "where you stand decides" is the one
-        // fact the player must act on, whatever else rides the hit.
+        // Which kind an authored enemy skill reads as, in this order: the
+        // seat-sized hit (Knell) first, because "where you stand decides" is
+        // the one fact the player must act on, whatever else rides the hit;
+        // then the skill's own Effect; then the status it applies; then the
+        // generic Skill. What a monster is about to DO changes the player's
+        // decision more than the fact that it is a skill at all, and a heal
+        // with no Regen attached must not telegraph as a generic "skill" on
+        // the one turn the player most needs to know it is not coming for them.
         public static EnemyIntentKind KindFor(Content.ResolvedSkill skill)
         {
             if (skill == null) return EnemyIntentKind.Skill;

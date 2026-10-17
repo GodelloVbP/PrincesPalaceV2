@@ -9,18 +9,15 @@ namespace PrincesPalace.Domain.Combat.Session
     // Everything the session needs to know about a combatant that is NOT part
     // of its mutable state.
     //
-    // A deliberately thin record. The plan expected a "flattening layer" to
-    // strip Unity types out of the content definitions -- it turned out not to
-    // be needed, because Domain/Content already holds ResolvedCharacter /
-    // ResolvedEnemy / ResolvedSkill with complete field sets and no mirror
-    // enums. So a kit is a small bundle over values that already exist. The
-    // last real conversion, Core's SkillDefinition -> ResolvedSkill, is gone
-    // too: the asset stores the ResolvedSkill and the adapter hands it back.
+    // A deliberately thin record: Domain/Content already holds
+    // ResolvedCharacter / ResolvedEnemy / ResolvedSkill with complete field
+    // sets and no mirror enums, so a kit is a small bundle over values that
+    // already exist. The asset stores the ResolvedSkill and the adapter hands
+    // it back.
     //
     // Kits carry COMBAT facts only. Portraits, sprite folders and voice clip
-    // keys are view concerns and live in adapter-built parallel arrays -- v1's
-    // `_playerOwners`/`_enemySources` dictionaries did both jobs at once, which
-    // is a large part of why combat logic could not leave the controller.
+    // keys are view concerns and live in adapter-built parallel arrays, so
+    // combat logic never depends on a view lookup.
     public sealed class PlayerKit
     {
         // The save-side identity this combatant writes back to, and the key the
@@ -44,26 +41,20 @@ namespace PrincesPalace.Domain.Combat.Session
         // elemental affinity. A rudimentary, one-directional system by design.
         public readonly DamageType? AttackType;
 
-        // BasicSpell removed (docs/PLAN_SHOP.md §4 Phase E, the flip): the
-        // automatic, nameless "Skill" action every character used to cast
-        // off spells.json's level-keyed ladder regardless of what they had
-        // learned. The ladder itself (SpellTierDefinition, EffectiveSkillScaling,
-        // GetSpellTierForLevel) is untouched -- it is what every Spell-axis
-        // skill's damage still scales through, this field just is not one
-        // any more. A character now has exactly the skills their kit
-        // authored plus whatever they learned from a book.
+        // There is no automatic, nameless "Skill" action: a character has
+        // exactly the skills their kit authored plus whatever they learned
+        // from a book. The spell-tier ladder (SpellTierDefinition,
+        // EffectiveSkillScaling, GetSpellTierForLevel) is what every
+        // Spell-axis skill's damage scales through.
 
-        // NOT PART OF THE BasicSpell REMOVAL -- kept on purpose. The spell
+        // The spell
         // tier's own powerMultiplier is a SEPARATE axis from
         // EffectiveSkillScaling's INT/WIS grade (FightSession.Skills.cs'
         // own header calls this out: "the two never stood in for each other
         // and neither replaces the other"), and it is what scales every
         // FIXED-damage-instance skill (frost_flare, lightning_bolt) -- named
-        // skills, not the free action that used to carry it. Removing
-        // BasicSpell wholesale would have silently dropped this multiplier
-        // to 1 for both of them, a real damage nerf nobody asked for and the
-        // plan's own F4 did not flag, because it read spells.json as
-        // powering only EffectiveSkillScaling. 1f (neutral) for a kit built
+        // skills. Dropping it would silently set the multiplier to 1 for
+        // both of them, a damage nerf. 1f (neutral) for a kit built
         // with no level to ask about, same as the ladder's own "before tier
         // 1" reading.
         public readonly float SkillPowerMultiplier;
@@ -202,9 +193,9 @@ namespace PrincesPalace.Domain.Combat.Session
         private static float Clamp01(float v) => v < 0f ? 0f : v > 1f ? 1f : v;
 
         // What this monster takes badly and what it shrugs off, as one value
-        // -- see ElementalAffinity. Two properties for two single elements is
-        // what this was, and the pair had to be threaded through every damage
-        // call site together anyway.
+        // -- see ElementalAffinity. One value rather than two properties for
+        // two single elements, since the pair has to be threaded through
+        // every damage call site together anyway.
         public ElementalAffinity Affinity => Source?.Affinity ?? ElementalAffinity.Neutral;
     }
 }
