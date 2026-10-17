@@ -82,7 +82,7 @@ namespace PrincesPalace
         //
         // Counted off the content rather than hardcoded, so adding a boss moves
         // the budget with no edit here. What it will NOT move is the shape of
-        // the finding: the content ships three live bosses against a tree whose
+        // the finding: the content ships two live bosses against a tree whose
         // single path costs 45 and a per-character cap of 30
         // (ContentDatabase.EmberSpendCap). The talent tree is, today,
         // approximately unreachable, and the batch is about to say so.
@@ -92,20 +92,16 @@ namespace PrincesPalace
 
             int bosses = ContentDatabase.Enemies.Count(e => e != null && e.Data.IsBoss);
 
-            // NOT CLAMPED TO EmberSpendCap ANY MORE, and the deletion is the
-            // point rather than a tidy-up. This clamped the GRANT because
-            // nothing clamped the SPEND: TalentPage.Evaluate asked the wallet
-            // alone, so a preset handed 31 embers would have kindled 31 embers'
-            // worth of tree and quietly reported a build the game cannot
-            // produce. The cap is now a refusal on the same path the player
-            // uses (TalentPage.Refusal.BudgetSpent), so the honest grant is the
-            // whole payout and the gate stops the spend at 30 -- one rule, in
-            // one place, instead of a second copy of it living here.
+            // NOT CLAMPED TO EmberSpendCap: the cap is a refusal on the same
+            // path the player uses (TalentPage.Refusal.BudgetSpent), so the
+            // grant is the whole payout and the gate stops the spend at 30 --
+            // one rule, in one place. A clamp here would be a second copy of it.
             //
-            // A save CAN hold more than the cap, and always could: EmberPayout
-            // pays one per unique boss with no reference to the cap, and the
-            // wallet is deliberately shared and uncapped. What is capped is how
-            // much of it any ONE character may commit.
+            // A character CAN hold more than the cap: EmberPayout pays one per
+            // unique boss with no reference to the cap, and embers are per
+            // character and uncapped (each fielded character gets the full
+            // grant in its own field). What is capped is how much of them any
+            // ONE character may commit.
             return EmberPayout.EmbersFor(bosses);
         }
 
@@ -254,7 +250,7 @@ namespace PrincesPalace
 
                 // RE-DERIVED EACH LOOP like the frontier itself, because each
                 // purchase spends some of it. This is what stops the preset at
-                // the lifetime cap now that EmbersFor no longer clamps the
+                // the lifetime cap, since EmbersFor does not clamp the
                 // grant -- the same refusal the screen's button reads.
                 int budget = ContentDatabase.EmbersLeftFor(character);
 

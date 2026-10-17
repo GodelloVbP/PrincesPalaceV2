@@ -32,9 +32,10 @@ namespace PrincesPalace
     // same reason: the SAVE is the state, and a second copy held here would be
     // a second thing that can disagree with the disk.
     // Split across files (docs/CODE_STANDARDS.md "Partial classes"): this root file owns the
-    // class declaration and everything a run has always done,
-    // RunOrchestrator.Shop.cs owns the shop's own mutations and
-    // RunOrchestrator.Event.cs the event room's -- one topic per file.
+    // class declaration and the run's core flow; RunOrchestrator.Shop.cs owns
+    // the shop's own mutations, RunOrchestrator.Event.cs the event room's,
+    // RunOrchestrator.Hone.cs and RunOrchestrator.Shelf.cs the hone and shelf
+    // mutations -- one topic per file.
     public static partial class RunOrchestrator
     {
         // ---- starting a descent -------------------------------------------------
@@ -210,8 +211,8 @@ namespace PrincesPalace
         public static bool IsFight(RoomType type) =>
             type == RoomType.Fight || type == RoomType.EliteFight || type == RoomType.Boss;
 
-        // What the room does. Byte for byte what MapController.Walk's Arrive
-        // did, minus the navigation and the redraw, which are the screen's.
+        // What the room does: the same as MapController.Walk's Arrive, minus
+        // the navigation and the redraw, which are the screen's.
         public static Arrival ArriveAt(RealmNode target)
         {
             if (target == null || !RunManager.MoveTo(target.Id)) return Arrival.Refused;
@@ -348,12 +349,11 @@ namespace PrincesPalace
                 return null;
             }
 
-            // isBoss/isElite ACTUALLY PASSED, which they were not before.
-            // FightSession took its defaults, so IsBossFight was false in every
-            // fight the game could reach -- and the settlement gates
-            // RecordBossKill on it, so no boss kill was ever recorded and the
-            // run settled without paying for any of them. EnemyKit took the
-            // same false for isElite, so elite rooms fielded ordinary kits.
+            // isBoss/isElite MUST BE PASSED: FightSession's defaults would make
+            // IsBossFight false in every fight, and the settlement gates
+            // RecordBossKill on it, so no boss kill would be recorded and the
+            // run would settle without paying for any of them. EnemyKit takes
+            // isElite the same way, so elite rooms would field ordinary kits.
             var built = FightEncounterAdapter.Build(
                 roster.PartyIds, roster.EnemyIds, roster.Rng,
                 isBoss: roster.IsBoss,
@@ -376,14 +376,11 @@ namespace PrincesPalace
             if (built == null) return null;
 
             // THE DEPTH RIDES THE SESSION, here and not only in
-            // FightBootstrap. The screen set it after calling this (its
-            // comment: "the payout is scaled by where the fight HAPPENED"),
-            // and the bot did not -- so every bot fight before this line
-            // settled at DepthStep 0: VictoryRewards paid unscaled gold/exp
-            // and RarityTable.RollTier centred every offer on FloorTier(0).
-            // Found by the first batch that traced offer tiers -- step-40
-            // offers had the step-1 distribution, which the formula cannot
-            // produce. One seam, two callers, so it lives in the seam.
+            // FightBootstrap: the payout is scaled by where the fight
+            // HAPPENED. Without it a fight would settle at DepthStep 0, and
+            // VictoryRewards would pay unscaled gold/exp while
+            // RarityTable.RollTier centred every offer on FloorTier(0). One
+            // seam, two callers, so it lives in the seam.
             built.Session.DepthStep = run.step;
 
             // THE CHARGE GOES IN BEFORE THE FIGHT OPENS, because Domain cannot
@@ -568,10 +565,10 @@ namespace PrincesPalace
             // spell drop, and so no Reckoning.
             var payout = won && request.Pays ? session?.Payout : null;
 
-            // GOLD IS NOT PASSED HERE any more. The fight's gold is banked
-            // below through RunManager.BankPayout, which is now the one place
-            // a run records having earned anything -- so handing it to the
-            // ledger too would count the same coin twice.
+            // GOLD IS NOT PASSED HERE. The fight's gold is banked below through
+            // RunManager.BankPayout, the one place a run records having earned
+            // anything -- so handing it to the ledger too would count the same
+            // coin twice.
             //
             // An event fight clears no room (the event's Leave does), so it
             // never counts toward roomsCleared; its exp and depth still do.

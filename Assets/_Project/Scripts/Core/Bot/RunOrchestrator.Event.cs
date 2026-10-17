@@ -209,7 +209,8 @@ namespace PrincesPalace
         }
 
         // The title the event page at a room will open with, "" when the pool
-        // is empty. Reads, draws from no shared stream.
+        // is empty. Commits the room's pick through DecideEvent (stored on the
+        // first call and saved), so the title is the event the room will open.
         internal static string PreviewEventTitle(RunSnapshot run, RealmNode node)
         {
             var save = SaveSlotManager.CurrentSave;

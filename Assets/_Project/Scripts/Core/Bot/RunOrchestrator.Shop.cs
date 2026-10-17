@@ -68,17 +68,16 @@ namespace PrincesPalace
         // the guard rather than an optimisation: without it a stale list from
         // a previous shop paints the next one.
         //
-        // THE REROLL ARRAY IS PART OF "OPEN", added after RerollSection was
-        // found indexing it unguarded in step 2 -- after the gold had already
-        // left the purse. Every mutation here is validate / apply / persist
+        // THE REROLL ARRAY IS PART OF "OPEN": RerollSection indexes it in step
+        // 2, after the gold has already left the purse. Every mutation here is validate / apply / persist
         // precisely so that step 2 CANNOT fail; an IndexOutOfRange thrown out
         // of step 2 leaves the run holding a charge for a shelf it never got.
         //
         // Stated in the predicate rather than patched at the one index: the
         // invariant is "an open shop has a reroll counter per section", and
         // saying it here makes it true for every mutator and for the shelf the
-        // screen paints, in one place. The read side (RerollsUsed below) has
-        // always been guarded; this is what stops the two halves from
+        // screen paints, in one place. The read side (RerollsUsed below) is
+        // guarded; this is what stops the two halves from
         // disagreeing about whether the array can be trusted. The state itself
         // is not reachable today -- Reconcile resizes the array on load,
         // carrying what was there -- so this is the invariant written down,
@@ -328,8 +327,8 @@ namespace PrincesPalace
 
             // THROUGH THE PAYOUT SEAM, not onto run.gold. A sale is gold the
             // run earned, and BankPayout is the one place that records that --
-            // `run.gold += paid` here was the second of the two leaks that let
-            // "Gold earned" read below "Gold held" (the other was treasure).
+            // adding to run.gold directly would let "Gold earned" read below
+            // "Gold held".
             RunManager.BankPayout(paid);
 
             // 3. PERSIST. BankPayout already wrote, so this is the second write
@@ -442,7 +441,8 @@ namespace PrincesPalace
                 ItemOfferRoll.Candidates(), run.step, ItemOfferRoll.MaxTier, next);
         }
 
-        // THE BOOK POOL THIS SHOP CAN OFFER: every bookTier > 0 skill, minus
+        // AvailableBookOptions (below ShopBookCandidatesForTest) returns THE
+        // BOOK POOL THIS SHOP CAN OFFER: every bookTier > 0 skill, minus
         // any skillId NO fielded character could use -- because they already
         // know it, or because their primary pool refuses spell books at all
         // (§2d's "owned by everyone" rule, widened by plan P6 -- a card
@@ -454,13 +454,13 @@ namespace PrincesPalace
         // ownership context (§7.1 point 4 puts those facts on the card
         // itself instead, read from run.learnedSpells/unassignedSpellBooks
         // directly by whatever paints the card).
+
         // The same pool, reachable from a PlayMode test. Public rather than
         // internal because InternalsVisibleTo names the Editor assembly only,
         // so a PlayMode fixture reaches this or reaches nothing -- and the
         // half of the book rule that lives here ("offered to whoever is
         // buying") is only worth anything if it is pinned beside the half
-        // that lives in AvailableSkillsFor. They were allowed to disagree for
-        // as long as neither was asserted against the other.
+        // that lives in AvailableSkillsFor.
         public static IReadOnlyList<ShopStock.BookCandidate> ShopBookCandidatesForTest() =>
             AvailableBookOptions();
 
@@ -471,8 +471,7 @@ namespace PrincesPalace
             var squad = save?.ActiveSquadIds() ?? new List<string>();
             var learned = run?.learnedSpells ?? new List<LearnedSpellEntry>();
 
-            // "EVERYONE KNOWS IT" BECAME "NOBODY CAN USE IT" (plan P6, gate
-            // 2). The rule §2d states is "a card nobody could act on is a
+            // "NOBODY CAN USE IT", not "everyone knows it". The rule is "a card nobody could act on is a
             // dead card taking a live card's slot", and knowing the book was
             // only ever ONE way to be unable to act on it -- a character
             // whose primary pool refuses books is another, and the shelf has
