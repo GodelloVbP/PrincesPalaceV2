@@ -93,11 +93,6 @@ namespace PrincesPalace.Domain.UiKit
             "Assets/_Project/Resources/Plates/pc_owl.png",
         };
 
-        // The Resources-relative path a `plateArt` value looks like, for the
-        // resolver's error message and for the tests that pin the three
-        // shipped rows. Not used to BUILD a path -- content owns that.
-        public const string ResourceRoot = "Plates/";
-
         // THE ENEMY PLATE'S OWN HEAD ZONE -- same idea as HeadZoneFrac above
         // (isolate the head so a small badge reads as a face rather than a
         // smear), a DIFFERENT axis because the source art is a different
