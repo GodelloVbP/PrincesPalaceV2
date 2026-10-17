@@ -7,61 +7,27 @@ namespace PrincesPalace.Domain.Tests
     // likely to be one digit wrong at.
     public class PlaytimeFormatTests
     {
-        [Test]
-        public void UnderAMinute_ReadsAsLessThanOne()
-        {
-            Assert.AreEqual("<1m", PlaytimeFormat.Describe(0f));
-            Assert.AreEqual("<1m", PlaytimeFormat.Describe(59f));
-        }
-
-        [Test]
-        public void ExactlyAMinute_IsOneMinute()
-        {
-            Assert.AreEqual("1m", PlaytimeFormat.Describe(60f));
-        }
-
-        [Test]
-        public void UnderAnHour_ShowsMinutesOnly()
-        {
-            Assert.AreEqual("41m", PlaytimeFormat.Describe(41f * 60f));
-            Assert.AreEqual("59m", PlaytimeFormat.Describe(59f * 60f + 59f));
-        }
-
+        // Rows read: seconds, expected text.
+        [TestCase(0f, "<1m")]
+        [TestCase(59f, "<1m")]
+        [TestCase(60f, "1m")]
+        [TestCase(41f * 60f, "41m")]
+        [TestCase(59f * 60f + 59f, "59m")]
         // THE BOUNDARY. 59:59.9 must not round up into "1h 0m" -- this is
         // floored, not rounded, so a slot never claims an hour it has not
         // actually reached.
-        [Test]
-        public void FiftyNineMinutesFiftyNineSeconds_IsStillUnderAnHour()
-        {
-            Assert.AreEqual("59m", PlaytimeFormat.Describe(59f * 60f + 59.9f));
-        }
-
-        [Test]
-        public void AnHourExactly_ShowsZeroMinutesRatherThanDroppingTheHour()
-        {
-            Assert.AreEqual("1h 0m", PlaytimeFormat.Describe(3600f));
-        }
-
-        [Test]
-        public void HoursAndMinutesBothShow()
-        {
-            Assert.AreEqual("3h 12m", PlaytimeFormat.Describe(3f * 3600f + 12f * 60f));
-        }
-
+        [TestCase(59f * 60f + 59.9f, "59m")]
+        [TestCase(3600f, "1h 0m")]
+        [TestCase(3f * 3600f + 12f * 60f, "3h 12m")]
         // Minutes never overflow into a bigger number than 59 -- the hour
         // carries instead, the same way a clock does.
-        [Test]
-        public void MinutesRemainderNeverReachesSixty()
+        [TestCase(2f * 3600f, "2h 0m")]
+        // Never a real input, but a corrupted or hand-edited save is not
+        // this method's job to validate -- it degrades rather than throws.
+        [TestCase(-5f, "<1m")]
+        public void DescribeReadsEveryBoundary(float seconds, string expected)
         {
-            Assert.AreEqual("2h 0m", PlaytimeFormat.Describe(2f * 3600f));
-        }
-
-        [Test]
-        public void NegativeSeconds_ClampsToZeroRatherThanThrowing()
-        {
-            // Never a real input, but a corrupted or hand-edited save is not
-            // this method's job to validate -- it degrades rather than throws.
-            Assert.AreEqual("<1m", PlaytimeFormat.Describe(-5f));
+            Assert.AreEqual(expected, PlaytimeFormat.Describe(seconds));
         }
     }
 }
