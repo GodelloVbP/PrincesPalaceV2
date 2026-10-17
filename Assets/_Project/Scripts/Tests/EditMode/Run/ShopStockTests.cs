@@ -159,10 +159,11 @@ namespace PrincesPalace.EditModeTests
             Assert.AreEqual(ShopStock.BookCount, offered.Count, "four candidates for three slots, none should pad");
             CollectionAssert.AllItemsAreUnique(offered.Select(e => e.contentId).ToList());
 
+            var priceByTier = new Dictionary<int, int> { { 1, 70 }, { 2, 95 }, { 3, 120 }, { 4, 145 } };
             foreach (var entry in offered)
             {
                 var source = candidates.First(c => c.SkillId == entry.contentId);
-                Assert.AreEqual(ShopPricing.BookAuthored(source.BookTier), entry.price);
+                Assert.AreEqual(priceByTier[source.BookTier], entry.price, entry.contentId);
             }
         }
 
