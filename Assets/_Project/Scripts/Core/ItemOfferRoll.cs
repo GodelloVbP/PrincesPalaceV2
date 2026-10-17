@@ -70,7 +70,7 @@ namespace PrincesPalace
         // (characters.json), the same for every save. Nothing worn adds to
         // it. Tolerant of a missing definition (content edited under a live
         // save), which reads as zero.
-        public static int FavorOf(Character character, CharacterDefinition definition)
+        public static int FavorOf(CharacterDefinition definition)
         {
             int authored = definition == null ? 0 : definition.Data.PrincesFavor;
             return authored < 0 ? 0 : authored;
@@ -121,7 +121,7 @@ namespace PrincesPalace
             if (save == null) return 0;
 
             int squad = SquadFavor(save.ActiveSquad()
-                .Select(c => FavorOf(c, ContentDatabase.Characters
+                .Select(c => FavorOf(ContentDatabase.Characters
                     .FirstOrDefault(d => d != null && d.id == c.definitionId))));
 
             var run = save.activeRun;
