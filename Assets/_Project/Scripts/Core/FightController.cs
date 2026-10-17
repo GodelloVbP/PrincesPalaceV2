@@ -1128,17 +1128,17 @@ namespace PrincesPalace
         {
             if (submenuRowRects == null) return;
 
-            // CLAMPED TO THE POOL, which is sixteen rows rather than the nine
-            // that fit. A count above the pool is content growth, not an error
-            // -- but a row past it has no rect and cannot be reached at all,
-            // which is why the pool carries four spare.
+            // CLAMPED TO THE POOL, which holds more rows than the view shows.
+            // A count above the pool is content growth, not an error -- but a
+            // row past it has no rect and cannot be reached at all, which is
+            // why the pool is sized with spare rows.
             int shown = FightSubmenuLayout.VisibleCount(count);
             _submenuCount = shown;
 
-            // NOTHING IS RE-ANCHORED. Every row sits at its pool
-            // position forever and the rect around them moves instead -- one
-            // write rather than sixteen, and the only construction that
-            // can also scroll. Rows are switched on or off and nothing else.
+            // NOTHING IS RE-ANCHORED. Every row sits at its pool position
+            // forever and the rect around them moves instead -- one write for
+            // the whole pool, and the only construction that can also scroll.
+            // Rows are switched on or off and nothing else.
             for (int i = 0; i < submenuRowRects.Length; i++)
             {
                 var rect = submenuRowRects[i];
