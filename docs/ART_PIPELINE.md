@@ -246,10 +246,8 @@ One rule the tooling doesn't enforce for you: **slice every stance of one
 actor in a single tool invocation.** The slicer sizes its shared canvas
 from whatever it's given in one pass; two separate invocations for the
 same actor produce two different canvases, which makes the actor visibly
-resize/jump the moment that stance shows. `ActorArtAssertions.AssertOneCanvasSize`
-checks this for every stance an actor has authored, and both
-`EnemyStageTests` and `PartyStageTests` run it over their own half of the
-roster.
+resize/jump the moment that stance shows. `EnemyArtCompletenessTests` checks
+this for every enemy stance; no test covers the party roster.
 
 ### 4b. `slice_actor_sheet.py`
 
@@ -374,9 +372,7 @@ python tools/actor_stance_qa.py --report Assets/_Project/Resources/Enemies --onl
 renders `tools/screenshots/actor_qa/<id>.png` (gitignored, never
 committed): one row per actor, one cell per stance, each with its canvas
 outline, ground line, alpha-centroid tick, and a `sqrt(area)/median`
-caption colour-coded against the same tolerance band
-`ActorArtAssertions.AssertOneDrawScale` asserts (shared by
-`EnemyStageTests` and `PartyStageTests`). A creature folder still holding
+caption colour-coded against a tolerance band (no test asserts it). A creature folder still holding
 old `<stance>/f0..fN/` frame folders (mid-migration to this pipeline) is
 skipped with a one-line notice rather than guessed at. `--report` has no
 dependency on the slicer, so it can render today's *committed* art as a
