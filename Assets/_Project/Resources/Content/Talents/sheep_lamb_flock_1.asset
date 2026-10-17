@@ -41,7 +41,6 @@ MonoBehaviour:
     SkillManaCostReduction: 0
     SignatureCapacityBonus: 0
     SignaturePerTurnBonus: 0
-    GrantsStartingItemId: 
     SortOrder: 32
     IconPath: 
     MinSpent: 0
