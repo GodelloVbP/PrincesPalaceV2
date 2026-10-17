@@ -43,6 +43,23 @@ namespace PrincesPalace.Domain.Tests
             return resolved;
         }
 
+        // No copy exists above ItemInstance.TierCap (10), so a longer ladder
+        // would be steps nothing can reach (AUDIT #276).
+        [Test]
+        public void AMaxPlusAboveTheTierCap_IsRefused_NamingTheSet()
+        {
+            ItemSetEntryResolver.TryResolveAll(new[] { Minimal(maxTier: 11) }, out _, out var errors);
+
+            Assert.IsTrue(errors.Any(e => e.Contains("set 'leather'") && e.Contains("maxTier is 11") && e.Contains("tier cap of 10")),
+                string.Join("; ", errors ?? new List<string>()));
+        }
+
+        [Test]
+        public void AMaxPlusAtTheTierCap_Resolves()
+        {
+            Assert.AreEqual(10, Resolve(Minimal(maxTier: 10)).Single().Curve.maxTier);
+        }
+
         // ---- the interpolation ------------------------------------------
         //
         // PINNED literals. Nothing here recomputes the formula or calls
@@ -521,12 +538,12 @@ namespace PrincesPalace.Domain.Tests
             CollectionAssert.Contains(resolved.Select(p => p.Id).ToList(), "leather_boots");
         }
 
-        // A guard against a typo, not a design limit — but an unguarded
-        // maxTier is a runaway asset generator.
+        // An unguarded maxTier is a runaway asset generator; the guard is
+        // the tier cap, which no copy can pass.
         [Test]
         public void AnAbsurdMaxPlus_IsRejectedRatherThanGeneratingMillions()
         {
-            StringAssert.Contains("ceiling", Errors(Minimal(maxTier: 100000))[0]);
+            StringAssert.Contains("tier cap of 10", Errors(Minimal(maxTier: 100000))[0]);
         }
 
         [Test]

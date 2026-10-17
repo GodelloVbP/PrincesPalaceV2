@@ -80,9 +80,9 @@ namespace PrincesPalace.Domain.Content
             }
 
             int maxTier = raw.maxTier >= 0 ? raw.maxTier : DefaultMaxTier;
-            if (maxTier > ItemSetEntryResolver.HighestSupportedTier)
+            if (maxTier > ItemInstance.TierCap)
             {
-                errors.Add($"{label}: maxTier is {maxTier}, above the supported ceiling of {ItemSetEntryResolver.HighestSupportedTier}. Raising the ceiling is a one-line change, but this is usually a typo.");
+                errors.Add($"{label}: maxTier is {maxTier}, above the tier cap of {ItemInstance.TierCap}. No copy reaches past the cap, so the art ladder would end in steps nothing can wear.");
                 return;
             }
 

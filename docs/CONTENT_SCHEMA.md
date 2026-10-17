@@ -144,7 +144,7 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `displayName` | string | (none -- required) | What the material is called in item names, e.g. 'Leather' gives 'Hardened Leather Coif'. |  |
 | `description` | string | `""` | Flavor text shown to the player. |  |
 | `tierAdjectives` | string[] | `[]` | One adjective per tier, lowest first; the last covers every tier past the list's end. |  |
-| `maxTier` | int | `-1` | The tier the art ladder tops out at, and where the AtMax numbers sit; no copy is rolled, honed or loaded above it (ItemInstance.TierCap). |  |
+| `maxTier` | int | `-1` | The tier the art ladder tops out at, and where the AtMax numbers sit; no copy is rolled, honed or loaded above it (ItemInstance.TierCap), so the build refuses a higher value. |  |
 | `cost` | int | `-1` | Gold cost of the piece. |  |
 | `sortOrder` | int | `-1` | Sort position among item sets. |  |
 | `styleWeights` | string[] | `[]` | '<ability score> <hundredths>' lines: this material's per-score share of the ability-score half of the budget, e.g. 'strength 40' is a weight of 0.40. |  |
@@ -376,7 +376,7 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `id` | string | (none -- required) | Stable identifier; generated item ids are built from it and item ids live in save files. |  |
 | `displayName` | string | (none -- required) | The noun in every generated name for this family, e.g. 'Sword' gives 'Keen Sword'. |  |
 | `description` | string | `""` | Flavor text shown to the player. |  |
-| `maxTier` | int | `-1` | The tier the art ladder tops out at, and where the AtMax numbers sit; no copy is rolled, honed or loaded above it (ItemInstance.TierCap). |  |
+| `maxTier` | int | `-1` | The tier the art ladder tops out at, and where the AtMax numbers sit; no copy is rolled, honed or loaded above it (ItemInstance.TierCap), so the build refuses a higher value. |  |
 | `cost` | int | `-1` | Gold cost of the weapon. |  |
 | `sortOrder` | int | `-1` | Sort position among weapon families. |  |
 | `slot` | string | `"Weapon"` | Which hand slot this family is worn in; 'Weapon' is the alias for Weapon1. |  |

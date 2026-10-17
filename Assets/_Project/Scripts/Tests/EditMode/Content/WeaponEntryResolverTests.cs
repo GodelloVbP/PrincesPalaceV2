@@ -132,17 +132,36 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(ScalingGrade.C, top.Scaling.dexterity);
         }
 
-        // Raising maxTier should stretch the curve, not run out of ladder
-        // partway up — the same promise the armour sets make about stats.
+        // A shorter ladder stretches the curve across its steps rather than
+        // ending partway up it -- the same promise the armour sets make about
+        // stats. The ladder tops out at the tier cap.
         [Test]
-        public void RaisingMaxPlus_StretchesTheCurveRatherThanCappingItEarly()
+        public void ALongerMaxPlus_StretchesTheCurveRatherThanCappingItEarly()
         {
-            var curve = Resolve(Sword(maxTier: 20)).Single().Curve;
+            var short5 = Resolve(Sword(maxTier: 5)).Single().Curve;
+            var full10 = Resolve(Sword(maxTier: 10)).Single().Curve;
 
-            Assert.AreEqual(ScalingGrade.C, curve.At(0).Scaling.strength);
-            Assert.AreEqual(ScalingGrade.S, curve.At(20).Scaling.strength);
-            Assert.AreEqual(ScalingGrade.C, curve.At(5).Scaling.strength,
-                "A +5 weapon on a 20-step curve should still be near the bottom of it");
+            Assert.AreEqual(ScalingGrade.S, short5.At(5).Scaling.strength);
+            Assert.AreEqual(ScalingGrade.S, full10.At(10).Scaling.strength);
+            Assert.AreEqual(ScalingGrade.C, full10.At(1).Scaling.strength,
+                "A +1 weapon on a 10-step curve should still be near the bottom of it");
+        }
+
+        // No copy exists above ItemInstance.TierCap (10), so an art ladder
+        // longer than that would be steps nothing can reach (AUDIT #276).
+        [Test]
+        public void AMaxPlusAboveTheTierCap_IsRefused_NamingTheFamily()
+        {
+            var errors = Errors(Sword(maxTier: 11));
+
+            Assert.IsTrue(errors.Any(e => e.Contains("weapon family 'sword'") && e.Contains("maxTier is 11") && e.Contains("tier cap of 10")),
+                string.Join("; ", errors));
+        }
+
+        [Test]
+        public void AMaxPlusAtTheTierCap_Resolves()
+        {
+            Assert.AreEqual(10, Resolve(Sword(maxTier: 10)).Single().Curve.maxTier);
         }
 
         // The decision the whole axis still buys, even collapsed to one

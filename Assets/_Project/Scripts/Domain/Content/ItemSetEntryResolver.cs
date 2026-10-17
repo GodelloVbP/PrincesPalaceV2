@@ -40,11 +40,6 @@ namespace PrincesPalace.Domain.Content
         // a visible gap, a set piece reads perfectly well without one.
         public const string FallbackAdjective = "";
 
-        // A guard, not a design limit. It exists so a typo'd maxTier of
-        // 100000 fails with a sentence instead of trying to generate a
-        // million ScriptableObjects.
-        public const int HighestSupportedTier = 50;
-
         // How many drawings an item sheet holds unless a piece says otherwise.
         // Every sheet delivered so far is ten: five across, two down, read
         // left to right and top to bottom.
@@ -140,9 +135,9 @@ namespace PrincesPalace.Domain.Content
             }
 
             int maxTier = raw.maxTier >= 0 ? raw.maxTier : DefaultMaxTier;
-            if (maxTier > HighestSupportedTier)
+            if (maxTier > ItemInstance.TierCap)
             {
-                errors.Add($"{label}: maxTier is {maxTier}, above the supported ceiling of {HighestSupportedTier}. Raising the ceiling is a one-line change, but this is usually a typo.");
+                errors.Add($"{label}: maxTier is {maxTier}, above the tier cap of {ItemInstance.TierCap}. No copy reaches past the cap, so the art ladder would end in steps nothing can wear.");
                 return;
             }
 

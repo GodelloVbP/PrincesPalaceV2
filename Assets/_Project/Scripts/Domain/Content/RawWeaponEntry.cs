@@ -36,7 +36,7 @@ namespace PrincesPalace.Domain.Content
 
         // The tier the art ladder and the authored numbers' top end sit at.
         // ItemInstance.TierCap is the same tier: no copy outranks the art ladder.
-        [ContentDoc("The tier the art ladder tops out at, and where the AtMax numbers sit; no copy is rolled, honed or loaded above it (ItemInstance.TierCap).")]
+        [ContentDoc("The tier the art ladder tops out at, and where the AtMax numbers sit; no copy is rolled, honed or loaded above it (ItemInstance.TierCap), so the build refuses a higher value.")]
         public int maxTier = -1;
 
         [ContentDoc("Gold cost of the weapon.")]
