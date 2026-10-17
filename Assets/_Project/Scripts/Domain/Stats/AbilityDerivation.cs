@@ -112,9 +112,7 @@ namespace PrincesPalace.Domain.Stats
         // neutral 10, it is the character's whole baseline regen rate, floor
         // divided straight off the raw score. floor(WIS / 4): WIS 14 -> 3,
         // WIS 3 -> 0, WIS 20 -> 5. Plain integer division already floors for
-        // every non-negative WIS a character can field, so there is no
-        // helper call here the way SpeedBonus/SignatureGainBonus need one
-        // for their signed, below-neutral case.
+        // every non-negative WIS a character can field.
         public const int ManaRegenPerPoints = 4;
 
         public static int ManaRegenBonus(AbilityScoreBlock scores)
