@@ -153,7 +153,7 @@ namespace PrincesPalace.Domain.Dungeon
             // Falling back to the whole pool when nothing is a regular means a
             // content set of bosses only still fights, rather than presenting
             // an empty stage. Graceful degradation, house style.
-            var drawFrom = regulars.Count > 0 ? regulars : new List<EnemyCandidate>(pool);
+            var drawFrom = regulars.Count > 0 ? regulars : bosses;
             if (drawFrom.Count == 0)
             {
                 return new Result(new List<string>(), isBoss: false, isElite: isElite);

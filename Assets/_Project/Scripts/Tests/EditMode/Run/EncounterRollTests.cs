@@ -192,6 +192,26 @@ namespace PrincesPalace.EditModeTests
             Assert.That(roll.IsBoss, Is.False, "an ordinary room is not a boss fight just because the pool is");
         }
 
+        // The boss-only fallback draws from the same id-filtered set as the
+        // primary draw, so a blank-id entry beside a boss is never fielded.
+        [Test]
+        public void ABlankIdBesideABossIsNeverFieldedInAnOrdinaryRoom()
+        {
+            var pool = new List<EnemyCandidate>
+            {
+                new EnemyCandidate("", isBoss: false),
+                new EnemyCandidate("warden", isBoss: true),
+            };
+
+            for (ulong seed = 1; seed <= 20; seed++)
+            {
+                var roll = EncounterRoll.Roll(RoomType.Fight, pool, Rng(seed));
+
+                Assert.That(roll.EnemyIds, Is.Not.Empty, "seed " + seed);
+                Assert.That(roll.EnemyIds, Has.None.Empty, "seed " + seed + " fielded a blank id");
+            }
+        }
+
         // --- who stands up ------------------------------------------------
 
         // A character with no health entry has never been hurt this run.
