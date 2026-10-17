@@ -1253,6 +1253,16 @@ namespace PrincesPalace.Domain.Content
             var authored = raw.elements;
             if (authored == null || authored.Length == 0) return true;
 
+            // A chosen element retypes damageInstances and nothing else, so the
+            // hit a consumed status upgrades to would keep its authored type
+            // whichever element was picked.
+            if (!string.IsNullOrWhiteSpace(raw.consumesStatus))
+            {
+                error = $"{label}: elements and consumesStatus cannot be authored together — a chosen " +
+                        "element retypes damageInstances only, not damageInstancesIfConsumed.";
+                return false;
+            }
+
             // A CHOICE OF ONE IS NOT A CHOICE. It would put a menu depth in
             // front of the player with a single row on it, and the same spell
             // authored as a typed packet plays identically with one fewer

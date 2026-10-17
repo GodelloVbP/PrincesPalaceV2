@@ -562,15 +562,30 @@ namespace PrincesPalace.Domain.Content
         private static readonly DamageType[] AllDamageTypes =
             (DamageType[])Enum.GetValues(typeof(DamageType));
 
+        // FNV-1a (32-bit) over the id's chars. string.GetHashCode is seeded per
+        // process on the dotnet host, so a derived pair changed from run to run
+        // there while staying put in Unity; the build and the tests both need
+        // the same pair for the same id everywhere.
+        private static uint StableHash(string id)
+        {
+            uint hash = 2166136261u;
+            foreach (char c in id ?? string.Empty)
+            {
+                hash = (hash ^ c) * 16777619u;
+            }
+
+            return hash;
+        }
+
         // Deterministic (same id -> same pair, every regeneration) so
         // omitting weakness/resistance doesn't make the build non-
         // reproducible. Guarantees the two values differ.
         private static void DeriveDamageTypePair(string id, out DamageType weakness, out DamageType resistance)
         {
             var values = AllDamageTypes;
-            int hash = Math.Abs((id ?? string.Empty).GetHashCode());
-            int weaknessIndex = hash % values.Length;
-            int resistanceOffset = 1 + hash / values.Length % (values.Length - 1);
+            uint hash = StableHash(id);
+            int weaknessIndex = (int)(hash % (uint)values.Length);
+            int resistanceOffset = 1 + (int)(hash / (uint)values.Length % (uint)(values.Length - 1));
             int resistanceIndex = (weaknessIndex + resistanceOffset) % values.Length;
             weakness = values[weaknessIndex];
             resistance = values[resistanceIndex];
@@ -589,8 +604,7 @@ namespace PrincesPalace.Domain.Content
         private static DamageType DeriveSingleDamageType(string id, IReadOnlyList<DamageType> exclude)
         {
             var values = AllDamageTypes;
-            int hash = Math.Abs((id ?? string.Empty).GetHashCode());
-            int index = hash % values.Length;
+            int index = (int)(StableHash(id) % (uint)values.Length);
 
             for (int step = 0; step < values.Length; step++)
             {

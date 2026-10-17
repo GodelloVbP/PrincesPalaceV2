@@ -363,10 +363,17 @@ namespace PrincesPalace.Domain.Content
             }
 
             var darkRaw = raw.roundDarkness ?? new EventRoundDarkness();
-            if (darkRaw.start > 0f && !hasLimit)
+            if ((darkRaw.start > 0f || darkRaw.step > 0f || darkRaw.floor > 0f) && !hasLimit)
             {
                 error = $"{label}: roundDarkness is set on a fight with no round limit (surviveRounds 0), so it " +
                         "would never step. Set surviveRounds, or drop it.";
+                return false;
+            }
+
+            if (darkRaw.start <= 0f && (darkRaw.step > 0f || darkRaw.floor > 0f))
+            {
+                error = $"{label}: roundDarkness has a step or floor but no start, so it would never show " +
+                        $"(start {darkRaw.start}, step {darkRaw.step}, floor {darkRaw.floor}). Set start, or drop it.";
                 return false;
             }
 

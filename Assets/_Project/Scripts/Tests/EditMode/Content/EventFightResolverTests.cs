@@ -525,6 +525,38 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
+        public void Refuses_ADarknessStepWithNoStart()
+        {
+            var fight = BellFight();
+            fight.roundDarkness = new EventRoundDarkness { start = 0f, step = 0.08f, floor = 0f };
+
+            StringAssert.Contains("roundDarkness has a step or floor but no start", Refusal(Event(fight)));
+        }
+
+        [Test]
+        public void Refuses_ADarknessFloorWithNoStart()
+        {
+            var fight = BellFight();
+            fight.roundDarkness = new EventRoundDarkness { start = 0f, step = 0f, floor = 0.1f };
+
+            StringAssert.Contains("roundDarkness has a step or floor but no start", Refusal(Event(fight)));
+        }
+
+        [Test]
+        public void Refuses_AStepAloneOnAFightWithNoRoundLimit()
+        {
+            var fight = BellFight();
+            fight.surviveRounds = 0;
+            fight.roundLabel = "";
+            fight.roundSfx = "";
+            fight.roundOverlay = new EventRoundOverlay();
+            fight.onSurvived = new RawEventOutcome();
+            fight.roundDarkness = new EventRoundDarkness { start = 0f, step = 0.08f, floor = 0f };
+
+            StringAssert.Contains("roundDarkness is set on a fight with no round limit", Refusal(Event(fight)));
+        }
+
+        [Test]
         public void Refuses_ARoundOverlayScaleOfZero()
         {
             var fight = BellFight();

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Stats;
@@ -153,6 +154,34 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(1, affinity.Weaknesses.Count, "derivation invents ONE weakness, not a set");
             Assert.AreEqual(1, affinity.Resistances.Count, "derivation invents ONE resistance, not a set");
             Assert.AreNotEqual(affinity.Weaknesses[0], affinity.Resistances[0]);
+        }
+
+        // Pinned literals: FNV-1a (32-bit) over the id, so the pair is the same
+        // in every process. string.GetHashCode is seeded per process on the
+        // dotnet host, which made these two ids a different pair every run.
+        [TestCase("goblin", DamageType.Wind, DamageType.Physical)]
+        [TestCase("ghoul", DamageType.Wind, DamageType.Poison)]
+        [TestCase("test_enemy", DamageType.Water, DamageType.Lightning)]
+        public void DerivedWeaknessAndResistance_FollowAFixedHashOfTheId(
+            string id, DamageType weakness, DamageType resistance)
+        {
+            EnemyEntryResolver.TryResolveAll(new List<RawEnemyEntry> { Minimal(id: id) }, out var resolved, out _);
+
+            Assert.AreEqual(weakness, resolved[0].Affinity.Weaknesses.Single());
+            Assert.AreEqual(resistance, resolved[0].Affinity.Resistances.Single());
+        }
+
+        // goblin's hash lands on Wind; Wind is taken on the other side, so the
+        // walk moves on to the next free element, Lightning.
+        [Test]
+        public void ADerivedSingleSide_FollowsTheSameFixedHash_AndSkipsWhatTheOtherSideHolds()
+        {
+            var entry = Minimal(id: "goblin");
+            entry.resistance = "Wind";
+
+            EnemyEntryResolver.TryResolveAll(new List<RawEnemyEntry> { entry }, out var resolved, out _);
+
+            Assert.AreEqual(DamageType.Lightning, resolved[0].Affinity.Weaknesses.Single());
         }
 
         [Test]

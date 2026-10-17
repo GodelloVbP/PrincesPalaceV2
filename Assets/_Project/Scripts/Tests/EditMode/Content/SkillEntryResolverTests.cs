@@ -472,6 +472,21 @@ namespace PrincesPalace.Domain.Tests
             StringAssert.Contains("needs damageInstances", ErrorFrom(entry));
         }
 
+        // The element choice retypes damageInstances and nothing else, so a
+        // consumed-path hit would keep the authored type whatever was picked.
+        [Test]
+        public void Elements_BesideConsumesStatus_IsRefused()
+        {
+            var entry = Choosing("Earth", "Water");
+            entry.consumesStatus = "Marked";
+            entry.damageInstancesIfConsumed = new[] { new RawDamageInstance { type = "Earth", amount = 24 } };
+
+            string error = ErrorFrom(entry);
+
+            StringAssert.Contains("orb", error);
+            StringAssert.Contains("elements and consumesStatus", error);
+        }
+
         // The file has to read as what happens when the first element is
         // picked. A packet typed outside the list is a spell that never once
         // deals what its own damageInstances say.

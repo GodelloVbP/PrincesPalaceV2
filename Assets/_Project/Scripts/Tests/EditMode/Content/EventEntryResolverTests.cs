@@ -484,6 +484,53 @@ namespace PrincesPalace.Domain.Tests
             StringAssert.Contains("typo", string.Join(" ", errors));
         }
 
+        // A gate with neither bound always passes; min above max can never be
+        // met. Both are authoring mistakes, so the build refuses them.
+        private static List<string> RefusalsForCounterGate(int min, int max)
+        {
+            var entry = MinimalEvent("gated");
+            entry.pages[0].choices[0].requires = new[]
+            {
+                new RawEventRequirement { kind = "counter", counter = "tosses", min = min, max = max },
+            };
+            entry.pages[0].choices[0].effects = new[] { new RawEventEffect { kind = "counter", counter = "tosses", amount = 1 } };
+            entry.pages[0].choices = new[]
+            {
+                entry.pages[0].choices[0],
+                new RawEventChoice { text = "Leave", outcomes = new[] { new RawEventOutcome { goTo = "Leave" } } },
+            };
+
+            Resolve(entry, out _, out var errors);
+            return errors ?? new List<string>();
+        }
+
+        [Test]
+        public void ACounterGateWithNeitherMinNorMax_IsRefusedNamingTheEvent()
+        {
+            string errors = string.Join(" ", RefusalsForCounterGate(-1, -1));
+
+            StringAssert.Contains("gated", errors);
+            StringAssert.Contains("neither min nor max", errors);
+        }
+
+        [Test]
+        public void ACounterGateWithMinAboveMax_IsRefusedNamingTheEvent()
+        {
+            string errors = string.Join(" ", RefusalsForCounterGate(5, 3));
+
+            StringAssert.Contains("gated", errors);
+            StringAssert.Contains("min 5 above max 3", errors);
+        }
+
+        [TestCase(3, -1)]
+        [TestCase(-1, 3)]
+        [TestCase(3, 3)]
+        [TestCase(0, 0)]
+        public void ACounterGateWithOneBoundOrAnEqualPair_Resolves(int min, int max)
+        {
+            CollectionAssert.IsEmpty(RefusalsForCounterGate(min, max));
+        }
+
         [Test]
         public void ACounterRequirementWhoseCounterIsIncrementedByAnotherEvent_Resolves()
         {

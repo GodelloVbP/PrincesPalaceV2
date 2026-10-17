@@ -632,6 +632,20 @@ namespace PrincesPalace.Domain.Content
 
                         int? min = row.min >= 0 ? row.min : (int?)null;
                         int? max = row.max >= 0 ? row.max : (int?)null;
+                        if (!min.HasValue && !max.HasValue)
+                        {
+                            error = $"{label}: counter requirement on '{row.counter}' has neither min nor max, " +
+                                    "so it would always pass. Author at least one bound.";
+                            return false;
+                        }
+
+                        if (min.HasValue && max.HasValue && min.Value > max.Value)
+                        {
+                            error = $"{label}: counter requirement on '{row.counter}' has min {min.Value} " +
+                                    $"above max {max.Value}, so it could never be met.";
+                            return false;
+                        }
+
                         requiredCounters.Add((row.counter, label));
                         list.Add(EventRequirement.Counter(row.counter, min, max));
                         break;
