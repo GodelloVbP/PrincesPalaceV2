@@ -138,7 +138,7 @@ namespace PrincesPalace.Domain.Progression
         // THE BRIDGE FROM CONTENT. ResolvedRewardTrack (Domain/Content) is
         // what RewardTrackEntryResolver hands back after validating and
         // captioning reward_tracks.json; this turns it into the same
-        // materialised, hundred-entry shape Default produces, so a caller
+        // materialised, MaxLevel-entry shape Default produces, so a caller
         // (RewardTrackContentPinTests, Core/RewardTracks.For) can read an
         // authored track through the identical At/CollectedTotal/HasUnlocked
         // API regardless of whether it came from JSON or from Default. Kept
@@ -207,7 +207,7 @@ namespace PrincesPalace.Domain.Progression
             SumOver(reward, RewardTrack.StartingLevel - 1, claimedLevel);
 
         // The same, narrowed to entries authored against a specific element --
-        // ElementalDamagePercent's read site, ContentDatabase.Effects,
+        // ElementalDamagePercent's read site, ContentDatabase.CharacterEffects,
         // asks this once per DamageType so a Fire node and an Ice node on the
         // same track never bleed into each other's total.
         public int CollectedTotal(TrackReward reward, DamageType against, int claimedLevel)

@@ -15,25 +15,13 @@ namespace PrincesPalace.Domain.Progression
     //
     // An authored table, not a formula: one exponent cannot describe a
     // ladder whose early rungs are meant to be minutes apart and whose late
-    // ones are meant to be runs apart. Against DifficultyCurve.ScaleExperience
-    // (25 permille) and a level cap of 40, the model fit a single geometric
-    // curve three ways and every fit priced level 40 at four to five deep
-    // runs while clearing a third of the track inside the first three short
-    // runs. See docs/handoffs/progression_v2/xp_model.md Part C for the
-    // three fits and PLAN_PROGRESSION_V2.md §3 for the table that replaced
-    // them.
+    // ones are meant to be runs apart.
     //
     // The table is passed in, not held. Domain cannot reach ContentDatabase,
     // and a static table installed once at load would be exactly the global
     // mutable state GlobalStateLintTests exists to keep out. Every method
     // here takes `costs`, the flat list the content resolver produces, and
     // `Character` -- the one Core-side seam -- is what fetches it.
-    //
-    // WHAT A SAVE WRITTEN BEFORE THIS SEES: nothing, because it is reset.
-    // SaveData's version-6 migration puts every roster character back to
-    // level 1 with 0 experience; the per-level costs moved far too much
-    // (level 10 was 236 and is now 500; level 40 was 30,199 and is now
-    // 10,000) for a carried level to mean the same thing on either side.
     public static class LevelCurve
     {
         // The first level a player PAYS for. A character begins at level 1,

@@ -21,8 +21,7 @@ namespace PrincesPalace.Domain.Progression
         StatPoint,
 
         // ---- EVERYTHING ELSE: a total summed over the entries at levels
-        // <= the watermark, read live at its own site rather than stored --
-        // docs/archive/PLAN_REWARD_TRACKS.md §2. --
+        // <= the watermark, read live at its own site rather than stored. --
         MaxHealth,
         Respec,
         SecondLife,
@@ -201,7 +200,7 @@ namespace PrincesPalace.Domain.Progression
         public readonly int Amount;
 
         // The two selectors an authored entry can carry beyond reward and
-        // amount (docs/archive/PLAN_REWARD_TRACKS.md §4): which element an
+        // amount: which element an
         // ElementalDamagePercent entry scales, and which skill an UnlockSkill
         // entry grants.
         public readonly DamageType? Against;
@@ -245,8 +244,8 @@ namespace PrincesPalace.Domain.Progression
 
     // THE PART OF A REWARD TRACK THAT DOES NOT VARY BY CHARACTER.
     //
-    // docs/archive/PLAN_REWARD_TRACKS.md P3 split this file in two. WHICH REWARD sits
-    // at which level is now per-character (RewardTrackDefinition, one instance
+    // WHICH REWARD sits
+    // at which level is per-character (RewardTrackDefinition, one instance
     // per track); WHERE THE MILESTONES FALL, and the pure arithmetic over a
     // level/claimedLevel pair the screen's whole state model runs on, is
     // shared by every track and stays here. See §1 of the plan for why the
@@ -308,8 +307,8 @@ namespace PrincesPalace.Domain.Progression
         public const int CompletionLevel = 30;
 
         // THE SHARED CADENCE. Ten levels, the same on every track whatever it
-        // pays at them -- docs/archive/PLAN_REWARD_TRACKS.md §1 explains why this
-        // stays fixed while the CONTENT at each one does not.
+        // pays at them: the cadence stays fixed while the CONTENT at each one
+        // does not.
         //
         // The early three (3, 5, 10) are new and are where the first hour
         // actually is: 3 is the first ability, typically fight 6 of run 1, and
@@ -324,7 +323,7 @@ namespace PrincesPalace.Domain.Progression
         // Whether `level` carries a MILESTONE rather than filler. Asked of
         // MilestoneLevels, which is the only thing that actually knows: the
         // reward KIND cannot answer it on its own, because the same kind
-        // (MaxHealth, on the interim default track) is also handed out as
+        // (MaxHealth, on the default track) is also handed out as
         // filler dozens of times.
         public static bool IsMilestone(int level)
         {
@@ -338,10 +337,9 @@ namespace PrincesPalace.Domain.Progression
 
         // A quantity handed over once, as against a capability or a total
         // that is simply read live off the watermark. THE ONLY GRANT IS
-        // StatPoint (docs/archive/PLAN_REWARD_TRACKS.md §2: "Nothing else is spent,
-        // so nothing else needs storage -- and storing it is strictly worse,
-        // because a stored copy can disagree with the definition after a
-        // retune"). A second grant added here without noticing would be paid
+        // StatPoint: nothing else is spent, so nothing else needs storage, and
+        // a stored copy could disagree with the definition after a
+        // retune. A second grant added here without noticing would be paid
         // once into a field nothing else expects and then paid again every
         // time CollectedTotal re-reads the same levels.
         public static bool IsGrant(TrackReward reward) => reward == TrackReward.StatPoint;
@@ -461,7 +459,7 @@ namespace PrincesPalace.Domain.Progression
         //
         // HERE WINS OVER WAITING, and that ordering is the decision rather than
         // an accident of the if-chain. The player's own node is the one thing
-        // on a hundred-node rail they need to find at a glance, so it draws
+        // on a forty-node rail they need to find at a glance, so it draws
         // pale even when its own reward is uncollected -- and nothing is hidden
         // by that, because IsWaiting below is asked separately for the pulsing
         // ring and for whether a click claims. A node can be both; only its

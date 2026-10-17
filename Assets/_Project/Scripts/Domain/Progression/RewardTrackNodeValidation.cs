@@ -133,8 +133,7 @@ namespace PrincesPalace.Domain.Progression
             // declared cap (RewardTrack.MaxLevel, for the production door) --
             // always true by construction there (RewardTrackDefinition.Build
             // sizes every track to MaxLevel), stated here anyway as the
-            // defensive floor for whatever authors a cap directly once phase
-            // 4 lands one.
+            // defensive floor for a fixture that passes its own cap.
             if (highestRewardingLevel > 0 && highestRewardingLevel != topLevel)
             {
                 errors.Add($"{label}: the track's highest rewarding level is {highestRewardingLevel}, not the " +
