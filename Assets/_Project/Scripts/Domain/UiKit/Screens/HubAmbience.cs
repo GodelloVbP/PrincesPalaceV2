@@ -31,8 +31,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             public readonly float X, Y, Size;
 
             // Empty means "use the layer's default". The braziers and the
-            // keystone still do; the buildings no longer can, because they are
-            // not all lit the same colour.
+            // keystone still do; the buildings cannot, because they are not
+            // all lit the same colour.
             public readonly string Colour;
 
             public Light(float x, float y, float size, string colour = "")
@@ -104,18 +104,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
             {
                 // BELOW CENTRE, and each in its own colour.
                 //
-                // These sat at +30..+60 -- above the middle of the building,
-                // where the structure is -- while every one of these paintings
-                // is lit from UNDERNEATH: the tree burns at its roots, the
-                // spire and the lectern are underlit by their platforms. A glow
-                // over the structure lights the one part that is already
-                // opaque, and reads as haze rather than as the building
-                // casting light into the void it hangs over.
-                //
-                // The single warm #FFCE8C was worse than the position. Four
-                // buildings painted orange, violet, blue and amber all wearing
-                // one gold wash fights every one of them; the wash reads as
-                // fog because it agrees with nothing underneath it.
+                // Every one of these paintings is lit from UNDERNEATH: the tree
+                // burns at its roots, the spire and the lectern are underlit by
+                // their platforms. A glow over the structure lights the one
+                // part that is already opaque and reads as haze, so each sits
+                // below centre. Each takes its own colour: one gold wash over
+                // orange, violet, blue and amber paintings agrees with none.
                 //
                 // Y and Size are in BASE units -- the caller multiplies both by
                 // the plot's depth scale, so a far building gets a smaller,
@@ -155,7 +149,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // SOURCE alpha to be lower.
         public const string BrazierColor = "#FFD79B99";     // nearest -- on the terrace
         public const string KeystoneColor = "#C9A6FF66";    // enchantment, not fire
-        // The FALLBACK only. Every building names its own colour now -- see
+        // The FALLBACK only. Every building names its own colour -- see
         // BuildingGlows -- because one warm wash over four differently-lit
         // paintings agreed with none of them.
         public const string BuildingColor = "#FFCE8C55";    // out over the void

@@ -7,7 +7,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
     //
     // Coordinates are v1's exactly, because the composition was tuned by eye
     // against the real background and is worth preserving. What changed is that
-    // they are now DECLARED positions the audit checks, rather than arithmetic
+    // they are DECLARED positions the audit checks, rather than arithmetic
     // scattered across a builder — and the corner button, the currency
     // plate, the four buildings and the gate are all siblings in one tree, so a collision
     // between any pair of them fails the build.
@@ -20,7 +20,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // static sprite the animator replaces.
         private const string HubArtRoot = "Assets/_Project/Resources/Hub";
 
-        // Sizes and positions now come from HubAnchors, which stages them at
+        // Sizes and positions come from HubAnchors, which stages them at
         // depth over the void rather than laying them out as a grid. The gate
         // keeps its "unmistakably primary" job and gets bigger still: it is the
         // one thing standing on solid ground.
@@ -116,10 +116,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .Styled(TypographyRole.TacticalData);
             screen.CurrencyLabel = currency;
 
-            // 220x60 was 3.667:1 against the Legacy plate's true 3:1 --
-            // ThemedButtonAspectLintTests. Height up to nominal, width kept;
-            // a corner button with nothing else nearby vertically, so the
-            // grow has room.
+            // Sized to the plate's nominal aspect (ThemedButtonAspectLintTests);
+            // width is kept, height follows. The corner has vertical room.
             var mainMenuSize = Ui.PlateNominalSizeFor(220f, 60f);
             var mainMenu = Ui.Button("MainMenuButton", UiStrings.HubExit, mainMenuSize, 16,
                 Place.At(-830f, 480f))
@@ -157,10 +155,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var systemMenu = SystemMenuScreen.Build(partyRosterCardCount, systemMenuLabelWidths);
             screen.SystemMenu = systemMenu;
 
-            // The old paperdoll is gone; the system menu's Character pane is
-            // the character screen now. SheetPanel opens the menu instead, so
-            // every caller -- C, I, Escape, the hub's building -- reaches the
-            // dossier without any of them knowing the screen changed.
+            // The system menu's Character pane is the character screen.
+            // SheetPanel opens the menu, so every caller -- C, I, Escape, the
+            // hub's building -- reaches the dossier through one path.
 
             var debug = DebugMenuScreen.Build();
             screen.Debug = debug;
