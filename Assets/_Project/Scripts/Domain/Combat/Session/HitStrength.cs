@@ -72,11 +72,9 @@ namespace PrincesPalace.Domain.Combat.Session
         // ONE CLASSIFICATION, EVERY CALLER. FightBeatPlayer's single-target
         // path and its per-enemy sweep path both funnel through this rather
         // than each writing its own version of "how hard was that" -- the
-        // sweep path has no per-target Absorbed today (BeatTargetResult
-        // carries no such field -- a known gap, see this pass's own
-        // report), so it always passes 0 there and still gets a sensible
-        // answer: nothing absorbed reads as "landed for `amount`", which is
-        // exactly what it already meant before this table existed.
+        // sweep path passes a BeatTargetResult's Amount, which is already the
+        // figure that reached health, with absorbed 0 -- passing that
+        // result's Absorbed too would subtract the ward a second time.
         //
         // `missed`: no slide, ever -- a dodge has nothing to react to.
         // `absorbed` + zero health damage: fully absorbed, no slide -- the

@@ -318,7 +318,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 DealRelicPacket(bearer, enemy, landed, type);
                 TollOfTheFlockDamageDealt += landed;
                 SetStance(enemy, enemy.IsAlive ? Stances.Hurt : Stances.Defeated);
-                RecordTargetResult(enemy, landed);
+                RecordTargetResult(enemy, landed, absorbed: preShield - landed);
 
                 largest = Math.Max(largest, preShield);
                 if (ownBeat) RecordPreShieldAmount(largest);

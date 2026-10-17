@@ -46,14 +46,21 @@ namespace PrincesPalace.Domain.Combat.Session
         // Amount, so nothing here is damage a second time.
         public readonly BeatPacket[] Packets;
 
+        // What a ward kept off THIS target's health. Amount is the figure that
+        // reached health, so Amount + Absorbed is this target's pre-shield
+        // hit, the figure CombatBeat.Amount takes the largest of. CombatBeat.
+        // Absorbed is the beat-wide sum and answers for no single target.
+        public readonly int Absorbed;
+
         public BeatTargetResult(CombatantState target, int amount, bool missed, bool crit = false,
-                                BeatPacket[] packets = null)
+                                BeatPacket[] packets = null, int absorbed = 0)
         {
             Target = target;
             Amount = amount;
             Missed = missed;
             Crit = crit && !missed;
             Packets = missed ? null : packets;
+            Absorbed = missed ? 0 : absorbed;
         }
     }
 

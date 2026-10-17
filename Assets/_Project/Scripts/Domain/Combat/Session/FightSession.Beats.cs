@@ -322,7 +322,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // rest of the round, and the beat's own Amount holds the largest single
         // hit rather than any particular enemy's. See BeatTargetResult.
         private void RecordTargetResult(CombatantState target, int amount, bool missed = false, bool crit = false,
-                                        BeatPacket[] packets = null)
+                                        BeatPacket[] packets = null, int absorbed = 0)
         {
             if (_recordingBeat == null || target == null) return;
 
@@ -331,7 +331,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 _recordingBeat.Results = new List<BeatTargetResult>();
             }
 
-            _recordingBeat.Results.Add(new BeatTargetResult(target, amount, missed, crit, packets));
+            _recordingBeat.Results.Add(new BeatTargetResult(target, amount, missed, crit, packets, absorbed));
         }
 
         // How hard this beat insists the stage is kicked, whatever it landed.

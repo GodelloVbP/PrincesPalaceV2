@@ -1583,7 +1583,8 @@ namespace PrincesPalace.Domain.Combat.Session
                     }
 
                     ApplyFinalDamage(actor, enemy, packetTotal, CombatActions.IsPhysicalMove(skill));
-                    RecordTargetResult(enemy, packetTotal, crit: packetsCrit, packets: TakeResolvedPackets());
+                    RecordTargetResult(enemy, packetTotal, crit: packetsCrit, packets: TakeResolvedPackets(),
+                        absorbed: packetAbsorbed);
                     struckAndLanded.Add(enemy);
 
                     largestPreShield = System.Math.Max(packetTotal + packetAbsorbed, largestPreShield);
@@ -1673,7 +1674,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 // CAST's type, not the caster's swing, exactly as before.
                 ApplyFinalDamage(actor, enemy, landed, CombatActions.IsPhysicalMove(skill), castType);
 
-                RecordTargetResult(enemy, landed, crit: outcome.IsCrit);
+                RecordTargetResult(enemy, landed, crit: outcome.IsCrit, absorbed: ownAbsorbed);
                 struckAndLanded.Add(enemy);
 
                 largestPreShield = System.Math.Max(landed + ownAbsorbed, largestPreShield);

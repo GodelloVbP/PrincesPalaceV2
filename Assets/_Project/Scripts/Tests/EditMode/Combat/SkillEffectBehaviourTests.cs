@@ -790,5 +790,29 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(70, beat.Amount);
         }
 
+        // The same sweep, read per victim: each result carries the ward share
+        // that victim alone absorbed, so landed + absorbed is its own pre-shield
+        // hit. The beat-wide Absorbed (10) answers for neither.
+        [Test]
+        public void ASweepBeatResult_CarriesItsOwnTargetsAbsorbedFigure()
+        {
+            var hero = Hero();
+            var a = Foe("A");
+            var b = Foe("B");
+            StatusEffects.ApplyWard(a.Statuses, 10, 1, hero);
+            var session = Session(new CombatEncounter(new[] { hero }, new[] { a, b }),
+                Kit(Skill(SkillEffect.DamageAll, flatAmount: 30)));
+
+            Assert.IsTrue(session.CastSkill(0, null), "the cast was refused");
+
+            var beat = session.DrainBeats().Single(x => x.Results != null && x.Results.Count == 2);
+            var ra = beat.Results.Single(r => r.Target == a);
+            var rb = beat.Results.Single(r => r.Target == b);
+            Assert.AreEqual(60, ra.Amount, "A landed");
+            Assert.AreEqual(10, ra.Absorbed, "A's ward share");
+            Assert.AreEqual(70, rb.Amount, "B landed");
+            Assert.AreEqual(0, rb.Absorbed, "B has no ward");
+        }
+
     }
 }
