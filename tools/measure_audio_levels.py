@@ -1,18 +1,16 @@
 #!/usr/bin/env python3
 """Measure every audio asset's loudness and emit a committed gain table.
 
-The problem this exists for, measured before it was written: across the 31
-clips under `Resources/Audio/`, integrated loudness spanned **14.6 dB**
-(-22.5 to -7.9 LUFS) and RMS spanned **20.8 dB**. Shawn's voice lines sat
-around -8 dB while the UI sounds sat near -29 dB, so the same master volume
-made one deafening and the other inaudible. Several clips also peaked ABOVE
-full scale (`shawn_hit_attack` at +1.9 dBTP), which is already clipping.
+Clips under `Resources/Audio/` differ widely in loudness (voice lines far
+louder than UI sounds), so one master volume makes some deafening and others
+inaudible, and some clips peak above full scale. A per-clip gain table evens
+them out per category.
 
 ## Why a gain table and not normalised files
 
 Rewriting the assets in place would be the obvious move, and `trim_wav.py`
 sets a precedent for editing audio destructively. It is the wrong one here:
-four of the music tracks are `.ogg` and two effects are `.mp3`, and applying
+the music tracks are `.ogg` and some effects are `.mp3`, and applying
 gain to a lossy file means decoding and re-encoding it. That is the same
 compounding-loss mistake `slice_actor_sheet.py` refuses outright when it
 declines to read its own output back in. A gain applied at playback costs
@@ -27,8 +25,7 @@ Two are used, each where it is actually valid:
   exactly what R128 was designed to measure.
 * **SFX and voice -> RMS.** R128 gates on 400ms blocks, so a 0.25s button
   click or a 0.33s grunt measures as `-inf` and cannot be normalised by it at
-  all. Nine of this project's clips are in that boat. RMS has no gate and is
-  the honest measure for a transient.
+  all. RMS has no gate, so it suits a transient.
 
 Mixing metrics is deliberate and the reason is above; each category is only
 ever compared against its own target, never across.

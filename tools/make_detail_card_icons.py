@@ -115,7 +115,6 @@ def snowflake(draw, fill_hex):
         x2, y2 = CX + 18 * math.cos(rad), CY + 18 * math.sin(rad)
         draw.line([(CX, CY), (x2, y2)], fill=hex_to_rgba(fill_hex), width=5)
         draw.line([(CX, CY), (x2, y2)], fill=hex_to_rgba(OUTLINE), width=7 if angle == 0 else 1)
-    draw.line([(CX, CY), (CX, CY)], fill=hex_to_rgba(fill_hex))
     for angle in range(0, 360, 60):
         rad = math.radians(angle)
         x2, y2 = CX + 18 * math.cos(rad), CY + 18 * math.sin(rad)
@@ -240,7 +239,7 @@ def burst(draw, fill_hex, single):
         draw.line([(x1, y1), (x2, y2)], fill=hex_to_rgba(fill_hex), width=4)
 
 
-def scale_glyph(draw, fill_hex, key):
+def scale_glyph(draw, fill_hex):
     # Six short-name markers rather than six bespoke pictograms -- the
     # detail card already prints the short name (ScalingLabel) beside the
     # icon, so the icon's job is "which stat, at a glance from its badge
@@ -306,7 +305,7 @@ def main():
     build("target_single", lambda d, c: burst(d, c, single=True), NEUTRAL_GOLD)
 
     for short, hexv in SCALE_HEX.items():
-        build(f"scale_{short}", lambda d, c, k=short: scale_glyph(d, c, k), hexv)
+        build(f"scale_{short}", scale_glyph, hexv)
 
     build("resource_mana", resource_mana, "#6FB8E8")
     build("resource_cost", resource_cost, "#C98A3A")

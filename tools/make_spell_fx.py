@@ -7,7 +7,7 @@ Usage, from the project root:
     python tools/make_spell_fx.py --out DIR        # write under DIR instead of Resources/Spells
 
 A piece is added here only when a spell's blocking shows it needs one and no
-existing frame can stand in. Each is deterministic (no clock, no RNG), so a
+existing frame can stand in. Each is deterministic (no clock; any RNG is seeded), so a
 rerun is byte-identical and the test pins the pixels.
 
 court_price_pulse: a soft violet ring around a glowing core, one 256x256 frame.
