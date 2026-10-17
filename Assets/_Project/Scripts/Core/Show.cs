@@ -4,10 +4,6 @@ namespace PrincesPalace
 {
     // Switching a GameObject on or off, guarded.
     //
-    // Written out seven times across Core before this -- the fight HUD, the
-    // map, the Reckoning, the system menu, the dossier, the talents and the
-    // exits pane -- each as its own private static with the same two lines.
-    //
     // THE GUARD IS THE POINT, and it is the half that would go missing from a
     // copy. SetActive is not free when the value is already correct: Unity
     // still walks the object's children, still fires OnEnable/OnDisable down

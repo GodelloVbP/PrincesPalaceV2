@@ -19,7 +19,7 @@ namespace PrincesPalace
     // Lives on the SAME GameObject as the seat/card Button it drags, on
     // purpose: uGUI only suppresses a Button's own onClick after a drag when
     // the drag handler sits on that Button's own object (see PartyController.
-    // Wire's comment on the click-vs-drag test this makes possible), so
+    // _dragResolvedFrame, the click-vs-drag test this makes possible), so
     // splitting this onto a child node would silently bring the "a completed
     // drag also selects" bug back.
     public class PartyDragSource : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler

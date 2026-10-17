@@ -14,8 +14,7 @@ namespace PrincesPalace
 {
     // ATTRIBUTES and SKILLS, and the character facts every section reads.
     //
-    // ATTRIBUTES holds the rows the attributes modal had, now as a section
-    // (phase 5d redesigns it): one row per score with its effect line and a
+    // ATTRIBUTES is a section: one row per score with its effect line and a
     // "-" / "+" pair, and the derived stats beside them. A "+" or "-" commits
     // on press (plan C5: attribute points have no pending state).
     //

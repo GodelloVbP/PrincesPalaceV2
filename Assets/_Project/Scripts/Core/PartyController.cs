@@ -98,7 +98,7 @@ namespace PrincesPalace
         [SerializeField] internal GameObject[] cardWashes;
         [SerializeField] internal PartyDragSource[] cardDragSources;
 
-        // ---- P4: the one reusable drag ghost, and the roster's own drop zone ----
+        // ---- the one reusable drag ghost, and the roster's own drop zone ----
         [SerializeField] internal GameObject dragGhost;
         [SerializeField] internal Image dragGhostArt;
         [SerializeField] internal GameObject dragGhostMonogramPlate;
@@ -149,7 +149,7 @@ namespace PrincesPalace
         private float _seatArtScale = 1f;
         private float _cardArtScale = 1f;
 
-        // ---- P4: drag session state ---------------------------------------------
+        // ---- drag session state -------------------------------------------------
 
         // Whether THIS controller's own BeginDrag accepted the gesture that
         // is currently in flight -- distinct from whatever uGUI itself
@@ -250,7 +250,7 @@ namespace PrincesPalace
             // compensating anchoredPosition by half the slot's own height,
             // which must happen exactly once or a second Paint would shift
             // it again by the same amount. What changes on every repaint is
-            // only which sprite (if any) fills the slot, and (P4) how far
+            // only which sprite (if any) fills the slot, and how far
             // GroundArt shifts it off this baseline for that sprite's own
             // manifest ground line -- see Paint*/GroundArt.
             _seatArtFloorY = AlignArtSlots(seatArts);
@@ -412,7 +412,7 @@ namespace PrincesPalace
         {
         }
 
-        // THE LINKS ROW: cancelLink/benchLink sit in the header, above both
+        // RefreshNavigation (below NavEntry) builds the LINKS ROW: cancelLink/benchLink sit in the header, above both
         // rails, and PaintHeader
         // (just above whichever caller reaches this) already hides them
         // outright unless something is being carried -- RuntimeNavWiring.
@@ -429,10 +429,8 @@ namespace PrincesPalace
         // is AUTHORITATIVE per node (writes all four directions of every
         // node it resolves), so a second call adding only "seat Up -> links"
         // would overwrite that seat's Left/Right back to null the moment it
-        // also gained this Up link -- the seat/roster rail groups move here
-        // from WireNavigation (formerly a Wire()-time-only call, run once)
-        // for exactly that reason. WireNavigation above keeps only the
-        // idempotent one-time setup (the SelectIndex halos).
+        // also gained this Up link -- so the seat/roster rail groups are built
+        // there too.
         //
         // REACHABLE FROM BOTH RAILS WHILE CARRYING: an explicit Up from
         // every seat (the row directly under the header) reaches the links,
@@ -440,9 +438,8 @@ namespace PrincesPalace
         // its own Up into the seat row (CrossLinks, below), so a card reaches
         // the links in the same two hops a Move up the screen would take on
         // the mouse path's own layout. Down from the links returns to seat
-        // column 0, an arbitrary pick the same way Hub's own gate Up-link is
-        // (WireNavigation's header there says why: whichever the header sits
-        // over dead centre gets no better claim than any other column).
+        // column 0, an arbitrary pick: the header sits over dead centre, so
+        // no column has a better claim than any other.
         // INavPaneEntry: the leftmost seat as drawn, which is the rear one (spec
         // section 9). Without this the menu's generic answer -- the first
         // Selectable in tree order -- was the FRONT seat, the far end of the row
@@ -583,7 +580,7 @@ namespace PrincesPalace
             // A DRAG IS A CARRY TOO, and EndDrag never arrives if the pane
             // disables mid-drag (closing the pane or switching hub tab drops
             // the pointer capture along with it) -- so without this,
-            // _dragging stays true and IgnoreClick() (~381) swallows every
+            // _dragging stays true and IgnoreClick() swallows every
             // seat/card click forever on the next open, since nothing else
             // ever sets it back to false or restamps _dragResolvedFrame.
             _dragging = false;
@@ -675,7 +672,7 @@ namespace PrincesPalace
             return seats;
         }
 
-        // ---- P4: drag-and-drop ---------------------------------------------------
+        // ---- drag-and-drop -------------------------------------------------------
         //
         // BEGIN calls straight through ClickSeat/ClickCard -- "the controller,
         // which asks the model" -- rather than re-deriving selectability by
@@ -1102,7 +1099,7 @@ namespace PrincesPalace
             SetShown(cardWashes, index, false);
         }
 
-        // ---- common scale (P5) ------------------------------------------------------
+        // ---- common scale ----------------------------------------------------------
         //
         // Sizes the slot's own RectTransform to the sprite's NATIVE size times
         // the roster-wide scale Paint just computed (PartyArtScale.ScaleFor),
@@ -1130,17 +1127,17 @@ namespace PrincesPalace
             image.rectTransform.sizeDelta = new Vector2(sprite.rect.width * scale, sprite.rect.height * scale);
         }
 
-        // ---- ground line (P4) ------------------------------------------------------
+        // ---- ground line -----------------------------------------------------------
         //
         // The fight stage grounds a figure against its stance manifest's own
         // ground line (FightController.StageVisuals.GroundTheFigure) because
         // delivered art does not put its feet on its own canvas edge --
         // Shawn's idle plants a staff 43px below his own feet
-        // (Resources/StanceManifest.json's "Characters/sheep" entry). P3's
-        // AlignArtSlots pinned every slot's canvas-bottom to the slot floor
-        // instead, which DECISIONS.md flagged as a known gap. This closes it
-        // the same way the stage does, adapted for a slot that draws at a
-        // roster-common scale (ScaleArt, above) rather than at native size:
+        // (Resources/StanceManifest.json's "Characters/sheep" entry).
+        // AlignArtSlots pins every slot's canvas-bottom to the slot floor;
+        // this shifts from there the same way the stage does, adapted for a
+        // slot that draws at a roster-common scale (ScaleArt, above) rather
+        // than at native size:
         //
         //   1. AlignArtSlots already pinned the UNSHIFTED canvas-bottom to
         //      the slot floor -- _seatArtFloorY/_cardArtFloorY remember that
@@ -1156,7 +1153,7 @@ namespace PrincesPalace
         //      that factor (equivalently "drawn height / source height",
         //      since drawnHeight = sourceHeight * scale by construction) --
         //      the manifest speaks in the sprite's own source pixels, and
-        //      this slot no longer shows the sprite at that size.
+        //      this slot does not show the sprite at that size.
         //
         // FALLS BACK TO CANVAS-BOTTOM (no shift) for any actor with no
         // manifest entry -- StanceManifest.GroundLineFor already returns
@@ -1164,8 +1161,7 @@ namespace PrincesPalace
         // separate branch here, only this comment saying so.
         //
         // NO HOVER. Odette flies on the fight stage (HoverSpec, "on this
-        // screen she stands on her ground line -- no hover" per the P4
-        // brief) -- only GroundLineFor is ever read here, never HoverFor.
+        // screen she stands on her ground line -- no hover") -- only GroundLineFor is ever read here, never HoverFor.
         private static void GroundArt(Image image, float floorY, Sprite sprite, string battleSpritePath)
         {
             if (image == null) return;
