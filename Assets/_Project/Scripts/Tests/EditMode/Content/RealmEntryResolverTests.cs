@@ -69,22 +69,25 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(p.restBeforeBoss);
         }
 
-        [TestCase(0, 1)]
-        [TestCase(8, 2)]
-        [TestCase(24, 4)]
-        [TestCase(792, 100)]
-        public void AnUndesignedFloorGetsTheDefaultProfileAndTheDescent(int legStartStep, int floor)
+        // Rows read: first step of the leg, floor, then the profile's pockets,
+        // forks, anchors and longest pocket.
+        [TestCase(0, 1, 1, 0, 1, 2)]
+        [TestCase(8, 2, 2, 0, 1, 2)]
+        [TestCase(24, 4, 3, 1, 2, 2)]
+        [TestCase(792, 100, 6, 3, 6, 4)]
+        public void AnUndesignedFloorGetsTheDefaultProfileAndTheDescent(
+            int legStartStep, int floor, int pockets, int forks, int anchors, int pocketLengthMax)
         {
             var designed = Resolved(Row(3));
 
             var realm = RealmProfiles.Resolve(legStartStep, false, designed);
-            var expected = RealmProfiles.Default(floor);
 
             Assert.AreEqual("The Descent", realm.Name);
             Assert.AreEqual(floor, realm.Floor);
-            Assert.AreEqual((expected.pocketCount, expected.forkCount, expected.anchorCount, expected.pocketLengthMax),
+            Assert.AreEqual((pockets, forks, anchors, pocketLengthMax),
                 (realm.Profile.pocketCount, realm.Profile.forkCount, realm.Profile.anchorCount, realm.Profile.pocketLengthMax));
-            CollectionAssert.AreEqual(expected.waypointWeights, realm.Profile.waypointWeights);
+            Assert.AreEqual("Fight:60,Event:20,Treasure:12,Rest:8,Cache:6",
+                string.Join(",", realm.Profile.waypointWeights.Select(w => w.type + ":" + w.weight)));
         }
 
         [Test]
