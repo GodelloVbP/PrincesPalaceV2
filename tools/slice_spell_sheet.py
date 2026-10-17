@@ -856,9 +856,9 @@ def pad_to_common_canvas(cells, canvas=None):
             padded[name] = cell
             continue
 
-        canvas = Image.new("RGBA", (max_w, max_h), (0, 0, 0, 0))
-        canvas.paste(cell, ((max_w - w) // 2, (max_h - h) // 2))
-        padded[name] = canvas
+        padded_cell = Image.new("RGBA", (max_w, max_h), (0, 0, 0, 0))
+        padded_cell.paste(cell, ((max_w - w) // 2, (max_h - h) // 2))
+        padded[name] = padded_cell
         print(f"  {name}: padded {w}x{h} -> {max_w}x{max_h} (centred)")
 
     return padded

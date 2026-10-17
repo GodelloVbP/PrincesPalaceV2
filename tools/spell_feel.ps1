@@ -8,7 +8,7 @@ param(
     [double]$Speed = 1,
     # Where the report folders go. Default: docs/captures/spell_feel.
     [string]$OutDir = "",
-    # Reuse the frames already under tools/screenshots/spell_feel/<spell>_vs_<enemy>/
+    # Reuse the frames already under tools/screenshots/spell_feel/<spell>_vs_<enemy>[_x<speed>]/
     # instead of capturing again.
     [switch]$ReportOnly,
     # Two report folders to put side by side (before, after); no capture.

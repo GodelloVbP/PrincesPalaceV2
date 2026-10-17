@@ -71,11 +71,10 @@ frame, so a different capture size still lands. If FightScreen moves a panel,
 re-read them off a capture; tools/measure_stage.py reads the same plates from
 source if that becomes worth wiring.
 
-CALIBRATION. Tuned on blackglass_spear vs treant and rat (2026-10-02):
+CALIBRATION. Tuned on blackglass_spear vs treant and rat:
 HOT_LEVEL 235, RESIDUE_FRAC 0.25, CLEAN_FRAC 0.10. Both read no WARN, with gather
-0.6 s, travel 0.1 s, clean at 1.1 s, residue 0.2-0.4 s. The doc's earlier
-peak figures (17-21) came from a different crop and are not reproduced; the
-shapes are (spike at contact, clean drop).
+0.6 s, travel 0.1 s, clean at 1.1 s, residue 0.2-0.4 s. The shape to expect is
+a spike at contact and a clean drop.
 """
 
 import argparse
@@ -407,6 +406,12 @@ def key_frames(analysis, fps, hot):
     }
 
 
+def strip_impact_frame(hit_frame):
+    """The strip's contact marker, -1 when no contact was found. Frame 0 is a
+    real contact (a ritual hit lands on the first frame)."""
+    return -1 if hit_frame is None else hit_frame
+
+
 def run_report(frames_dir, spell, versus, out_dir, params):
     paths = find_series(frames_dir, spell)
     if not paths:
@@ -449,7 +454,7 @@ def run_report(frames_dir, spell, versus, out_dir, params):
                      width=GIF_WIDTH, colors=GIF_COLORS,
                      hold_last_ms=GIF_HOLD_MS, step=GIF_STEP, disposal=0))
 
-    strip_timing = {"captureIntervalMs": interval, "impactFrame": result["hit_frame"] or -1,
+    strip_timing = {"captureIntervalMs": interval, "impactFrame": strip_impact_frame(result["hit_frame"]),
                     "settledFrame": result["clean_frame"]}
     title = "%s | %d frames @ %.1fms | contact f%s | clean f%d" % (
         name, len(shown), interval, result["hit_frame"], result["clean_frame"])

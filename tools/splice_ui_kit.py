@@ -6,11 +6,11 @@ Those white-background sheets are RGB with no alpha yet and get keyed off
 whiteness. These sheets arrive as real RGBA already -- the model painted
 actual transparency around each cell -- so there is nothing to key: find the
 six connected blobs of non-transparent pixels, crop each tight, and name it
-by which of the six house themes (gold/crimson/violet/blue/green/silver) its
-border colour matches. Matching by colour rather than by fixed grid position
-means a sheet that got laid out in a different order, or with a gap moved,
-still comes out right -- position is a layout accident, colour is the only
-thing that actually identifies a theme.
+by its grid position, left-to-right then top-to-bottom, in the house theme
+order (gold/crimson/violet/blue/green/silver). Each cell's border colour is
+checked against the name its position gives it; a mismatch prints a WARNING
+and keeps the positional name, so a sheet laid out in a different order
+needs a look by eye.
 
     py tools/splice_ui_kit.py
 """

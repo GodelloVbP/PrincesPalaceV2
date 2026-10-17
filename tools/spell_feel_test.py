@@ -178,6 +178,11 @@ class RitualAndWindowTests(unittest.TestCase):
         r = spell_feel.analyse(a, [0.0] * 42, FPS, 0, 0.0, ritual=True)
         self.assertEqual(r["hit_frame"], 0)
 
+    def test_strip_marks_a_hit_on_frame_zero_and_none_as_minus_one(self):
+        self.assertEqual(spell_feel.strip_impact_frame(0), 0)
+        self.assertEqual(spell_feel.strip_impact_frame(7), 7)
+        self.assertEqual(spell_feel.strip_impact_frame(None), -1)
+
     def test_is_ritual_needs_a_release_layer_with_nothing_delayed(self):
         self.assertTrue(spell_feel.is_ritual({"layers": [{"at": "release"}, {"at": "hit"}]}))
         self.assertFalse(spell_feel.is_ritual(
