@@ -292,9 +292,7 @@ namespace PrincesPalace.Domain.Combat.Presentation
             performance.Schedule = BuildSchedule(instances, performance.HitCueSeconds);
             performance.ClearedSeconds = ClearedOf(instances, performance.HitCueSeconds);
             performance.Gloom = presentation.gloom ?? new SpellGloom();
-            performance._gloomReleaseSeconds =
-                performance.Gloom.ReleaseSeconds(performance.HitCueSeconds, performance.ClearedSeconds);
-            performance.GloomEndSeconds = performance.Gloom.EndSecondsAt(performance._gloomReleaseSeconds);
+            performance.ReleaseGloom();
             foreach (var one in instances)
             {
                 if (one.Layer.stoke > 0f) performance.HasStoke = true;
@@ -398,8 +396,18 @@ namespace PrincesPalace.Domain.Combat.Presentation
             float travel = instance.Layer == null ? 0f : instance.Layer.travelSeconds;
             if (travel <= 0f) return UiVec.Zero;
 
+            // Position is held (Progress clamps) before departure, after the
+            // arrival of a non-through flight and once a through flight has
+            // reached FlightReach; a held thing has no speed.
+            float raw = (seconds - instance.StartSeconds - instance.Layer.travelDelay) / travel;
+            bool ballistic = Ballistic(instance);
+            float last = instance.Layer.through
+                ? (ballistic ? instance.FlightReach : 1f + (instance.FlightReach - 1f) / 2f)
+                : 1f;
+            if (raw < 0f || raw > last) return UiVec.Zero;
+
             float u = Progress(instance, seconds);
-            return (instance.To - instance.From) * ((Ballistic(instance) ? 1f : 2f * (u < 1f ? u : 1f)) / travel);
+            return (instance.To - instance.From) * ((ballistic ? 1f : 2f * (u < 1f ? u : 1f)) / travel);
         }
 
         // Past 1 only for a `through` flight, which keeps counting travel
@@ -429,6 +437,15 @@ namespace PrincesPalace.Domain.Combat.Presentation
 
             Schedule = BuildSchedule(_built, HitCueSeconds);
             ClearedSeconds = ClearedOf(_built, HitCueSeconds);
+            ReleaseGloom();
+        }
+
+        // The gloom's release rides ClearedSeconds, so every re-time of the
+        // cast's clearing re-times it too.
+        private void ReleaseGloom()
+        {
+            _gloomReleaseSeconds = Gloom.ReleaseSeconds(HitCueSeconds, ClearedSeconds);
+            GloomEndSeconds = Gloom.EndSecondsAt(_gloomReleaseSeconds);
         }
 
         // ---- fan-out -------------------------------------------------------------

@@ -168,6 +168,47 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(1111.111f, SpellPerformance.VelocityOf(spear, 0.78f).X, 1e-1f);
         }
 
+        // Reach 25 puts the spear off the stage at 0.6 + 0.18 * 12 = 2.76 and
+        // its fade clears it at 2.94, past the rift's 2.4, so a gloom held
+        // until the cast clears lifts at 2.94 (0.5 s fade), not at 2.4.
+        [Test]
+        public void AGloomHeldUntilClearedFollowsAThroughFlightsReach()
+        {
+            var vfx = RiftingThrough();
+            vfx.gloom = new SpellGloom { strength = 0.5f, until = "cleared", fadeOut = 0.5f };
+            var performance = Resolve(vfx);
+            Assert.AreEqual(2.9f, performance.GloomEndSeconds, 1e-5f);
+
+            performance.SetFlightReach(Named(performance, "spear"), 25f);
+
+            Assert.AreEqual(2.94f, performance.ClearedSeconds, 1e-4f);
+            Assert.AreEqual(3.44f, performance.GloomEndSeconds, 1e-4f);
+            Assert.AreEqual(0.5f, performance.GloomAlphaAt(2.94f), 1e-5f);
+        }
+
+        // A non-through flight is held at its start before departure and at
+        // its aim after arrival, so it carries no speed in either span.
+        [Test]
+        public void AHeldFlightCarriesNoVelocityBeforeDepartureOrAfterArrival()
+        {
+            var instance = new SpellLayerInstance
+            {
+                Layer = new SpellLayer { travelSeconds = 0.4f, travelDelay = 0.2f },
+                StartSeconds = 0f,
+                From = new UiVec(0f, 0f),
+                To = new UiVec(100f, 0f),
+            };
+
+            Assert.AreEqual(0f, SpellPerformance.VelocityOf(instance, 0.1f).X, 1e-4f);
+            Assert.AreEqual(437.5f, SpellPerformance.VelocityOf(instance, 0.55f).X, 1e-3f);
+            Assert.AreEqual(0f, SpellPerformance.VelocityOf(instance, 0.7f).X, 1e-4f);
+
+            instance.Layer.ballistic = true;
+            Assert.AreEqual(0f, SpellPerformance.VelocityOf(instance, 0.1f).X, 1e-4f);
+            Assert.AreEqual(250f, SpellPerformance.VelocityOf(instance, 0.4f).X, 1e-4f);
+            Assert.AreEqual(0f, SpellPerformance.VelocityOf(instance, 0.7f).X, 1e-4f);
+        }
+
         // The rift is laid along launch -> exit: at the arrival the tip has
         // crossed 1 of the 3.4 lengths, and the whole of it once the spear is out.
         [Test]
