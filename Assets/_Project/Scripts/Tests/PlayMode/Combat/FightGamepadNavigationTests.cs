@@ -237,6 +237,36 @@ namespace PrincesPalace.PlayModeTests
             pad.MoveFocus(1);
             Assert.AreEqual("EnemyHitArea0", FocusName(pad), "Down returns to the same pending target");
             Assert.IsTrue(IsShown("TargetPrompt"), "returning from intent must not cancel the pending attack");
+        }
+
+        // S05-001: the mouse Cancel button steps back through the same StepBack
+        // as the pad, and must drop the intent inspection the pad opened.
+        [UnityTest]
+        public IEnumerator TheMouseCancelButtonClearsAnIntentInspectionOpenedByThePad()
+        {
+            yield return StandUpAFight();
+
+            var pad = (IFightNavigationTarget)_fight;
+            pad.ConfirmFocus();
+            yield return null;
+            pad.MoveFocus(-1);
+            yield return null;
+            Assert.AreEqual("EnemyIntent0", FocusName(pad), "fixture: the pad is reading the intent");
+            Assert.IsTrue(IsShown("IntentTooltip"), "fixture: the intent tooltip is up");
+
+            var cancel = Node("TargetCancelButton");
+            Assert.IsNotNull(cancel, "the Fight scene has no TargetCancelButton - rebuild the scenes (-BuildScenes)");
+            cancel.GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
+            yield return null;
+
+            Assert.IsFalse(IsShown("IntentTooltip"), "Cancel left the intent tooltip up at the verb column");
+
+            pad.ConfirmFocus();
+            yield return null;
+            Assert.AreEqual("EnemyHitArea0", FocusName(pad),
+                "reopening the target pick must land on the enemy, not on a stale intent inspection");
+        }
+
         // S04-001: a dead _inspectedActor reads as no pointer, so its status code
         // must not light the same row on the pad-focused actor.
         [UnityTest]

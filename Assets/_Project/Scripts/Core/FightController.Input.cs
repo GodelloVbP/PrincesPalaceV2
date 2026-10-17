@@ -1114,6 +1114,12 @@ namespace PrincesPalace
             // player never made. The seat cursor likewise.
             _hoveredAllyIndex = -1;
             _hoveredSeat = -1;
+
+            // The pad's intent read belongs to one open Target pick too; the
+            // mouse Back and Cancel buttons reach here without going through
+            // IFightNavigationTarget.OnBackPressed's own clear.
+            _targetIntentEnemyIndex = -1;
+            ShowIntentTooltip(-1, false);
             RefreshUi();
             return true;
         }
