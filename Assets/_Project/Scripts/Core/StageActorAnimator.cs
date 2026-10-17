@@ -194,6 +194,13 @@ namespace PrincesPalace
         // the other exists or what range it works in.
         private float _stretch;
 
+        // The struck figure's squash, held apart from _stretch because a punch
+        // lands while a lunge or recoil is mid-arc and both deform the same
+        // body; one field would let whichever coroutine wrote last erase the
+        // other. Same sign convention as _stretch: negative is narrower and
+        // taller.
+        private float _punch;
+
         // The run-up's squash and sag: the fraction of height lost, 0 standing.
         // Kept apart from _stretch because a lunge or recoil finishing its arc
         // writes _stretch back to zero, and the sag of a defeated figure must
@@ -259,6 +266,26 @@ namespace PrincesPalace
             // correct while a slot's position was fixed at build time, and it
             // is not: see Rehome.
             Rehome();
+        }
+
+        // Unity stops a coroutine with its object and never finishes it, so
+        // each handle is cleared here (IsPlaying, IsGliding and Play's
+        // restart read them) and every ghost still fading is switched off, as
+        // FadeGhost would have: a pooled ghost lives on the rack, which stays
+        // active.
+        private void OnDisable()
+        {
+            _running = null;
+            _gliding = null;
+            _punching = null;
+            _posing = null;
+
+            foreach (var ghost in _ghosts)
+            {
+                if (ghost != null) ghost.gameObject.SetActive(false);
+            }
+
+            _ghostFades.Clear();
         }
 
         // Re-reads the mark and the scale from where the slot ACTUALLY is now.
@@ -350,6 +377,7 @@ namespace PrincesPalace
             // breath on the next frame, which is not a length of time anybody
             // can see.
             _stretch = 0f;
+            _punch = 0f;
             _breath = 0f;
             _travel = Vector2.zero;
             _hover = 0f;
@@ -368,8 +396,8 @@ namespace PrincesPalace
         // an exception.
         private Vector3 UndeformedScale()
         {
-            float x = (1f + _stretch) * (1f - _breath * BreathVolumeRatio);
-            float y = (1f - _stretch * VolumeRatio) * (1f - _pose) * (1f + _breath);
+            float x = (1f + _stretch) * (1f + _punch) * (1f - _breath * BreathVolumeRatio);
+            float y = (1f - _stretch * VolumeRatio) * (1f - _punch * VolumeRatio) * (1f - _pose) * (1f + _breath);
 
             return new Vector3(
                 Mathf.Abs(x) < 0.01f ? _rect.localScale.x : _rect.localScale.x / x,
@@ -747,6 +775,7 @@ namespace PrincesPalace
                 // self-correcting -- nothing else writes localScale, so it
                 // would simply stay squashed for the rest of the fight.
                 ApplyStretch(0f);
+                ApplyPunch(0f);
 
                 // AND THE BREATH, for the opposite reason. Nothing STOPS
                 // pushing a breath -- the driver simply stops being called
@@ -811,7 +840,7 @@ namespace PrincesPalace
             // The compression itself is one frame -- there is no wind-up on
             // being hit, and easing into it is exactly what makes a punch read
             // as a stretch.
-            ApplyStretch(peak);
+            ApplyPunch(peak);
 
             float elapsed = 0f;
             while (elapsed < seconds)
@@ -820,16 +849,12 @@ namespace PrincesPalace
 
                 // Ease-out back to shape, so it springs rather than melts.
                 float t = Mathf.Clamp01(elapsed / seconds);
-                ApplyStretch(peak * (1f - t) * (1f - t));
+                ApplyPunch(peak * (1f - t) * (1f - t));
 
                 yield return null;
             }
 
-            // Only if nothing else has taken the scale in the meantime -- a
-            // lunge that started mid-punch owns the deformation from then on,
-            // and writing zero here would flatten it a frame before its own
-            // arc did.
-            if (_running == null) ApplyStretch(0f);
+            ApplyPunch(0f);
             _punching = null;
         }
 
@@ -1221,6 +1246,14 @@ namespace PrincesPalace
             WriteScale();
         }
 
+        private void ApplyPunch(float amount)
+        {
+            if (_rect == null) return;
+
+            _punch = amount;
+            WriteScale();
+        }
+
         // ---- the breath a standing figure takes -------------------------------
 
         // How much taller than its mark this figure is standing, right now.
@@ -1334,8 +1367,8 @@ namespace PrincesPalace
 
             // The swing: wider and shorter, or the inverse when Punch feeds it
             // a negative amount.
-            float x = 1f + _stretch;
-            float y = (1f - _stretch * VolumeRatio) * (1f - _pose);
+            float x = (1f + _stretch) * (1f + _punch);
+            float y = (1f - _stretch * VolumeRatio) * (1f - _punch * VolumeRatio) * (1f - _pose);
 
             // The breath: taller, and a little of that taken back out of the
             // width. Never negative -- see BreathCurve, which only ever grows

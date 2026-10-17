@@ -67,6 +67,10 @@ namespace PrincesPalace
 
         private void Awake() => Rehome();
 
+        // Unity stops the kick with its object; without this the handle stays
+        // set and SetNudge never writes again.
+        private void OnDisable() => _running = null;
+
         // Re-reads the mark. The racks themselves do NOT move at runtime --
         // AnchorStageSlots re-lays the slots inside them, which is a different
         // transform -- so unlike StageActorAnimator.Rehome this is a seam for a

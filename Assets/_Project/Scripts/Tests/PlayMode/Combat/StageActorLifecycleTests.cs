@@ -285,6 +285,97 @@ namespace PrincesPalace.PlayModeTests
                 "the next encounter");
         }
 
+        // ---- A7: the object going inactive mid-coroutine -----------------------
+
+        // Unity stops a coroutine with its object and never runs the rest of
+        // it, so every handle the animator tests against null stays set and
+        // every pooled thing the coroutine would have switched off stays on.
+        [UnityTest]
+        public IEnumerator ADisabledAnimatorIsNeitherPlayingNorGlidingWhenItWakes()
+        {
+            yield return AFightAgainst("Enemies/golem");
+            SharedScene.MarkDirty("deactivates a stage slot mid-animation");
+
+            var slotObject = Named("Party0Slot");
+            var animator = slotObject.GetComponent<StageActorAnimator>();
+
+            animator.Play(new Vector2(140f, 20f), 0.5f);
+            animator.GlideTo(animator.Home + new Vector2(80f, 0f), animator.BaseScale, 1f);
+            yield return null;
+            Assert.IsTrue(animator.IsPlaying, "fixture: the lunge is already over");
+            Assert.IsTrue(animator.IsGliding, "fixture: the walk is already over");
+
+            slotObject.SetActive(false);
+            slotObject.SetActive(true);
+
+            Assert.IsFalse(animator.IsPlaying, "a lunge stopped by the disable still reads as playing and holds the next beat");
+            Assert.IsFalse(animator.IsGliding, "a walk stopped by the disable still reads as gliding and holds the next beat");
+        }
+
+        [UnityTest]
+        public IEnumerator ADisabledAnimatorLeavesNoAfterimageShowingUnderTheRack()
+        {
+            yield return AFightAgainst("Enemies/golem");
+            SharedScene.MarkDirty("deactivates a stage slot mid-fade");
+
+            var slotObject = Named("Party0Slot");
+            var animator = slotObject.GetComponent<StageActorAnimator>();
+            var rack = slotObject.transform.parent;
+
+            bool Showing() => rack.GetComponentsInChildren<Transform>(true)
+                .Any(t => t.name == "Afterimage" && t.gameObject.activeSelf);
+
+            animator.Play(new Vector2(600f, 0f), 0f, 0.3f);
+            float deadline = Time.realtimeSinceStartup + 2f;
+            while (!Showing() && Time.realtimeSinceStartup < deadline) yield return null;
+            Assert.IsTrue(Showing(), "fixture: the rush left no afterimage to strand");
+
+            slotObject.SetActive(false);
+
+            Assert.IsFalse(Showing(), "a ghost mid-fade was left on the stage at its half alpha for the next fight");
+            slotObject.SetActive(true);
+        }
+
+        [UnityTest]
+        public IEnumerator ADisabledRackStillTakesANudgeWhenItWakes()
+        {
+            yield return AFightAgainst("Enemies/golem");
+            SharedScene.MarkDirty("deactivates a rack mid-kick");
+
+            var shake = _fight.StageShakesForTest[0];
+            var rack = (RectTransform)shake.transform;
+            var home = rack.anchoredPosition;
+
+            shake.Kick(1f, 1f);
+            yield return null;
+
+            shake.gameObject.SetActive(false);
+            shake.gameObject.SetActive(true);
+            shake.SetNudge(new Vector2(7f, 0f));
+
+            Assert.AreEqual(home.x + 7f, rack.anchoredPosition.x, 0.01f,
+                "the nudge was swallowed because the stopped kick still counts as running");
+        }
+
+        // ---- A8: a punch landing on a figure that is mid-lunge --------------------
+
+        [UnityTest]
+        public IEnumerator APunchStaysSquashedWhileTheFigureLunges()
+        {
+            yield return AFightAgainst("Enemies/golem");
+
+            var slot = (RectTransform)Named("Party0Slot").transform;
+            var animator = slot.GetComponent<StageActorAnimator>();
+            var baseScale = animator.BaseScale;
+
+            animator.Punch(1f);
+            animator.Play(new Vector2(100f, 0f), 0.2f);
+            yield return null;
+
+            Assert.Less(slot.localScale.x, baseScale.x * 0.85f,
+                $"the lunge's stretch overwrote the punch: width {slot.localScale.x:F3} of {baseScale.x:F3}");
+        }
+
         // ---- A6: a revival arriving mid-fade ---------------------------------------
 
         [UnityTest]
