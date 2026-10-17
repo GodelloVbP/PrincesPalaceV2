@@ -264,21 +264,18 @@ namespace PrincesPalace.Domain.Combat.Session
             _recordingBeat.Missed = true;
         }
 
-        // Roots the actor in place for this beat, for art whose plain-attack
-        // pose is itself stationary. Separate from the `isCast` constructor
-        // argument because it is decided later -- the intent has to be resolved
-        // first -- and because it must NOT also force the cast stance.
         // The approach a skill authored, applied over whatever BeginBeat
-        // assumed. Separate from the constructor argument for the reason
-        // HoldActorPosition is: the skill is not known until after the beat has
-        // been opened, and opening it later would lose everything recorded in
-        // between.
+        // assumed. Separate from the constructor argument because the skill is
+        // not known until after the beat has been opened, and opening it later
+        // would lose everything recorded in between.
         private void ApproachAs(StageApproach approach)
         {
             if (_recordingBeat == null) return;
             _recordingBeat.Approach = approach;
         }
 
+        // Roots the actor in place for this beat, for art whose plain-attack
+        // pose is itself stationary. It does not force the cast stance.
         private void HoldActorPosition()
         {
             if (_recordingBeat == null) return;
@@ -491,11 +488,9 @@ namespace PrincesPalace.Domain.Combat.Session
         // room for its own cause. Attaching it to the last queued beat puts it
         // back in causal order.
         //
-        // This SIMPLIFIES in the split. v1 needed an `_isPlayingBack` gate,
-        // because resolution and playback shared a queue and a message arriving
-        // during playback was genuinely current. Here resolution finishes
-        // entirely before the view drains anything, so there is no such window
-        // and no gate.
+        // Resolution finishes entirely before the view drains anything, so no
+        // message arrives mid-playback and no playback gate is needed.
+        //
         // Public, not internal: the Core adapter appends fight-opening lines
         // ("The bog witch blocks your path!") that no command produces, and
         // they have to obey the same ordering rule as everything else.

@@ -105,30 +105,21 @@ namespace PrincesPalace.Domain.Combat.Session
         // the resource's own maximum. FightCapacityPinTests' pin went with
         // it -- there is nothing left for a signature capacity to overflow.
 
-        // The detail column's MAXIMUM stat rows -- how many PHYSICAL row
-        // slots the tree reserves, not how many any one card shows. The
-        // canonical order FightHudModel can draw from is MANA, COST
-        // (resource/health), COOLDOWN, POWER, DEFENSE, TARGET, EFFECT,
-        // SCALES (eight), but FightHudModel.DetailPanel.Stats is COMPACT: a
-        // stat that does not apply to what is hovered is not added at all
-        // (2026-09-22 rework #2), so a skill using only three of the eight
-        // paints a three-row card, not an eight-row one with five gaps.
-        // FightController.Hud.cs's RefreshDetail paints panel.Stats[i] into
-        // physical row i for i < Stats.Count and hides the rest -- the same
-        // fixed-pool/toggle-visibility idiom FightSubmenuLayout's rows use.
+        // The detail column's maximum stat rows -- how many physical row slots
+        // the tree reserves, not how many any one card shows. The canonical
+        // order FightHudModel can draw from is MANA, COST (resource/health),
+        // COOLDOWN, POWER, DEFENSE, TARGET, EFFECT, SCALES (eight), but
+        // FightHudModel.DetailPanel.Stats is compact: a stat that does not
+        // apply to what is hovered is not added at all.
         public const int DetailStatRows = 8;
 
-        // THE ICON ROW POOL (2026-09-23 icon rework, raised 6 -> 8 in the
-        // coordinator's pass 2: dropping COST/COOLDOWN entirely was a real
-        // regression, not a scoping choice) -- how many PHYSICAL icon+value
-        // row slots the tree reserves, alongside DetailStatRows above rather
-        // than replacing it: FightHudModel.DetailPanel.Stats and .Icons are
-        // both populated by DetailForSkill now (that struct's own header),
-        // Stats for any reader that still wants the old strings and Icons
-        // for what the card actually paints. Eight covers every
-        // DetailIconKind member -- Mana, Cost, Cooldown, Element(+POWER),
-        // Defense, Reach, AreaOfEffect, Scaling -- with no ninth kind
-        // defined, so eight is the true ceiling, not a guessed one.
+        // The icon row pool: how many physical icon+value row slots the tree
+        // reserves, alongside DetailStatRows rather than replacing it.
+        // FightHudModel.DetailPanel.Stats and .Icons are both populated by
+        // DetailForSkill; RefreshDetail paints Icons. Eight is the ceiling
+        // because Effect (a non-damaging skill's row) excludes the Element and
+        // Defense rows, so no card carries more than eight of the nine
+        // DetailIconKind members.
         public const int DetailIconRows = 8;
 
         // Attack / Skill / Item / Hold Back. RUN was removed -- see

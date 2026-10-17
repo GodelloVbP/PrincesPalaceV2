@@ -701,17 +701,12 @@ namespace PrincesPalace.Domain.Combat.Session
                 Body = skill.Description ?? "",
             };
 
-            // COMPACT, IN THIS ORDER -- MANA, COST, COOLDOWN, POWER, DEFENSE
-            // ONLY WHEN THEY APPLY, then TARGET/EFFECT/SCALES always. A stat
-            // that does not apply is not added at all (2026-09-22 rework
-            // #2), rather than added with an empty value at a fixed slot --
-            // a skill that skips four of the five conditional rows gets a
-            // compact five-row card, not a five-row gap in an eight-row one.
-            // FightController.Hud.cs's RefreshDetail paints panel.Stats[i]
-            // into physical row i for i in 0..Count-1 and hides the rest, so
-            // WHICH physical row ends up labelled POWER now varies with what
-            // else is present -- RefreshDetailDamageType finds that row by
-            // key, at runtime, rather than assuming a fixed index.
+            // Compact, in this order: MANA, COST, COOLDOWN, POWER, DEFENSE only
+            // when they apply, then TARGET/EFFECT/SCALES always. A stat that
+            // does not apply is not added at all, so a skill that skips four of
+            // the five conditional rows gets a five-row card, not a gap-filled
+            // eight-row one. Stats is compact; FightController.Hud.cs's
+            // RefreshDetail paints the parallel Icons list.
             int cooldownRemaining = session?.CooldownRemaining(actor, skill.Id) ?? 0;
             string primaryTag = PrimaryTagOf(actor);
 
@@ -1148,24 +1143,6 @@ namespace PrincesPalace.Domain.Combat.Session
             public string CounterLabel => CounterText ?? Counter.ToString();
         }
 
-        // Every status effect and every relic-granted speed buff/malus
-        // currently on ONE combatant, as rows, in section 5's display order.
-        // Two different stores (CombatantState.Statuses, FightSession's
-        // private speed-buff dictionary) because that split is real -- see
-        // FightSession.SpeedBuffs's own header -- so this is where they
-        // finally become one list, for the one place a player actually
-        // looks: the character they are about to act with. Replaces
-        // BuffBadgesFor.
-        //
-        // SESSION IS OPTIONAL, actor is not (S3's review corrects the old
-        // claim here: EnemyStatusLine does not call this at all any more --
-        // Phase 3 retired its own status list to BRK only, see that
-        // method's own header -- and nothing in this tree currently calls
-        // StatusRowsFor with session == null). Kept optional anyway: a null
-        // session still costs only the speed-buff half and, as of C2, the
-        // Drowned Lantern's own mark below -- actor.Statuses needs no
-        // session to read at all -- so a future no-session caller (a
-        // preview render, a design tool) degrades rather than throws.
         // ---- the knell's floor figures (PLAN_BELLWETHER_KIT M5) -----------------
         //
         // While a seat-sized hit (the Death Knell) is a committed intent, what
@@ -1248,8 +1225,10 @@ namespace PrincesPalace.Domain.Combat.Session
             return source is StatusEffectType status ? StatusHud.NameFor(status) : source.ToString();
         }
 
-        // The live badge row: capture, then format. A beat records the capture
-        // (Vitals.Statuses) and the HUD formats it at paint time.
+        // The live badge row: every status effect and relic speed buff on one
+        // combatant, in section 5's display order. Capture, then format: a beat
+        // records the capture (Vitals.Statuses) and the HUD formats it at paint
+        // time. A null session reads only actor.Statuses.
         public static List<StatusRow> StatusRowsFor(FightSession session, CombatantState actor)
         {
             return actor == null ? new List<StatusRow>() : StatusRowsFrom(StatusSnapshot.Capture(session, actor));
@@ -1349,34 +1328,19 @@ namespace PrincesPalace.Domain.Combat.Session
             public static string ResourceFor(StatusRow row) => "Status/" + row.Slug;
         }
 
-        // ---- enemy plate status line (Phase 3: retired to BRK only) --------
+        // ---- enemy plate status line -----------------------------------------
         //
-        // Used to join every status into a "PSN·3  ·  VLN·2  ·  +1" line
-        // squeezed under the HP bar in 8pt text -- PLAN_STATUS_EFFECT_UI.md
-        // section 9 (Phase 3) retires that: the same statuses already read,
-        // full-size, off the enemy's own stage row (BuildEnemyStatusRows,
-        // FightController.RefreshEnemyStatusRows), and a plate line
-        // repeating them was "two surfaces for one fact on a 200x64 card",
-        // the plate's own comment's own warning turned against itself.
+        // Only BRK is written here; the other statuses read full-size off the
+        // enemy's stage row (BuildEnemyStatusRows,
+        // FightController.RefreshEnemyStatusRows). BRK has no other surface:
+        // BreakShield is not a StatusEffectType, so StatusRowsFor never sees
+        // it, and it must never be bumped into a "+N" overflow. The Tags node
+        // this writes into stays in the screen tree for this prefix; see
+        // FightScreen.BuildEnemyPlates.
         //
-        // BRK SURVIVES because it has no other surface. BreakShield is not a
-        // StatusEffectType -- StatusRowsFor never sees it, so no badge in the
-        // stage row represents it -- and it is the one always-shown fact this
-        // line used to guarantee could never be bumped into a "+N" overflow.
-        // The Tags node this writes into stays in the screen tree for exactly
-        // this prefix; see FightScreen.BuildEnemyPlates.
-        //
-        // `session` is unread now that the status list is gone from THIS
-        // line -- it moved, not disappeared. C2's review found the Marked-
-        // vs-Marked de-duplication had actually been dropped, not relocated:
-        // StatusRowsFor read only actor.Statuses, so an enemy carrying a
-        // Drowned Lantern mark and no StatusEffectType.Marked entry showed
-        // nothing anywhere at all. StatusRowsFor now reads session.IsMarked
-        // itself and appends the row there, which is what makes `session`
-        // unread here rather than merely redundant. Kept as a
-        // parameter rather than dropped: the call site still has a session
-        // in scope, and losing the parameter now would just have to come
-        // back the day this line grows a second always-shown fact.
+        // `session` is unread: StatusRowsFor reads session.IsMarked itself. It
+        // stays a parameter because the call site has a session in scope and a
+        // second always-shown fact would need it.
         private const string BrokenHex = "#FFC45A";
 
         public static string EnemyStatusLine(CombatantState enemy, FightSession session)

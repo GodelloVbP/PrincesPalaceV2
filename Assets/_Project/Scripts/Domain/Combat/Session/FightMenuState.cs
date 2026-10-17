@@ -64,9 +64,9 @@ namespace PrincesPalace.Domain.Combat.Session
     // the desync class v1 never had. This type is still the view's, it just is
     // not a MonoBehaviour, so its transitions can be tested in milliseconds.
     //
-    // Plain state, not a stack. The graph has exactly five edges and a stack
-    // would let it reach positions the design does not have -- v1's own note,
-    // preserved because it is the reason this is three fields.
+    // Plain state, not a stack: a stack would let the menu reach positions the
+    // design does not have. Depth, Branch and the selection indices below are
+    // the whole graph.
     public sealed class FightMenuState
     {
         public MenuDepth Depth { get; private set; } = MenuDepth.Root;
@@ -104,30 +104,16 @@ namespace PrincesPalace.Domain.Combat.Session
         // than picking between the two indices itself.
         public int RowSelection => Depth == MenuDepth.Element ? ElementSelection : Selection;
 
+        // Driven by the branch alone, never by a second "can the player act" test
+        // computed alongside it: the branch is only set through a guarded path
+        // and Reset clears it on every resolution, so it is the authority.
         public bool IsOpen => Branch != MenuBranch.None;
 
-        // Driven by THE BRANCH ALONE, never by a second "can the player act"
-        // test computed alongside it.
-        //
-        // v1 asked twice and the two answers disagreed: opening a branch guarded
-        // on the SIMULATION's turn while the redraw read the DISPLAYED one, and
-        // during playback those are different actors. The branch would be set
-        // and the column would stay hidden, which made the basic spell
-        // unreachable in exactly the states where playback was still catching
-        // up. The branch is only ever set through a guarded path and Reset
-        // clears it on every resolution, so it is already the authority.
-        // THE LIST FOLDS ONCE SOMETHING IS PICKED.
-        //
-        // It used to stay up through targeting, so that the player could see
-        // what they had chosen. The detail column says that, in more words, and
-        // the target prompt names it outright -- while the list itself was
-        // sitting over the middle of the battlefield, which is the half of the
-        // screen the player has just been asked to point at.
-        //
-        // ATTACK was already excluded, because it skips the submenu on the way
-        // in. That exception is now the rule.
-        // Element depth keeps the column up: it is the same column showing a
-        // different list, not a second piece of chrome.
+        // The list folds once something is picked: the detail column and the
+        // target prompt already name the pick, and the list would sit over the
+        // battlefield the player is being asked to point at. ATTACK skips the
+        // submenu on the way in. Element depth keeps the column up: it is the
+        // same column showing a different list, not a second piece of chrome.
         public bool SubmenuOpen => IsOpen && (Depth == MenuDepth.Sub || Depth == MenuDepth.Element);
 
         // The detail column is populated for ATTACK too, through a synthetic
