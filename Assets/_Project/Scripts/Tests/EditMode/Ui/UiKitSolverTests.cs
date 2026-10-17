@@ -102,6 +102,21 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
+        public void StretchFillChildInsideFromChildren_TakesTheParentsEdges_AndIsNotCircular()
+        {
+            // Ui.Sprite/Solid/Frame author Stretch + Fill: the rect comes from
+            // the parent's edges, so it never feeds the parent's own size.
+            var tree = Ui.Panel("Holder", Place.At(0f, 0f), UiSize.FromChildren(),
+                Ui.Solid("Art", "#ffffff", Place.Stretch(), UiSize.Fill),
+                Ui.Solid("Body", "#ffffff", Place.At(0f, 0f), UiSize.Fixed(120f, 80f)));
+
+            var solved = UiSolver.Solve(tree, Frame);
+
+            AssertRect(solved, 0f, 0f, 120f, 80f);
+            AssertRect(Child(solved, "Art"), 0f, 0f, 120f, 80f);
+        }
+
+        [Test]
         public void FlowChildInsideAPanel_IsRefused_WithRemedies()
         {
             var tree = Ui.Panel("Root", UiSize.Fill,

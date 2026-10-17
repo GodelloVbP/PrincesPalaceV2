@@ -51,7 +51,9 @@ namespace PrincesPalace.Domain.UiKit
             // and a Pool is always placement-sized, so a Fill child inside
             // either resolves fine -- flagging those would ban a legitimate and
             // obvious pattern (a cell-filling icon) for no reason.
-            if (parent != null && SizeDependsOnChildren(parent))
+            // A Stretch/Frac child takes its rect from the parent's edges and
+            // ignores Size, so its Fill never feeds the parent's measure.
+            if (parent != null && SizeDependsOnChildren(parent) && !node.Place.SizedByPlacement)
             {
                 if (node.Size.ModeX == UiSizeMode.Fill && parent.Size.ModeX == UiSizeMode.FromChildren)
                 {
