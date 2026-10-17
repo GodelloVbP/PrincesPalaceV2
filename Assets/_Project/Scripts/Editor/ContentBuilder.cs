@@ -153,7 +153,9 @@ public static class ContentBuilder
         // AssetDatabase.IsValidFolder/CreateFolder are the database's own view
         // of the tree, and asking it to create a folder while it is not
         // importing is asking for a folder that is not there yet when
-        // CreateAsset needs it.
+        // CreateAsset needs it. The one exception is RealmsPath, which
+        // BuildRealms creates inside the bracket (its store step calls
+        // EnsureFolder).
         //
         // try/finally, not a bare pair: a resolver that throws inside here
         // would otherwise leave the AssetDatabase paused for the rest of the
@@ -501,7 +503,8 @@ public static class ContentBuilder
         WarnOnMissingDialogueBusts(events, characters);
     }
 
-    // PLAN_DIALOGUE_STAGE contract 11: a line whose bust has no file WARNS
+    // WarnOnMissingDialogueBusts (below ResourcesRoot), PLAN_DIALOGUE_STAGE
+    // contract 11: a line whose bust has no file WARNS
     // and never refuses -- art arrives after content, and the stage already
     // degrades to name plate + text. Here rather than in EventEntryResolver
     // because the resolver is pure Domain with no file system and no warning
@@ -510,6 +513,8 @@ public static class ContentBuilder
     // would see no bust at all: a missing "happy" that falls back to an
     // existing "neutral" is the designed fallback, not a warning.
     // One warning per character/expression pair, naming the first line.
+
+    // Where the bust PNGs are looked for.
     private const string ResourcesRoot = "Assets/_Project/Resources/";
 
     private static void WarnOnMissingDialogueBusts(IReadOnlyList<ResolvedEventDefinition> events,
@@ -563,34 +568,13 @@ public static class ContentBuilder
             (asset, upgrade) => asset.SetData(upgrade),
             upgrade => upgrade.Id);
 
-    // Weakness/resistance pairs, chosen so every one of the 5 characters'
-    // attackType (see BuildCharacters) has at least one enemy it's strong
-    // against; only Fire has no matching character yet, deliberately left
-    // as headroom for a future fire-themed character or talent rather than
-    // stretched to fit one of the existing five. First-pass balance, not
-    // exhaustively tuned — see CombatMath.EffectivenessMultiplier.
-    // Monsters are the one content type authored outside this file — see
-    // Assets/_Project/ContentData/enemies.json. That's the "hand-authored
-    // assets belong in a folder this tool does not own" promise this file's
-    // own header comment has always made, actually kept for enemies: the
-    // JSON isn't touched by RecreateFolder(ContentRoot) above, so adding a
-    // monster is "add a line to enemies.json and rebuild," not "write a
-    // CreateEnemy call and recompile." EnemyEntryResolver (Domain layer,
-    // unit-tested, engine-free) does the actual validation and default-
-    // filling; this method is just the thin Editor-only glue that reads the
-    // file, calls the resolver, and turns the result into real assets.
-    //
-    // Design intent behind the current roster, preserved here since JSON
-    // has no comments: golem is the tanky/slow end of the spread (high
-    // HP+defense, low speed); imp is the glass-cannon end (high attack,
-    // zero defense); bog_witch resists the same type Sheep deals, giving
-    // Sheep a bad matchup to offset its free win against golem; crystal_bat
-    // is brittle but resists Arcane, punishing the same Physical attackers
-    // golem/wolf also punish. warden (v1's only boss, since removed; the
-    // note stays for the reasoning) fought in every
-    // dungeon clear) deliberately resists Fire — the one type no character
-    //'s attackType used at the time — after Poison here once silently
-    // gutted the Assassin's execute bonus in every single boss fight.
+    // Monsters are authored in Assets/_Project/ContentData/enemies.json, not
+    // in this file. The JSON is not touched by RecreateFolder(ContentRoot)
+    // above, so adding a monster is "add a line to enemies.json and
+    // rebuild". EnemyEntryResolver (Domain layer, unit-tested, engine-free)
+    // does the validation and default-filling; this method is the thin
+    // Editor-only glue that reads the file, calls the resolver, and turns
+    // the result into real assets.
     // Returns every enemy that got an asset, with its slotSpan: what an event
     // fight may name and what it costs of the stage (BuildEvents).
     private static IReadOnlyDictionary<string, int> BuildEnemies() =>
