@@ -246,59 +246,56 @@ class Stats:
         self.assistant_lines_seen = 0
         self.assistant_lines_deduped = 0
 
-        # item 2 (original): per raw model, last-N-days totals
+        # per raw model, last-N-days totals
         self.model_totals = defaultdict(new_bucket)
 
-        # item 3 (original): main vs subagent totals
+        # main vs subagent totals
         self.scope_totals = defaultdict(new_bucket)  # 'main' / 'subagent'
         self.subagent_model_totals = defaultdict(new_bucket)  # actual message.model used inside subagent transcripts
 
-        # item 3 (original): Agent tool_use invocations found in MAIN sessions (dedup by (file,id))
+        # Agent tool_use invocations found in MAIN sessions (dedup by (file,id))
         self.agent_tool_model_counts = Counter()  # 'opus'/'sonnet'/'haiku'/'unspecified'/other literal
         self.agent_tool_subagent_type_counts = Counter()
         self.agent_tool_prompt_lens = []  # all prompt char lengths
         self.agent_tool_prompt_lens_by_type = defaultdict(list)
         self.subagent_launches_per_day = Counter()  # date -> count, from Agent tool_use blocks in main sessions
 
-        # item 4 (original): per main-session-file stats, keyed by session uuid
+        # per main-session-file stats, keyed by session uuid
         self.session_stats = {}
         self.session_agent_launches = Counter()  # uuid -> count of Agent tool_use blocks in that main file
         self.session_first_user_msg = {}  # uuid -> label text
 
-        # item 5 (original): Read/Grep/Glob counts by scope, and Read file path frequency
+        # Read/Grep/Glob counts by scope, and Read file path frequency
         self.tool_counts_by_scope = defaultdict(Counter)  # scope -> Counter(tool_name)
         self.read_path_counts = Counter()
 
-        # item 6 (original): verification reruns per day (loose substring match, kept as-is)
+        # verification reruns per day (loose substring match)
         self.test_rerun_per_day = Counter()
 
-        # coordinator addendum: day -> family -> total tokens (sum of 4 classes)
+        # day -> family -> total tokens (sum of 4 classes)
         self.day_family_totals = defaultdict(lambda: defaultdict(int))
 
-        # ---- additions ----
-
-        # addition 1: per-subagent-file stats, keyed by jsonl path; rolled up onto
+        # per-subagent-file stats, keyed by jsonl path; rolled up onto
         # the owning main session by parent uuid at report-build time.
         self.subagent_file_stats = {}
 
-        # addition 3: Read line estimate and Grep mode counts
+        # Read line estimate and Grep mode counts
         self.read_line_sum = Counter()       # file_path -> summed estimated lines returned
         self.read_unknown_count = Counter()  # file_path -> # of Read calls we could not estimate
         self.line_count_cache = {}
         self.grep_mode_by_scope = defaultdict(Counter)  # scope -> Counter(output_mode)
 
-        # addition 4: script execution vs mention, per script/day/scope
+        # script execution vs mention, per script/day/scope
         self.script_exec = defaultdict(lambda: defaultdict(int))            # name -> scope -> count
         self.script_mention = defaultdict(lambda: defaultdict(int))         # name -> scope -> count
         self.script_exec_by_day = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))  # day -> name -> scope -> count
 
-        # addition 5: cache-TTL gap tracking, per scope/family
+        # cache-TTL gap tracking, per scope/family
         self.cache_ttl_gap_count = defaultdict(lambda: defaultdict(int))   # scope -> family -> count
         self.cache_ttl_gap_tokens = defaultdict(lambda: defaultdict(int))  # scope -> family -> cache_creation tokens
 
         # bookkeeping / caveats
         self.files_processed = 0
-        self.files_skipped_by_mtime = 0
         self.mismatched_sidechain_main = 0
         self.mismatched_sidechain_sub = 0
         self.records_outside_window_skipped = 0
@@ -329,7 +326,7 @@ def list_target_files(window_start):
 
 
 def process_assistant_groups(records_by_reqid):
-    """records_by_reqid: dict[key] -> list of (usage_dict, model, stop_reason, timestamp_dt)
+    """records_by_reqid: dict[key] -> list of (usage_dict, model, timestamp_dt)
     Returns list of (model, input, cache_creation, cache_read, output, timestamp_dt, variance) - one per group."""
     out = []
     for key, items in records_by_reqid.items():
@@ -341,7 +338,7 @@ def process_assistant_groups(records_by_reqid):
         best_output = -1
         best_ts = None
         model = None
-        for usage, m, stop_reason, ts in items:
+        for usage, m, ts in items:
             it = usage.get("input_tokens") or 0
             cc = usage.get("cache_creation_input_tokens") or 0
             cr = usage.get("cache_read_input_tokens") or 0
@@ -368,7 +365,7 @@ def process_file(path, scope, stats: Stats, window_start):
     for assistant usage, and separately scans tool_use blocks (Agent/Read/Grep/Glob/
     Bash/PowerShell) deduped by tool_use id within this file."""
 
-    reqid_groups = defaultdict(list)  # key -> list of (usage, model, stop_reason, ts)
+    reqid_groups = defaultdict(list)  # key -> list of (usage, model, ts)
     seen_tool_ids = set()
     sidechain_true = 0
     sidechain_false = 0
@@ -427,7 +424,7 @@ def process_file(path, scope, stats: Stats, window_start):
                     if not rid:
                         fallback_counter += 1
                         rid = ("__fallback__", d.get("uuid"), fallback_counter)
-                    reqid_groups[rid].append((usage, model, msg.get("stop_reason"), ts))
+                    reqid_groups[rid].append((usage, model, ts))
 
                 # tool_use blocks (Agent / Read / Grep / Glob / Bash / PowerShell)
                 # Dedup by tool_use id unconditionally (correctness of "seen" bookkeeping),
@@ -587,7 +584,7 @@ def process_file(path, scope, stats: Stats, window_start):
             "output": sum_out,
         }
 
-    # addition 5: cache-lifetime gaps, computed per file in chronological order
+    # cache-lifetime gaps, computed per file in chronological order
     threshold = timedelta(minutes=5) if scope == "subagent" else timedelta(minutes=60)
     kept_for_gap_check.sort(key=lambda t: t[2])
     prev_ts = None
@@ -613,7 +610,7 @@ def build_markdown(stats: Stats, main_files, subagent_files, files_skipped_mtime
     lines = []
     lines.append("# Token-usage baseline")
     lines.append("")
-    lines.append(f"Generated {NOW.isoformat()}Z-ish (local run). Window: last {days} days")
+    lines.append(f"Generated {NOW.isoformat()} (local run). Window: last {days} days")
     lines.append(f"({window_start.date().isoformat()} to {NOW.date().isoformat()}), "
                   f"files gated by mtime, records gated by their own `timestamp`.")
     lines.append("")
@@ -651,7 +648,7 @@ def build_markdown(stats: Stats, main_files, subagent_files, files_skipped_mtime
         lines.append(f"_Models with no rate bucket (cost shown as n/a, excluded from TOTAL cost): {', '.join(any_unrated)}_")
     lines.append("")
 
-    # ---- coordinator addendum: per-day fable vs non-fable totals ----
+    # ---- per-day fable vs non-fable totals ----
     lines.append("## Per-day totals: Fable-family vs non-Fable (all four token classes summed)")
     lines.append("")
     lines.append("_Requested because the account's binding limit is a weekly all-models cap._")
@@ -718,7 +715,7 @@ def build_markdown(stats: Stats, main_files, subagent_files, files_skipped_mtime
         lines.append(f"| {day} | {stats.subagent_launches_per_day[day]} |")
     lines.append("")
 
-    # ---- 4 (original). per-session stats, top 10 by cost proxy ----
+    # ---- per-session stats, top 10 by cost proxy ----
     lines.append("## Per main-session stats (last {0} days), top 10 by cost proxy".format(days))
     lines.append("")
     lines.append("| Session file | Assistant turns | Peak context (tokens) | Total cache-read | Cache-read ratio | Cost proxy |")
@@ -734,7 +731,7 @@ def build_markdown(stats: Stats, main_files, subagent_files, files_skipped_mtime
     lines.append(COST_PROXY_NOTE)
     lines.append("")
 
-    # ---- 5 (original). Read/Grep/Glob counts + top 15 read paths ----
+    # ---- Read/Grep/Glob counts + top 15 read paths ----
     lines.append("## Read / Grep / Glob tool_use calls: main vs subagent")
     lines.append("")
     lines.append("| Tool | Main | Subagent | Total |")
@@ -753,7 +750,7 @@ def build_markdown(stats: Stats, main_files, subagent_files, files_skipped_mtime
         lines.append(f"| {i} | {path} | {cnt} |")
     lines.append("")
 
-    # ---- 6 (original). verification reruns per day (loose match, kept as-is) ----
+    # ---- verification reruns per day (loose match) ----
     lines.append("## Verification reruns per day (Bash/PowerShell command contains `run_tests_parallel.ps1` or `tools/test.ps1`)")
     lines.append("")
     lines.append("| Day | Reruns |")
@@ -768,7 +765,7 @@ def build_markdown(stats: Stats, main_files, subagent_files, files_skipped_mtime
     # ADDITIONS
     # =====================================================================
 
-    # ---- addition 1a: per main session, own stats + Agent launches + label ----
+    # ---- per main session, own stats + Agent launches + label ----
     lines.append("## Addition 1a: per main session (own tokens only, not rolled up)")
     lines.append("")
     lines.append("_Proxy for \"per completed task\" at the orchestrator level -- excludes whatever its subagents spent; see 1b for the rolled-up view._")
@@ -788,7 +785,7 @@ def build_markdown(stats: Stats, main_files, subagent_files, files_skipped_mtime
     lines.append(COST_PROXY_NOTE)
     lines.append("")
 
-    # ---- addition 1b: per main session rolled up with its subagents ----
+    # ---- per main session rolled up with its subagents ----
     lines.append("## Addition 1b: per main session rolled up with its subagents (parent + workers)")
     lines.append("")
     lines.append("_This is the \"per completed task\" proxy: everything spent to produce one orchestrator session's worth of work, including every subagent it launched._")
@@ -823,7 +820,7 @@ def build_markdown(stats: Stats, main_files, subagent_files, files_skipped_mtime
     lines.append(COST_PROXY_NOTE)
     lines.append("")
 
-    # ---- addition 2: per Agent launch ----
+    # ---- per Agent launch ----
     lines.append("## Addition 2: per Agent launch (one row per subagent transcript), top 25 by cost proxy")
     lines.append("")
     lines.append("| Type | Model | Turns | Peak context | Mean context/turn | Cache-read | Cache-write | Output | Cost proxy | Brief |")
@@ -849,7 +846,7 @@ def build_markdown(stats: Stats, main_files, subagent_files, files_skipped_mtime
     lines.append(COST_PROXY_NOTE)
     lines.append("")
 
-    # ---- addition 3: Read-range estimate + Grep mode split ----
+    # ---- Read-range estimate + Grep mode split ----
     lines.append("## Addition 3: Read-range estimate (top 15 by estimated lines returned)")
     lines.append("")
     lines.append("_Estimate per Read call: `limit` if given, else the referenced file's own line count capped at 2000 "
@@ -881,7 +878,7 @@ def build_markdown(stats: Stats, main_files, subagent_files, files_skipped_mtime
     lines.append("_`output_mode` defaults to `files_with_matches` when the call omits it; unspecified calls are counted there._")
     lines.append("")
 
-    # ---- addition 4: test/build/preview/screenshot script executions ----
+    # ---- test/build/preview/screenshot script executions ----
     lines.append("## Addition 4: tools/*.ps1 executions vs mentions, per script")
     lines.append("")
     lines.append("_\"Execution\" = the command invokes the script as its program (`-File tools/<name>` or a direct "
@@ -920,7 +917,7 @@ def build_markdown(stats: Stats, main_files, subagent_files, files_skipped_mtime
             lines.append(f"| {day} | {name} | {m} | {s} | {m+s} |")
     lines.append("")
 
-    # ---- addition 5: cache-lifetime gaps ----
+    # ---- cache-lifetime gaps ----
     lines.append("## Addition 5: cache-write attributable to long gaps (prompt-cache TTL)")
     lines.append("")
     lines.append("_TTL assumption: subagent transcripts use a 5-minute cache; main sessions on this subscription plan "
@@ -949,8 +946,8 @@ def build_markdown(stats: Stats, main_files, subagent_files, files_skipped_mtime
                   "records are SSE-streamed and repeat across lines that share the same "
                   "`requestId` (== `message.id` in every record observed). Within a group, "
                   "`input_tokens`/`cache_creation_input_tokens`/`cache_read_input_tokens` were "
-                  "identical on every sampled line (0 groups with variance in this run: "
-                  f"{stats.dedup_groups_with_input_variance} flagged). `output_tokens` grows "
+                  "identical on every sampled line (groups with variance this run: "
+                  f"{stats.dedup_groups_with_input_variance}). `output_tokens` grows "
                   "monotonically across the group and is taken as the max (== last line) per group.")
     lines.append(f"- Malformed / unparseable JSONL lines skipped: {stats.malformed_lines} "
                   f"out of {stats.total_lines} total lines read.")
@@ -974,9 +971,9 @@ def build_markdown(stats: Stats, main_files, subagent_files, files_skipped_mtime
                   "by tool_use `id` within each file (not from the `subagents/*.meta.json` sidecar "
                   "files, though the two should roughly agree; meta.json was not cross-checked line "
                   "for line against this count).")
-    lines.append("- Per-session stats (original item 4) are computed strictly from each top-level main `.jsonl` "
-                  "file and do NOT roll up that session's subagent transcripts. Addition 1a repeats that "
-                  "own-tokens-only view with more columns; addition 1b adds the subagent-inclusive roll-up.")
+    lines.append("- Per-session stats are computed strictly from each top-level main `.jsonl` "
+                  "file and do NOT roll up that session's subagent transcripts. The per-main-session table "
+                  "repeats that own-tokens-only view with more columns; the roll-up table adds the subagent-inclusive view.")
     lines.append("- Read/Grep/Glob and Bash/PowerShell tool_use calls are deduped by tool_use `id` "
                   "within each file, since a tool_use block can appear on more than one streamed line "
                   "for the same request (not verified to have differing content across duplicates, but "
@@ -1033,7 +1030,11 @@ def main():
 
     reports_root_norm = os.path.normcase(os.path.normpath(REPORTS_ROOT))
     out_norm = os.path.normcase(os.path.normpath(out_path))
-    if os.path.commonpath([reports_root_norm, out_norm]) != reports_root_norm:
+    try:
+        inside = os.path.commonpath([reports_root_norm, out_norm]) == reports_root_norm
+    except ValueError:  # another drive: no common path
+        inside = False
+    if not inside:
         print(f"Refusing to write outside reports/: {out_path}", file=sys.stderr)
         sys.exit(1)
 
