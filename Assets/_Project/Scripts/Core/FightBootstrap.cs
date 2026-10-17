@@ -62,7 +62,7 @@ namespace PrincesPalace
         // plain-field fallback there is always null, so BuildPlaceholderFight
         // needs no #if of its own at the call site.
         //
-        // TWO MORE KEYS BESIDE IT, and they belong here rather than anywhere
+        // SIX MORE KEYS BESIDE IT, and they belong here rather than anywhere
         // nearer the content because they are the same kind of thing: a
         // preview's opinion about ONE fight, consumed together with it and
         // never written to a record, a save or an asset. tools/preview.ps1 sets
@@ -411,8 +411,7 @@ namespace PrincesPalace
             // about nothing.
             //
             // DevForcedEnemyId overrides all of that with exactly one named
-            // enemy -- see its own field comment. Consumed here, not left for
-            // next time.
+            // enemy -- see its own field comment.
             // ALREADY CONSUMED, by Start, before this was called -- see
             // ConsumeDevForced. They are one preview's opinion about one
             // fight; a leftover key is a scene reload later showing a fight
@@ -524,13 +523,6 @@ namespace PrincesPalace
 
         private static bool HasArt(CharacterDefinition definition) =>
             !string.IsNullOrWhiteSpace(definition.Data.BattleSpritePath);
-
-    
-        // Which backdrop and which reward multiplier is the ENCOUNTER
-        // REQUEST's answer (EncounterRequest.Class): the room's type for a
-        // room, the event fight's `elite` for an event fight -- an event
-        // fight's node (RoomType.Event) cannot answer this.
-
         // THE SETTLEMENT LIVES IN RunOrchestrator.
         //
         // Folding the ledger, writing HP back, spending second lives,
@@ -561,14 +553,12 @@ namespace PrincesPalace
             if (settled.RunEnded != null) LastSettlement = settled.RunEnded;
         }
 
-        // What the fight just paid, per character. Held for the rewards screen
-        // to read once it exists; until then the levels have still been applied,
-        // which is the part that matters to the save.
+        // What the fight just paid, per character. No production code reads
+        // it; FightSettlementTests observes it.
         public static Domain.Rewards.CombatReward LastReward { get; private set; }
 
-        // What the run that just ended paid out and cost. Read by the defeat
-        // screen, which cannot compute it itself: EndRun has already discarded
-        // the snapshot by the time anything is drawn.
+        // What the run that just ended paid out and cost. No production code
+        // reads it; FightSettlementTests observes it.
         public static RunSettlement.Result LastSettlement { get; private set; }
 
         // Resolving the effect is Core's job -- the session is told what

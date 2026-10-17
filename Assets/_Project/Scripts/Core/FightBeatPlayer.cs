@@ -566,10 +566,9 @@ namespace PrincesPalace
         // FINISH PATH RUNS EXACTLY ONCE.
         //
         // An exception inside a coroutine stops it dead and Unity only logs
-        // it. Before this, the one try/catch in a beat covered the impact
-        // block, so a throw from anything else in the beat -- the opening
-        // SetStance, the lunge, PlayVfx (content-driven), ImpactDelayFor --
-        // left IsPlaying true and _onFinished unfired. FightController's busy
+        // it. A throw from anywhere in a beat -- the opening SetStance, the
+        // lunge, PlayVfx (content-driven), ImpactDelayFor -- would otherwise
+        // leave IsPlaying true and _onFinished unfired. FightController's busy
         // flag is cleared only by that callback, and its watchdog
         // (RescueAStrandedTurn) trusts IsPlaying, which the dead coroutine
         // owned: every verb dead until the scene was left.
@@ -895,7 +894,7 @@ namespace PrincesPalace
 
             PaintVitals?.Invoke(beat.PreSnapshot);
 
-            // THE LOG LINE IS NOT PUSHED HERE ANY MORE -- see LogBeat, called
+            // THE LOG LINE IS NOT PUSHED HERE -- see LogBeat, called
             // at the impact instant below. A beat's lines are whole sentences
             // the session wrote after resolving it ("casts Crownfall on the
             // Treant for 10!"), so pushing them at the open printed the
@@ -1213,28 +1212,6 @@ namespace PrincesPalace
                 Guard(() => PaintFormation?.Invoke(beat.Formation));
             }
 
-            // WHAT THE BEAT ACTUALLY SPENT, which is the number the settle
-            // has to be sized against -- "the beat got longer" is the
-            // failure mode SettleAfter's own header records going
-            // unnoticed once.
-            //
-            // A swing spends StaticSwing.WindupSeconds and a charge spends
-            // chargeOutSeconds -- both report exactly what their own
-            // wind-up wait just spent, or SettleAfter would hand back a
-            // settle sized for a shorter beat than the one that actually
-            // played, and the whole beat would run long (the "no pause"
-            // bug SettleAfter's own header records). Everything else
-            // spends nothing and is charged StillPoseSeconds, which is
-            // what a flat pose has always cost. The floor is the only
-            // thing that can take a beat further, and only at the top of
-            // the range: at HitStop.MaxSeconds a swing's or a charge's
-            // remainder clamps up to MinSettleSeconds.
-            //
-            // AND A BOUGHT WIND-UP IS SPENT TIME LIKE ANY OTHER. It is
-            // added to StillPoseSeconds rather than replacing it: the 0.08
-            // is the notional cost of showing a drawing, which the beat
-            // still does, and boughtWindup is real seconds this beat
-            // actually waited on top of it.
             // THE CASTER'S PRICE, after the payoff (SpellPresentation.
             // casterCostSeconds). Charged to the settle like the hold above.
             float costHold = 0f;
@@ -1245,6 +1222,15 @@ namespace PrincesPalace
                 Guard(() => PaintVitals?.Invoke(beat.Snapshot));
             }
 
+            // `spent` is what the beat actually used, the number the settle
+            // is sized against (see SettleAfter's header: an under-counted
+            // beat runs long). A swing spends StaticSwing.WindupSeconds and a
+            // charge chargeOutSeconds, each exactly what its own wind-up wait
+            // spent. Anything else spends StillPoseSeconds, the notional cost
+            // of showing a drawing, plus boughtWindup, the real seconds the
+            // beat waited on top of it. The floor can only lengthen the beat
+            // at the top of the range: at HitStop.MaxSeconds a swing's or a
+            // charge's remainder clamps up to MinSettleSeconds.
             float spent = staticSwing ? StaticSwing.WindupSeconds
                 : staticCharge ? chargeOutSeconds
                 : StillPoseSeconds + boughtWindup;
@@ -1417,8 +1403,8 @@ namespace PrincesPalace
 
         private void ShowSingleAmount(CombatBeat beat)
         {
-            // PHASE D1: a miss shows its OWN popup even though Amount stays
-            // 0 -- the exact case FlashCombatant/Recoil/Punch above still
+            // A miss shows its OWN popup even though Amount stays
+            // 0 -- the exact case FlashTarget/Recoil/Punch still
             // correctly skip (nothing landed, so no hit reaction), but the
             // player still needs to be TOLD nothing landed, or a dodge reads
             // as no different from a Hold Back turn or a non-damaging cast.
@@ -1652,12 +1638,10 @@ namespace PrincesPalace
         // thing down" actually looks like, and it is why this one is a
         // coroutine while Lunge is a call.
         //
-        // THE SAME DISTANCE AS A LUNGE, now that both stop at the same
-        // measured stand-off point rather than at their own fraction of the
-        // gap. That collapse is deliberate: "how close do you have to be to
-        // hit this thing" was never a property of the approach, and the two
-        // fractions that said otherwise (0.70 and 0.78) were two guesses at
-        // one number. What still separates a Close from a Lunge is the ORDER
+        // THE SAME DISTANCE AS A LUNGE: both stop at the same measured
+        // stand-off point (see StageStandOff). "How close do you have to be
+        // to hit this thing" is not a property of the approach. What
+        // separates a Close from a Lunge is the ORDER
         // -- arrive, THEN swing -- which is the difference this method's own
         // header opens with and the only one worth having.
         //
@@ -1926,7 +1910,7 @@ namespace PrincesPalace
         // it silently assumes the bodies are standing on them. At a 0.4175s
         // reel that was true by the time the next beat opened. At 1.505s it
         // is not: the second and third attacker of a round arrive at a target
-        // still shoved RecoilDistance further away than the stand-off aimed
+        // still shoved HitStrength.HeavyDistance further away than the stand-off aimed
         // at, and the blow lands in 45px of daylight. The one picture this
         // whole stand-off mechanism exists to produce is a blow landing ON
         // something.
@@ -1982,28 +1966,12 @@ namespace PrincesPalace
             }
         }
 
-        // NO TRAVEL FRACTIONS: a target position is a stand-off point (see
-        // StageStandOff, Domain/Stage), never a fraction of the gap. A
-        // fraction of the gap leaves a residual that GROWS with the gap, so
-        // the same swing stops a body short from the back rank and looks
-        // fine from the front one, and a fraction knows nothing about how
-        // far the attacker's own weapon reaches, so a slam can go through
-        // whatever it is slamming.
-        //
-        // `staticSwing` decides only the anticipation LEAD; TravelFor moves
-        // nothing for a beat that does not cross to a target, because the
-        // actor and the target are then the same figure on the same mark.
-
-        // RecoilDistance (the flat 45px every struck figure slides) restates
-        // as HitStrength.HeavyDistance, the top of the three-tier table,
-        // rather than a second literal this file could drift from.
-
         // ---- how long a struck figure reels ----------------------------------
         //
         // A reel is three legs and the slowdown is spread over the two that
         // are MOTION:
         //
-        //   PUSH OUT, StageActorAnimator.LungeSeconds, 0.055s -- UNCHANGED.
+        //   PUSH OUT, StageActorAnimator.LungeSeconds, 0.055s -- not slowed.
         //   It is what puts the body where the flash and the damage number
         //   already are, so stretching it slides the impact frame off the
         //   one those two land on. The blow still connects as hard as it did.
@@ -2018,14 +1986,13 @@ namespace PrincesPalace
         //   velocity. This is the leg the eye actually reads as the flinch
         //   easing off.
         //
-        // IN BEATS, NOT IN SECONDS, and that is the other half of the fix.
-        // The dwell was always a fraction of BeatHoldSeconds; replacing it
-        // with a flat 1.45f took the reel out of the beat's system of units,
-        // so the preset and the beat budget could move underneath it. Both
-        // legs are now multiples of the beat, so the reel is 3.2 beats long
-        // at every speed and stays that way if the budget ever moves.
+        // IN BEATS, NOT IN SECONDS: a flat seconds figure would sit outside
+        // the beat's system of units, so the preset and the beat budget could
+        // move underneath it. Both legs are multiples of the beat, so the reel
+        // is 3.2 beats long at every speed and stays that way if the budget
+        // moves.
         //
-        // NOT 4x THE DISTANCE. RecoilDistance above is unchanged: a body
+        // NOT 4x THE DISTANCE. The slide distance (HitStrength.HeavyDistance at most) is unchanged: a body
         // shoved four times as far reads as a knockback, which is a different
         // move from a flinch.
         private const float ReelSlowdown = 4f;
@@ -2088,10 +2055,9 @@ namespace PrincesPalace
         // beats a rush cannot happen for: a self-targeted beat (nothing to
         // travel to) or one missing an actor or target entirely.
         //
-        // Once this fix (AUDIT.md #59) went in, a Charge's wind-up stopped
-        // being "none" and became ChargeOutSeconds -- the SAME value Charge()
-        // hands the animator, read once by both. Wrapping it in IsStaticSwing
-        // instead was rejected on purpose: that predicate also gates Lunge's
+        // A Charge's wind-up is ChargeOutSeconds -- the SAME value Charge()
+        // hands the animator, read once by both. It is not folded into
+        // IsStaticSwing because that predicate also gates Lunge's
         // separate anticipation lead, and a Charge must never get one (the
         // rush IS the travel, not a lean before it).
         private static bool IsStaticCharge(CombatBeat beat)
