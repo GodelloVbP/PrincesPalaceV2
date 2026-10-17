@@ -21,7 +21,7 @@ namespace PrincesPalace.Domain.Combat.Session
     //
     // Everything here is inert for a combatant whose FuryEngine is None, whose
     // Momentum is not Enabled and whose BattleTrance / TwinRampage are null --
-    // which is every combatant until the Unity wiring sets them.
+    // a combatant whose talents do not switch the engine on.
     public sealed partial class FightSession
     {
         // Raised when a Battle Trance soak takes its holder's pool below the

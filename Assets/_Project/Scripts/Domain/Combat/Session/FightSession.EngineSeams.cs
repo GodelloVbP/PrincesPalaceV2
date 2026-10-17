@@ -5,7 +5,7 @@ using PrincesPalace.Domain.Stats;
 namespace PrincesPalace.Domain.Combat.Session
 {
     // THE PHASE 4 ENGINE SEAMS (docs/PLAN_BJORN_CONSTELLATIONS.md, "Phase 4
-    // engine seams -- built in cloud, wiring handoff"): the session halves of
+    // engine seams"): the session halves of
     // four mechanics whose state lives on CombatantState and whose rules live
     // in small Domain types.
     //
@@ -20,11 +20,10 @@ namespace PrincesPalace.Domain.Combat.Session
     //                        FuryEngine / EinherjarSeams; session half
     //                        FightSession.FuryEngines.cs
     //
-    // Every one is OFF for every combatant until something sets it, so the
-    // fight is unchanged for anyone the Juggernaut content never touches.
-    // Nothing in content sets any of them yet: the TalentEffect/SkillEffect
-    // members that will are content-hashed and land with the Unity session.
-    // The public Open*/Arm* methods below are that wiring's one-liners.
+    // Every one is OFF for every combatant until a talent or skill sets it
+    // (Begin() runs ArmEngineSeams), so the fight is unchanged for anyone the
+    // Juggernaut content never touches. The public Open*/Arm* methods below
+    // are the one-liners that wiring calls.
     public sealed partial class FightSession
     {
         // The SpeedBuffs key Unyielding's surge is granted and revoked under.

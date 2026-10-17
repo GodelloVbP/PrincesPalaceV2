@@ -6,12 +6,8 @@ using PrincesPalace.Domain.Stats;
 namespace PrincesPalace.Domain.Combat.Session
 {
     // What the monsters do, and what they told the player they were going to
-    // do. Ported from v1's FightController.Turns.cs.
-    //
-    // In v1 this ran only inside a loaded Gameplay scene, so the whole of it --
-    // intent commitment, the skip paths, taunt redirection, the status rider --
-    // was covered by whatever a PlayMode fight happened to walk through. It is
-    // ordinary branching logic over ordinary data and belongs here.
+    // do: intent commitment, the skip paths, taunt redirection and the status
+    // rider, as plain branching logic over plain data.
     public sealed partial class FightSession
     {
         // A combatant that has just lost an action to hard control must take
@@ -590,16 +586,6 @@ namespace PrincesPalace.Domain.Combat.Session
         // `isPlayerTurn` is passed in rather than read off the encounter for
         // exactly that reason: the caller knows which turn is on SCREEN, and
         // this method must not answer for the one that has already resolved.
-        // AND THE FORFEIT SENTINEL IS NOT A THREAT. IntentForfeit is "a
-        // sentinel before it is a label" by its own declaration, and printing
-        // it raw put "Forfeits Turn!" on the nameplate styled exactly like
-        // "Roar!" and "Grapple!" -- in the slot this header reserves for
-        // "something special is coming", to announce that nothing is. Nothing
-        // rather than a muted line: a blank nameplate is what this method
-        // already means by "no threat", and a rooted monster is not a threat.
-        // FightHudModel.IntentTooltip special-cases the same sentinel and its
-        // comment names THIS method as the precedent for doing so, while this
-        // method compared against IntentAttack only.
         public string TelegraphSuffix(CombatantState enemy, bool isPlayerTurn)
         {
             if (!isPlayerTurn) return "";
@@ -613,6 +599,11 @@ namespace PrincesPalace.Domain.Combat.Session
         // the safer seat are the player's to work out from the badge and its
         // number, so neither is spelled out here (Intent.Then and
         // StepBackIsSafer stay on the intent for the badge and the bot).
+        //
+        // The forfeit sentinel is not a threat: IntentForfeit is a sentinel
+        // before it is a label, and a rooted monster telegraphs nothing, so it
+        // reads blank like IntentAttack. FightHudModel.IntentTooltip treats it
+        // the same way.
         public string TelegraphLine(CombatantState enemy)
         {
             var detail = IntentDetailFor(enemy);
@@ -701,37 +692,25 @@ namespace PrincesPalace.Domain.Combat.Session
         // Hands the turn on and opens the next one. False means the fight ended
         // and the caller should stop.
         //
-        // Pairing AdvanceTurn with GrantTurnStart is not optional and missing it
-        // here was a real bug in v1: AdvanceAfterAction only grants to whoever is
-        // Current the FIRST time it advances, normally an enemy. When this loop
-        // then advances PAST that enemy -- to a second enemy, or back to the
-        // player -- nothing granted THEM a turn start at all. Wool's GainPerTurn
-        // survived unnoticed because GainOnAttack dwarfs it in every test; mana
-        // regen has no such cover and would have fired once per fight, ever.
+        // Pairing AdvanceTurn with GrantTurnStart is not optional:
+        // AdvanceAfterAction grants only to whoever is Current the first time it
+        // advances, normally an enemy. When this loop advances past that enemy,
+        // to a second enemy or back to the player, only this pairing gives them
+        // a turn start (per-turn gains, mana regen).
         private bool StepToNextTurn()
         {
             // A fight can end on a monster's swing or on a poison tick at turn
             // start, and neither of those passes through the riders -- so
             // without this a defeat would never settle.
             //
-            // ASKED ON BOTH EXITS, because the two endings this names arrive at
-            // opposite ends of the method and only the first was ever caught: a
-            // swing is already settled by the time the loop calls back in, but
-            // the turn start is the LAST thing that happens here, and the death
-            // it causes is exactly what makes this method return false and the
-            // loop stop. There is no next pass to catch it on.
-            //
-            // AdvanceAfterAction re-checks IsOver after the loop and covered it
-            // for any fight driven by a player command, which is why this held
-            // for so long. It does not cover the two callers that drive
-            // AutoResolveEnemyTurns themselves -- Begin, and
-            // FightController.RescueAStalledEnemyTurn. Both settled nothing: no
-            // payout, not even the zeroed one a loss owes, and no "The party
-            // falls." (The rescue used to be reached on every spent second
-            // life; it is not any more -- see SettleIfOver below.)
-            //
-            // Both calls are idempotent (_victoryResolved, _payoutResolved), so
-            // asking twice costs a comparison.
+            // Asked on both exits because both can end the fight: a swing is
+            // settled by the time the loop calls back in, but the turn start is
+            // the last thing that happens here and its death makes this method
+            // return false with no next pass to catch it. Begin and
+            // FightController.RescueAStalledEnemyTurn drive AutoResolveEnemyTurns
+            // themselves, so AdvanceAfterAction's IsOver check never covers
+            // them. Both calls are idempotent (_victoryResolved,
+            // _payoutResolved), so asking twice costs a comparison.
             if (SettleIfOver()) return false;
 
             // THE TURN-END CLOCK, wound here for the same reason
@@ -749,19 +728,11 @@ namespace PrincesPalace.Domain.Combat.Session
 
         // True when the fight is over, having settled it.
         //
-        // ASKED AGAIN AFTER SETTLING, not answered from the entry test. A
-        // second life is spent inside ResolveOutcome and the whole mechanic is
-        // that the fight then does not end -- so the honest answer to "is it
-        // over" changes during this method, and a `return true` written off the
-        // guard above reports the fight ended when it demonstrably did not.
-        //
-        // What that cost: StepToNextTurn's first call site returned false, the
-        // enemy loop broke WITHOUT advancing, and Current stayed the monster
-        // that had just landed the killing blow. Nothing settles (IsOver is
-        // false), nothing prepares intents (it is not the player's turn), and
-        // every driver in the tree then re-enters AutoResolveEnemyTurns on that
-        // same live enemy -- which resolves its action a second time, on a hero
-        // who is standing on exactly half health. One turn, two swings.
+        // Asked again after settling, not answered from the entry test: a
+        // second life is spent inside ResolveOutcome and the fight then does not
+        // end, so a `return true` written off the guard above would report an
+        // ended fight that continues. Callers re-ask the turn after this
+        // returns false.
         private bool SettleIfOver()
         {
             if (!_encounter.IsOver) return false;
@@ -1087,31 +1058,9 @@ namespace PrincesPalace.Domain.Combat.Session
                 // ResolveDamageSingle.
                 ResolveCharacterSkill(enemy, chosen.Value.Skill, new[] { target }, 0);
 
-                // AND COMMITTED, which it was not.
-                //
-                // This branch returned straight out, past the CommitBeat at the
-                // bottom of this method, and ResolveCharacterSkill does not
-                // close its own beat -- the player's two wrappers (UseSkill,
-                // CastSkill) each commit after calling it. So a monster casting
-                // a REAL skill opened a beat and abandoned it: the next
-                // BeginBeat overwrote _recordingBeat and the whole thing went
-                // in the bin.
-                //
-                // Nothing about the fight looked wrong, which is why it lasted.
-                // Damage, statuses and kills are model state and had already
-                // landed; what the discarded beat was carrying was the entire
-                // PRESENTATION -- the spell's frames, the caster's pose, the
-                // target's flinch, the floating number and the log line. Every
-                // monster with an authored skill has been casting invisibly:
-                // the Bog Witch's Mud Burst, the Golem's Boulder Slam, the
-                // Warden's Overhead Slam and Grapple. Reported from play as
-                // "the Bog Witch doesn't use the mud blast animation", which is
-                // exactly what it looks like from the outside.
-                //
-                // The legacy scaled-attack path below never had the problem --
-                // it falls through to the same CommitBeat every plain swing
-                // uses -- which is why enemy VFX worked at all and made this
-                // read as a content-wiring question rather than a dropped beat.
+                // ResolveCharacterSkill does not close its own beat (the player's
+                // UseSkill and CastSkill wrappers each commit after it), so this
+                // early return commits here or the beat is abandoned.
                 CommitBeat();
                 return chosen.Value.IsPhysicalMove;
             }
@@ -1335,16 +1284,9 @@ namespace PrincesPalace.Domain.Combat.Session
         }
 
         // The character's authored baseline plus whatever their talents add on
-        // top. Both exist on purpose: the authored field is the character's
-        // floor and the talent is the engine above it, which is why a character
-        // built around the engine can author 0 and still generate.
-        //
-        // The Fragile Lamb's engine is NOT here -- it pays inside ResolveWard,
-        // at the moment a ward actually meets a hit. Paying it here as well was
-        // the first shape and it was wrong twice over: by the time damage has
-        // landed the ward has usually been spent, so the evidence is gone, and a
-        // poison tick is not "a hit", does not consume a ward, and must not pay
-        // for one.
+        // top: the authored field is the floor and the talent the engine above
+        // it. The Fragile Lamb's engine pays inside ResolveWard, where a ward
+        // meets a hit, not here.
         // A fleece thickens in a hard winter: being ground down is itself a way
         // to build. Granted per HIT rather than per point, so a swarm of weak
         // attackers is not a better generator than one real threat.
