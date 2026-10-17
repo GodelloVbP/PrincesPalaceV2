@@ -4,8 +4,8 @@ using UnityEngine.UI;
 
 namespace PrincesPalace
 {
-    // Gentle alpha flicker for the talent tree background's near star
-    // layer -- only the sparse near layer gets this (far/mid stay static),
+    // Gentle alpha flicker for the main menu's and the hub's near star
+    // layers -- only the sparse near layer gets this (far/mid stay static),
     // since a few hundred far-layer stars each running their own Update
     // would be needless cost for a barely-visible effect at that size.
     // Time.time-driven, same non-deterministic-is-fine reasoning as

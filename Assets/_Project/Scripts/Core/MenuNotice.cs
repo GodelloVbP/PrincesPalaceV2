@@ -7,9 +7,8 @@ namespace PrincesPalace
     // THE MENU'S ONE NOTICE LINE (plan C11, AUDIT #259): a refusal or a
     // confirmation, in the same place every time, on the footer's left.
     //
-    // It replaces the mechanisms the panes grew for themselves -- the Party
-    // toast, the dossier's already-known line -- so a message reads the same
-    // wherever it comes from and there is one clock to keep right.
+    // One line for every pane, so a message reads the same wherever it comes
+    // from and there is one clock to keep right.
     //
     // TWO KINDS OF LINE. A notice is transient: it holds for its seconds, fades,
     // and is gone. A state line is persistent: it stays until cleared, and shows

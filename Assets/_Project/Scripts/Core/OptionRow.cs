@@ -5,8 +5,8 @@ namespace PrincesPalace
     // The ONE component handling an Options row's movement and hover (plan
     // section 7). Not a plain Selectable plus a second IMoveHandler:
     // ExecuteEvents.Execute<T> runs EVERY matching component on the target,
-    // so two would both fire on the same press. This REPLACES the row's old
-    // plain Panel + HoverIndex pair with the one component that is now both.
+    // so two would both fire on the same press. This one component is both
+    // the row's selectable and its hover reporter.
     //
     // Left/Right adjusts the row's own bound value and consumes the event
     // without calling base.OnMove; Up/Down calls base.OnMove unchanged, which

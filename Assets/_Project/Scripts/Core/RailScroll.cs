@@ -54,11 +54,8 @@ namespace PrincesPalace
 
             Grabbed?.Invoke();
 
-            // NOT negated -- inverted on request from the previous build,
-            // where a wheel notch away from the player (scroll up) walked
-            // forward along the track. Scrolling down now walks forward
-            // (content slides left, revealing later levels to the right);
-            // scrolling up walks back.
+            // NOT negated: scrolling down walks forward (content slides left,
+            // revealing later levels to the right); scrolling up walks back.
             Scrolled(amount * WheelGain * Mathf.Abs(NodePitchStep()));
         }
 

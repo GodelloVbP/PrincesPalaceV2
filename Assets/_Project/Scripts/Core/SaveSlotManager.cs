@@ -132,17 +132,15 @@ namespace PrincesPalace
             // A RUN DOES NOT SURVIVE THE PROCESS, and THIS LINE IS THE WHOLE
             // OF THAT RULE'S ENFORCEMENT (AUDIT #117). A descent abandoned by
             // a crash or an alt-F4 is settled the moment its slot is opened,
-            // which is also the first moment anything can see it -- there used
-            // to be a [RuntimeInitializeOnLoadMethod] boot check in RunManager
-            // as well, but "before any scene" meant it ran with the slot still
-            // at 0, so it covered nothing this line does not and wrote slot 0
-            // on its way past, which is what stole Continue from the slot the
+            // which is also the first moment anything can see it. A boot-time
+            // check could not do this: before any scene CurrentSlot is still 0,
+            // so it would settle and write slot 0 instead of the slot the
             // player last played.
             //
             // AFTER CurrentSlot above, never before: SettleOnOpening reads
             // CurrentSave, and CurrentSave is whichever slot CurrentSlot names.
-            // See SaveSlotController, which is where this rule lived before
-            // Continue needed it too.
+            // Every way into a slot (SaveSlotController, Continue) comes
+            // through here.
             RunManager.SettleOnOpening();
 
             // THE ONE THIS MANAGER IS HOLDING, not a second CreateNew().

@@ -8,7 +8,7 @@ namespace PrincesPalace
     // the full argument; this class is its mechanism.
     //
     // Nothing else in the project reads Vertical/Horizontal/Submit/Cancel
-    // for UI navigation after this lands -- SceneBuilder.CreateEventSystem
+    // for UI navigation -- SceneBuilder.CreateEventSystem
     // attaches this in place of the stock StandaloneInputModule, and
     // EventSystem.Update() calls Process() at most once per engine frame
     // (verified against the uGUI package source, plan section 2), which is
@@ -16,9 +16,8 @@ namespace PrincesPalace
     // transition (a Cancel that pops Options while Fight sits underneath
     // cannot also reach Fight's own branch until the NEXT call).
     //
-    // topAtStart is captured once per Process() and never re-read mid-call --
-    // see the class comment above for why that single capture is the whole
-    // fix for the double-drive bug this replaces.
+    // topAtStart is captured once per Process() and never re-read mid-call:
+    // that single capture is what stops one press from driving two contexts.
     public class NavigationInputModule : StandaloneInputModule
     {
         // Fresh every time this component wakes, which is once per scene
@@ -87,8 +86,7 @@ namespace PrincesPalace
             FocusTarget = null;
         }
 
-        // The Fight branch's own debounce state, moved verbatim from the
-        // deleted FightController.Input.cs PollGamepadNavigation. One field
+        // The Fight branch's own debounce state. One field
         // is enough because at most one Fight context can be top at a time.
         private bool _fightVerticalArmed = true;
 
@@ -110,7 +108,7 @@ namespace PrincesPalace
 
         // THE ORDINARY BRANCH'S OWN ARMED EDGE -- one flick, one Move.
         //
-        // What the stock path did instead, measured against this project's
+        // What the stock path does instead, measured against this project's
         // own ProjectSettings/InputManager.asset (joystick Horizontal/
         // Vertical, type Joystick Axis, dead 0.19) and uGUI's own source:
         // BaseInputModule.DetermineMoveDirection answers None below a
@@ -324,11 +322,9 @@ namespace PrincesPalace
             ReselectIfOutsideDeclaredSet(topAtEnd, selectedBeforeDispatch, movePress && ReferenceEquals(topAtEnd, topAtStart));
 
             // FOCUS MEMORY IS THE DISPATCHER'S JOB, not each screen's (plan
-            // sections 4 and 6, AUDIT.md #163's second half). Before this,
-            // NavContext.Remember was called from nowhere at all, so
-            // "remembered ?? entry" was only ever entry and a context popped
-            // and re-entered always landed on its entry rather than where the
-            // player left it.
+            // sections 4 and 6, AUDIT.md #163's second half). NavContext.Remember
+            // is called only from here, so "remembered ?? entry" lands a
+            // context popped and re-entered where the player left it.
             //
             // Recorded HERE, after the reselection rule above has settled the
             // frame, so what gets remembered is the selection this context

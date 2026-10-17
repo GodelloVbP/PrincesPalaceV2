@@ -13,8 +13,8 @@ namespace PrincesPalace
     // kept.
     //
     // internal, because the Editor assembly assigns them directly (see
-    // Core/AssemblyInfo.cs) instead of reflecting over a field NAME the way v1
-    // did at 330 sites. [SerializeField] kept, because internal fields do not
+    // Core/AssemblyInfo.cs) instead of reflecting over a field NAME.
+    // [SerializeField] kept, because internal fields do not
     // serialize on their own -- and a field that does not serialize is null in
     // the built player no matter how correctly the builder assigned it.
     public class MainMenuController : MonoBehaviour
@@ -115,8 +115,8 @@ namespace PrincesPalace
         private void Quit()
         {
             RunManager.EndRun();
-            // Navigation.Quit, not Application.Quit: the system menu grew a
-            // second quit and one of the two had to be the door. See Navigation.
+            // Navigation.Quit, not Application.Quit: the system menu also
+            // quits, so Navigation owns the one door. See Navigation.
             Navigation.Quit();
         }
 

@@ -7,7 +7,7 @@ namespace PrincesPalace
     //
     // The names live HERE, once, rather than as string literals at each call
     // site. A mistyped scene name is a runtime exception with no compile-time
-    // warning, and v1 had them scattered across controllers.
+    // warning.
     //
     // Deliberately thin. This is not a state machine and should not become one:
     // what the game does next is a decision each screen makes for itself, and

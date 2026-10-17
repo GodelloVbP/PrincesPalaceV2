@@ -10,11 +10,7 @@ namespace PrincesPalace
     // UnityEngine.UI.Navigation.Explicit. It computes no neighbour itself.
     //
     // WHY NAVIGATION IS WIRED AT RUNTIME AND NOT AT SCENE-BUILD TIME.
-    // The build-time half -- a UiNavDeclaration hung off ScreenDef,
-    // resolved by UiAudit.CheckNavigable and written by a build-time
-    // UiNavWiring pass -- never gained a single consumer.
-    // The evidence, screen by screen, is that the navigable set is a RUNTIME
-    // fact everywhere this phase touches:
+    // The navigable set is a RUNTIME fact, screen by screen:
     //   - SystemMenu's tab strip: the scene carries six tabs, a context
     //     shows five or six, and WHICH is recomputed in ApplyContext
     //     (SystemMenuScreen's own header says the scene cannot know).
@@ -26,15 +22,10 @@ namespace PrincesPalace
     //   - Map: MapController.Refresh() recomputes the reachable node set per
     //     floor -- the plan's own section 4 already calls this out.
     // A build-time write would therefore be correct for no frame the player
-    // ever sees: every one of those surfaces rewires on its own repaint, so
-    // the build-time links are overwritten before first use. Keeping both
-    // paths is the parallel implementation docs/CODE_STANDARDS.md "Build the model"
-    // forbids, and between the two only this one can express a runtime fact
-    // -- so the build-time declaration path (ScreenDef.Nav, UiNavWiring,
-    // UiAudit.CheckNavigable) is deleted rather than kept for a consumer that
-    // does not exist. What survives build-time is UiNavControlsAudit, which
-    // checks something a runtime pass genuinely cannot: the inventory of
-    // custom actionable controls a screen emitted.
+    // ever sees: every one of those surfaces rewires on its own repaint.
+    // What runs at build time is UiNavControlsAudit, which checks something a
+    // runtime pass cannot: the inventory of custom actionable controls a
+    // screen emitted.
     //
     // AUTHORITATIVE, not incremental: Apply writes all four directions of
     // every node its declaration resolved. A surface therefore passes its

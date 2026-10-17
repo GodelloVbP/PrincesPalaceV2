@@ -57,17 +57,12 @@ namespace PrincesPalace
         // THE ONE THE AUTHOR ASKED FOR, and failing that THE FIRST ONE THAT
         // DRAWS SOMETHING, falling back to the first. A preview exists to
         // photograph art, and an elemental spell may author art on one element
-        // and none on the others -- prismatic_orb had four elements and one
-        // Water block. Taking element[0] unconditionally photographed Earth,
-        // which drew nothing, and the picture was an empty stage with a damage
-        // number: evidence that the pilot does not work, produced by a preview
-        // that never cast it.
+        // and none on the others (prismatic_orb had four elements and one
+        // Water block): taking element[0] unconditionally could photograph an
+        // element that draws nothing, an empty stage with a damage number.
         //
-        // The default rule survived that fix and then became the whole problem
-        // once the other three were drawn: with four elements that all draw,
-        // "the first that draws" always means Earth, and photographing Wind
-        // meant reordering elements[] in skills.json, capturing, and putting
-        // the order back (AUDIT #107). `requested` is that ask, and an element
+        // With several elements that all draw, "the first that draws" is
+        // always the same one, so `requested` picks another (AUDIT #107). An element
         // the skill does not offer is refused by name rather than approximated
         // -- see ElementRefusal, which is the sentence an author reads.
         //
@@ -210,7 +205,8 @@ namespace PrincesPalace
         public static Plan ForSpell(string skillId) => ForSpell(skillId, null);
 
         // `element` is tools/preview.ps1 -Element, by the DamageType's own name
-        // and case-insensitively. Empty means today's rule unchanged.
+        // and case-insensitively. Empty means the default rule (the first
+        // element that draws).
         public static Plan ForSpell(string skillId, string element)
         {
             var plan = new Plan();
@@ -447,19 +443,17 @@ namespace PrincesPalace
         // (see FightEncounterAdapter.KitFor's own header).
         //
         // THE DEFINITION-ONLY DOOR, WHICH IS THE ONE THE PREVIEW'S KIT USES.
-        // This asked AvailableSkillsFor(new Character(id)) and the comment said
-        // the two agree because the Character handed in is bare -- true of the
-        // record, false of the answer. AvailableSkillsFor reads RunManager.Run
-        // ambiently (its own header says so, and the shop's book route is why),
-        // so with a run in progress a book that character learned joined the
-        // opener while the stage was still fielding KitFor(definition, level 1)
-        // -- a preview naming a skill the previewed kit does not hold. The
-        // preview has no run and is not supposed to notice one.
+        // AvailableSkillsFor reads RunManager.Run ambiently (its own header
+        // says so; the shop's book route is why), so with a run in progress a
+        // book that character learned would join the opener while the stage
+        // fields KitFor(definition, level 1) -- a preview naming a skill the
+        // previewed kit does not hold. The preview has no run and does not
+        // notice one.
         //
         // Same ordering (UnlockLevel then SortOrder) and the same first row for
         // a fresh level-1 character with no run, which SkillUnlockFilterTests.
         // TheSharedFunctionAgreesWithAvailableSkillsForAFreshLevelOneCharacter
-        // already pins -- so nothing moves except the ambient read.
+        // pins.
         public static string FirstSelectableSkillFor(string characterId)
         {
             if (string.IsNullOrWhiteSpace(characterId)) return null;
