@@ -354,7 +354,6 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `skillManaCostReduction` | int | `0` | Percent reduction to skill mana costs granted while this talent is unlocked. |  |
 | `signatureCapacityBonus` | int | `0` | Signature-resource capacity granted while this talent is unlocked. |  |
 | `signaturePerTurnBonus` | int | `0` | Signature resource gained per turn, granted while this talent is unlocked. |  |
-| `grantsStartingItemId` | string | `""` | An items.json id granted once into the owner's stash when this talent is taken. |  |
 | `effects` | RawEffect[] (below) | `[]` | Non-numeric rules this talent grants; see RawEffect. |  |
 | `grantsSkillId` | string | `""` | A skills.json id this talent adds to the owner's combat strip. |  |
 | `appliesToSkillId` | string | `""` | A skills.json id (owned by this talent's character) that this node's skill-scoped effects (the Slam* rules) upgrade; required with such an effect, refused without one. |  |
