@@ -221,6 +221,18 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(156f, graph.SlotCentre(5).X - heart.X, 0.01f);
         }
 
+        // SlotCentre places front slots left, right, left, ...: a third would
+        // stack on slot 0. The stage cap (3, one slot taken by the boss) is what
+        // keeps it at two, so a cap of 4 must fail here, not on the map
+        // (AUDIT #279).
+        [Test]
+        public void TheStageCapLeavesTwoFrontSlotsWhichIsAllSlotCentreHandles()
+        {
+            Assert.AreEqual(3, PrincesPalace.Domain.Combat.Session.FightHudSpec.StageSlotsPerSide);
+            Assert.LessOrEqual(MapGraph.FrontSlots, 2,
+                "MapGraph.SlotCentre has a left and a right front position only; generalise it before raising the cap");
+        }
+
         [Test]
         public void TouchingBoxesDoNotIntersect()
         {

@@ -74,9 +74,13 @@ namespace PrincesPalace.Domain.UiKit
         //
         // ExitsLayout, OptionsLayout and PartyLayout read these for their own
         // HalfWidth/HalfHeight instead of Width * 0.5f / Height * 0.5f, and
-        // Ui's container-inset helper uses the same insets; the other panes
-        // (Glossary, Dossier, RewardTrack, Run) lay out against their own
-        // frame. For the panes that read these, the declared frame
+        // Ui's container-inset helper uses the same insets. GlossaryLayout,
+        // DossierLayout and RunLayout do not: each builds its own 1520 x 756
+        // working area (the declared frame inset 40 px at the sides and 24 px
+        // top and bottom), which is 16 px wider and 20 px taller per side
+        // than PaneContentHalfWidth/Height. That is a kept choice, not drift.
+        // RewardTrack is hosted inside the Dossier's detail area and has no
+        // frame of its own. For the panes that read these, the declared frame
         // (Width/Height, still PanelWidth x ContentHeight --
         // SystemMenuPaneTests.EveryHostedPaneIsTheSizeOfTheContentArea pins
         // this) and the usable content region are not the same rect.

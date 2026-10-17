@@ -32,7 +32,7 @@ debt), and a struck finding gets its number removed.
 - Shop: #122, #191, #196, #197, #212, #244, #285
 - Events: #274
 - Dossier / Party / Talents / Reward track / Reckoning: #44, #104, #141, #150, #178, #199, #214
-- Menus / Options / Navigation & gamepad: #91, #142, #166, #167, #179, #223, #225, #227, #231, #234, #236, #242, #250, #251, #253, #257, #258, #259, #260, #261, #279
+- Menus / Options / Navigation & gamepad: #91, #142, #166, #167, #179, #223, #225, #227, #231, #234, #236, #242, #250, #251, #253, #257, #258, #259, #260, #261
 - Save & run lifecycle: #87, #102, #220, #255, #281
 - Content pipeline & data: #86, #121, #125, #128, #131, #134, #135, #145, #198, #256, #262, #286
 - Art / VFX / stage: #80, #92, #100, #109, #129, #133, #181, #192, #213, #284
@@ -2582,15 +2582,6 @@ merchant "pleasure doing business"), and "Walk on" ends at the plain farewell, s
 "Bring the owl back sometime" can't be reached after a second look. Option A: point
 Look again back at the Odette scene. Option B: leave it; the first look is the only
 Odette beat. `ContentData/events.json:1411` [C1-007].
-
-### 279. Pane layout: re-base Glossary, Dossier and Run on the shared pane size?
-`SystemMenuLayout` says all panes lay out against `PaneContentHalf*` (744 x 357.78);
-only Options, Party and Exits do. Glossary, Dossier and Run build a 1520 x 756 area
-(16 px wider, 20 px taller per side) and may overrun the container art. Option A:
-re-base them (visual check needed). Option B: correct the comment and keep the sizes.
-`GlossaryLayout.cs:17-24` [S44-008]. Related, latent: `MapGraph.SlotCentre` assumes two
-front slots; a party cap of 4 would stack a third on slot 0. Pin the cap in a test or
-generalise now? `MapGraph.cs:108-114` [S44-009].
 
 ### 281. Save reconcile order and the v8 run migration
 (a) `Reconcile` judges "nobody standing" on the squad before the roster/selection
