@@ -30,7 +30,7 @@ param(
     [Parameter(ValueFromRemainingArguments = $true)][string[]]$Rest = @()
 )
 
-# One GIF recorder for every art subject -- docs/PLAN_GIF_CAPTURE.md, phases A and B.
+# One GIF recorder for every art subject -- docs/PLAN_GIF_CAPTURE.md.
 #
 #   tools/gif.ps1 spell crownfall [-Vs treant] [-Formation full] [-Speed 1.5] [-PreStatus Poison]
 #   tools/gif.ps1 spell court_of_whispers -Aspect 4:3     (1440x1080 canvas, whole frame)
@@ -108,7 +108,7 @@ function Invoke-Gif {
 }
 
 if ($Stop) {
-    Write-Host "-Stop is for the warm host, which arrives in phase C. Nothing is running."
+    Write-Host "-Stop: no warm host exists. Nothing is running."
     exit 2
 }
 if ($Compare.Count -gt 0) {

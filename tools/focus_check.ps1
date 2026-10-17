@@ -1,7 +1,6 @@
 # PositionalBinding off: every parameter here is named, so a bare word on the
 # command line is one of -CommandScript's arguments (CommandArgs), never a
-# silent -HeadlessClass. Seen while fixing -CommandScript: "combat" in
-# "-CommandScript tools\test.ps1 combat -List" bound to HeadlessClass.
+# silent -HeadlessClass.
 [CmdletBinding(PositionalBinding = $false)]
 param(
     [ValidateSet("Headless", "Runtime", "Both", "Command")]
@@ -31,14 +30,11 @@ param(
     # (-SkipSync, -Mode ...) is taken here: in-process, put the child's
     # arguments after "--" or pass -CommandArgs combat,'-SkipSync'.
     #
-    # -CommandLine '<raw powershell.exe argument line>' is the older form,
-    # kept for callers that already have one; it is passed through untouched,
-    # which is why it broke here. The documented single-quoted shape cannot
-    # hold "Prince's" at all (the apostrophe ends the string), and the
-    # double-quoted shape loses its inner quotes when a PowerShell 5.1 caller
-    # hands it to a native powershell.exe -File, so the child got
-    # "-File C:\...\Prince's" plus a stray "Palace-v2\..." and failed --
-    # which, before COMMAND was reported, still read "FOCUS CHECK: ok".
+    # -CommandLine '<raw powershell.exe argument line>' is for callers that
+    # already have one; it is passed through untouched. A single-quoted value
+    # cannot hold "Prince's" (the apostrophe ends the string), and a
+    # double-quoted one loses its inner quotes when a PowerShell 5.1 caller
+    # hands it to a native powershell.exe -File. Prefer -CommandScript.
     [string]$CommandScript,
     [Parameter(ValueFromRemainingArguments = $true)][string[]]$CommandArgs = @(),
     [string]$CommandLine,
@@ -63,11 +59,9 @@ param(
 # new foreground window's pid, process name, PARENT pid and parent process
 # name (Get-CimInstance Win32_Process, cached and refreshed periodically so a
 # fast-lived process can still be identified after it exits), and window
-# title. The 2026-09-18 owner report ("still does it") is exactly a case
-# where the OLD version of this script -- pass/fail on whether foreground was
-# restored by the end -- could have missed the culprit: it only proves
-# something came back, never says what took it in the first place. This
-# version's whole log is the evidence, whether the run passes or not.
+# title. Pass/fail on whether foreground was restored by the end would only
+# prove something came back, never what took it, so the whole log is the
+# evidence, whether the run passes or not.
 #
 # It also tracks the DESCENDANT PROCESS TREE of the child it launches (built
 # the same way the process-tree focus guard in tools/unity_path.ps1 does, but
@@ -91,10 +85,8 @@ param(
 # window was left alone; "COMMAND" is whether the watched command itself
 # succeeded (its exit code). They are independent -- a run that fails at once
 # never gets far enough to steal focus, so a clean focus log over a failed
-# command proves nothing about the guard -- and this used to print only the
-# first: "FOCUS CHECK: ok", exit 0, over a child that had exited non-zero
-# without launching anything. Exit code: the first failed command's own exit
-# code; else 1 when focus was not restored; else 0.
+# command proves nothing about the guard. Exit code: the first failed
+# command's own exit code; else 1 when focus was not restored; else 0.
 #
 # Pure ASCII, no BOM -- CLAUDE.md's PowerShell gotcha.
 
@@ -117,7 +109,7 @@ if (-not ("PP.FocusCheck.NativeMethods" -as [type])) {
 #
 # One bulk Win32_Process query (Get-CimInstance with no -Filter) rather than a
 # per-event lookup: the whole point of this script is to catch changes that
-# can happen inside a 200ms poll window, and a WMI round-trip per event is
+# can happen inside a 150ms poll window, and a WMI round-trip per event is
 # slower than that. Cached and rebuilt on a timer instead.
 $script:ProcCache = @{}          # pid -> @{ Name; ParentId }
 $script:LastProcRefresh = [DateTime]::MinValue
