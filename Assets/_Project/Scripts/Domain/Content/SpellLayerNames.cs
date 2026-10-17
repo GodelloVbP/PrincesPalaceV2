@@ -494,12 +494,14 @@ namespace PrincesPalace.Domain.Content
     // on a target authoring stageScale 1.45, because nothing before this
     // multiplied the box by how big that target actually draws.
     //
-    // ONLY WHERE A SINGLE STRUCK BODY IS RESOLVED. `target`, `target-centre`
-    // and `sky` are the placements PlaceOne resolves against one struck
-    // combatant, and a travelling layer arrives on one; `formation` measures its own span from every struck body at
-    // once (there is no single "the target" to read a footprint off), and
-    // `caster`/`caster-centre` without travel never touch a target's rect
-    // either -- SpellLayerRules.CheckPlacement refuses `fit: target` on those
+    // ONLY WHERE A SINGLE STRUCK BODY IS RESOLVED. `target`, `target-centre`,
+    // `target-head`, `sky` and `above` are the placements PlaceOne resolves
+    // against one struck combatant, a travelling layer arrives on one, the
+    // counterpart words read the body seated opposite, and a layer riding
+    // another takes the one its source resolved; `formation` measures its own
+    // span from every struck body at once (there is no single "the target" to
+    // read a footprint off), and `caster`/`caster-centre` without travel
+    // never touch a target's rect either -- SpellLayerRules.CheckPlacement refuses `fit: target` on those
     // for the same reason it refuses `size` on a formation layer: a word
     // that would silently do nothing is refused rather than ignored.
     public enum SpellFit

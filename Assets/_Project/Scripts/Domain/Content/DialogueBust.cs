@@ -35,8 +35,8 @@ namespace PrincesPalace.Domain.Content
         // The order the dialogue stage tries loading a bust in: the
         // requested expression, then "neutral". Two entries, not one per
         // expression, because DIALOGUE_D0_BRIEF's own note is what this
-        // exists for: Shawn has no neutral bust today and Bjorn has ONLY a
-        // neutral one -- every other expression falls back to it rather than
+        // exists for: Bjorn has ONLY a neutral bust, so every other
+        // expression falls back to it rather than
         // showing nothing, and a character with neither yet still shows
         // nothing (the runtime's Resources.Load already returns null for
         // that, with no third rung needed here).

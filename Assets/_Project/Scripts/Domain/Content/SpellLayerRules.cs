@@ -923,9 +923,10 @@ namespace PrincesPalace.Domain.Content
                              "measured span's own midpoint overrides. Remove it.");
             }
 
-            // ONLY WHERE A SINGLE STRUCK BODY IS RESOLVED. `target` and
-            // `target-centre` are the two placements PlaceOne resolves against
-            // one struck combatant's own rect; `formation` measures a span
+            // ONLY WHERE A SINGLE STRUCK BODY IS RESOLVED. `target`,
+            // `target-centre`, `target-head`, `sky` and `above` are the
+            // placements PlaceOne resolves against one struck combatant's own
+            // rect, and the counterpart words resolve the body seated opposite; `formation` measures a span
             // over every struck body at once and `caster`/`caster-centre`
             // (without travel) never touch a target's rect at all -- none of
             // the three has "the struck target" for `fit: target` to read a
