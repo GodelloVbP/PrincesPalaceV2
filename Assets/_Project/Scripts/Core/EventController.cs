@@ -44,7 +44,7 @@ namespace PrincesPalace
         // Every page's art, keyed by its authored artPath, baked by
         // ScreenRegistry.WireEvent because only the builder can reach
         // AssetDatabase. A page whose key is absent shows the empty frame.
-        [UiOptional("no event authors art yet -- the demo event deliberately has none, to exercise the missing-art path")]
+        [UiOptional("an event may author no art; a missing key shows the empty frame")]
         [SerializeField] internal IconEntry[] eventArt;
 
         // ---- the dialogue stage (docs/PLAN_DIALOGUE_STAGE.md, D2/D3) -------------

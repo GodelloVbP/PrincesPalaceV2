@@ -4,20 +4,11 @@ namespace PrincesPalace
 {
     // Who already acted on this frame's Escape.
     //
-    // Escape means "close the thing in front of me", and more than one
-    // component listens for it in the same scene: the hub closes its debug menu,
-    // and the system menu opens and closes itself. They sit
-    // on the SAME GameObject, so Unity's Update order between them is whatever
-    // serialization order happens to be -- which is not a thing to build
-    // behaviour on.
-    //
-    // The race this prevents is real and was introduced by fixing a different
-    // bug. While SystemMenuController lived on its own inactive modal it could
-    // not run at all with the menu closed, so it could never see an Escape the
-    // hub was about to consume. Moving it to the scene root so that Escape can
-    // OPEN the menu also put it in the same frame as everyone else: with the
-    // debug menu up, whichever ran first decided whether Escape dismissed it
-    // or dismissed it AND opened the system menu on top.
+    // Escape means "close the thing in front of me". Listeners that share a
+    // scene run in whatever order Unity serializes them, so a listener that
+    // acts calls Consume() and one that runs later checks ConsumedThisFrame
+    // before acting on the same press. No production listener claims the stamp
+    // today; only tests and TestGlobals.ResetAll touch it.
     //
     // A frame stamp rather than a bool, so nothing has to remember to clear it.
     public static class EscapeKey

@@ -23,12 +23,10 @@ namespace PrincesPalace
     // global Volume, the canvas and the EventSystem -- not a node in any
     // screen tree, and not created at runtime either.
     //
-    // Runtime creation was the first shape and it was wrong for a stated
-    // reason rather than a matter of taste: it put a second rect preamble
+    // Not created at runtime: that would put a second rect preamble
     // (anchors, pivot, sizeDelta) in this file, which UiKitLintTests'
-    // OnlyTheEmitterMayCreateGameObjects exists to prevent -- v1 had 86
-    // hand-rolled UI construction sites and they drifted. A screen tree was
-    // wrong too, for the opposite reason: this marker belongs to the
+    // OnlyTheEmitterMayCreateGameObjects exists to prevent. Not in a screen
+    // tree either, for the opposite reason: this marker belongs to the
     // DISPATCHER, not to any one screen, and putting it in eleven trees would
     // be eleven NodeRefs, eleven bindings and eleven UiAudit overlap
     // exemptions for an object whose whole job is to sit on top of whatever
@@ -157,12 +155,10 @@ namespace PrincesPalace
 
         // WHICH EDGE, with the neighbours consulted (FocusMarkerPlacement.
         // EdgeFor's header: a marker on another control reads as selecting
-        // it). Decided EVERY FRAME, not cached: the first version kept its
-        // answer for a quarter second and the capture caught it deciding
-        // while the pack panel was still fading in (its sort tabs at alpha
-        // 0, so not yet neighbours) and then standing on TIER and "+" long
-        // after they appeared. The walk is kept cheap instead -- see
-        // CollectObstacles.
+        // it). Decided EVERY FRAME, not cached: a cached answer decides while a
+        // panel is still fading in (its sort tabs at alpha 0, so not yet
+        // neighbours) and then stands on TIER and "+" long after they appear.
+        // The walk is kept cheap instead -- see CollectObstacles.
         private readonly List<UiRect> _obstacles = new List<UiRect>();
         private readonly List<UiRect> _keepClear = new List<UiRect>();
         private static readonly List<TMP_Text> Texts = new List<TMP_Text>();

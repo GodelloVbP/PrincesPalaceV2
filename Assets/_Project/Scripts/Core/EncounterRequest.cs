@@ -9,7 +9,7 @@ namespace PrincesPalace
     // (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md 3.1).
     //
     // Every fight is one of these. A room's is derived from the node, exactly
-    // as RunEncounter.For always derived it; an event's is read from the open
+    // as RunEncounter.For derives it; an event's is read from the open
     // event's `fights` block while RunSnapshot.pendingFight names it. The one
     // producer is RunOrchestrator.CurrentEncounterRequest, and its readers are
     // the build (RunOrchestrator.BuildFight -> RunEncounter.For), the screen's
@@ -93,8 +93,8 @@ namespace PrincesPalace
         // The fight's own backdrop key, "" for the class default.
         public string BackdropKey => IsEventFight ? EventFight.BackdropKey ?? "" : "";
 
-        // Everything the fight screen dresses this fight in beyond its class
-        // (M6): FightController.Bind reads it once. A room fight is None --
+        // Everything the fight screen dresses this fight in beyond its class:
+        // FightController.Bind reads it once. A room fight is None --
         // no counter, no overlay, no ambience, the class backdrop.
         public FightRoundPresentation Presentation =>
             IsEventFight

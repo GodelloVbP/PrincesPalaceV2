@@ -70,10 +70,9 @@ namespace PrincesPalace
 
         public static readonly int[] FpsLimits = { 30, 60, 120, 144, 240 };
 
-        // NAMED ONCE. These were literals in three places -- the property
-        // initialisers, Load's PlayerPrefs fallbacks, and nowhere else that
-        // needed them until Options grew a Restore Defaults button. A fourth
-        // copy is how a "restore" quietly restores something else.
+        // NAMED ONCE, shared by the property initialisers, Load's PlayerPrefs
+        // fallbacks and Restore Defaults, so a "restore" cannot quietly restore
+        // something else.
         public const float DefaultVolume = 0.8f;
         public const int DefaultWindowModeIndex = 1;   // Borderless Windowed
         public const int DefaultFpsLimitIndex = 1;     // 60
@@ -179,11 +178,10 @@ namespace PrincesPalace
 
         // Pushes the stored settings at the actual device.
         //
-        // Skipped entirely in batch mode, and NOT just for tidiness — the
-        // first version applied targetFrameRate unconditionally, which
-        // capped the headless test runner at 60fps and took the PlayMode
-        // suite from ~9s to ~30s, because every test that yields frames
-        // suddenly waited 16ms per frame. A global engine setting changed
+        // Skipped entirely in batch mode, and NOT just for tidiness —
+        // applying targetFrameRate there caps the headless test runner at
+        // 60fps and slows the PlayMode suite several-fold, because every
+        // test that yields frames waits 16ms per frame. A global engine setting changed
         // from a test leaks into every test after it, so the honest fix is
         // to keep device application out of headless runs completely.
         // Screen.SetResolution is skipped for the same class of reason: the

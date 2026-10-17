@@ -2,27 +2,13 @@ using UnityEngine;
 
 namespace PrincesPalace
 {
-    // Two easing curves, written out five times across Core before this --
-    // the hub's zoom, the reward track's pulses and its fly-ins, the
-    // reckoning's card sweep, and the reckoning's wipe-open and exp-bar
-    // sweep -- each its own private static, and not quite the same contract
-    // twice: one of the five clamped its input, the other four did not.
+    // Two easing curves, the one home for them in Core.
     //
-    // The reckoning's wipe-open and exp-bar sweep were folded in later than
-    // the rest: both callers already wrapped every call in Mathf.Clamp01 at
-    // the call site, so folding the formula into SmoothStep's own internal
-    // clamp changed nothing about what either animation does.
-    //
-    // BOTH CLAMP TO [0,1] HERE, because an unclamped smoothstep is not just
+    // BOTH CLAMP TO [0,1], because an unclamped smoothstep is not just
     // imprecise past its domain, it is wrong in a way a caller has to know to
     // avoid: SmoothStep(1.5f) returns -1.5, not 1 -- t*t*(3-2t) keeps falling
-    // once t passes 1, it does not plateau. The four copies got away with
-    // that only because every caller happened to pre-normalise (a
-    // Mathf.Clamp01 at the call site, or a value already proven to sit in
-    // [0,1] upstream); a fifth caller that forgot to would have gotten a
-    // curve that reverses instead of a curve that finishes. Clamping here
-    // makes that a property of the function, not an obligation on every
-    // caller who reaches for it next.
+    // once t passes 1, it does not plateau. Clamping here makes a curve that
+    // finishes a property of the function, not an obligation on every caller.
     //
     // TWO COPIES ELSEWHERE ARE LEFT ALONE, on purpose:
     // - Domain/UiKit/ConstellationLayout.cs has its own smoothstep because

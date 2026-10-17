@@ -5,13 +5,9 @@ namespace PrincesPalace
 {
     // Discovers an f0..fN frame sequence under a Resources folder.
     //
-    // Three places needed exactly this and each had written it out:
     // StanceAnimationLibrary (actor stances), SpellVfxPlayer (spell/ability
-    // effects) and HubBuildingAnimator (hub buildings) all probed
-    // "{path}/f{i}" until null, each with its own cache, its own MaxFrames
-    // and its own copy of the comment explaining why Resources.LoadAll is
-    // wrong here. Three copies of an eight-line loop is what
-    // docs/CODE_STANDARDS.md "Reuse" names as the moment to promote.
+    // effects) and HubBuildingAnimator (hub buildings) all probe
+    // "{path}/f{i}" until null, and Resources.LoadAll is wrong here.
     //
     // ONLY frame discovery is shared. The three PLAYBACK classes stay
     // separate on purpose, and HubBuildingAnimator's own header argues the
@@ -22,10 +18,8 @@ namespace PrincesPalace
     public static class FrameSequenceLoader
     {
         // The cap only stops a typo'd path (or an accidental stance FOLDER
-        // with no f0 in it) from probing Resources forever. Was 64/64/32
-        // across the three copies — the 32 was not a considered limit, just
-        // a different guess at "more than anything real", so this settles on
-        // the larger value rather than tightening one caller silently.
+        // with no f0 in it) from probing Resources forever. It is a guess at
+        // "more than anything real", not a considered limit.
         public const int MaxFrames = 64;
 
         // Keyed by folder path, which holds no object references — so unlike

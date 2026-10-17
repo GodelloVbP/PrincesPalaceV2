@@ -15,18 +15,13 @@ namespace PrincesPalace
     // of a max that gear moves, so the max has to be read before the swap and
     // rescaled after it.
     //
-    // That pair had three copies: CharacterDossierController.EquipFromPack,
-    // CharacterDossierController.UnequipSlot, and the Reckoning's old
-    // offer take (now RewardPages.Take) -- each with the same
-    // "MEASURED BEFORE THE SWAP" comment, which is what three copies of a rule
-    // look like just before one of them is edited alone. The bot is the fourth
-    // caller and the reason it is one place now, exactly the bargain
-    // RunOrchestrator's own header describes for the run's rules: one
-    // rulebook, several callers, and a headless player that measures the game
-    // rather than a copy of it.
+    // That pair lives here once for CharacterDossierController.EquipFromPack,
+    // CharacterDossierController.UnequipSlot, RewardPages.Take and the bot:
+    // one rulebook, several callers, and a headless player that measures the
+    // game rather than a copy of it.
     //
-    // DELIBERATELY DOES NOT PERSIST. The three callers differ on when they
-    // write, and honestly so: the sheet saves immediately because gear lost to
+    // DELIBERATELY DOES NOT PERSIST. The callers differ on when they
+    // write: the sheet saves immediately because gear lost to
     // a crash between an equip and a save is unforgivable, the Reckoning saves
     // once after each take, and the bot's equip pass saves once per pass.
     // EVERY CALLER NAMES ITS MenuContext, and a context that MenuPermissions
@@ -35,8 +30,8 @@ namespace PrincesPalace
     // Descent.
     //
     // Folding SaveCurrent in here would make two of them write more often than
-    // they mean to -- and a save write was 91% of a bot batch's wall clock
-    // before BotRunDriver.InMemorySaves existed.
+    // they mean to; a save write dominates a bot batch's wall clock unless
+    // BotRunDriver.InMemorySaves is on.
     public static class EquipmentOps
     {
         // Wears this copy off `save.stockpiledItems`. False when EquipMove
