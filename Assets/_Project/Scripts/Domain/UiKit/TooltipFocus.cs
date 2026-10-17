@@ -78,7 +78,13 @@ namespace PrincesPalace.Domain.UiKit
                 _selected = node;
                 if (!ReferenceEquals(node, _quiet)) _quiet = null;
             }
-            else if (ReferenceEquals(_selected, node)) _selected = null;
+            else if (ReferenceEquals(_selected, node))
+            {
+                // A deselect with nothing taking over spends the quiet: the next
+                // selection of this node is the player's own.
+                _selected = null;
+                if (ReferenceEquals(node, _quiet)) _quiet = null;
+            }
 
             return Settle();
         }

@@ -190,5 +190,15 @@ namespace PrincesPalace.Domain.Tests
             _focus.Selection(_b, selected: false);
             Assert.AreSame(_a, _focus.Selection(_a, selected: true).Enter, "the quiet was spent by the move");
         }
+
+        [Test]
+        public void TheQuietNodeDeselectedWithNothingElseSelected_ShowsAgainWhenSelectedAgain()
+        {
+            _focus.Quiet(_a);
+            _focus.Selection(_a, selected: true);
+            _focus.Selection(_a, selected: false);
+
+            Assert.AreSame(_a, _focus.Selection(_a, selected: true).Enter, "re-selecting after the focus was cleared is the player's own selection");
+        }
     }
 }
