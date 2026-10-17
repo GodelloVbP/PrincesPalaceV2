@@ -76,9 +76,9 @@ public static class ProceduralSpriteBaker
 
         BakeFocusArrow();
         BakeRarityBurst();
-        BakeBar();
+        BakeTrackMarks();
+        BakeTrackGrounds();
         BakeScrim();
-        BakeEmber();
         BakeConstellation();
         BakeSpeedStreak();
         BakeGlowDisc();
@@ -177,8 +177,6 @@ public static class ProceduralSpriteBaker
             reach[i] = Mathf.Lerp(0.42f, FadeBy, Frac(i * 0.3247f));
         }
 
-        BakeTrackMarks();
-
         BakeGlow("rarity_burst", 1024, (nx, ny) =>
         {
             float radius = Mathf.Sqrt(nx * nx + ny * ny);
@@ -222,8 +220,6 @@ public static class ProceduralSpriteBaker
     // committed asset.
     private static void BakeTrackMarks()
     {
-        const int Size = 128;
-
         // The claimed tick. Two strokes, the short one falling and the long one
         // rising well past it, which is what makes a tick read as a tick rather
         // than as a bent line.
@@ -440,13 +436,11 @@ public static class ProceduralSpriteBaker
         // The travelling light on the rail. A soft band with no edge of its
         // own, stretched to 300px and walked across 19,000.
         //
-        // UNIFORM ALONG y for the reason bar_track's header gives: this is
-        // scaled horizontally at runtime, and anything that varies across the
-        // axis being scaled distorts differently every frame.
+        // UNIFORM ALONG y: this is scaled horizontally at runtime, and anything
+        // that varies across the axis being scaled distorts differently every
+        // frame.
         BakeGlow("shimmer_band", 64, (nx, ny) =>
             Mathf.Exp(-(nx * nx) / (0.42f * 0.42f)));
-
-        BakeTrackGrounds();
     }
 
     // ---- the talent sky ---------------------------------------------------------
@@ -509,26 +503,12 @@ public static class ProceduralSpriteBaker
         // with Image.type Filled / Radial360 by the controller, which is uGUI's
         // own conic gradient -- the design's arc is exactly a radial fill of a
         // ring, and needs no shader to say so.
-        //
-        // A NOTCH AT TWELVE O'CLOCK, because at 7/9 a plain conic looked like a
-        // closed circle. The gap is where the count starts, so the arc has a
-        // beginning as well as an end.
         Bake("collar_ring", dist =>
         {
             const float Radius = 0.86f;
             const float HalfWidth = 0.055f;
 
             return 1f - Smoothstep(Mathf.Clamp01(Mathf.Abs(dist - Radius) / HalfWidth));
-        });
-
-        BakeGlow("collar_notch", 64, (nx, ny) =>
-        {
-            // A wedge at the top, cut out of the collar by drawing over it in
-            // the panel's own ground.
-            float radius = Mathf.Sqrt(nx * nx + ny * ny);
-            if (radius < 0.6f || radius > 1f) return 0f;
-
-            return Mathf.Abs(nx) < 0.055f && ny > 0f ? 1f : 0f;
         });
 
         // A LIT STONE'S AURA: two soft arcs in a band, rotated by the
@@ -891,87 +871,6 @@ public static class ProceduralSpriteBaker
 
     private static float Frac(float value) => value - Mathf.Floor(value);
 
-    // The experience bar: a recessed channel and the light that fills it.
-    //
-    // UNIFORM ALONG X, both of them, and that is the whole design decision.
-    // The fill is stretched to whatever fraction of the track has been earned,
-    // so anything that varies horizontally -- a rounded cap, a highlight at one
-    // end -- distorts as the bar grows and, worse, distorts DIFFERENTLY every
-    // frame while it animates. All the shaping is vertical; the ends are square
-    // and the track's own art supplies the enclosure.
-    private static void BakeBar()
-    {
-        // The channel. Dark, with the light caught along its top lip so it
-        // reads as cut into the panel rather than drawn on top of it.
-        //
-        // Raised well above black so the Reckoning's dark violet tint has
-        // something to colour: a body near-black before that multiply
-        // compounds to roughly #08060E, and the bar reads as a hole punched
-        // in the panel rather than as a groove cut into it. The shading
-        // still does the recessing, but the result stays recognisably a
-        // surface.
-        BakeGradient("bar_track", 64, y =>
-        {
-            // Light bouncing off the floor of the groove, and the highlight
-            // caught on its top lip. Keeping BOTH is what stops a raised level
-            // reading as a flat plate: bright, dip, bright is a section through
-            // a channel, and a single ramp is not.
-            float floorBounce = Mathf.Clamp01(1f - y / 0.22f);
-            float lip = Mathf.Exp(-Mathf.Pow((y - 0.94f) / 0.05f, 2f));
-
-            float value = Mathf.Lerp(0.30f, 0.46f, y) + floorBounce * 0.10f;
-            return (Mathf.Clamp01(value + lip * 0.42f), 1f);
-        });
-
-        // The light the fill throws onto the panel around it.
-        //
-        // HOLLOW THROUGH THE MIDDLE, which is the whole trick. This is drawn as
-        // a child of the fill and therefore ON TOP of it, so any alpha across
-        // the bar itself would wash out the thing it is supposed to be lit by.
-        // Zero for the width the fill occupies, rising just outside it, gone by
-        // the edge -- a halo, not an overlay.
-        //
-        // The node is inset 12 beyond a 32-tall track, so the fill occupies the
-        // middle 32/56 of this texture: everything inside d 0.57 must stay
-        // empty, and 0.50 leaves margin for filtering.
-        BakeGradient("bar_bloom", 96, y =>
-        {
-            float d = Mathf.Abs(y - 0.5f) * 2f;                  // 0 centre, 1 edge
-            if (d <= 0.5f) return (1f, 0f);
-
-            float t = Mathf.Clamp01((d - 0.5f) / 0.5f);
-            float alpha = Smoothstep(Mathf.Clamp01(t / 0.2f)) * Mathf.Pow(1f - t, 1.8f);
-            return (1f, alpha);
-        });
-
-        // The fill. White so it can be tinted twice from one asset -- once for
-        // what was already earned and once, brighter, for what this fight paid.
-        BakeGradient("bar_fill", 64, y =>
-        {
-            // Brightest just under the top edge, falling away downward: a bar
-            // lit from above rather than a flat block of colour.
-            //
-            // The old numbers said bloom and drew a flat white strip. body ran
-            // 0.55..0.95 and the bloom added up to 0.55 on top, so everything
-            // above y 0.45 clamped to 1 -- five eighths of the bar was one
-            // saturated value and the gradient was invisible. A bloom is a
-            // bright CORE against something less bright; without the contrast
-            // there is nothing to read as light.
-            //
-            // Lowered and narrowed so the core saturates over roughly a fifth
-            // of the height and falls off on both sides of it.
-            float bloom = Mathf.Exp(-Mathf.Pow((y - 0.80f) / 0.26f, 2f));
-            float body = Mathf.Lerp(0.34f, 0.62f, y);
-
-            // Softened at both edges so it never shows a hard line against the
-            // channel it sits in -- and widened with the channel, since a
-            // lighter track shows a hard fill edge that a near-black one hid.
-            float edge = Mathf.Clamp01(Mathf.Min(y, 1f - y) / 0.10f);
-
-            return (Mathf.Clamp01(body + bloom * 0.62f), edge);
-        });
-    }
-
     // The stage scrim: two of its three layers. The third is `radial_glow`,
     // already baked above and simply tinted dark -- a knock-down and a bloom
     // are the same shape, and only the colour differs.
@@ -991,25 +890,6 @@ public static class ProceduralSpriteBaker
         {
             float edge = Mathf.Clamp01(Mathf.Min(y, 1f - y) / 0.30f);
             return (1f, Smoothstep(edge));
-        });
-
-        // The dossier's own wash, brightest along the top edge.
-        //
-        // A flat ground gave that screen no hierarchy at all: three columns of
-        // equal weight on one even field, and nothing telling the eye where to
-        // start. Light falling from above is the cheapest fix that is also
-        // true to the rest of the game's art -- every portrait and actor in
-        // this project is lit from above, so a panel lit the same way sits in
-        // the same world rather than looking like a web page behind them.
-        //
-        // Cubed falloff, not linear. Linear reads as a grey haze over the whole
-        // panel; cubed keeps the bottom two thirds honest black and puts the
-        // whole of the lift in the top third, where the portrait and the column
-        // headings are.
-        BakeGradient("dossier_veil", 128, y =>
-        {
-            float up = Mathf.Clamp01(y);
-            return (1f, Smoothstep(up * up * up));
         });
 
         // Weighted to the bottom of the screen, under the command columns.
@@ -1044,143 +924,6 @@ public static class ProceduralSpriteBaker
             float aboveBottom = Mathf.Clamp01((ny + 1f) * 0.5f / 0.25f);
             return (1f, Smoothstep(across) * Smoothstep(aboveBottom));
         });
-    }
-
-    // The heat under the Continue arrow.
-    //
-    // THIS ONE BAKES ITS OWN COLOUR, and that is a departure from the rule the
-    // scrim states two methods up -- there, colour is a layout decision and
-    // belongs in the tree. Fire is not one colour. A flame is white-hot at the
-    // core, orange through the body and deep red at the edge, and no single
-    // Image tint can produce that from a greyscale ramp: multiplying white by
-    // red gives red everywhere, with a brighter red where the core should be
-    // white. The hue ramp is intrinsic to the thing being drawn. Intensity is
-    // still the tree's: the node tints alpha and leaves the hues alone.
-    //
-    // NOT AN ELLIPSE. The brief was "not square or rectangular, it should feel
-    // flowing and alive", so the radius is modulated by two out-of-phase sine
-    // terms in the angle. Enough to break the silhouette; not so much that it
-    // reads as a shape with lobes.
-    private static void BakeEmber()
-    {
-        const int Width = 512;
-
-        // 256 rather than 128. The vertical edge fade below spans a third of
-        // the height and is then squeezed into an 88px box on screen, so the
-        // ramp has about 29 screen pixels to happen in; at 128 rows it was
-        // being reconstructed from 42 texture rows and banded visibly.
-        const int Height = 256;
-        string path = $"{GeneratedDir}/arrow_ember.png";
-
-        var texture = new Texture2D(Width, Height, TextureFormat.RGBA32, false);
-        var pixels = new Color32[Width * Height];
-
-        // The core sits BACK ON THE ARROWHEAD, not at the point, and the whole
-        // character of the effect turns on that one number.
-        //
-        // A core at the point can only ever produce a tail: the arrow is
-        // opaque, so nothing behind it shows, and the glow starts where the art
-        // stops. Pulled back to -0.18 the core is hidden under the head and
-        // what remains visible is the halo AROUND it -- heat running the length
-        // of the arrow, top and bottom, brightest at the head and trailing off
-        // to the right. That is what makes it embrace the button instead of
-        // pointing away from it.
-        //
-        // Every one of these was settled by compositing against the real arrow
-        // and frame rather than reasoned about: a core at the point, a core
-        // under the head with a tight vertical spread (a smudge), and a long
-        // narrow version that read as jet exhaust, before this.
-        const float CoreX = -0.18f;
-
-        // Asymmetric on purpose: the tail runs further right than left.
-        const float SpreadRight = 1.10f;
-        const float SpreadLeft = 1.00f;
-
-        // WIDE, and this is the other half of the embrace. At 1.25 the glow
-        // fell off before it cleared the arrow's own silhouette, so it could
-        // never be seen alongside the art -- only past the end of it. At 1.90
-        // the falloff is gentle enough that the band of heat is still alive
-        // where the arrow's top and bottom edges are.
-        const float SpreadY = 1.90f;
-
-        for (int y = 0; y < Height; y++)
-        {
-            for (int x = 0; x < Width; x++)
-            {
-                float nx = (x + 0.5f) / Width * 2f - 1f;
-                float ny = (y + 0.5f) / Height * 2f - 1f;
-
-                float dx = (nx - CoreX) / (nx >= CoreX ? SpreadRight : SpreadLeft);
-                float dy = ny / SpreadY;
-
-                float r = Mathf.Sqrt(dx * dx + dy * dy);
-                float angle = Mathf.Atan2(dy, dx);
-                float wobble = 1f
-                    + 0.13f * Mathf.Sin(angle * 3f + 1.1f)
-                    + 0.07f * Mathf.Sin(angle * 5f - 0.4f);
-                r /= Mathf.Max(0.35f, wobble);
-
-                float falloff = 1f - Smoothstep(Mathf.Clamp01(r));
-
-                // 1.1, down from a squared falloff and then from 1.3. Each drop
-                // buys tail: squared was a dot with nothing coming off it, and
-                // anything above about 1.2 loses the far end of the band that
-                // now runs alongside the arrow.
-                float alpha = Mathf.Pow(falloff, 1.1f);
-
-                // FADE THE OUTER THIRD TO NOTHING, and this is a fix rather
-                // than a flourish. SpreadY is 1.90, which means the radial
-                // falloff is nowhere near zero by the time it reaches the top
-                // and bottom of the texture -- it was still at alpha 64 and 81
-                // of 255 at the two edges, so the sprite ended in a hard
-                // horizontal line and the glow read as a rectangle laid over
-                // the panel. Widening the spread to wrap the arrow is what
-                // caused it; the spread is right and the cut was the bug.
-                //
-                // 0.34, up from a first attempt at 0.10. A tenth was not a
-                // gradient: it took alpha from 81 to 1 in six texture rows,
-                // which is four pixels once this is squeezed into an 88px box,
-                // and four pixels of ramp is still an edge. The fade has to
-                // start where the glow is still strong to read as a fade at
-                // all.
-                //
-                // It cannot start much earlier than this without eating the
-                // band alongside the arrow that the whole widening was for --
-                // the arrow's own silhouette reaches about |ny| 0.68, so the
-                // fade begins just outside it.
-                //
-                // SQUARED, so the ramp leaves the full-strength region gently
-                // and arrives at zero steeply. A plain smoothstep put its
-                // steepest part in the middle of the ramp, which is exactly
-                // where the eye reads a line.
-                //
-                // Applied on both axes, even though only the vertical one was
-                // visibly wrong: the next change to a spread should not be able
-                // to reintroduce this.
-                float fadeY = Smoothstep(Mathf.Clamp01((1f - Mathf.Abs(ny)) / 0.34f));
-                float fadeX = Smoothstep(Mathf.Clamp01((1f - Mathf.Abs(nx)) / 0.10f));
-                alpha *= fadeY * fadeY * fadeX;
-
-                // White-hot core -> orange -> deep red, keyed off the same
-                // falloff so the hottest pixel is also the brightest.
-                float hot = Mathf.Clamp01((falloff - 0.55f) / 0.45f);
-                float mid = Mathf.Clamp01(falloff / 0.55f);
-
-                float red = Mathf.Lerp(0.77f, 1f, mid);
-                float green = Mathf.Lerp(0.12f, 0.48f, mid) + hot * 0.46f;
-                float blue = Mathf.Lerp(0.03f, 0.12f, mid) + hot * 0.62f;
-
-                pixels[y * Width + x] = new Color32(
-                    (byte)Mathf.RoundToInt(Mathf.Clamp01(red) * 255f),
-                    (byte)Mathf.RoundToInt(Mathf.Clamp01(green) * 255f),
-                    (byte)Mathf.RoundToInt(Mathf.Clamp01(blue) * 255f),
-                    (byte)Mathf.RoundToInt(Mathf.Clamp01(alpha) * 255f));
-            }
-        }
-
-        texture.SetPixels32(pixels);
-        texture.Apply();
-        WritePng(path, texture);
     }
 
     // A bar-shaped sprite that varies only with height. `shade` returns
@@ -1350,8 +1093,7 @@ public static class ProceduralSpriteBaker
     {
         "hairline_fade", "rail_ramp", "rail_glow", "shimmer_band", "track_drop",
         "band_fade", "card_ground", "soft_edge_stripe",
-        "bar_track", "bar_fill", "bar_bloom",
-        "scrim_band", "dossier_veil", "scrim_floor", "scrim_ceiling", "scrim_left",
+        "scrim_band", "scrim_floor", "scrim_ceiling", "scrim_left",
         "trail_stroke",
     };
 

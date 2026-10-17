@@ -186,8 +186,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // THE EXPERIENCE RING'S THREE TINTS. The light neutral is where the
         // member already stood, the amber what this fight paid, and the track
-        // the channel both are cut into. tools/measure_bar.py reads all three
-        // out of this file rather than carrying copies.
+        // the channel both are cut into.
         //
         // Neutral, not violet: a violet track and arc on a violet cloth hid
         // the before-arc. The amber is saturated rather than a desaturated
