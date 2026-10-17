@@ -29,6 +29,7 @@ namespace PrincesPalace.PlayModeTests
         {
             SharedScene.AfterTest();
             FightBeatPlayer.BeatSpeedMultiplier = 1f;
+            TestGlobals.ResetAll();
         }
 
         private IEnumerator OpenTheFight()
@@ -105,6 +106,43 @@ namespace PrincesPalace.PlayModeTests
             float deadline = Time.realtimeSinceStartup + 5f;
             while (PropName(0) != null && Time.realtimeSinceStartup < deadline) yield return null;
             Assert.IsNull(PropName(0), "the broken shield is removed after a moment");
+        }
+
+        [UnityTest]
+        public IEnumerator AnEarlierFightsBreakTimerCannotClearALaterFightsBrokenShield()
+        {
+            yield return OpenTheFight();
+
+            // Real-time pace: the clear timer is 1.2 s, long enough to straddle a rebind.
+            FightBeatPlayer.BeatSpeedMultiplier = 1f;
+            FightBeatPlayer.PlayerSpeedSource = () => 1f;
+            FightBeatPlayer.AdoptPlayerSpeed();
+            Assert.AreEqual(1f, FightBeatPlayer.Pace, "fixture: real-time pace");
+            var session = _fight.Session;
+            var hero = session.Encounter.PlayerParty[0];
+            var foe = session.Encounter.Enemies[0];
+
+            session.BeatAroundForTest(hero, hero, () => session.PlantShield(hero));
+            session.DrainBeats();
+            var firstBreak = session.BeatAroundForTest(foe, hero,
+                () => session.StrikeForTest(foe, hero, 100000, DamageType.Physical));
+            session.DrainBeats();
+            _fight.PaintShieldsForTest(firstBreak);
+            float firstShown = Time.realtimeSinceStartup;
+            Assert.AreEqual("broken", PropName(0), "fixture: the first break shows the broken frame");
+
+            // The next fight binds; a break at the same seat lands half a second
+            // later (the same beat painted again: its snapshot is a break).
+            yield return new WaitForSecondsRealtime(0.5f);
+            _fight.ResetShieldPropsForTest();
+            Assert.IsNull(PropName(0), "fixture: the rebind hides the prop");
+            _fight.PaintShieldsForTest(firstBreak);
+            Assert.AreEqual("broken", PropName(0), "fixture: the second break shows the broken frame");
+
+            // 1.3 s after the first break: past its timer (1.2 s), inside the second's (1.7 s).
+            while (Time.realtimeSinceStartup < firstShown + 1.3f) yield return null;
+            Assert.AreEqual("broken", PropName(0),
+                "the first fight's timer cleared the second fight's broken shield early");
         }
 
         [UnityTest]

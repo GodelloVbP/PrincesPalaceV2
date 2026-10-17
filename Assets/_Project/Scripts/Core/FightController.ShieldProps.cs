@@ -44,8 +44,9 @@ namespace PrincesPalace
 
         private void ResetShieldProps()
         {
+            // The tokens survive a reset: a timer still pending from the last
+            // fight must find its slot on a later number, never a reused one.
             _shieldShown.Clear();
-            _shieldBreakToken.Clear();
             HideAllShieldProps();
         }
 
@@ -196,6 +197,8 @@ namespace PrincesPalace
                 : null;
 
         public void RefreshShieldPropsForTest() => RefreshShieldProps();
+
+        public void ResetShieldPropsForTest() => ResetShieldProps();
 
         public void PaintShieldsForTest(CombatBeat beat) => PaintShields(beat.Shields, beat.Snapshot);
 
