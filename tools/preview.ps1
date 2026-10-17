@@ -655,6 +655,16 @@ if ($Element -ne "" -and $Spell -eq "") {
     exit 2
 }
 
+if ($Versus -ne "" -and $Spell -eq "") {
+    Write-Host "-Versus only means something with -Spell <id>; it picks the enemy the spell is cast at."
+    exit 2
+}
+
+if ($Formation -eq "full" -and ($Spell -ne "" -or $Character -ne "")) {
+    Write-Host "-Formation full only means something with -Enemy <id>; -Spell and -Character previews ignore it."
+    exit 2
+}
+
 if ($Enemy -ne "") {
     exit (Invoke-EnemyPreview -Id $Enemy)
 }

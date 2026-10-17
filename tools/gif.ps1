@@ -123,7 +123,14 @@ if ($TrimFrames) {
 }
 if ($Prune -ge 0) {
     $cut = (Get-Date).AddDays(-$Prune)
-    $old = @(Get-ChildItem $RunsRoot -Directory -ErrorAction SilentlyContinue | Where-Object { $_.LastWriteTime -lt $cut })
+    # A run's age is when it finished (its newest result.json, in the run
+    # folder or one level down), not the folder mtime, which moves whenever
+    # anything inside is touched. No result.json: the folder mtime.
+    $old = @(Get-ChildItem $RunsRoot -Directory -ErrorAction SilentlyContinue | Where-Object {
+        $results = @(Get-ChildItem -LiteralPath $_.FullName -Filter "result.json" -Recurse -Depth 1 -File -ErrorAction SilentlyContinue)
+        $stamp = if ($results.Count -gt 0) { ($results | Measure-Object LastWriteTime -Maximum).Maximum } else { $_.LastWriteTime }
+        $stamp -lt $cut
+    })
     foreach ($d in $old) { Remove-Item -LiteralPath $d.FullName -Recurse -Force }
     Write-Host "pruned $($old.Count) run(s) older than $Prune day(s)."
     exit 0

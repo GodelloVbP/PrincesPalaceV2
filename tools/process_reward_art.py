@@ -165,9 +165,11 @@ def main():
     args = ap.parse_args()
     with open(os.path.join(FOLDER, "reward_recipe.json"), encoding="utf-8") as f:
         recipe = json.load(f)
-    for sheet in recipe["sheets"]:
-        if args.only and sheet["sheet"] != args.only:
-            continue
+    sheets = [s for s in recipe["sheets"] if not args.only or s["sheet"] == args.only]
+    if not sheets:
+        print(f"--only {args.only!r} matches no sheet in reward_recipe.json", file=sys.stderr)
+        sys.exit(1)
+    for sheet in sheets:
         print(sheet["sheet"])
         process_sheet(sheet, args.out)
 

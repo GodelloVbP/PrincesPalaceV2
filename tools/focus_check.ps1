@@ -323,6 +323,7 @@ function Watch-Launch {
     $treePids = Get-DescendantPids -RootPid $proc.Id
 
     $changeLog = @()
+    $inTreeSteal = $false   # a window of the launched tree took the foreground
     $windowInventory = @{}   # hwnd(int64) -> detail, everything ever seen in-tree
     $last = $before
     $lastTreeRefresh = [DateTime]::MinValue
@@ -345,7 +346,7 @@ function Watch-Launch {
             $entry = "{0:yyyy-MM-dd HH:mm:ss.fff}  ->  {1}" -f (Get-Date), (Format-WindowDetail $detail $inTree)
             Write-Host "  CHANGE: $entry"
             $changeLog += $entry
-            if ($inTree) { $windowInventory[[int64]$detail.Hwnd] = $detail }
+            if ($inTree) { $windowInventory[[int64]$detail.Hwnd] = $detail; $inTreeSteal = $true }
             $last = $now
         }
 
@@ -391,8 +392,12 @@ function Watch-Launch {
         if ($after -eq $before) {
             Write-Host "  foreground WAS restored to the window it started on -- a transient minimize/restore, not a steal."
         } else {
-            Write-Host "  FOREGROUND WAS NOT RESTORED by the end of $Label. This is the failure this script exists to catch."
-            $focusOk = $false
+            if ($inTreeSteal) {
+                Write-Host "  FOREGROUND WAS NOT RESTORED by the end of $Label after a window of the launched tree took it. This is the failure this script exists to catch."
+                $focusOk = $false
+            } else {
+                Write-Host "  foreground ended elsewhere, but no window of the launched tree ever took it -- the user switched windows, not a steal."
+            }
         }
     }
     return [pscustomobject]@{ Label = $Label; FocusOk = $focusOk; ExitCode = [int]$exitCode }

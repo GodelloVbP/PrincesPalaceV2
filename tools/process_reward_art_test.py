@@ -43,5 +43,17 @@ class RestoreOpaqueTests(unittest.TestCase):
         self.assertEqual(out[2, 2, 3], 0)
 
 
+class OnlyFlagTests(unittest.TestCase):
+    def test_only_matching_nothing_exits_1(self):
+        old = sys.argv
+        sys.argv = ["process_reward_art.py", "--only", "no_such_sheet.png"]
+        try:
+            with self.assertRaises(SystemExit) as cm:
+                pra.main()
+        finally:
+            sys.argv = old
+        self.assertEqual(cm.exception.code, 1)
+
+
 if __name__ == "__main__":
     unittest.main()
