@@ -482,5 +482,75 @@ namespace PrincesPalace.PlayModeTests
                 "Bjorn now holds plate 0: his ghost must snap to 90/300, not ease down from Shawn's full bar");
             Assert.AreEqual(1f, Ghost(1), 0.001f, "Shawn now holds plate 1 at full");
         }
+
+        // ---- a rebind stops the previous fight's ending (S06-001) -----------------
+
+        [UnityTest]
+        public IEnumerator ARebindDuringTheLeaderFallEndingDoesNotFinishPlaybackOnTheNewSession()
+        {
+            yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
+            yield return null;
+            yield return null;
+
+            _fight = Object.FindAnyObjectByType<FightController>();
+            Assert.IsNotNull(_fight, "the Fight scene has no FightController");
+            FightBeatPlayer.BeatSpeedMultiplier = 60f;
+
+            var hero = new CombatantState("Shawn", true, 50000, 30, 40, 30);
+            var boss = new CombatantState("Boss", false, 100, 10, 1, 1);
+            var follower = new CombatantState("Follower", false, 100, 10, 1, 1);
+            var encounter = new CombatEncounter(new[] { hero }, new[] { boss, follower });
+            Assert.IsTrue(encounter.DeclareLeader(boss), "fixture: the boss must be the leader");
+
+            var enemyKits = new List<EnemyKit>
+            {
+                new EnemyKit(new ResolvedEnemy("boss", "Boss", new StatBlock(), 5, 3, true,
+                    DamageType.Physical, DamageType.Physical, 0), false),
+                new EnemyKit(new ResolvedEnemy("follower", "Follower", new StatBlock(), 5, 3, false,
+                    DamageType.Physical, DamageType.Physical, 0), false),
+            };
+            var kit = new PlayerKit("shawn", CharacterRole.Tank, new List<ResolvedSkill>(), null, null);
+            var first = new FightSession(encounter, new List<PlayerKit> { kit }, enemyKits,
+                new SeededRandom(7), isBossFight: true);
+            first.Begin();
+
+            _fight.Bind(first, EncounterClass.Boss, new List<SatchelStack>());
+            yield return null;
+
+            var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+            boss.CurrentHealth = 0;
+            Assert.IsTrue(first.ExecuteAttack(follower), "fixture: the swing was refused");
+            typeof(FightController).GetMethod("AfterResolution", flags).Invoke(_fight, null);
+
+            var leaderEnding = typeof(FightController).GetField("_leaderEnding", flags);
+            float deadline = Time.realtimeSinceStartup + 30f;
+            while (!(bool)leaderEnding.GetValue(_fight) && Time.realtimeSinceStartup < deadline) yield return null;
+            Assert.IsTrue((bool)leaderEnding.GetValue(_fight), "fixture: the leader-fall ending never started");
+
+            // A NEW FIGHT ON THE SAME CONTROLLER, busy with its own playback.
+            var hero2 = new CombatantState("Shawn", true, 300, 30, 40, 30);
+            var foe2 = new CombatantState("Front", false, 5000, 10, 8, 1);
+            var second = new FightSession(new CombatEncounter(new[] { hero2 }, new[] { foe2 }),
+                new List<PlayerKit> { kit },
+                new List<EnemyKit> { new EnemyKit(new ResolvedEnemy("front", "Front", new StatBlock(), 5, 3, false,
+                    DamageType.Physical, DamageType.Physical, 0), false) },
+                new SeededRandom(9));
+            second.Begin();
+            _fight.Bind(second, EncounterClass.Normal, new List<SatchelStack>());
+
+            // Busy for a real reason: its own swing, played at normal pace so
+            // it outlasts the frames below. A stale ending that finishes
+            // playback on this session clears the flag under that swing.
+            FightBeatPlayer.BeatSpeedMultiplier = 1f;
+            Assert.IsTrue(second.ExecuteAttack(foe2), "fixture: the swing was refused");
+            typeof(FightController).GetMethod("AfterResolution", flags).Invoke(_fight, null);
+
+            var busy = typeof(FightController).GetField("_isBusy", flags);
+            Assert.IsTrue((bool)busy.GetValue(_fight), "fixture: the swing did not hold the controller busy");
+            for (int frame = 0; frame < 5; frame++) yield return null;
+
+            Assert.IsTrue((bool)busy.GetValue(_fight),
+                "the previous fight's ending ran OnPlaybackFinished on the new session mid-swing");
+        }
     }
 }

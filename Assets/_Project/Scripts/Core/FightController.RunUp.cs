@@ -62,6 +62,7 @@ namespace PrincesPalace
         {
             if (_runUpRoutine != null) StopCoroutine(_runUpRoutine);
             _runUpRoutine = null;
+            StopEndingRoutines();
             StopHops();
             _runUpEnded = false;
             _runUpEnding = false;
@@ -184,7 +185,7 @@ namespace PrincesPalace
             _spokeVictory = true;
 
             SoundController.Play(Sound.VictorySting);
-            StartCoroutine(VictoryVoices(Mathf.Max(0f, voiceDelayWall)));
+            _victoryVoicesRoutine = StartCoroutine(VictoryVoices(Mathf.Max(0f, voiceDelayWall)));
         }
 
         private IEnumerator VictoryVoices(float delay)
@@ -196,6 +197,8 @@ namespace PrincesPalace
             {
                 CharacterVoice.Play(id, VoiceLine.Victory, oncePerFight: true);
             }
+
+            _victoryVoicesRoutine = null;
         }
 
         // The kill registering: every body still fading sags first, then

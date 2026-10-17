@@ -274,7 +274,7 @@ namespace PrincesPalace
             }
 
             RefreshStatusBox();
-            StartCoroutine(DarknessEndingRoutine());
+            _darknessEndingRoutine = StartCoroutine(DarknessEndingRoutine());
             return true;
         }
 
@@ -299,6 +299,7 @@ namespace PrincesPalace
             while (AnyEnemyFading()) yield return null;
 
             _darknessEnding = false;
+            _darknessEndingRoutine = null;
             OnPlaybackFinished();
         }
 
@@ -334,7 +335,7 @@ namespace PrincesPalace
             }
 
             RefreshStatusBox();
-            StartCoroutine(LeaderFallRoutine());
+            _leaderFallRoutine = StartCoroutine(LeaderFallRoutine());
             return true;
         }
 
@@ -346,6 +347,7 @@ namespace PrincesPalace
             while (AnyEnemyFading() && Time.unscaledTime < giveUp) yield return null;
 
             _leaderEnding = false;
+            _leaderFallRoutine = null;
             OnPlaybackFinished();
         }
 
@@ -353,6 +355,22 @@ namespace PrincesPalace
         private const float LeaderFallWaitCapSeconds = 6f;
 
         private bool _leaderEnded;
+
+        // Held so a rebind can stop an ending the previous fight left running;
+        // left alone it would call OnPlaybackFinished on the new session.
+        private Coroutine _darknessEndingRoutine;
+        private Coroutine _leaderFallRoutine;
+        private Coroutine _victoryVoicesRoutine;
+
+        private void StopEndingRoutines()
+        {
+            if (_darknessEndingRoutine != null) StopCoroutine(_darknessEndingRoutine);
+            if (_leaderFallRoutine != null) StopCoroutine(_leaderFallRoutine);
+            if (_victoryVoicesRoutine != null) StopCoroutine(_victoryVoicesRoutine);
+            _darknessEndingRoutine = null;
+            _leaderFallRoutine = null;
+            _victoryVoicesRoutine = null;
+        }
 
         // Busy with nothing playing, like _darknessEnding: the stranded-turn
         // rescue must not "recover" it into the Reckoning.
