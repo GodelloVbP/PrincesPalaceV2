@@ -33,10 +33,8 @@ namespace PrincesPalace.Domain.Rewards
         // True for a squad member who was not fielded — at 0 HP, so
         // BuildEncounter skipped them.
         //
-        // They get a row anyway, greyed and with nothing gained. Skipping
-        // them made the party silently change size on the results screen,
-        // which is exactly the confusion this pass exists to remove: three
-        // characters went in, two came back, and nothing said why.
+        // They get a row anyway, greyed and with nothing gained, so the
+        // party never changes size on the results screen unexplained.
         public readonly bool IsDowned;
 
         public readonly int LevelBefore;
@@ -129,14 +127,13 @@ namespace PrincesPalace.Domain.Rewards
         }
     }
 
-    // Everything one fight paid out. Built by FightController at the moment
-    // of victory and read by the rewards screen.
+    // Everything one fight paid out. Built by RewardApplier and read by the
+    // rewards screen.
     public sealed class CombatReward
     {
         public readonly List<CharacterReward> Characters = new List<CharacterReward>();
 
         public int GoldGained;
-        public int TotalGold;
 
         // The item the player picked from the three offered, or empty if the
         // fight offered none (or the screen was skipped).

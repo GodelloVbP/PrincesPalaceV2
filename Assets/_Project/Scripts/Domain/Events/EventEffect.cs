@@ -22,13 +22,13 @@ namespace PrincesPalace.Domain.Events
         PrincesFavor,
         FillSpecialPool,
 
-        // docs/PLAN_EVENTS_BELL_AND_CARAVAN.md 3.5, Stage A. Fight starts
+        // docs/PLAN_EVENTS_BELL_AND_CARAVAN.md 3.5. Fight starts
         // one of the event's own fights (FightId); Finish marks a returning
         // event seen, so it never rolls again this run.
         Fight,
         Finish,
 
-        // Stage B (the caravan). Shelf opens one of the event's own merchant
+        // The caravan (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md). Shelf opens one of the event's own merchant
         // shelves (ShelfId), revealing its fakes when Reveal; TakeShelf hands
         // the party that shelf's unsold cards, Amount of them lost to the
         // scuffle first.

@@ -114,8 +114,8 @@ namespace PrincesPalace.Domain.Rewards
         // enough data to fit a curve to and a lookup is honest about that
         // (§2b). WHICH band a spell is in is authored content (bookTier), not
         // a switch over skill ids here -- so a sixth spell never needs this
-        // file edited. Gate 1 sells no books; the table is here because the
-        // price is a pricing fact, and pricing lives in one place.
+        // file edited. The price is a pricing fact, and pricing lives in one
+        // place.
         //
         // MaxBookTier is the top of that table, and SkillEntryResolver
         // refuses a bookTier above it (AUDIT #145 B3): the default arm below

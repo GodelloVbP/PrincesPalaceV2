@@ -4,14 +4,11 @@ namespace PrincesPalace.Domain.Rewards
 {
     // How far above the expected a drop climbs.
     //
-    // A LADDER, NOT A TABLE, and that choice is the whole design. Every
-    // shape tried before this one shared a fault: any bonus -- a floor
-    // multiplier, an encounter multiplier, a luck bonus added to the roll --
-    // eventually pushes the score past the top cut, and everything past the
-    // top cut lands in the RAREST band. Measured on the multiplicative version
-    // this replaces, a floor-1 boss produced the jackpot tier 34% of the time
-    // and a floor-3 normal produced it 67% of the time. Bonuses were making
-    // the rare outcome the DEFAULT outcome, which is exactly backwards.
+    // A LADDER, NOT A TABLE, and that choice is the whole design. With a
+    // score table, any bonus -- a floor multiplier, an encounter multiplier,
+    // a luck bonus added to the roll -- eventually pushes the score past the
+    // top cut, and everything past the top cut lands in the RAREST band, so
+    // bonuses would make the rare outcome the DEFAULT outcome.
     //
     // Here each rung has to be earned separately: climbing s rungs means s
     // consecutive successes, so P(climb >= s) = p^s. The tail therefore decays

@@ -49,7 +49,7 @@ namespace PrincesPalace.Domain.Events
     // before (contract 14). Gated on the lines, never on BackdropKey -- every
     // page carries a backdrop, defaulted at content build. The concluded
     // state has no page and so no lines; it plays on the stage when the
-    // EVENT has lines on any page (EventHasLines, D4), so a resume from a
+    // EVENT has lines on any page (EventHasLines), so a resume from a
     // save paints what the live pick painted. Staged is that one rule.
     public sealed class EventView
     {
