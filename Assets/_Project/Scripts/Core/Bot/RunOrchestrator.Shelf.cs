@@ -37,7 +37,7 @@ namespace PrincesPalace
         // Whether the stock in front is a merchant shelf rather than the room
         // shop: the screen stands down what a merchant does not have (books,
         // relics, rerolls, selling) and shows consumables in their place.
-        public static bool ShelfInFrontIsMerchant => OpenShelfOn(RunManager.Run) != null;
+        public static bool ShelfInFrontIsMerchant => EventShelfPending;
 
         // Whether the shelf in front has had its fakes revealed ("Browse with
         // Odette"). The mark belongs to the stock, so it survives Look again
