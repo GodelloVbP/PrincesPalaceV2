@@ -2682,9 +2682,4 @@ reader since the run-map rebuild. Delete script, PNGs and the ART_PIPELINE row, 
 `BagSort`/`BagSortKey` have no caller. Decide once `docs/PLAN_ITEMS.md` lands whether
 the bag gets sort buttons or the code goes. `Domain/Equipment/BagSort.cs:21` [D4-004].
 
-### 286. Two comment-vs-code drifts that need a one-line call
-(a) `ContentBuilder.BuildRealms` creates `RealmsPath` inside the asset-editing bracket,
-which the file's own comment (:152) says must not create folders. Create it up front, or
-correct the comment? [D6-016]. (b) `AudioLevels.cs:33` cites a nonexistent
-`MusicLibrary.PathOf`; the music player is not built. Reword now or leave until the
-player lands? [S26-009].
+### ~~286. Two comment-vs-code drifts that need a one-line call~~ — fixed in `99565bc4`: the ContentBuilder bracket comment now states that RealmsPath is made with its first asset (the code was right), and `AudioLevels.cs` no longer cites a nonexistent `MusicLibrary`
