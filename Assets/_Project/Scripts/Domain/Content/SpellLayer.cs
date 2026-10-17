@@ -125,7 +125,7 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("The square box the art is fitted into; 0 means SpellPresentation.DefaultSize. Ignored by place 'formation', which measures its own span.")]
         public float size;
 
-        [ContentDoc("What `size` scales against: none (the authored number, verbatim) or target (multiplied by the struck target's visible body on stage -- the larger of its opaque width and height over TargetBody.ReferenceExtent, a front-rank Giant Rat; an emitter scales its particles, speeds and source offset by the same factor). Blank means none. Legal only where a single struck target is resolved: place target, target-centre, sky or above, a layer that travels, or a layer riding another (place layer:<id>).")]
+        [ContentDoc("What `size` scales against: none (the authored number, verbatim), target (multiplied by the struck target's visible body on stage -- the larger of its opaque width and height over TargetBody.ReferenceExtent, a front-rank Giant Rat; an emitter scales its particles, speeds and source offset by the same factor) or head (the same, off the head height). Blank means none. Legal only where a single struck target is resolved: place target, target-centre, target-head, counterpart, counterpart-centre, sky or above, a layer that travels, or a layer riding another (place layer:<id>).")]
         public string fit = "";
 
         [ContentDoc("Mirroring: auto (take the cast's facing), none (never mirror) or reverse. Blank means auto.")]

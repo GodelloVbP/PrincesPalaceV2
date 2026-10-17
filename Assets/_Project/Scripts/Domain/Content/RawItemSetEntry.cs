@@ -97,7 +97,7 @@ namespace PrincesPalace.Domain.Content
         // a piece override this by hand; they are GONE from the schema. A
         // piece naming either is a content-build error now, not a silent
         // override -- see ItemSetEntryResolver.
-        [ContentDoc("'<combat stat> <percent>' lines spending the combat-stat half of the budget; the five lines must sum to exactly 100.")]
+        [ContentDoc("'<combat stat> <percent>' lines spending the combat-stat half of the budget; the percents over the five combat stats must sum to exactly 100.")]
         public string[] statProfile = Array.Empty<string>();
 
         [ContentDoc("This set's pieces; see RawSetPiece.")]

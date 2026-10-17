@@ -111,7 +111,7 @@ namespace PrincesPalace.Domain.Content
                            $"({(starters.Count == 0 ? "none" : string.Join(", ", starters.Select(c => c.Id)))}). " +
                            "That flag is what a fresh profile opens with; without exactly three of them the " +
                            "starting squad would fall back to whichever rows happen to sit at the top of the " +
-                           "file, which is how appending a character used to make them unfieldable.");
+                           "file, and appending a character would make them unfieldable.");
             }
 
             foreach (var duplicate in starters.GroupBy(c => c.SquadSlot).Where(g => g.Count() > 1))

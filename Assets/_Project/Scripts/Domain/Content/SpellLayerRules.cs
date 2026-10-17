@@ -953,7 +953,7 @@ namespace PrincesPalace.Domain.Content
             {
                 problems.Add($"{at} authors fit '{layer.fit.Trim()}' but is placed on {layer.place.Trim()}, which " +
                              "resolves no single struck target to read a footprint off. Only target, " +
-                             "target-centre, target-head, sky, above, a travelling layer or a layer riding another do.");
+                             "target-centre, target-head, counterpart, counterpart-centre, sky, above, a travelling layer or a layer riding another do.");
             }
 
             // AN EMITTER'S FLIGHT SHAPING READS THE LINE OF THE LAYER IT RIDES;

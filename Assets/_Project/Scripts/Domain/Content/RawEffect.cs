@@ -12,7 +12,7 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Which Domain.Combat.EffectKind this grants, matched case-insensitively; the holder must be allowed it (EffectCatalog).")]
         public string type = "";
 
-        [ContentDoc("How much: percent, points or rating as the kind says. An affix's is the UNSCALED base (the fight reads base x TierMultiplier x RiftMultiplier). Omitted for a flag kind; may be negative only on a relic stat.")]
+        [ContentDoc("How much: percent, points or rating as the kind says. An affix's is the UNSCALED base (the fight reads base x TierMultiplier). Omitted for a flag kind; may be negative only on a relic stat.")]
         public int magnitude;
 
         [ContentDoc("Percent of max health for a health-gated kind (WorldEndersCrown); omitted otherwise.")]
