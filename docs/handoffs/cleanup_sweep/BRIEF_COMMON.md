@@ -14,12 +14,24 @@ Categories:
   dev loop. Name the call frequency.
 - SIMP: a deletion or collapse that keeps behaviour.
 - DRIFT: a comment, doc or schema line that is false today.
+- ARCH: a candidate only; nobody fixes it in this sweep. Record it when your slice
+  shows any of these:
+  - understanding one concept means bouncing between many small modules;
+  - a shallow module, whose interface is nearly as complex as its implementation;
+  - logic pulled out for testability while the bugs hide at its call sites;
+  - coupling that leaks across a seam.
+
+  Record the deletion test: would deleting the module concentrate complexity, or
+  just move it? Use the `codebase-design` vocabulary: module, interface, depth,
+  seam, adapter, leverage, locality.
 
 Severity:
 - S1: player-visible or data loss.
 - S2: latent; reachable but rare.
 - S3: PERF or SIMP.
 - S4: DRIFT.
+- ARCH carries no severity. Give it a strength instead: `strong`,
+  `worth-exploring` or `speculative`.
 
 Intent precedence, highest first:
 1. The Decided list below, or an AUDIT entry.

@@ -1,8 +1,8 @@
 # Cleanup sweep plan
 
-Status: rev 3, after two review rounds. Reviews:
+Status: rev 4. Rev 4 adds architecture candidates (D13, P6) on the owner's ask. Rev 3 came after two review rounds. Reviews:
 `docs/handoffs/cleanup_sweep/REVIEW_R{1,2}_{warm,cold}.md`. §12 maps every point
-to its change. Rev 3's own changes have not been reviewed.
+to its change. Rev 3 and rev 4 changes have not been reviewed.
 
 **Owner ask (2026-10-17):** sweep the whole codebase for bugs, inefficiencies,
 simplifications and more. Make it efficient. Map out who does what and where.
@@ -21,7 +21,7 @@ get scans only.
 | # | Decision | Why | Owner can overturn |
 |---|---|---|---|
 | D1 | **Scripts** run grep-shaped scans (zero tokens, no misses). **Haiku `reader`s** run the three scans that need light judgement. **Sonnet finders** read the code. | Answers the Haiku question. Haiku is cheap, but a grep is cheaper and exact. Haiku never diagnoses (CLAUDE.md); past yield came from cross-seam bugs. | — |
-| D2 | One finder read covers all four categories. | The read is the cost. | — |
+| D2 | One finder read covers all five categories, ARCH included as candidates. | The read is the cost. | — |
 | D3 | Scan candidates are tagged to slices and confirmed or refuted by that slice's finder. | No separate triage read. | — |
 | D4 | Slices of 3,000 lines or fewer. T1 gets a full read. T2 gets a read of `git diff -W bc867981 c8d0c631`. A `partial` is re-cut once to 2,000 lines or fewer; a second `partial` is filed as a coverage gap. | 5.5K-line slices came back partial in September. | T2 full read: +18 finders. Churn bar 25% → 50%: about −20 finders. |
 | D5 | **The fix's place follows its paths.** A fix that touches only `Domain/` and `Tests/EditMode/` code reachable by the dotnet host is a **worktree fix**, done in a sparse worktree with `[D]` tests, in parallel. Any other fix is a **main-tree fix**, done in the main tree by one holder at a time, which gates with Unity itself. | Worktrees run only named `[D]` classes (`test.ps1:567`), and Core, Data and Editor are Unity-only (R2 cold 1). Full extra clones cost about 3.5 GiB plus a fresh Unity import each. | One extra full clone with its own TestRunner doubles main-tree throughput; the owner can approve the disk. |
@@ -31,6 +31,7 @@ get scans only.
 | D9 | The sweep's scripts are one-offs, under `docs/handoffs/cleanup_sweep/scripts/`, each with fixtures. | First use. Fold them into `tools/` on a second use. | — |
 | D10 | No `-Runtime` captures until the owner says yes. Visual fixes queue for one batch. | Owner rule. | — |
 | D11 | Gate infrastructure is frozen until every other lane closes: `test.ps1`, `run_tests_parallel.ps1`, `test_select.ps1`, `test_areas.ps1`, `playmode_shards.ps1`, `runner_sync.ps1`, `unity_lock.ps1`, `unity_path.ps1`, `tools/githooks/`, `tools/domain-tests/`. Then L9b fixes them, followed by a runner-trust check. | Every gate runs through them. | — |
+| D13 | **Architecture is found in the sweep, fixed after it.** Finders record ARCH candidates (BRIEF_COMMON) from the same read. After the last lane closes, P6 turns them into the `/improve-codebase-architecture` report. The owner picks a candidate and grills it through. Each chosen candidate gets its own plan and session. | Deepening redesigns a contract (senior, `Escalation: architecture`), which needs the owner. Refactoring mid-sweep would move code under 13 running lanes. Dead code removed first keeps noise out of the report. | — |
 | D12 | Bugs are fixed without asking. Design forks go to one owner digest. Comment density is out of scope; false and history comments are in. | Standing owner rules. | "trim density" |
 
 ## 2. Contracts
@@ -82,6 +83,7 @@ What a fix may change:
 | Worktree fixers | lane `implementer`; `fixer` (Haiku) for pre-diagnosed one-file batches | up to 1 per lane at a time | `.claude/worktrees/sweep-<lane>` | their branch, `ledger/<lane>.tsv` | named `[D]` classes |
 | Main-tree holders | lane `implementer`, fresh per hold, up to 4 rows per hold | 1 at a time (D6) | main tree | commits, `ledger/<lane>.tsv` | `test.ps1 <class>`, then the commit gate |
 | Integrator | `implementer` (Sonnet), fresh per batch | 1 at a time (D6) | main tree | cherry-picks, regenerated scenes and content, reverts | the commit gate, full runs, the final run |
+| Architecture synthesiser | `implementer` (Sonnet) | 1, in P6 | read-only | the HTML report in the OS temp dir, plus a copy in the sweep dir | — |
 | Senior | `senior` (Opus) | as needed | as the row's place | — | — |
 
 The senior's brief needs a line `Escalation: architecture | cross-layer |
@@ -161,7 +163,33 @@ Routing:
 
 **Empty case:** a lane with zero rows is closed with one line in the record.
 
-### P4 fixing (§7) and P5 integration (§8)
+### P4 fixing (§7), P5 integration (§8), P6 architecture (below)
+
+### P6 architecture report (after close-out)
+
+Inputs:
+- the ARCH rows from `LEDGER.tsv`, re-checked at HEAD, since sweep fixes may
+  already have removed some;
+- X7 layering output;
+- commit hot spots from `git log` since `bc867981`;
+- `codebase-design` vocabulary.
+
+Steps:
+1. The orchestrator runs the skill's Explore step with that input. The ARCH rows
+   stand in for the organic walk, so there is no second codebase read.
+2. One synthesiser reads only the code behind `strong` and `worth-exploring` rows.
+3. It writes the report per the skill's `HTML-REPORT.md`: a card per candidate
+   with files, problem, solution, benefits, a before/after diagram and a
+   strength, and a top recommendation.
+
+**Gate:** the report exists and every `strong` row is either a card or listed
+with a reason it was merged or dropped.
+
+**Empty case:** zero ARCH rows. The record says so and no report is written.
+
+The skill has two prerequisites the repo lacks: `CONTEXT.md` does not exist and
+no `docs/adr/` exists. The skill creates `CONTEXT.md` lazily during grilling.
+The orchestrator then asks the owner, "Which of these would you like to explore?"
 
 ## 5. Finder waves
 
@@ -313,6 +341,7 @@ Per batch:
 6. The orchestrator writes `docs/SWEEP_2026-10-17.md`:
    - counts by category, severity, state and grade;
    - the full unresolved list, including coverage gaps;
+   - the ARCH candidate count by strength, with a pointer to P6;
    - the owner digest: one plain-language question per fork, with options and my
      recommendation;
    - measured cost per role.
@@ -324,17 +353,18 @@ Cost is tool calls × context, and cache reads are 96% of tokens.
 1. **Byte-identical prefix.** Every prompt is `BRIEF_COMMON.md` verbatim, then a
    short suffix. One finder launches first, so the prefix is cached before the
    rest start.
-2. **Scripts before models.** Eight of twelve scans cost zero tokens.
-3. **One read, four lenses.** Candidates arrive pre-located.
-4. **Small returns.** One line per agent. The orchestrator reads only S1/S2 and
+2. **ARCH rides the finder read.** It costs about one row per slice and one synthesiser, not a second walk of the codebase.
+3. **Scripts before models.** Eight of twelve scans cost zero tokens.
+4. **One read, five lenses.** Candidates arrive pre-located.
+5. **Small returns.** One line per agent. The orchestrator reads only S1/S2 and
    fork rows.
-5. **Parallel where it is safe.** Finders and worktree fixes run in parallel.
+6. **Parallel where it is safe.** Finders and worktree fixes run in parallel.
    Only main-tree work is serial, and that work is the part Unity must check
    anyway.
-6. **Fresh small agents for Unity waits.** Holders and integrators re-pay their
+7. **Fresh small agents for Unity waits.** Holders and integrators re-pay their
    cache after each Unity run of 3–7 minutes. They start fresh per hold or batch,
    so what they re-pay stays small.
-7. **Diff-scoped T2.** 18 slices become 5 D-groups.
+8. **Diff-scoped T2.** 18 slices become 5 D-groups.
 
 Estimate, mostly Sonnet cache reads:
 
