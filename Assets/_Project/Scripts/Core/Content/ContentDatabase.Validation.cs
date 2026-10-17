@@ -714,7 +714,9 @@ namespace PrincesPalace.Content
             // same reason: a skillId that names a real skill, no signature
             // reward on a character with no signature resource, and
             // FuryStartOfFight refused on anyone but a positive-amount,
-            // Zero-start pool owner (RewardTrackEntryResolver's rule 6).
+            // Zero-start pool owner (RewardTrackEntryResolver's rule 6), and
+            // MaxMana/ManaRegen refused on a non-WisdomDerived primary pool
+            // (rule 7).
             // (The old "filler element must be one the character can deal
             // at level 1" mirror went with the filler mix itself --
             // progression v2 phase 4, see RawTrackLevel.)
@@ -727,8 +729,15 @@ namespace PrincesPalace.Content
                 // the signature-resource check just above: this validates
                 // the LOADED catalogue, which a hand-authored asset can
                 // reach without ever passing through RewardTrackEntryResolver.
-                bool primaryPoolStartsZero = owner != null
-                    && PrimaryPoolFor(owner.Data.PrimaryPoolId)?.Data?.StartRule == PoolStartRule.Zero;
+                var primaryPool = owner == null ? null : PrimaryPoolFor(owner.Data.PrimaryPoolId)?.Data;
+                bool primaryPoolStartsZero = primaryPool?.StartRule == PoolStartRule.Zero;
+
+                // RULE 7, mirrored (RewardTrackEntryResolver): MaxMana and
+                // ManaRegen pay nothing on a primary pool whose capacity rule
+                // is not WisdomDerived. No pool resolved means no refusal,
+                // as in the resolver.
+                bool primaryPoolTakesManaBonuses = primaryPool == null
+                    || primaryPool.CapacityRule == PoolCapacityRule.WisdomDerived;
 
                 foreach (var level in track.Data.Levels)
                 {
@@ -758,6 +767,14 @@ namespace PrincesPalace.Content
                         errors.Add($"Reward track '{track.Data.CharacterId}' level {level.Level} authors " +
                                    "FuryStartOfFight, but it is only legal on a character whose primary pool " +
                                    "starts at Zero, with an amount above 0.");
+                    }
+
+                    if ((level.Reward == TrackReward.MaxMana || level.Reward == TrackReward.ManaRegen)
+                        && !primaryPoolTakesManaBonuses)
+                    {
+                        errors.Add($"Reward track '{track.Data.CharacterId}' level {level.Level} authors " +
+                                   $"{level.Reward} on a primary pool with a fixed capacity rule, which " +
+                                   "ignores every outside max-mana and regen bonus, so this would pay nothing.");
                     }
 
                     // THE RESOLVER'S OWN ElementalDamagePercent-needs-against
