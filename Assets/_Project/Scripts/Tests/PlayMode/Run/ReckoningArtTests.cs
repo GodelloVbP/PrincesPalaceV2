@@ -104,6 +104,25 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(expected, Part<Image>("ReckoningCacheArt").sprite.name);
         }
 
+        // A sweep to the summary cut short leaves the offer phase mid-smear
+        // (SettleBeat only resets the summary's); the next Show opens clean.
+        [UnityTest]
+        public IEnumerator AShowAfterACutShortSweepOpensWithoutTheSmear()
+        {
+            var pages = ReckoningPageFixtures.Settle(new List<EncounterClass> { EncounterClass.Normal });
+            yield return Show(pages);
+
+            Part<RectTransform>("ReckoningOfferPhase").localScale = new Vector3(1.035f, 1f, 1f);
+            var group = Part<RectTransform>("ReckoningOfferPhase").gameObject.AddComponent<CanvasGroup>();
+            group.alpha = 0.85f;
+
+            _reckoning.Show(Reward(), pages);
+            yield return null;
+
+            Assert.AreEqual(1f, Part<RectTransform>("ReckoningOfferPhase").localScale.x, "the offer phase kept its horizontal smear");
+            Assert.AreEqual(1f, group.alpha, "the offer phase kept its fade");
+        }
+
         // ---- the chain -------------------------------------------------------------------
 
         [UnityTest]

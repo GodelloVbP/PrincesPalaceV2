@@ -505,6 +505,10 @@ namespace PrincesPalace
             offerPhase.anchoredPosition = Vector2.zero;
             summaryPhase.gameObject.SetActive(!choosing);
             summaryPhase.anchoredPosition = Vector2.zero;
+
+            // A sweep cut short (a menu opening, a disable) stops mid-smear.
+            ClearSmear(offerPhase);
+            ClearSmear(summaryPhase);
             _choosing = choosing;
             PaintEmbers();
 
@@ -1763,6 +1767,9 @@ namespace PrincesPalace
             if (phase == null) return null;
             return phase.GetComponent<CanvasGroup>() ?? phase.gameObject.AddComponent<CanvasGroup>();
         }
+
+        private static void ClearSmear(RectTransform phase) =>
+            Smear(phase, phase != null ? phase.GetComponent<CanvasGroup>() : null, 0f);
 
         private static void Smear(RectTransform phase, CanvasGroup group, float amount)
         {
