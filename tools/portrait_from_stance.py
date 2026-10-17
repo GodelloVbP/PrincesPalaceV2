@@ -6,9 +6,8 @@ Why this exists: a painted portrait is real art (see
 remove_portrait_backgrounds.py, which keys a flat-color backdrop off an
 AI-generated portrait sheet via border flood-fill) and someone has to
 commission and key one per character. Until that happens for a given
-character, giving their dossier plate someone else's face (as bear and owl
-both currently do, wearing Portraits/sheep) is worse than a soft, obviously-
-stand-in crop of art the character already has. This tool is that stopgap:
+character, giving their dossier plate someone else's face is worse than a
+soft, obviously-stand-in crop of art the character already has. This tool is that stopgap:
 it takes the idle stance PNG already sitting under Resources/<Enemies|
 Characters>/<id>/idle.png (produced by slice_actor_sheet.py) and crops a
 head-and-shoulders slice off the top of the figure's own alpha bounding
@@ -29,8 +28,8 @@ own width (plus a small margin) sets the crop width, and the target aspect
 sets the crop height from that -- so the band is always whole and centred.
 Below the band the figure is free to run wider than the crop (pauldrons,
 an out-held hammer): rather than growing the box to keep chasing that
-content in frame (an earlier version of this tool did, and for a
-broad-built figure that convergence pulled in almost the entire pose), the
+content in frame (for a
+broad-built figure the box would grow to take in almost the entire pose), the
 body is simply allowed to clip at the left/right edges. A dossier plate
 this small reads by the face, not by whether a hammer head is intact at
 the bottom corner. See `crop_box`'s docstring for the mechanics.
@@ -46,7 +45,7 @@ idle height) and the dossier plate is drawn from a source several times
 that size (Portraits/sheep.png is 1122x1402). Upscaling a ~140x175px crop
 to that resolution with LANCZOS is a real quality loss — it will read as
 soft next to a painted portrait — which is why this is a "for now" tool:
-the README section it prints a reminder to add should say so plainly.
+the README section for a borrowed portrait should say so plainly.
 Rather than resample straight to the target's exact pixel dimensions
 (a fractional, non-integer scale factor that resampling artifacts compound),
 this multiplies the crop's own native size by the largest whole integer
@@ -190,17 +189,14 @@ def main():
     # answer here: the box asked for clear air around the head, and clear air
     # is what padding gives it.
     #
-    # Clamping was the first version and it lost the tool's one stated
-    # contract -- "same aspect", not "same canvas size". A clamp shortens ONE
-    # side of the box, so the output silently comes out at a ratio the dossier
-    # plate does not draw at, and nothing says so: the PNG looks fine on its
-    # own and is stretched only once something puts it in the frame. It bit at
-    # both severities. Portraits/bear.png shipped 1010x1250 rather than
-    # 1010x1260 -- the top margin clamped away, so the crown of his head
-    # touches the frame edge, which is the one thing TOP_MARGIN exists to
-    # prevent. And an owl-shaped still (a wide head band on a canvas barely
-    # taller than the band is wide) asked for 460 rows from a 366-row canvas
-    # and got a near-SQUARE portrait, 25% off a plate drawn at 4:5.
+    # The tool's contract is "same aspect", not "same canvas size". A clamp
+    # shortens ONE side of the box, so the output silently comes out at a ratio
+    # the dossier plate does not draw at: the PNG looks fine on its own and is
+    # stretched only once something puts it in the frame. It also clamps away
+    # the top margin, so the crown of the head touches the frame edge, which
+    # TOP_MARGIN exists to prevent. An owl-shaped still (a wide head band on a
+    # canvas barely taller than the band is wide) asks for more rows than the
+    # canvas has, and a clamp would hand back a near-square portrait.
     cropped = still.crop((left, top, right, bottom))
     crop_w, crop_h = cropped.size
     print(f"crop box (source px): ({left}, {top}) - ({right}, {bottom}), size {crop_w}x{crop_h}")

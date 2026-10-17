@@ -209,13 +209,11 @@ function Invoke-ContentBuild {
 
     Write-Host "route: no Editor on this project, so batchmode."
 
-    # | Out-Host, AND IT IS NOT COSMETIC. A native call's stdout lands in the
-    # CALLING FUNCTION'S pipeline, so without this every line build_content.ps1
-    # printed -- the Mark timings included -- was swallowed into this
-    # function's return value, and the caller's `if` then saw a non-empty array
-    # and read it as success no matter what the build did. Out-Host puts the
-    # child's output where the author can see it and leaves the boolean below
-    # as the only thing this function returns.
+    # | Out-Host IS NOT COSMETIC. A native call's stdout lands in the CALLING
+    # FUNCTION'S pipeline, so without it every line build_content.ps1 prints
+    # joins this function's return value, and the caller's `if` reads the
+    # non-empty array as success whatever the build did. Out-Host shows the
+    # child's output and leaves the boolean below as the only return value.
     & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "build_content.ps1") | Out-Host
     return ($LASTEXITCODE -eq 0)
 }
@@ -275,10 +273,9 @@ function Resolve-ContentId {
 
     # $parsed, NOT $file. PowerShell variables are case-INSENSITIVE, so a
     # local called $file is the SAME variable as the [string]$File parameter:
-    # assigning the parsed object to it silently replaced the filename with a
-    # PSCustomObject, and the "no such id" message then printed the entire
-    # contents of skills.json -- readme and all -- where the filename should
-    # have been. Found the first time this ran for real.
+    # assigning the parsed object to it replaces the filename with a
+    # PSCustomObject, and the "no such id" message prints the whole JSON file
+    # where the filename belongs.
     $parsed = Get-Content $jsonPath -Raw | ConvertFrom-Json
     $ids = @($parsed.$Collection | ForEach-Object { $_.id })
 

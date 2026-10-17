@@ -18,8 +18,7 @@ clears the threshold is the pad, in pixels. Three thresholds are printed
 (8/32/128) because the kit's edges are not a hard cutoff -- a feathered edge
 can leave single-digit alpha several pixels past the actual paint, the same
 reason PngAlpha.LowestOpaqueRow does not default to zero. 32 is the
-threshold ContainerArt/ButtonPlateArt actually use (decided on the main
-tree): a uniform halo means the count agrees with 8 and 128 almost exactly,
+threshold ContainerArt/ButtonPlateArt actually use: a uniform halo means the count agrees with 8 and 128 almost exactly,
 which is itself part of what makes 32 safe to build on.
 
 GROUPING. Files are grouped by (stem, shape suffix) -- the theme token
@@ -134,7 +133,9 @@ def measure_pc_plates():
         print()
         return []
 
-    files = sorted(f for f in os.listdir(PLATE_DIR) if f.endswith(".png"))
+    # pc_plate_glow.png is the shared acting-highlight decal, not a plate.
+    files = sorted(f for f in os.listdir(PLATE_DIR)
+                   if f.endswith(".png") and f != "pc_plate_glow.png")
     if not files:
         return []
 
@@ -229,14 +230,11 @@ def main():
                     f"({worst[2][edge_index]}px). Re-measure by hand before pinning this group."
                 )
 
-        # NO PASTEABLE LINE FOR A GROUP THAT JUST FAILED ITS OWN CHECK. The
-        # number would be a mean over a spread the tool has this second
-        # declared untrustworthy -- for container_3x4's 9px left spread that
-        # mean is wrong for every one of the six themes, not right for the
-        # middle one -- and it was being printed under a heading that says
-        # "C#-PASTEABLE" with the reason not to paste it further down the
-        # output. Anything that has to be read bottom-up to be read correctly
-        # gets read wrong.
+        # NO PASTEABLE LINE FOR A GROUP THAT FAILED ITS OWN CHECK. The number
+        # would be a mean over a spread the tool has just declared
+        # untrustworthy (a 9px left spread makes the mean wrong for every
+        # theme, not right for the middle one), and a line under the
+        # "C#-PASTEABLE" heading gets pasted before the reason not to is read.
         if disagreed:
             csharp_blocks.append(
                 f"  // {label}\n"

@@ -71,6 +71,9 @@ try:
 except ImportError:
     sys.exit("numpy is required: pip install numpy")
 
+# The one edge walk the kit and the plates are both pinned with.
+from measure_ui_kit import edge_pads  # noqa: E402
+
 
 SOURCE_DIR = "Assets/_Project/Art/UI/Plates/Source"
 OUTPUT_DIR = "Assets/_Project/Resources/Plates"
@@ -153,30 +156,6 @@ def cut_columns(arr, cut_at, remove, blend):
         left[:, cut_at - blend:] = left[:, cut_at - blend:] * (1.0 - t) + donor * t
 
     return np.concatenate([left, right], axis=1).round().clip(0, 255).astype(np.uint8)
-
-
-def edge_pads(alpha, threshold):
-    """(left, top, right, bottom) in px -- the same walk tools/measure_ui_kit.py
-    does, restated here so the recipe records the pad it actually wrote rather
-    than a number from a separate run."""
-    h, w = alpha.shape
-    col_max = alpha.max(axis=0)
-    row_max = alpha.max(axis=1)
-
-    left = 0
-    while left < w and col_max[left] <= threshold:
-        left += 1
-    right = 0
-    while right < w and col_max[w - 1 - right] <= threshold:
-        right += 1
-    top = 0
-    while top < h and row_max[top] <= threshold:
-        top += 1
-    bottom = 0
-    while bottom < h and row_max[h - 1 - bottom] <= threshold:
-        bottom += 1
-
-    return left, top, right, bottom
 
 
 def head_start_column(arr):
@@ -447,7 +426,7 @@ def print_measurements(recipe):
     print()
     print("---- C#-PASTEABLE, PcPlateArt ----")
     print("  // canvas %dx%d, aspect %.6f" % (canvas_w, canvas_h, recipe["targetAspect"]))
-    print("  internal const float PlateAspect = %.4ff;" % recipe["targetAspect"])
+    print("  public const float Aspect = %.4ff;" % recipe["targetAspect"])
     worst = [0, 0, 0, 0]
     head = 0.0
     for entry in recipe["plates"]:
@@ -462,7 +441,7 @@ def print_measurements(recipe):
     print("  // WORST inset per side across the three plates, as a fraction:")
     print("  new ContentInsetFrac(left: %.4ff, right: %.4ff, top: %.4ff, bottom: %.4ff),"
           % (worst[0] / canvas_w, worst[2] / canvas_w, worst[1] / canvas_h, worst[3] / canvas_h))
-    print("  internal const float HeadZoneFrac = %.4ff;" % head)
+    print("  public const float HeadZoneFrac = %.4ff;" % head)
     print()
 
 

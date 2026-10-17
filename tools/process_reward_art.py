@@ -61,8 +61,7 @@ def grade(rgba, saturation, value, cool=0.0):
     """Scale HSV saturation and value, then lean the result toward blue by `cool`."""
     arr = np.asarray(rgba).astype(np.float32) / 255.0
     rgb = arr[..., :3]
-    mx, mn = rgb.max(-1), rgb.min(-1)
-    sat = np.where(mx > 0, (mx - mn) / np.maximum(mx, 1e-6), 0)
+    mx = rgb.max(-1)
     # grey reference at the same value, then lerp toward the original by `saturation`
     grey = np.repeat(mx[..., None], 3, -1)
     out = grey + (rgb - grey) * saturation
