@@ -235,7 +235,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             //
             // Sized for the longest line any room can produce, so a long
             // message cannot overflow a box fitted to the short ones.
-            var roomMessage = Ui.Label("MapRoomMessageLabel", UiStrings.MapRoomShop,
+            var roomMessage = Ui.Label("MapRoomMessageLabel", UiStrings.MapRoomItem,
                 new UiVec(760f, 32f), 18, "#C8BBE4", OnContent(190f, -176f))
                 .Styled(TypographyRole.Body);
 
@@ -339,10 +339,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var hone = HoneScreen.Build();
             screen.Hone = hone;
 
-            // The old paperdoll is gone; the system menu's Character pane is
-            // the character screen now. SheetPanel opens the menu instead, so
-            // every caller -- C, I, Escape, the hub's building -- reaches the
-            // dossier without any of them knowing the screen changed.
+            // The system menu's Character pane is the character screen.
+            // SheetPanel opens the menu, so every caller reaches the dossier
+            // through one path.
 
             // Viewport FIRST so the headings draw over
             // the scrolling wood rather than under it. SHOP then SYSTEM MENU,
@@ -528,11 +527,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
             return segment;
         }
 
-        // The four states a trail can be in. Colours rather than one tint at
-        // four alphas: a walked path and an unreachable one differ in what they
-        // MEAN, and the eye separates hue faster than it separates opacity.
-        //
-        // The verge half, which is the darker outer edge.
         // Soft-edged stroke the controller tints per state; both layers of a
         // road use it so neither ends on a hard line.
         public const string TrailStrokeKey = "proc:trail_stroke";
@@ -544,6 +538,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public const string VignetteHex = "#00000066";
         public const float GoldIconSize = 26f;
 
+        // The four states a trail can be in. Colours rather than one tint at
+        // four alphas: a walked path and an unreachable one differ in what they
+        // MEAN, and the eye separates hue faster than it separates opacity.
+        // The verge half, which is the darker outer edge.
         public const string TrailTakenHex = "#3A2312";
         public const string TrailOpenHex = "#462D19F2";
         public const string TrailAheadHex = "#2E1C108C";

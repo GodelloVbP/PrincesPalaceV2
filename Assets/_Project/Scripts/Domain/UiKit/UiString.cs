@@ -4,23 +4,21 @@ namespace PrincesPalace.Domain.UiKit
 {
     // Every piece of user-facing text in the game, as a value.
     //
-    // This is Contract A, and it exists because of a specific v1 failure: the
-    // builder wrote a label's initial text and a controller rewrote it at
-    // runtime, with nothing tying the two together. 116 literals, four of them
-    // confirmed drifted -- the builder writing "Gold: 0    Relics: 0" while the
-    // controller wrote $"Gold: {g}    Relics: {r}", the four-space separator
-    // copied by hand and therefore copyable wrong.
+    // This is Contract A. If the builder wrote a label's initial text and a
+    // controller rewrote it at runtime, nothing would tie the two together and
+    // a hand-copied separator ("Gold: 0    Relics: 0" against
+    // $"Gold: {g}    Relics: {r}") could drift.
     //
-    // The fix is not discipline. Ui.Label and Ui.Button accept ONLY a UiString,
-    // so a bare literal at a construction site does not compile, and controllers
-    // set text exclusively through Core's UiText extensions -- which take the
-    // same UiString. Builder text and runtime text become the same template by
-    // construction, and those four drift pairs collapse into four entries.
+    // The guarantee is not discipline. Ui.Label and Ui.Button accept ONLY a
+    // UiString, so a bare literal at a construction site does not compile, and
+    // controllers set text exclusively through Core's UiText extensions --
+    // which take the same UiString. Builder text and runtime text are the same
+    // template by construction.
     public readonly struct UiString
     {
         // Stable identifier. The seam a localisation table would key on later;
         // nothing depends on that yet, but naming it now costs nothing and
-        // retrofitting it across 116 sites would not.
+        // retrofitting it across every site would not.
         public readonly string Key;
 
         // A composite format string ("Gold: {0}") or a plain literal.

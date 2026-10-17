@@ -215,7 +215,7 @@ namespace PrincesPalace.Domain.UiKit
             foreach (var stat in Feeds(score, primaryPoolRule))
             {
                 int gain = DerivedBonus(stat, bumped) - DerivedBonus(stat, scores);
-                if (gain != 0) parts.Add($"{(gain > 0 ? "+" : "")}{gain} {LabelFor(stat).Template}");
+                if (gain != 0) parts.Add(UiStrings.StatPerPointPart.Format(gain, LabelFor(stat).Template));
             }
 
             if (parts.Count == 0)
@@ -228,12 +228,12 @@ namespace PrincesPalace.Domain.UiKit
                 // Feeds drops the pool row for them, so the summary says
                 // Magical Defense alone rather than promising a capacity that
                 // will not move.
-                return Feeds(score, primaryPoolRule).Length == 0
-                    ? "Feeds no stat directly - it scales weapons and skills."
-                    : "The next point does not move a stat.";
+                return (Feeds(score, primaryPoolRule).Length == 0
+                    ? UiStrings.StatPerPointNoFeed
+                    : UiStrings.StatPerPointNoChange).Template;
             }
 
-            return "One more point: " + string.Join(", ", parts);
+            return UiStrings.StatPerPoint.Format(string.Join(", ", parts));
         }
 
         // What moving the scores from `before` to `after` does to one derived

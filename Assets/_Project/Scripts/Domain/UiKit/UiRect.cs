@@ -6,8 +6,8 @@ namespace PrincesPalace.Domain.UiKit
     //
     // Centre-based rather than min/max because that is the convention every
     // position in this project is authored in, and because it is what a
-    // RectTransform's anchoredPosition means at a centre pivot. Min/Max are
-    // derived on demand for the audit's overlap and containment maths.
+    // RectTransform's anchoredPosition means at a centre pivot. Left, Right,
+    // Bottom and Top are derived on demand for the audit's overlap and containment maths.
     public readonly struct UiRect : IEquatable<UiRect>
     {
         public readonly UiVec Centre;

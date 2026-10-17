@@ -3,10 +3,9 @@ namespace PrincesPalace.Domain.UiKit
     // Inner padding on a container: the band between its own rect and the area
     // its children are laid out in.
     //
-    // A container property, never a per-child one. In v1 the equivalent was
-    // spelled out at each construction site as an adjusted start coordinate,
-    // which is exactly how "the count came from content but the offsets stayed
-    // hardcoded" bugs were written.
+    // A container property, never a per-child one. Spelled out at each
+    // construction site as an adjusted start coordinate, it is how "the count
+    // came from content but the offsets stayed hardcoded" bugs get written.
     public readonly struct UiPad
     {
         public readonly float Left;

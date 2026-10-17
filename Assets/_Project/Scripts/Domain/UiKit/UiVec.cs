@@ -9,6 +9,11 @@ namespace PrincesPalace.Domain.UiKit
     // second, with no scene, no Canvas and no Unity object lifecycle.
     //
     // The emitter converts to Vector2 at the boundary and nowhere else.
+    //
+    // The canvas convention this whole layer is authored in: centre origin,
+    // +y UP, 1920x1080 reference frame ("authored == rendered"). Anything
+    // that reads like a screen coordinate with +y DOWN is a bug at the
+    // boundary, not here.
     public readonly struct UiVec : IEquatable<UiVec>
     {
         public readonly float X;
@@ -23,10 +28,8 @@ namespace PrincesPalace.Domain.UiKit
         public static UiVec Zero => new UiVec(0f, 0f);
         public static UiVec One => new UiVec(1f, 1f);
 
-        // The canvas convention this whole layer is authored in: centre origin,
-        // +y UP, 1920x1080 reference frame ("authored == rendered"). Anything
-        // that reads like a screen coordinate with +y DOWN is a bug at the
-        // boundary, not here.
+        // The half-fraction (0.5, 0.5): the middle of a rect, used as an
+        // anchor or pivot.
         public static UiVec Centre => new UiVec(0.5f, 0.5f);
 
         public UiVec WithX(float x) => new UiVec(x, Y);

@@ -17,8 +17,8 @@ namespace PrincesPalace.Domain.UiKit
     // both, and the combination that is genuinely circular -- Fill inside
     // FromChildren on the same axis -- is refused rather than guessed at.
     //
-    // Pure arithmetic over plain structs: no Unity types, no allocation beyond
-    // the result tree, and fast enough that auditing every screen at four canvas
+    // Pure arithmetic over plain structs: no Unity types, build-time only (it
+    // allocates the result tree plus per-container scratch lists), and fast enough that auditing every screen at four canvas
     // aspects on every build is free.
     public static class UiSolver
     {

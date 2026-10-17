@@ -15,7 +15,7 @@ namespace PrincesPalace.Domain.UiKit
 
     // Per AXIS, not per node — a row of buttons that fills the panel's width
     // while standing 60px tall is ordinary, and forcing one mode onto both axes
-    // is the kind of expressiveness gap that made v1's NewUiRect bypassable.
+    // is the kind of expressiveness gap that gets a layout API bypassed.
     //
     // The two non-Fixed modes flow in OPPOSITE directions, which is precisely
     // why the solver is two-phase (measure bottom-up, then arrange top-down)

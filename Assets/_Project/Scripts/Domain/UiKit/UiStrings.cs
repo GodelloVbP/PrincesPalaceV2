@@ -3,12 +3,9 @@ using System.Reflection;
 
 namespace PrincesPalace.Domain.UiKit
 {
-    // THE string manifest. AUDIT #35 asked for exactly this and v1 never had it.
-    //
-    // Grows as screens are rebuilt; this is the starter set, seeded from strings
-    // that genuinely exist in v1 rather than invented. Entries are added here
-    // and nowhere else, because Ui.Label and Ui.Button take no string overload
-    // and Core's UiText extensions take no string overload either.
+    // THE string manifest (AUDIT #35). Entries are added here and nowhere
+    // else, because Ui.Label and Ui.Button take no string overload and Core's
+    // UiText extensions take no string overload either.
     //
     // One file until it hurts, then partials of this same class. The guarantee
     // is the missing overloads and the lint, not the file count.
@@ -24,7 +21,6 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString PagerPrev = UiString.Define("pager.prev", "<");
         public static readonly UiString PagerNext = UiString.Define("pager.next", ">");
 
-        // --- main menu ------------------------------------------------------
         // ---- talents -------------------------------------------------------
 
         public static readonly UiString TalentEmbers =
@@ -148,11 +144,10 @@ namespace PrincesPalace.Domain.UiKit
         // pieces let it stand at 34 while the word LEVEL in front of it and
         // the rest of the words around it stay quiet at 18.
         //
-        // THE REWARD'S NAME IS BACK, having been cut once for good reason: as
-        // part of a single centred sentence it ran to eighty characters and
-        // collided with CLOSE. It has its own box now, which is what the text
-        // fit audit measures against, so the collision is a build failure
-        // rather than something to discover in a screenshot.
+        // THE REWARD'S NAME HAS ITS OWN BOX: in a single centred sentence it
+        // ran to eighty characters and collided with CLOSE. The text fit audit
+        // measures against that box, so a collision is a build failure rather
+        // than something to discover in a screenshot.
         public static readonly UiString TrackLevelWord =
             UiString.Define("track.level_word", "LEVEL");
 
@@ -188,7 +183,7 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString TrackCardCollected = UiString.Define("track.card_collected", "ALREADY YOURS");
         public static readonly UiString TrackCardToCome = UiString.Define("track.card_to_come", "STILL AHEAD");
 
-        // The card's level is a FIGURE now, standing at the right end of the
+        // The card's level is a FIGURE, standing at the right end of the
         // header row after a small "LVL" -- so the word and the number are two
         // strings, at two sizes, rather than one label reading "LEVEL 48".
         public static readonly UiString TrackCardLvl =
@@ -287,9 +282,7 @@ namespace PrincesPalace.Domain.UiKit
 
         // ---- descent map ----------------------------------------------------
 
-        // The top band: the floor, then the realm's name and the rooms walked.
-        // Every floor without a designed realm (P8) is the default realm, and
-        // its name is the descent itself.
+        // The top band: the floor and the rooms walked.
         public static readonly UiString MapTitle =
             UiString.Define("map.title", "FLOOR {0}  ·  ROOM {1}", "FLOOR 99  ·  ROOM 999");
         // The coin is drawn beside the amount, so the word is gone; banked gold
@@ -330,15 +323,13 @@ namespace PrincesPalace.Domain.UiKit
         // content behind them yet: a room that does nothing without
         // explaining itself reads as a bug.
         //
-        // "Gold", not v1's "Embers": gold and embers are two different
+        // "Gold", not "Embers": gold and embers are two different
         // currencies (gold is spent inside a descent, embers survive it).
         public static readonly UiString MapRoomTreasure =
             UiString.Define("map.room.treasure", "You found a stash of {0} Gold.",
                 "You found a stash of 999 Gold.");
         public static readonly UiString MapRoomRest =
             UiString.Define("map.room.rest", "The squad rests, and recovers to full health.");
-        public static readonly UiString MapRoomShop =
-            UiString.Define("map.room.shop", "A trader waits here. (In-run shops are not built yet.)");
         public static readonly UiString MapRoomEvent =
             UiString.Define("map.room.event", "Something stirs here, but nothing comes of it.");
         public static readonly UiString MapRoomItem =
@@ -478,6 +469,16 @@ namespace PrincesPalace.Domain.UiKit
         // and what did it ("10 → 13 (Stampede)"), plan C4.
         public static readonly UiString StatEffective =
             UiString.Define("stat.effective", "{0} → {1} ({2})", "1000 → 1000 (Stampede)");
+
+        // SheetStats.PerPointSummary: what one more point of a score buys.
+        public static readonly UiString StatPerPoint =
+            UiString.Define("stat.per_point", "One more point: {0}", "One more point: +99 Max Mana, +99 Magical Defense");
+        public static readonly UiString StatPerPointPart =
+            UiString.Define("stat.per_point_part", "{0:+0;-0} {1}", "+99 Magical Defense");
+        public static readonly UiString StatPerPointNoFeed =
+            UiString.Define("stat.per_point_no_feed", "Feeds no stat directly - it scales weapons and skills.");
+        public static readonly UiString StatPerPointNoChange =
+            UiString.Define("stat.per_point_no_change", "The next point does not move a stat.");
 
         // What a shredded armour point is called when the fight is the source.
         public static readonly UiString FightModifierArmourShred =
@@ -1146,9 +1147,7 @@ namespace PrincesPalace.Domain.UiKit
 
         // The card's own gold figure, sitting beside a number badge and two
         // lines of detail that already say which slot it is -- so this is a
-        // bare amount, not a sentence that names the slot again. Same
-        // template MapGold uses, kept as its own entry rather than reused
-        // across two unrelated screens' names.
+        // bare amount, not a sentence that names the slot again.
         public static readonly UiString SlotGold =
             UiString.Define("slot_gold", "{0} GOLD", "99999 GOLD");
 
@@ -1173,6 +1172,9 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("confirm_quit", "Quit to desktop? A run in progress ends and pays out what it earned.");
 
         // --- combat ---------------------------------------------------------
+        // The titles (CommandTitle, Submenu*Title) are letterspaced by hand.
+        // That spacing is typography, not data, which is why it belongs in the
+        // manifest text and not in a formatter somewhere.
         public static readonly UiString CommandTitle = UiString.Define("command_title", "C O M M A N D");
         public static readonly UiString Back = UiString.Define("back", "BACK");
 
@@ -1189,9 +1191,6 @@ namespace PrincesPalace.Domain.UiKit
 
         // --- the fight screen -------------------------------------------------
         //
-        // The verbs are letterspaced by hand, as v1 authored them. That spacing
-        // is typography, not data, which is why it belongs in the manifest text
-        // and not in a formatter somewhere.
         public static readonly UiString VerbAttack = UiString.Define("verb_attack", "ATTACK");
         public static readonly UiString VerbSkill = UiString.Define("verb_skill", "SKILL");
         public static readonly UiString VerbItem = UiString.Define("verb_item", "ITEM");
@@ -1230,8 +1229,7 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("pool_tag", "{0}", "WISDOM");
         public static readonly UiString Continue = UiString.Define("continue", "Continue");
 
-        // Plate templates. v1 formatted these inline in FightController, in five
-        // places, with the slash and spacing retyped each time.
+        // Plate templates: one home for the slash and spacing.
         public static readonly UiString HealthValue =
             UiString.Define("health_value", "{0}/{1}", "9999/9999");
         public static readonly UiString SignatureValue =
@@ -1247,13 +1245,11 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString HpValueTagged =
             UiString.Define("hp_value_tagged", "HP {0}/{1}", "HP 9999/9999");
 
-        // The reasoning above still holds for HP -- "HP" is authored UI
-        // copy and belongs here -- but the second meter's tag is not copy:
-        // the pool a character actually holds owns its own shortTag
-        // (pools.json), and a roster card that printed a literal "MP" would
-        // say MP over a bar full of somebody's rage. So the tag is a
-        // PARAMETER here, exactly as the signature line's resource name
-        // below already is.
+        // The second meter's tag is not authored copy, unlike "HP": the pool a
+        // character actually holds owns its own shortTag (pools.json), and a
+        // roster card that printed a literal "MP" would say MP over a bar
+        // full of somebody's rage. So the tag is a PARAMETER here, exactly as
+        // the signature line's resource name below is.
         //
         // A CLONE OF SignatureNamedValue, not a reuse of it, because the two
         // are measured against different boxes: this one is drawn ON a
@@ -1305,12 +1301,8 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString DetailStatEffect = UiString.Define("detail_stat_effect", "EFFECT");
         public static readonly UiString DetailStatScaling = UiString.Define("detail_stat_scaling", "SCALES");
 
-        // The way out of targeting. It reads ESC because that is what the row
-        // it replaced said, and because a player who has learned that key in
-        // every other menu should not have to unlearn it here -- even though
-        // the fight scene's Escape belongs to the system menu and this is a
-        // click. Named honestly rather than promising a key that does something
-        // else would be the alternative, and "CANCEL" alone loses the mnemonic.
+        // The way out of targeting. It says CANCEL rather than ESC because the
+        // fight scene's Escape belongs to the system menu and this is a click.
         public static readonly UiString TargetCancel = UiString.Define("fight.target_cancel", "CANCEL");
 
         public static readonly UiString TargetPrompt =
@@ -1331,11 +1323,9 @@ namespace PrincesPalace.Domain.UiKit
         // What the counter says when the fight authored no roundLabel.
         public static readonly UiString FightRoundDefaultLabel = UiString.Define("fight.round_default", "Round");
 
-        // The rework's group-target wording -- revives what was, until the
-        // group-target confirm fix, dead copy: nothing routed an AllEnemies
-        // skill through Target depth for this to ever be read. It is reachable
-        // now, so it is worded distinctly from the single-target prompt above:
-        // there is genuinely nothing to aim at, only something to confirm.
+        // The group-target wording: an AllEnemies skill routes through Target
+        // depth, and there is nothing to aim at, only something to confirm, so
+        // it is worded distinctly from the single-target prompt above.
         public static readonly UiString TargetPromptGroup =
             UiString.Define("target_prompt_group", "{0} — confirm on any enemy plate.",
                 "Boulder Slam — confirm on any enemy plate.");
@@ -1376,15 +1366,6 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString FightSeatFront = UiString.Define("fight_seat_front", "Front");
         public static readonly UiString FightSeatMiddle = UiString.Define("fight_seat_middle", "Middle");
         public static readonly UiString FightSeatRear = UiString.Define("fight_seat_rear", "Rear");
-
-        // A transformation IS a status on the character, so it reads out
-        // through the badge row on the party plate and the roster card
-        // like every other one, and its "X turns"/"permanent" wording
-        // lives in StatusHud.TransformRow's
-        // tooltip beside the twelve status tooltips it belongs with -- a
-        // hover string, not a label, so it is not a UiStrings entry at all.
-        // The 36px the strip reserved is what paid for the roster cards'
-        // extra rows; see FightScreen's own RosterPlateH note.
 
         // ---- the overarching menu ------------------------------------------
         //
@@ -1726,10 +1707,10 @@ namespace PrincesPalace.Domain.UiKit
 
         // Every entry declared above, derived rather than restated.
         //
-        // This was a hand-maintained 92-line second copy of the 317 names, and
-        // the copy was the whole problem: an entry left out of it was invisible
-        // to the AuditSample check and to the unique-key check, so the one place
-        // that could catch a bad string silently skipped it. Reflection over the
+        // A hand-maintained list of the names would be a second copy, and an
+        // entry left out of it would be invisible to the AuditSample check and
+        // to the unique-key check, so the one place that could catch a bad
+        // string would silently skip it. Reflection over the
         // class's own public static readonly UiString fields cannot skip one --
         // the declaration IS the registration, and there is no second list to
         // forget. System.Reflection is BCL, so Domain stays engine-free.
