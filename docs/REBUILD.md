@@ -73,7 +73,7 @@ already shipped or narrowly avoided. Nothing here is theoretical.
       behind**, never a child — uGUI draws later siblings on top, so a child
       paints over its own parent.
 - [ ] **A `Graphic` with no sprite renders as a solid white quad**, not as
-      nothing. Carry `WhiteQuadTests`' sweep over.
+      nothing. `UiKitAuditTests` sweeps for it.
 
 ### Content / assets
 - [ ] **Do NOT carry `[CreateAssetMenu]` onto the `*Definition` types.**
