@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using NUnit.Framework;
 using PrincesPalace.Domain.Talents;
+using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace.Domain.Tests
 {
@@ -121,6 +122,15 @@ namespace PrincesPalace.Domain.Tests
             var unlocked = new HashSet<string>();
 
             Assert.IsFalse(TalentPage.EdgeIsLit(tree, Path, Strand0, Convergence, unlocked));
+        }
+
+        // The locked label names the level the character's own track grants
+        // the respec at, so a track that moves it does not leave "8" on screen.
+        [Test]
+        public void TheLockedRespecLabelNamesTheLevelItIsGivenAt()
+        {
+            Assert.AreEqual("RESPEC · REWARD 8", UiStrings.TalentRespecLocked.Format(8));
+            Assert.AreEqual("RESPEC · REWARD 12", UiStrings.TalentRespecLocked.Format(12));
         }
     }
 }

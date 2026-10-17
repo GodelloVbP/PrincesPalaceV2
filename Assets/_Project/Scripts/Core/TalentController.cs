@@ -97,7 +97,7 @@ namespace PrincesPalace
         [SerializeField] internal RectTransform[] shootingStars;
         [SerializeField] internal Image[] shootingStarImages;
 
-        // Level 20 of the reward track. See Respec().
+        // Granted by the reward track (RewardTracks.For(character).UnlockLevel). See OpenRespec().
         [SerializeField] internal Button respecButton;
         [SerializeField] internal GameObject respecDialog;
         [SerializeField] internal TMP_Text respecDialogBody;
@@ -551,7 +551,7 @@ namespace PrincesPalace
             RewardTracks.For(character).HasUnlocked(TrackReward.Respec, character.claimedTrackLevel);
 
         // Gives back everything this character has committed, so they can
-        // spend it again. Level 20 of the reward track.
+        // spend it again. Granted by the reward track.
         //
         // IT ASKS FIRST: a single press clearing all three constellations
         // outright, with nothing between the pointer and twenty-one dark
@@ -698,8 +698,10 @@ namespace PrincesPalace
                 respecButton.SetShown(true);
                 respecButton.interactable = earned
                     && character.HasAnythingToRespec(ContentDatabase.SpentBy(character));
-                respecButton.GetComponentInChildren<TMP_Text>(includeInactive: true)
-                    ?.Set(earned ? UiStrings.TalentRespec : UiStrings.TalentRespecLocked);
+                var respecLabel = respecButton.GetComponentInChildren<TMP_Text>(includeInactive: true);
+                if (earned) respecLabel?.Set(UiStrings.TalentRespec);
+                else respecLabel?.Set(UiStrings.TalentRespecLocked,
+                    RewardTracks.For(character).UnlockLevel(TrackReward.Respec));
                 respecButton.GetComponent<ThemedButtonState>()?.Refresh();
             }
 
