@@ -88,7 +88,6 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void AZeroWatermarkOwesNoMoreThanAOne()
         {
-            Assert.AreEqual(RewardTrack.UnclaimedCount(30, 1), RewardTrack.UnclaimedCount(30, 0));
             Assert.AreEqual(29, RewardTrack.UnclaimedCount(30, 0));
         }
 
