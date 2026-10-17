@@ -28,6 +28,10 @@ namespace PrincesPalace.Domain.Combat
         // between it and the rates matters.
         private const float TurnThreshold = 100f;
 
+        // The highest charge a pull may leave an entry at: strictly under the
+        // line, so a pull is a position and never a turn.
+        private const float PullCeiling = TurnThreshold - 0.01f;
+
         private readonly List<Entry> _entries = new List<Entry>();
         private Entry _current;
         private int _round;
@@ -462,7 +466,13 @@ namespace PrincesPalace.Domain.Combat
                     return;
                 }
 
-                entry.Charge = above + 1f;
+                float destination = Math.Min(above + 1f, PullCeiling);
+                if (destination <= entry.Charge)
+                {
+                    return;
+                }
+
+                entry.Charge = destination;
             }
         }
 
@@ -543,7 +553,7 @@ namespace PrincesPalace.Domain.Combat
 
             if (highest > float.MinValue && entry.Charge <= highest)
             {
-                entry.Charge = highest + 1f;
+                entry.Charge = Math.Max(entry.Charge, Math.Min(highest + 1f, PullCeiling));
             }
 
             return true;

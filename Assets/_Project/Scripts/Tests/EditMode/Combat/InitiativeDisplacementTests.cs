@@ -80,6 +80,32 @@ namespace PrincesPalace.Domain.Tests
                 "D moved two forecast positions on one slot, because a slot moves past a level");
         }
 
+        // Another entry sits at 99, one under the line. +1 would be 100: the
+        // pulled actor would be ready at once with its overflow carried.
+        [Test]
+        public void AnAdvancePastAnEntryNearTheLine_StaysUnderTheThreshold()
+        {
+            var order = Acting("A");
+            Join(order, "B", charge: 99, speed: 10);
+            Join(order, "C", charge: 50, speed: 10);
+
+            Assert.IsTrue(order.PullForward("C", 1));
+
+            Assert.AreEqual(99.99f, order.ChargeOf("C"), 0.0001f, "just under the threshold, still past B");
+        }
+
+        [Test]
+        public void APullToFrontPastAnEntryNearTheLine_StaysUnderTheThreshold()
+        {
+            var order = Acting("A");
+            Join(order, "B", charge: 99, speed: 10);
+            Join(order, "C", charge: 50, speed: 10);
+
+            Assert.IsTrue(order.PullToFront("C"));
+
+            Assert.AreEqual(99.99f, order.ChargeOf("C"), 0.0001f, "just under the threshold, still past B");
+        }
+
         // ---- (b) a fast actor appearing twice ----------------------------------
 
         [Test]
