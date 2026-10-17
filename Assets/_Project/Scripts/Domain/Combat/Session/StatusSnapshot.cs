@@ -94,20 +94,27 @@ namespace PrincesPalace.Domain.Combat.Session
 
         public static StatusSnapshot Capture(FightSession session, CombatantState actor)
         {
-            var statuses = new List<StatusEffects.StatusSummary>();
-            var seen = new HashSet<StatusEffectType>();
+            // Both lists are read-only to every consumer, so an idle combatant
+            // shares the empty array instead of allocating per beat.
+            IReadOnlyList<StatusEffects.StatusSummary> statuses = System.Array.Empty<StatusEffects.StatusSummary>();
+            List<StatusEffects.StatusSummary> found = null;
+            HashSet<StatusEffectType> seen = null;
             foreach (var status in actor.Statuses)
             {
                 if (status.Type == StatusEffectType.Shielded) continue;
+                seen ??= new HashSet<StatusEffectType>();
                 if (!seen.Add(status.Type)) continue;
-                statuses.Add(StatusEffects.SummariseStatus(actor, status.Type));
+                found ??= new List<StatusEffects.StatusSummary>();
+                found.Add(StatusEffects.SummariseStatus(actor, status.Type));
             }
+            if (found != null) statuses = found;
 
             var transformation = actor.Transformation;
             var suppression = actor.Suppression;
 
             int rallyStacks = 0, rallyPercent = 0;
-            var speed = new List<SpeedGrant>();
+            IReadOnlyList<SpeedGrant> speed = System.Array.Empty<SpeedGrant>();
+            List<SpeedGrant> grants = null;
             bool marked = false;
             if (session != null)
             {
@@ -119,9 +126,11 @@ namespace PrincesPalace.Domain.Combat.Session
                 {
                     // A status-driven entry already has its own summary above.
                     if (buff.Source is StatusEffectType) continue;
-                    speed.Add(new SpeedGrant(FightHudModel.SpeedSourceName(kit, buff.Source), buff.Granted,
+                    grants ??= new List<SpeedGrant>();
+                    grants.Add(new SpeedGrant(FightHudModel.SpeedSourceName(kit, buff.Source), buff.Granted,
                         buff.TurnsLeft));
                 }
+                if (grants != null) speed = grants;
 
                 marked = session.IsMarked(actor);
             }

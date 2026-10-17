@@ -577,14 +577,12 @@ namespace PrincesPalace.Domain.Combat
             // dead combatant that is about to be undead — IsAlive is read all
             // over this codebase and a one-statement window where it lies is
             // a bug waiting for a reordering.
-            bool cheatedDeath = false;
             if (toHealth >= target.CurrentHealth
                 && target.CurrentHealth > 0
                 && !target.CheatDeathSpent
                 && target.Effects.Has(EffectKind.CheatDeathOncePerFight))
             {
                 target.CheatDeathSpent = true;
-                cheatedDeath = true;
                 target.CurrentHealth = 1;
 
                 // BLOOD PRICE T3's second half: the save also fills the primary
@@ -600,7 +598,7 @@ namespace PrincesPalace.Domain.Combat
             }
 
             target.CurrentHealth = Math.Max(0, target.CurrentHealth - toHealth);
-            return new DamageResult(absorbed, cheatedDeath);
+            return new DamageResult(absorbed, false);
         }
 
         public static void Heal(CombatantState target, int amount)

@@ -479,7 +479,17 @@ namespace PrincesPalace.Domain.Combat
         private bool _followersLeftWithLeader;
 
         // Whether any enemy is still standing or still waiting to come on.
-        private bool AnyEnemyLeft => LivingEnemies.Any() || _reinforcements.Count > 0;
+        private bool AnyEnemyLeft => AnyAlive(_enemies) || _reinforcements.Count > 0;
+
+        // Index loop, not LINQ: IsOver is polled from input gating and the HUD.
+        private static bool AnyAlive(List<CombatantState> side)
+        {
+            for (int i = 0; i < side.Count; i++)
+            {
+                if (side[i].IsAlive) return true;
+            }
+            return false;
+        }
 
         // WHICH ROUND THE SCHEDULE IS IN, 1 from Start. A round is how long a
         // baseline-speed combatant takes to earn one turn (TurnOrder's own
@@ -508,17 +518,29 @@ namespace PrincesPalace.Domain.Combat
 
         // A queued reinforcement keeps the fight going with the field empty:
         // the next turn boundary seats it.
-        public bool IsOver => EndedBySurvival || LeaderFell || !LivingPlayerParty.Any() || !AnyEnemyLeft;
+        public bool IsOver => EndedBySurvival || LeaderFell || !AnyAlive(_party) || !AnyEnemyLeft;
 
         // A SURVIVED FIGHT IS A WIN, with a living enemy on the field, and so
         // is one whose leader fell. Code downstream that needs "every enemy is
         // dead" must ask LivingEnemies, not this (risk R3 in that plan).
-        public bool PlayerWon => IsOver && LivingPlayerParty.Any()
+        public bool PlayerWon => IsOver && AnyAlive(_party)
                                  && (EndedBySurvival || LeaderFell || !AnyEnemyLeft);
 
         // The leader fell with enemies still standing or queued: they leave
         // with it, and the ending says so rather than "every enemy is down".
         public bool EndedByLeaderFalling => PlayerWon && !EndedBySurvival && LeaderFell && (AnyEnemyLeft || _followersLeftWithLeader);
+
+        // The shared guard of the three projections: a count under one is a caller
+        // bug, and a finished fight has no next turn.
+        private bool ProjectionIsEmpty(int count)
+        {
+            if (count <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(count), count, "Ask for at least one upcoming turn.");
+            }
+
+            return IsOver;
+        }
 
         // The next `count` turns, starting with whoever is acting right now,
         // for the initiative tracker to display.
@@ -541,15 +563,7 @@ namespace PrincesPalace.Domain.Combat
         // exist.
         public IReadOnlyList<CombatantState> UpcomingTurns(int count)
         {
-            if (count <= 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(count), count, "Ask for at least one upcoming turn.");
-            }
-
-            if (IsOver)
-            {
-                return new List<CombatantState>();
-            }
+            if (ProjectionIsEmpty(count)) return new List<CombatantState>();
 
             return _turnOrder.Project(count, combatant => combatant.IsAlive);
         }
@@ -563,15 +577,7 @@ namespace PrincesPalace.Domain.Combat
         // push would actually do to it.
         public IReadOnlyList<CombatantState> UpcomingTurnsPushed(CombatantState pushedActor, int slots, int count)
         {
-            if (count <= 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(count), count, "Ask for at least one upcoming turn.");
-            }
-
-            if (IsOver)
-            {
-                return new List<CombatantState>();
-            }
+            if (ProjectionIsEmpty(count)) return new List<CombatantState>();
 
             return _turnOrder.ProjectPushed(pushedActor, slots, count, combatant => combatant.IsAlive);
         }
@@ -581,15 +587,7 @@ namespace PrincesPalace.Domain.Combat
         // either -- TurnOrder.ProjectPulled runs on a Snapshot (plan 1.13).
         public IReadOnlyList<CombatantState> UpcomingTurnsPulled(CombatantState pulledActor, int slots, int count)
         {
-            if (count <= 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(count), count, "Ask for at least one upcoming turn.");
-            }
-
-            if (IsOver)
-            {
-                return new List<CombatantState>();
-            }
+            if (ProjectionIsEmpty(count)) return new List<CombatantState>();
 
             return _turnOrder.ProjectPulled(pulledActor, slots, count, combatant => combatant.IsAlive);
         }
