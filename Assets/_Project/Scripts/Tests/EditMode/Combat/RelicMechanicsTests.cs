@@ -134,6 +134,56 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(Marks.IsMarked(foe2));
         }
 
+        // A full party where every member carries the same drafted relic, as
+        // FightEncounterAdapter hands them out.
+        private static (FightSession session, CombatantState[] heroes, CombatantState[] foes) PartyFight(
+            EffectKind relic, int foeAttack = 1)
+        {
+            var heroes = new[]
+            {
+                new CombatantState("Shawn", true, 100, 100, 20, 20),
+                new CombatantState("Odette", true, 100, 100, 20, 20),
+                new CombatantState("Bjorn", true, 100, 100, 20, 20),
+            };
+            var foes = new[]
+            {
+                new CombatantState("Foe1", false, 100, 0, foeAttack, 1),
+                new CombatantState("Foe2", false, 100, 0, foeAttack, 1),
+                new CombatantState("Foe3", false, 100, 0, foeAttack, 1),
+            };
+
+            var kits = new List<PlayerKit>();
+            foreach (var hero in heroes)
+            {
+                kits.Add(new PlayerKit(hero.Name, CharacterRole.Tank, null,
+                    new List<ResolvedRelic> { Relic(relic) }, null));
+            }
+
+            var session = new FightSession(new CombatEncounter(heroes, foes), kits,
+                new List<EnemyKit> { Foe("Foe1"), Foe("Foe2"), Foe("Foe3") },
+                new SeededRandom(5)) { DamageVarianceRange = 0f };
+            TestRelics.Hold(session);
+            session.Begin();
+            return (session, heroes, foes);
+        }
+
+        private static int CountMessages(FightSession session, string fragment)
+        {
+            var all = new List<string>(session.DrainImmediateMessages());
+            foreach (var beat in session.DrainBeats()) all.AddRange(beat.Messages);
+            return all.Count(m => m.Contains(fragment));
+        }
+
+        [Test]
+        public void JarOfBearUrineUncorksOncePerPartyNotOncePerMember()
+        {
+            var (session, _, foes) = PartyFight(EffectKind.JarOfBearUrine);
+
+            foreach (var foe in foes) Assert.IsTrue(Marks.IsMarked(foe));
+            Assert.AreEqual(1, CountMessages(session, "uncorks the jar"),
+                "three holders, one jar: the party logs it once");
+        }
+
         // ---- world ender's crown -------------------------------------------------
 
         [Test]
@@ -638,6 +688,20 @@ namespace PrincesPalace.Domain.Tests
             // claim here: a second RandomLivingEnemy draw never happens
             // because InconspicuousKeyOnKill returns before reaching it.
             Assert.IsTrue(session.IsOver);
+        }
+
+        [Test]
+        public void TheKeyFiresOncePerCombatForTheWholeParty()
+        {
+            var (session, heroes, foes) = PartyFight(EffectKind.InconspicuousKey, foeAttack: 7);
+            foes[0].CurrentHealth = 1;
+
+            session.DealCreditedBlowForTest(heroes[0], foes[0], 5); // first holder's kill: the key answers
+            foes[1].CurrentHealth = 1;
+            session.DealCreditedBlowForTest(heroes[1], foes[1], 5); // a second holder's kill: the party's key is spent
+
+            Assert.AreEqual(1, CountMessages(session, "answers the key's call"),
+                "one key for the party, not one per wearer");
         }
 
         // ---- dancer's anklet -----------------------------------------------------------

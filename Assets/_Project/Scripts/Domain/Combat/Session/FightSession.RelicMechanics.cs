@@ -31,22 +31,36 @@ namespace PrincesPalace.Domain.Combat.Session
     {
         // ---- jar of bear urine ----------------------------------------------------
 
+        // Relics are drafted for the whole PARTY (FightEncounterAdapter's own
+        // header): every member's kit carries the identical list. A relic whose
+        // text is about "you" or "the party" rather than the wearer's own action
+        // fires once, for this first holder. The seam Loaded Dice, Jar of Bear
+        // Urine and Inconspicuous Key share. The dictionary is never reordered
+        // mid-fight, so "first" is stable; a dead first holder still owns a lock.
+        private CombatantState FirstPartyHolder(EffectKind kind)
+        {
+            foreach (var kit in _playerKits)
+            {
+                if (kit.Key.Effects.Has(kind)) return kit.Key;
+            }
+
+            return null;
+        }
+
         // Called once from Begin(), before the first GrantTurnStart -- every
         // enemy on the field is marked from the very first beat, whichever
         // side acts first.
         private void RelicsOnCombatBegin()
         {
-            foreach (var kit in _playerKits)
+            var jarHolder = FirstPartyHolder(EffectKind.JarOfBearUrine);
+            if (jarHolder != null)
             {
-                var actor = kit.Key;
-                if (!actor.Effects.Has(EffectKind.JarOfBearUrine)) continue;
-
                 foreach (var enemy in _encounter.LivingEnemies)
                 {
-                    Marks.Apply(enemy, actor);
+                    Marks.Apply(enemy, jarHolder);
                 }
 
-                AppendMessage($"{actor.Name} uncorks the jar - every enemy reeks, and is marked.");
+                AppendMessage($"{jarHolder.Name} uncorks the jar - every enemy reeks, and is marked.");
             }
 
             LoadedDiceOnCombatBegin();
@@ -306,39 +320,31 @@ namespace PrincesPalace.Domain.Combat.Session
 
         // ---- loaded dice -------------------------------------------------------------
 
-        // Called once from RelicsOnCombatBegin. Relics are drafted for the
-        // whole PARTY (FightEncounterAdapter's own header) -- every party
-        // member's kit carries the identical relic list -- so this returns
-        // the instant it fires rather than looping every holder the way Jar
-        // of Bear Urine's idempotent re-marking can afford to: a second
-        // stun would consume a second RNG draw and desync a seeded replay
-        // for no gameplay reason, and stunning the same enemy twice reads
-        // as a bug, not a bonus.
+        // Called once from RelicsOnCombatBegin, for the first holder only: a
+        // second stun would consume a second RNG draw and desync a seeded
+        // replay for no gameplay reason, and stunning twice reads as a bug,
+        // not a bonus.
         private void LoadedDiceOnCombatBegin()
         {
-            foreach (var kit in _playerKits)
+            var actor = FirstPartyHolder(EffectKind.LoadedDice);
+            if (actor == null) return;
+
+            int livingCount = 0;
+            foreach (var e in _encounter.LivingEnemies) livingCount++;
+            if (livingCount == 0) return;
+
+            int index = _rng?.NextInt(0, livingCount) ?? 0;
+            CombatantState target = null;
+            int seen = 0;
+            foreach (var e in _encounter.LivingEnemies)
             {
-                var actor = kit.Key;
-                if (!actor.Effects.Has(EffectKind.LoadedDice)) continue;
+                if (seen == index) { target = e; break; }
+                seen++;
+            }
 
-                int livingCount = 0;
-                foreach (var e in _encounter.LivingEnemies) livingCount++;
-                if (livingCount == 0) return;
-
-                int index = _rng?.NextInt(0, livingCount) ?? 0;
-                CombatantState target = null;
-                int seen = 0;
-                foreach (var e in _encounter.LivingEnemies)
-                {
-                    if (seen == index) { target = e; break; }
-                    seen++;
-                }
-
-                if (ApplyStatusTo(target, StatusEffectType.Stun, 0, 1, actor))
-                {
-                    AppendMessage($"{actor.Name} palms the loaded dice - {target.Name} stumbles, stunned!");
-                }
-                return;
+            if (ApplyStatusTo(target, StatusEffectType.Stun, 0, 1, actor))
+            {
+                AppendMessage($"{actor.Name} palms the loaded dice - {target.Name} stumbles, stunned!");
             }
         }
 
@@ -498,7 +504,7 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             if (actor == null || victim == null || !actor.IsPlayerSide || victim.IsSummon) return;
             if (!actor.Effects.Has(EffectKind.InconspicuousKey)) return;
-            if (!_locks.OncePerCombat(actor, FightTuning.InconspicuousKeyLockKey)) return;
+            if (!_locks.OncePerCombat(FirstPartyHolder(EffectKind.InconspicuousKey), FightTuning.InconspicuousKeyLockKey)) return;
 
             var target = RandomLivingEnemy();
             if (target == null) return;
@@ -650,6 +656,11 @@ namespace PrincesPalace.Domain.Combat.Session
             DealDamage(actor, target, amount, type, KillCredit.Nobody);
 
         public void HealForTest(CombatantState target, int amount) => HealAndCount(target, amount);
+
+        // A blow that credits the attacker, so the kill funnel (RelicsOnEachKill)
+        // runs without sequencing a whole party's turns to reach a given killer.
+        public void DealCreditedBlowForTest(CombatantState actor, CombatantState target, int amount) =>
+            DealDamage(actor, target, amount, DamageType.Physical, KillCredit.Attacker);
 
         public void TickPhoenixEggForTest(CombatantState actor) => TickPhoenixEgg(actor);
 
