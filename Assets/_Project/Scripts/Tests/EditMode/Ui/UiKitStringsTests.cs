@@ -8,18 +8,6 @@ namespace PrincesPalace.Domain.Tests
     public class UiKitStringsTests
     {
         [Test]
-        public void TheWalletSummary_FormatsIdenticallyForBuilderAndRuntime()
-        {
-            // The confirmed v1 drift pair, pinned. SceneBuilder.Hub.cs:127 baked
-            // "Gold: 0    Relics: 0" while HubController.cs:67 wrote
-            // $"Gold: {save.Gold}    Relics: {save.Relics}" - two hand-typed
-            // copies of a four-space separator. One entry now serves both, so
-            // the initial text and every refresh cannot disagree.
-            Assert.AreEqual("Gold: 0    Relics: 0", UiStrings.WalletSummary.Format(0, 0));
-            Assert.AreEqual("Gold: 340    Relics: 2", UiStrings.WalletSummary.Format(340, 2));
-        }
-
-        [Test]
         public void TemplatedEntries_PinTheirRenderedForm()
         {
             Assert.AreEqual("Floor 7 - 3h 12m", UiStrings.SlotDetail.Format(7, "3h 12m"));

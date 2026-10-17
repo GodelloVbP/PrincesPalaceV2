@@ -24,15 +24,6 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString PagerPrev = UiString.Define("pager.prev", "<");
         public static readonly UiString PagerNext = UiString.Define("pager.next", ">");
 
-        // --- the confirmed drift pair -------------------------------------
-        // v1 wrote this twice: SceneBuilder.Hub.cs:127 baked
-        // "Gold: 0    Relics: 0" while HubController.cs:67 wrote
-        // $"Gold: {save.Gold}    Relics: {save.Relics}" -- the four-space
-        // separator copied by hand, and therefore copyable wrong. One entry now
-        // serves both the initial text and every refresh.
-        public static readonly UiString WalletSummary =
-            UiString.Define("wallet_summary", "Gold: {0}    Relics: {1}", "Gold: 999999    Relics: 99");
-
         // --- main menu ------------------------------------------------------
         // ---- talents -------------------------------------------------------
 
@@ -282,9 +273,7 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("dossier.refund_point", "−");
         // ---- the hub -------------------------------------------------------
 
-        // Three currencies, not two. Embers is what talents actually cost and
-        // the hub never showed it. WalletSummary is left alone -- other screens
-        // still use the two-currency line.
+        // Three currencies: Embers is what talents actually cost.
         public static readonly UiString HubWallet =
             UiString.Define("hub.wallet", "Gold: {0}    Embers: {1}",
                 "Gold: 999999    Embers: 999");
