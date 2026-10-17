@@ -394,9 +394,8 @@ namespace PrincesPalace.Domain.Bot
         public List<EquipTrace> EquippedAtStart = new List<EquipTrace>();
 
         // The fielded squad's total level when the run ended. Summed rather
-        // than per character because only Shawn is ever really fielded today,
-        // and a sum degrades correctly to "his level" while a first-member read
-        // would quietly start lying the day a second character is real.
+        // than per character so it holds for a squad of any size; a
+        // first-member read would ignore every other fielded character.
         public int LevelAtDeath;
 
         // A stable hash of the whole trace, for the determinism check: the

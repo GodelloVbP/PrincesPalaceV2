@@ -9,9 +9,8 @@ namespace PrincesPalace.Domain.Bot
     // and others -- see that policy's own header for the actual root cause,
     // which this guard is a backstop for rather than the fix itself).
     //
-    // Neither policy is stateless by construction (both already hold a
-    // Dictionary keyed by actor for exactly this purpose; GreedyDefensive's
-    // was private and ward-only before this type existed), and the shape a
+    // Neither policy is stateless by construction (both hold per-actor
+    // memory for exactly this purpose), and the shape a
     // livelock takes is always the same: a per-turn score or priority ranks
     // some action highest for reasons that do not change turn to turn, so a
     // memoryless policy keeps making the same choice forever even after it
@@ -26,10 +25,9 @@ namespace PrincesPalace.Domain.Bot
     // Ward count bleed into the Provoke count or vice versa.
     public sealed class NonDamagingSkillGuard
     {
-        // The task's own number: a non-damaging, non-restorative skill may
-        // repeat twice in a row with nothing to show for it before the
-        // guard steps in. GreedyDefensive's pre-existing ward guard keeps
-        // its own higher threshold (3) rather than being retuned to this --
+        // A non-damaging, non-restorative skill may repeat twice in a row
+        // with nothing to show for it before the guard steps in.
+        // GreedyDefensive's ward guard keeps its own higher threshold (3);
         // see that policy's MaxConsecutiveWardsWithoutASwing for why.
         public const int DefaultMaxConsecutive = 2;
 

@@ -79,13 +79,14 @@ namespace PrincesPalace.Domain.Bot
             legal = AllyTargetSelection.Narrow(session, actor, legal);
 
             var livingEnemies = session.Encounter.LivingEnemies.ToList();
+            var skillOptions = session.SkillOptionsFor(actor);
 
             var tied = new List<FightAction> { legal[0] };
-            long bestScore = ScoreOf(session, actor, legal[0], livingEnemies, _repeatGuard, out _);
+            long bestScore = ScoreOf(session, actor, legal[0], livingEnemies, skillOptions);
 
             for (int i = 1; i < legal.Count; i++)
             {
-                long score = ScoreOf(session, actor, legal[i], livingEnemies, _repeatGuard, out _);
+                long score = ScoreOf(session, actor, legal[i], livingEnemies, skillOptions);
                 if (score > bestScore)
                 {
                     bestScore = score;
@@ -100,7 +101,7 @@ namespace PrincesPalace.Domain.Bot
 
             var chosen = tied.Count == 1 ? tied[0] : tied[rng.NextInt(0, tied.Count)];
 
-            string chosenKey = NonProgressingSkillKey(session, actor, chosen);
+            string chosenKey = NonProgressingSkillKey(skillOptions, chosen);
             if (chosenKey != null)
             {
                 _repeatGuard.RecordChosen(actor, chosenKey);
@@ -124,11 +125,12 @@ namespace PrincesPalace.Domain.Bot
         // effects ScoreOf cannot preview at all is the fix: real or not, a
         // repeat that never gets interrupted by an actual damaging pick is
         // exactly the shape the guard exists to catch.
-        private static string NonProgressingSkillKey(FightSession session, CombatantState actor, FightAction action)
+        private static string NonProgressingSkillKey(
+            IReadOnlyList<ResolvedSkillOption> skillOptions, FightAction action)
         {
             if (action.Kind != FightActionKind.Skill) return null;
 
-            var option = session.SkillOptionsFor(actor).FirstOrDefault(o => o.Index == action.SkillIndex);
+            var option = skillOptions.FirstOrDefault(o => o.Index == action.SkillIndex);
 
             return option.Skill.IsDamaging ? null : option.Skill.Id;
         }
@@ -138,13 +140,13 @@ namespace PrincesPalace.Domain.Bot
         // 1-for-1 against the incoming term so both sides read in the same
         // unit) plus KillBonus if it drops its target, minus the enemies
         // still standing afterwards' combined expected damage next turn.
-        private static long ScoreOf(
+        private long ScoreOf(
             FightSession session, CombatantState actor, FightAction action, List<CombatantState> livingEnemies,
-            NonDamagingSkillGuard repeatGuard, out string nonProgressingKey)
+            IReadOnlyList<ResolvedSkillOption> skillOptions)
         {
+            var repeatGuard = _repeatGuard;
             long ownEffect = 0;
             bool killsTarget = false;
-            nonProgressingKey = null;
 
             switch (action.Kind)
             {
@@ -157,7 +159,7 @@ namespace PrincesPalace.Domain.Bot
                 }
                 case FightActionKind.Skill:
                 {
-                    var option = session.SkillOptionsFor(actor).FirstOrDefault(o => o.Index == action.SkillIndex);
+                    var option = skillOptions.FirstOrDefault(o => o.Index == action.SkillIndex);
                     var effect = option.Skill.Effect;
 
                     // Only the same effects PreviewSkillPower can actually
@@ -186,26 +188,17 @@ namespace PrincesPalace.Domain.Bot
                     }
                     else if (isHeal)
                     {
-                        // CAPPED TO WHAT IS ACTUALLY MISSING -- the root
-                        // cause of the seed 18 (and 418 further rows across
-                        // the batch this was found in) livelock: an
-                        // uncapped heal scores its full preview amount even
-                        // at or near full health, where it restores nothing
-                        // real. woolgathering (flatAmount 40 + power 30 per
-                        // point of Wool spent, so a flat ~160 whenever the
-                        // caster is not already low on Wool) was consistently
-                        // OUTSCORING a real attack whose pre-mitigation
-                        // preview happened to sit below that flat number for
-                        // this matchup, so it won every single turn and
-                        // enemy HP never moved -- the trace shows party HP
-                        // oscillating in a narrow high band the whole time,
-                        // not sitting at a fixed low value, which is what
-                        // said "the heal itself is fine, the SCORE is wrong"
-                        // rather than "this actor is stuck needing to heal".
+                        // CAPPED TO WHAT IS ACTUALLY MISSING: an uncapped
+                        // heal scores its full preview amount even at or
+                        // near full health, where it restores nothing real.
+                        // woolgathering (flatAmount 40 + power 30 per point
+                        // of Wool spent, a flat ~160 whenever the caster is
+                        // not already low on Wool) would outscore an attack
+                        // whose pre-mitigation preview sits below that, win
+                        // every turn, and leave enemy HP unmoved.
                         //
-                        // The Item branch above already caps a health potion
-                        // to MaxHealth-CurrentHealth for the identical
-                        // reason; heal skills never got the same treatment.
+                        // The Item branch below caps a health potion to
+                        // MaxHealth-CurrentHealth for the identical reason.
                         // RestorePartyMana previews through the same
                         // SkillResolution.Amount case as the two HP heals
                         // (there is no way to tell "restores mana" from
@@ -266,9 +259,8 @@ namespace PrincesPalace.Domain.Bot
                         // running with no damaging action landing in between
                         // is the same "tried it, not converting" signal the
                         // else branch already acts on.
-                        nonProgressingKey = option.Skill.Id;
                         if (repeatGuard != null &&
-                            !repeatGuard.MayChoose(actor, nonProgressingKey, NonDamagingSkillGuard.DefaultMaxConsecutive))
+                            !repeatGuard.MayChoose(actor, option.Skill.Id, NonDamagingSkillGuard.DefaultMaxConsecutive))
                         {
                             ownEffect -= KillBonus;
                         }
@@ -277,15 +269,12 @@ namespace PrincesPalace.Domain.Bot
                     {
                         // Backstop for whatever the comment above already
                         // scores at 0 -- see NonDamagingSkillGuard's own
-                        // header. Flagging the key here (rather than only in
-                        // NonProgressingSkillKey, which Choose() also calls)
-                        // means the penalty below and the eventual
-                        // RecordChosen/RecordProgress bookkeeping read off
-                        // the exact same "is this effect one we cannot
-                        // preview" test, so the two can never drift apart.
-                        nonProgressingKey = option.Skill.Id;
+                        // header. The key is the skill id, the same one
+                        // NonProgressingSkillKey hands RecordChosen in Choose(),
+                        // so the penalty here and that bookkeeping guard the
+                        // same skills.
                         if (repeatGuard != null &&
-                            !repeatGuard.MayChoose(actor, nonProgressingKey, NonDamagingSkillGuard.DefaultMaxConsecutive))
+                            !repeatGuard.MayChoose(actor, option.Skill.Id, NonDamagingSkillGuard.DefaultMaxConsecutive))
                         {
                             // Large enough to outweigh any realistic
                             // ownEffect-incoming spread so this drops below

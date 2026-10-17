@@ -6,15 +6,15 @@ namespace PrincesPalace.Domain.Bot
 {
     // WHETHER THE BATCH TAKES SHOPS AT ALL.
     //
-    // The four archetypes' own ChooseNode rules were written before a shop
+    // The archetypes' own ChooseNode rules were written before a shop
     // was a room worth entering, and none of them mentions one: a Shop node
     // falls through every case and is reached only when it is the sole
     // choice. So a batch run against the archetypes as written measures a
     // shop that is almost never visited, which answers neither "what does a
     // visit cost" nor "what does it buy" (docs/PLAN_SHOP.md §7.1 point 1).
     //
-    // Rather than teach four policies about shops -- which would make the
-    // comparison a comparison of four new heuristics -- the preference wraps
+    // Rather than teach every policy about shops -- which would make the
+    // comparison a comparison of new heuristics -- the preference wraps
     // ChooseNode from OUTSIDE, at the driver, and is a batch-level switch.
     // Two batches over the same seeds, one in each mode, are then paired runs
     // that differ in exactly one decision.

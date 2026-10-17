@@ -79,11 +79,12 @@ namespace PrincesPalace.Domain.Bot
             FightAction? hold = null;
             FightAction? bellow = null;
 
+            var skillOptions = session.SkillOptionsFor(actor);
             foreach (var action in legal)
             {
                 if (action.Kind != FightActionKind.Skill) continue;
 
-                var option = session.SkillOptionsFor(actor).FirstOrDefault(o => o.Index == action.SkillIndex);
+                var option = skillOptions.FirstOrDefault(o => o.Index == action.SkillIndex);
                 var skill = option.Skill;
                 if (skill == null) continue;
 
