@@ -20,9 +20,8 @@ namespace PrincesPalace
     //
     // That is the whole division: FightHudModel works out what a row SAYS and
     // whether it is affordable, FightMenuState works out what is open, and this
-    // file turns those answers into text and colour. v1's equivalent did both at
-    // once across 698 lines, which is why "is the column open" got asked twice
-    // and answered differently.
+    // file turns those answers into text and colour. Keeping the two apart
+    // means "is the column open" is answered once, in FightMenuState.
     public partial class FightController
     {
         // The palette, parsed once. Domain speaks hex because it cannot name a
@@ -158,8 +157,8 @@ namespace PrincesPalace
             // RefreshEnemyPlates and RefreshInitiative later in the same
             // RefreshUi pass -- goes through SkillOptions() instead of
             // FightSession.SkillOptionsFor directly, so one dropped-menu
-            // click that used to recompute the same filtered, allocated list
-            // five to eight times now computes it once and everyone downstream
+            // click would otherwise recompute the same filtered, allocated list
+            // five to eight times; it is computed once and everyone downstream
             // of this method reads that. Clearing here rather than caching it
             // for longer is what keeps it from ever surviving into a repaint
             // where the turn, cooldowns or mana have moved on: nothing
@@ -551,10 +550,9 @@ namespace PrincesPalace
         // DetailIcon/DetailIconKind ARE NOT NESTED in FightHudModel --
         // FightHudModel.cs declares them at namespace scope (Domain.Combat.
         // Session), alongside the static FightHudModel class, not inside it.
-        // `FightHudModel.DetailIcon` (CS0426) went unnoticed through this
-        // session's own dotnet verification because the dotnet host only
-        // compiles Domain -- this file is Core, Unity-only, and the Unity
-        // gate is what actually caught it. Unqualified is correct, the same
+        // Qualifying it as `FightHudModel.DetailIcon` is a compile error
+        // (CS0426), and the dotnet host only compiles Domain, so only the
+        // Unity gate sees it. Unqualified is correct, the same
         // way this file already reads DetailPanel unqualified.
         private static readonly IconCache<string> DetailIconSprites = new IconCache<string>();
 
@@ -625,9 +623,8 @@ namespace PrincesPalace
         // Whether the skill resolving at Target depth hits every enemy at
         // once, for the prompt's wording. Asked only once the ally pick has
         // been ruled out above, and reads AllEnemies by name rather than
-        // "not SingleEnemy" -- which was the same thing while SingleEnemy and
-        // AllEnemies were the only two targetings that reached Target depth,
-        // and stopped being once SingleAlly did. The basic spell, which
+        // "not SingleEnemy", because SingleAlly also reaches Target depth and
+        // is not a group. The basic spell, which
         // carries no authored Targeting of its own, is always single-target.
         private bool TargetingIsGroup()
         {
@@ -1695,10 +1692,6 @@ namespace PrincesPalace
         // enemy row from FightController.StageVisuals.cs's RefreshStage,
         // right beside RefreshIntentIcons so a status and an intent always
         // paint off the same beat; each PC plate from RefreshPcPlate above.
-        // Replaces
-        // RefreshPartyBuffs outright -- BuffBadge/BuffBadgesFor/StatusBadge/
-        // PillCode/PillCategory/CategoryOf are gone with it (Package A,
-        // section 4/11).
         //
         // GREEN for something helping the character, RED for something
         // hurting them -- IntentHeal and HpBright, the same two tokens the
@@ -1739,8 +1732,8 @@ namespace PrincesPalace
             new List<FightHudModel.StatusRow>();
 
         // EnemyStatusBadgesPerRow/RosterStatusBadgesPerRow/EnemyStatusBadgeCount/
-        // RosterStatusBadgeCount/PartyStatusBadgeCount moved to the root
-        // FightController.cs (S9's review, CODE_STANDARDS.md section 4: a
+        // RosterStatusBadgeCount/PartyStatusBadgeCount live on the root
+        // FightController.cs (CODE_STANDARDS.md section 4: a
         // MonoBehaviour's consts and runtime state fields belong on the root
         // partial-class file, methods only here).
 
@@ -1788,8 +1781,8 @@ namespace PrincesPalace
         // _statusRowActiveCodes, _statusRowScratchCodes,
         // _statusBadgePopRoutines, _inspectedActor,
         // _inspectedCode, _statusBoxCanvas, _enemyStatusStripHome and
-        // _enemyStatusBadgeHome all moved to the root FightController.cs
-        // (S9's review) -- see them there for what each one is and why.
+        // _enemyStatusBadgeHome all live on the root FightController.cs --
+        // see them there for what each one is and why.
 
         private void WireAllStatusBadges()
         {
@@ -1871,14 +1864,12 @@ namespace PrincesPalace
         //
         // A smooth rounded outline for a benefit, clipped corners with a top
         // notch for a detriment -- geometry, not colour, so both survive
-        // greyscale. B could not bake a proc: sprite from this worktree
+        // greyscale. A proc: sprite cannot be baked at runtime
         // (ProceduralSpriteBaker is an Editor menu item -- see
         // FightScreen.BuildStatusBadge's own comment), so this bakes the
-        // same idea at RUNTIME instead: once per polarity, ever, cached in
+        // frame at RUNTIME instead: once per polarity, ever, cached in
         // these two statics -- never per badge, never per repaint. Neither
-        // rotates the glyph's RectTransform -- B suggested that as a
-        // stopgap and section 3 rejects it; this is a separate Image
-        // instead.
+        // rotates the glyph's RectTransform; the frame is a separate Image.
         private const int FrameTextureSize = 36;
         private const float FrameRingThickness = 2f;
 
@@ -1978,7 +1969,7 @@ namespace PrincesPalace
         // than getting folded in here too: an enemy-intent badge with no art
         // is a BUG and disables its Image outright (a blank slot beats a
         // filled white rectangle -- see RefreshIntentIcons' own comment); a
-        // status badge with no art (twelve of fourteen entries today) is
+        // status badge with no art (only a status added before its art lands) is
         // that badge's INTENDED steady state and falls back to Code instead
         // -- see PaintBadge.
         private class IconCache<TKind>
@@ -2015,9 +2006,8 @@ namespace PrincesPalace
         // a new dictionary entry (and a new Resources.Load) every turn a
         // status counts down, when the art behind it never does. The two
         // speed presentations have no StatusEffectType to key on instead
-        // (section 4), which is exactly why this is slug-keyed and the old
-        // StatusEffectType-keyed cache is gone -- every caller now holds a
-        // StatusRow already.
+        // (section 4), which is exactly why this is slug-keyed rather than
+        // StatusEffectType-keyed; every caller holds a StatusRow.
         private static readonly IconCache<string> StatusRowSprites = new IconCache<string>();
 
         private static Sprite StatusSpriteFor(FightHudModel.StatusRow row) =>
@@ -2156,7 +2146,7 @@ namespace PrincesPalace
             }
 
             // Icon first, same priority RefreshIntentIcons already uses. All
-            // fourteen (twelve statuses plus both speed presentations) ship
+            // every status and both speed presentations ship
             // real art under Resources/Status/ (StatusBadgeIconTests), so the
             // three-letter Code fallback below is only for a future
             // status/presentation added before its own art lands.
@@ -3011,16 +3001,12 @@ namespace PrincesPalace
             {
                 bool filled = i < previewed.Count;
 
-                // THE LINE THE v2 PORT DROPPED. v1's tracker read as "who is
-                // next" because every chip carried that combatant's own idle
-                // pose -- v1 FightController.Hud.cs RefreshInitiativeTracker,
-                // `icon.sprite = LoadStanceSprite(combatant, StanceIdle)`,
-                // under a comment saying exactly that. v2 declared the Image
-                // with a null sprite key (FightScreen.BuildInitiativeTracker)
-                // and then never assigned one anywhere, and ShowSprite refuses
-                // to switch on an Image with nothing to draw -- so no chip has
-                // ever been visible in this tree, and the whole tracker
-                // rendered as a row of bare capital letters.
+                // THE CHIP'S ART. The tracker reads as "who is next" because
+                // every chip carries that combatant's own idle pose. The tree
+                // declares the Image with a null sprite key
+                // (FightScreen.BuildInitiativeTracker), so this assignment is
+                // the only source, and ShowSprite refuses to switch on an
+                // Image with nothing to draw.
                 //
                 // Read through StanceSpriteFor, the same lookup the enemy
                 // plates already use one method up, so a chip and a plate
@@ -3033,8 +3019,7 @@ namespace PrincesPalace
                 //
                 // NEVER MIRRORED, deliberately -- the queue is a reading aid,
                 // and a row where half the figures face left is harder to scan
-                // than one where they all face the same way. v1 made the same
-                // call in the same place.
+                // than one where they all face the same way.
                 //
                 // ONLY THE SPRITE. preserveAspect and raycastTarget are the
                 // chip's shape and are declared on the tree
@@ -3048,12 +3033,10 @@ namespace PrincesPalace
                 ShowSprite(initiativeIcons[i], filled);
                 ShowSprite(initiativeRings[i], filled && i == 0);
 
-                // The initial, and ONLY as the fallback its own comment always
-                // said it was. It is layered over the middle of the chip, so
-                // now that a chip can actually carry art, writing the letter
-                // unconditionally would stamp a capital over every portrait.
-                // A combatant whose idle art is missing still gets one, which
-                // is the case it was added for.
+                // The initial, ONLY as a fallback. It is layered over the
+                // middle of the chip, so writing the letter unconditionally
+                // would stamp a capital over every portrait. A combatant whose
+                // idle art is missing still gets one.
                 initiativeLabels[i].SetContent(filled && art == null && previewed[i].Name.Length > 0
                     ? previewed[i].Name.Substring(0, 1).ToUpperInvariant()
                     : "");
@@ -3256,9 +3239,8 @@ namespace PrincesPalace
                 return FightHudModel.DetailForSkill(_session, actor, skill, actor?.SignaturePool?.DisplayName);
             }
 
-            // Every skill-branch row now has a ResolvedSkill behind it --
-            // the basic spell's row, which did not, is gone (docs/PLAN_SHOP.md
-            // §4 Phase E). Reaching here means the index does not match an
+            // Every skill-branch row has a ResolvedSkill behind it.
+            // Reaching here means the index does not match an
             // option after all; the same empty panel DetailForNoSelection
             // already gives an out-of-range Column C selection.
             return FightHudModel.DetailForNoSelection(_menu.Branch);
