@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using NUnit.Framework;
 using PrincesPalace.Domain.Content;
@@ -8,62 +7,28 @@ using PrincesPalace.Domain.Events;
 namespace PrincesPalace.Domain.Tests
 {
     // THE DIALOGUE STAGE'S FIXTURE EVENT (docs/PLAN_DIALOGUE_STAGE.md, D4),
-    // read from its staging copy docs/fixtures/demo_dialogue.json through the
-    // real resolver against the real characters.json. It must resolve with no
-    // errors, and each thing it exists to exercise is pinned here by literal,
-    // so an edit that quietly drops one (the 200-character line, the locked
-    // row, the Bjorn variant) fails here rather than in a capture.
-    //
-    // The event is also merged into events.json as its last entry; the last
-    // test here holds the two copies to the same resolved shape, so an edit
-    // to one that is not made to the other fails. When the staging copy is
-    // deleted, retarget Resolve() at events.json and drop that test.
+    // read from events.json (its last entry) through the real resolver
+    // against the real characters.json. Each thing it exists to exercise is
+    // pinned here by literal, so an edit that quietly drops one (the
+    // 200-character line, the locked row, the Bjorn variant) fails here
+    // rather than in a capture.
     public class DemoDialogueFixtureTests
     {
-        private static string FixturePath() =>
-            Path.Combine(ContentDataFiles.RepoRoot(), "docs", "fixtures", "demo_dialogue.json");
-
         private static Dictionary<string, string> RealCharacters() =>
             ContentDataFiles.ParseFile<RawCharacterFile>(ContentDataFiles.DataPath("characters.json")).characters
                 .ToDictionary(c => c.id, c => c.displayName);
 
+        private static RawEventEntry RawEntry() =>
+            ContentDataFiles.ParseFile<RawEventFile>(ContentDataFiles.DataPath("events.json")).events
+                .Single(e => e.id == "demo_dialogue");
+
         private static ResolvedEventDefinition Resolve()
         {
-            var entries = ContentDataFiles.ParseFile<RawEventFile>(FixturePath()).events;
-            bool ok = EventEntryResolver.TryResolveAll(entries, RealCharacters(), new string[0],
+            bool ok = EventEntryResolver.TryResolveAll(new[] { RawEntry() }, RealCharacters(), new string[0],
                 new Dictionary<string, string>(), out var resolved, out var errors);
             Assert.IsTrue(ok, "demo_dialogue does not resolve: " + string.Join("; ", errors ?? new List<string>()));
             Assert.AreEqual(1, resolved.Count);
             return resolved[0];
-        }
-
-        // Every string the stage shows and every edge, in order: two copies
-        // that agree on this play identically.
-        private static string Fingerprint(ResolvedEventDefinition evt)
-        {
-            var parts = new List<string> { evt.Id, string.Join(",", evt.Floors), evt.BackdropKey, evt.Requires.Length.ToString() };
-            foreach (var page in evt.Pages)
-            {
-                parts.Add($"page {page.Id}|{page.Title}|{page.Body}|{page.ArtKey}|{page.BackdropKey}");
-                parts.AddRange(page.Lines.Select(l => $"line {l.SpeakerId}|{l.IsNarration}|{l.Expression}|{l.Side}|{l.Text}"));
-                foreach (var choice in page.Choices)
-                {
-                    parts.Add($"choice {choice.Text}|{choice.HiddenUntilMet}|{choice.Requires.Length}|{choice.Effects.Length}");
-                    parts.AddRange(choice.Outcomes.Select(o =>
-                        $"outcome {o.GoTo}|{o.IsLeave}|{o.Result}|{o.Requires.Length}|{o.Effects.Length}"));
-                }
-            }
-
-            return string.Join("\n", parts);
-        }
-
-        [Test]
-        public void TheMergedCopyInEventsJson_MatchesTheStagingCopy()
-        {
-            var resolved = RealEventCatalogue.Events();
-
-            Assert.AreEqual("demo_dialogue", resolved.Last().Id, "demo_dialogue is the last entry of events.json");
-            Assert.AreEqual(Fingerprint(Resolve()), Fingerprint(resolved.Last()));
         }
 
         [Test]
@@ -108,7 +73,7 @@ namespace PrincesPalace.Domain.Tests
         {
             var page = Resolve().Pages[0];
             Assert.AreEqual(4, page.Lines.Length);
-            var raw = ContentDataFiles.ParseFile<RawEventFile>(FixturePath()).events[0].pages[0];
+            var raw = RawEntry().pages[0];
             Assert.AreEqual(0, raw.cast?.Length ?? 0, "fixture: no declared sides, so they come from first appearance");
 
             Assert.IsTrue(page.Lines[0].IsNarration);
