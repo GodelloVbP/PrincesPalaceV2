@@ -27,17 +27,17 @@ added to the fitting line (or "Recorded decisions" if it's a RECORDED: entry, no
 debt), and a struck finding gets its number removed.
 
 - Fight screen / HUD: #45, #81, #84, #89, #143, #177, #186, #206, #221, #222, #224, #228, #229, #230, #232, #237, #238, #239, #240, #245, #246, #247, #249, #252
-- Combat domain: #97, #105, #120, #124, #194, #210, #235, #264, #265, #266
+- Combat domain: #97, #105, #120, #124, #194, #210, #235, #264, #265, #266, #273
 - Map: none open
-- Shop: #122, #191, #196, #197, #212, #244
-- Events: none open
-- Dossier / Party / Talents / Reward track / Reckoning: #44, #104, #141, #150, #178, #199, #214
-- Menus / Options / Navigation & gamepad: #91, #142, #166, #167, #179, #223, #225, #227, #231, #234, #236, #242, #250, #251, #253, #257, #258, #259, #260, #261
-- Save & run lifecycle: #87, #102, #220, #255
-- Content pipeline & data: #86, #121, #125, #128, #131, #134, #135, #145, #198, #256, #262
-- Art / VFX / stage: #80, #92, #100, #109, #129, #133, #181, #192, #213
-- Tooling / tests / workflow: #95, #96, #98, #103, #137, #164, #263, #269
-- Balance / economy: #37, #41, #82, #83, #85
+- Shop: #122, #191, #196, #197, #212, #244, #285
+- Events: #274, #275
+- Dossier / Party / Talents / Reward track / Reckoning: #44, #104, #141, #150, #178, #199, #214, #278
+- Menus / Options / Navigation & gamepad: #91, #142, #166, #167, #179, #223, #225, #227, #231, #234, #236, #242, #250, #251, #253, #257, #258, #259, #260, #261, #279
+- Save & run lifecycle: #87, #102, #220, #255, #281
+- Content pipeline & data: #86, #121, #125, #128, #131, #134, #135, #145, #198, #256, #262, #280, #286
+- Art / VFX / stage: #80, #92, #100, #109, #129, #133, #181, #192, #213, #284
+- Tooling / tests / workflow: #95, #96, #98, #103, #137, #164, #263, #269, #282, #283
+- Balance / economy: #37, #41, #82, #83, #85, #276, #277
 - Recorded decisions, not debt: #200, #201, #208, #215, #216, #217, #218
 
 ---
@@ -2570,3 +2570,121 @@ and Gale Scythe (whirls, not one cut) partly fail; Thorn, Viper and Borrowed
 pass narrowly. Each spell's NOTES.md under `docs/captures/spell_rework/after/`
 names the still that fixes it; prompts are in
 `docs/prompts/2026-10-03_spell_rework.md`. ChatGPT art was skipped this pass.
+
+## Cleanup sweep owner forks, 2026-10-17 (lane L11)
+
+Each is a question the sweep could not settle from two agreeing sources. Sweep ids
+in brackets; finder text in `C:\Games\sweep-2026-10-17\LEDGER.tsv`.
+
+### 273. Relics are party-wide: do they fire once per party or once per wearer?
+Every party member carries the same drafted relics. Jar of Bear Urine ("marks every
+enemy when combat begins") currently re-marks and logs "uncorks the jar" once per
+member (3x in a full party). Inconspicuous Key ("once per combat, an enemy you kill
+strikes...") lets each member's first kill fire it, up to 3 last blows per combat.
+Option A: once per party (first holder only, like Loaded Dice). Option B: once per
+wearer, and reword the relic text. `FightSession.RelicMechanics.cs:40`, `:500`
+[S17-003, S17-004].
+
+### 274. Rat caravan: should "Look again" after Odette keep the owl scene?
+Browse with Odette, then "Look again" drops to the generic browse scene (no Odette,
+merchant "pleasure doing business"), and "Walk on" ends at the plain farewell, so
+"Bring the owl back sometime" can't be reached after a second look. Option A: point
+Look again back at the Odette scene. Option B: leave it; the first look is the only
+Odette beat. `ContentData/events.json:1411` [C1-007].
+
+### 275. Does a bot run need to decide each node's event up front like the screen does?
+The screen previews every map card, which reserves events so no two rooms share one.
+A bot run that never previews decides at arrival, so the same seed can field different
+events and bot event stats may not match what a player sees. Option A: bot previews
+per node at leg start. Option B: accept the difference. `RunOrchestrator.Event.cs:167,218`
+[S24-010].
+
+### 276. Items past the art ladder: validate them, and is the top multiplier right?
+(a) A copy can reach tier 11-12 of a base whose art ladder ends at 10. Stats,
+requirements and scores keep extrapolating, but content validation stops at 10, so an
+unwearable or blank tier-11/12 copy could ship. Option A: validate up to the tier cap
+(12). Option B: cap copies at the art ladder. `ContentDatabase.Validation.cs:431`
+[D3-013]. (b) Tier 10 multiplies tier 0 by 9.3132 (1.25^10). Is "a tier-10 piece is
+about 9.3x a tier-0 piece" intended? Now pinned as a literal in `GearScalingTests.cs`
+[H6b-0003].
+
+### 277. Extra Recruit Slot upgrade does nothing with a party cap of 3
+Description says "Bring an additional character on every run"; the squad is capped at
+3 and three characters already ship, so buying it changes nothing. Same file:
+starting-gold boost has no run-start reader. No shop sells either today. What should
+the upgrade do (bench slot, 4th seat, something else), or should it be removed?
+`ContentData/upgrades.json:2,7`, `SaveData.cs:330-336` [C5-005].
+
+### 278. Dossier and Party screens: what resets when you reopen them?
+(a) Dossier Skills list reopens scrolled where you left it; the pack resets to the top.
+Reset it too, or keep the scroll? `CharacterDossierController.cs:449` [S01-002].
+(b) Character rows keep their old order across closes, even after a level-up or gear
+change should re-sort them. Re-sort each visit, or freeze for the whole session?
+`CharacterDossierController.Sections.cs:97` [S01-003]. (c) Party gamepad Down from a seat
+can land on a hidden card when the roster is shorter than the card count (latent, roster
+normally equals card count). Clamp to the roster? `PartyController.cs:461,515-529`
+[S09-001].
+
+### 279. Pane layout: re-base Glossary, Dossier and Run on the shared pane size?
+`SystemMenuLayout` says all panes lay out against `PaneContentHalf*` (744 x 357.78);
+only Options, Party and Exits do. Glossary, Dossier and Run build a 1520 x 756 area
+(16 px wider, 20 px taller per side) and may overrun the container art. Option A:
+re-base them (visual check needed). Option B: correct the comment and keep the sizes.
+`GlossaryLayout.cs:17-24` [S44-008]. Related, latent: `MapGraph.SlotCentre` assumes two
+front slots; a party cap of 4 would stack a third on slot 0. Pin the cap in a test or
+generalise now? `MapGraph.cs:108-114` [S44-009].
+
+### 280. Content build: which silent authoring mistakes should refuse to build?
+None ships today. (a) Event counter gate with neither min nor max (always passes) or
+min above max (locked forever as "Not yet"): refuse both? `EventEntryResolver.cs:633`
+[S60-005]. (b) Round darkness with a step but no start, or any darkness field on a
+fight with no round limit, is silently ignored: refuse? `EventEntryResolver.Fights.cs:366-380`
+[S60-006]. (c) A skill with both `elements` and `consumesStatus` retypes the normal hit
+but not the consumed-path hit: refuse the pair, or retype both? `ResolvedSkill.cs:451-480`
+[S63-005]. (d) A blank enemy weakness/resistance derives a pair from the id hash, which
+differs run to run in the dotnet test loop (stable in Unity): switch to a fixed hash, or
+leave? `EnemyEntryResolver.cs:575,596` [S60-004].
+
+### 281. Save reconcile order and the v8 run migration
+(a) `Reconcile` judges "nobody standing" on the squad before the roster/selection
+cleanup runs, so a removed character can still count. Move the run reconciles below the
+roster block? `SaveData.cs:849-851` [S37-002]. (b) `RealmMigration.ToRealmMap` places an
+old in-flight party on a map nobody resumes; the run is settled on entry anyway. Keep
+(plan-mandated) or reduce to "just close it"? `RealmMigration.cs:30-62` [S37-010].
+
+### 282. Test gates: .meta-only changes and spell_feel_test.py
+(a) A change to only a `.meta` (sprite pixels-per-unit, pivot, texture type, font,
+asmdef) is classed "ignored", so the gate runs nothing and art/ui sweeps that read sprite
+size never run. Option A: ignore only `.meta` beside code/docs, route the rest through
+the path areas. Option B: keep ignoring. `tools/test_areas.ps1:686-687` [S85-001].
+(b) `tools/spell_feel_test.py` (339 lines) runs only by hand and pins `skills.json`
+literals that a content edit breaks unseen. Wire it into a gate and TESTING.md, or
+accept as manual? [S84-011].
+
+### 283. Capture and preview tools: four small behaviours
+(a) `focus_check.ps1` fails when you click another window mid-run, even if nothing in the
+launched tree stole focus; fail only on in-tree steals? `:394` [S77-003]. (b)
+`gif.ps1 -Prune` ages runs by folder mtime, so trimmed runs live longer; age by
+`result.json` time? `:124` [S77-007]. (c) `preview.ps1` silently ignores `-Versus`
+without `-Spell` and `-Formation full` with `-Spell`/`-Character` (only `-Element`
+refuses); refuse uniformly? `:667` [S81-005]. (d) `process_reward_art.py --only` with a
+typo matches nothing and exits 0; exit 1? `:169` [S81-012].
+
+### 284. Art tools: measure_bar thresholds and the orphaned map-icon script
+(a) `measure_bar.py` reports earned/resting contrast 1.14x (min 1.40) and lip 0.35x (min
+1.15): BarFillTint #FFC24A vs BarBeforeTint #B5ADA3 may be too close, or the thresholds
+are stale. Retint, or re-bless the thresholds? `:58-67` [S80-004]. (b)
+`process_map_icons.py` and its 7 `map_forest_*`/`forest_map_chest` Processed PNGs have no
+reader since the run-map rebuild. Delete script, PNGs and the ART_PIPELINE row, or keep?
+`:1` [S81-008].
+
+### 285. Bag sort: delete BagSort or wire sort buttons (after the item redesign)
+`BagSort`/`BagSortKey` have no caller. Decide once `docs/PLAN_ITEMS.md` lands whether
+the bag gets sort buttons or the code goes. `Domain/Equipment/BagSort.cs:21` [D4-004].
+
+### 286. Two comment-vs-code drifts that need a one-line call
+(a) `ContentBuilder.BuildRealms` creates `RealmsPath` inside the asset-editing bracket,
+which the file's own comment (:152) says must not create folders. Create it up front, or
+correct the comment? [D6-016]. (b) `AudioLevels.cs:33` cites a nonexistent
+`MusicLibrary.PathOf`; the music player is not built. Reword now or leave until the
+player lands? [S26-009].
