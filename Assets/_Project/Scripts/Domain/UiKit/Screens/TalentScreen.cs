@@ -106,10 +106,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> Orbs = new List<NodeRef>();
         public List<NodeRef> OrbGlows = new List<NodeRef>();
 
-        // The reveal: a mask per orb, holding the LIT medallion. The mask is
-        // what grows when a talent is kindled; the orb inside it is held at
-        // full size and full strength the whole way, which is the difference
-        // between something arriving and something switching on.
         // A stone's own furniture, one entry per orb in the same order.
         public List<NodeRef> OrbAuras = new List<NodeRef>();
         public List<NodeRef> OrbCores = new List<NodeRef>();
