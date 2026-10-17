@@ -51,9 +51,9 @@ namespace PrincesPalace.Domain.UiKit
 
         // This context's own optional tab strip (INavTabStrip) -- a
         // FUNCTION for the same reason `_claimant` is one, even
-        // though today's one implementor (SystemMenuController) never
-        // changes identity while pushed: a context that grows a second
-        // tab-bearing state later should not have to change this shape to
+        // though the implementors (SystemMenuController, TalentController)
+        // never change identity while pushed: a context that grows a second
+        // tab-bearing state should not have to change this shape to
         // ask "which one is live right now" the way ActivePaneCancelClaim
         // already does for Cancel.
         private readonly Func<INavTabStrip> _tabStrip;

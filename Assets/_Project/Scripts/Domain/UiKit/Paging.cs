@@ -4,17 +4,15 @@ namespace PrincesPalace.Domain.UiKit
 {
     // Page arithmetic, once.
     //
-    // BagView, DebugMenuCatalog and GlossaryCatalog each grew their own
-    // identical PageCount/ClampPage/Page within a day of each other. The
-    // arithmetic is four lines, which is exactly why it kept being rewritten
-    // rather than shared -- and it has two off-by-one traps in it that are
+    // The arithmetic is four lines, which is exactly why it tempts a private
+    // copy per pager -- and it has two off-by-one traps in it that are
     // invisible when wrong:
     //
     //   * an EMPTY list is ONE page, not zero. "PAGE 1 OF 0" is a bug report.
     //   * EXACTLY pageSize entries is one page, not two. A second, blank page
     //     the player can flip to reads as content that failed to load.
     //
-    // Three copies means three chances to get those wrong and three places to
+    // Each copy is another chance to get those wrong and another place to
     // fix them. One copy, tested once.
     public static class Paging
     {

@@ -16,13 +16,13 @@ namespace PrincesPalace.Domain.UiKit
     // its colour through the four Image components of its rim plus its name
     // label -- and those two want different values. A rim is a boundary at
     // 0.70 alpha against a dark fill; a name is text that has to stay
-    // legible over PanelPrimary at 12-20pt. One hex could not serve both:
+    // legible over the painted plate (PcPlateArt) at 12-20pt. One hex could not serve both:
     // rim-strength text is dim, text-strength rim is a neon outline.
     //
     // MEANWHILE, WHAT DOES NOT MOVE. The HP/MP meters keep their resource
     // colours (red is health on every card, whoever's card it is) and the
     // stage foot rings keep their side colours (a targeting signal, not an
-    // identity one). The card FILL stays FightHudPalette.PanelPrimary on
+    // identity one). The card GROUND is the painted PcPlateArt plate on
     // every theme -- the meters' contrast was tuned against that one ground,
     // and six grounds would be six separate contrast problems.
     //

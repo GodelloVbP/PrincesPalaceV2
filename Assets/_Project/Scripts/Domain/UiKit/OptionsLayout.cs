@@ -25,7 +25,6 @@ namespace PrincesPalace.Domain.UiKit
 
         // A SMALL SLACK MARGIN over the pane's own content inset, not a
         // second authored pad. Same pattern as ExitsLayout.ContentMargin.
-        // ColumnWidth comes out at 1480 either way.
         public const float PadX = 4f;
         public const float PadTop = 4f;
         public const float PadBottom = 4f;
@@ -38,8 +37,7 @@ namespace PrincesPalace.Domain.UiKit
         public const float ColumnCount = 2f;
 
         // HalfWidth * 2f, not PaneWidth -- the content region is the pane's
-        // own declared inset, narrower than the declared frame. Comes out at
-        // 1480 either way.
+        // own declared inset, narrower than the declared frame.
         public static float ColumnWidth =>
             (HalfWidth * 2f - PadX * 2f - ColumnGap * (ColumnCount - 1f)) / ColumnCount;   // 1480
 
@@ -54,7 +52,7 @@ namespace PrincesPalace.Domain.UiKit
         // The heading sits in its OWN narrow box at the card's left edge rather
         // than a full-width one at its centre. Ui.Label centres text in its box
         // and there is no left-aligned helper, so a snug box at the left is how
-        // a heading gets left-aligned here -- and over a 1420px row, a centred
+        // a heading gets left-aligned here -- and over a 660px row, a centred
         // one floats in the middle of nothing with its own rows starting far
         // away underneath it.
         public const float HeadingWidth = 320f;

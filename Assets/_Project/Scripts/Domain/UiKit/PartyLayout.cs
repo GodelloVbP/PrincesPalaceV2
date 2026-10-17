@@ -47,8 +47,8 @@ namespace PrincesPalace.Domain.UiKit
         // seats and the roster all have to fit the pane at once.
         //
         // A label's box is at least 1.33 x its font size or TMP draws nothing
-        // (CharacterDossierScreenTests.EveryLabelThatTruncatesOrClampsIsBoxed
-        // ForAtLeastOneLine), so 24 needs 32 and 20 needs 27.
+        // (LabelLineHeightLintTests, LineRatio 1.33), so 24 needs 32 and 20
+        // needs 27.
         public const float HeaderHeight = 40f;
         public static float HeaderCentreY => ContentTop - HeaderHeight * 0.5f;
 

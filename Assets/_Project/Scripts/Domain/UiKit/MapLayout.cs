@@ -22,9 +22,10 @@ namespace PrincesPalace.Domain.UiKit
         // on screen.
         public const float SpanWidth = 1500f;
 
-        // The vertical distance between two longest-route rows. The tallest
-        // footprint (an anchor tile with its tag above and caption below) is
-        // RowPitch - 15, so two nodes in neighbouring rows never touch.
+        // The vertical distance between two longest-route rows. Every
+        // footprint (a tile with its tag above and caption below) is shorter
+        // than this -- the boss, the tallest, by 9 -- so two nodes in
+        // neighbouring rows never touch.
         public const float RowPitch = 224f;
 
         // Row 0's centre below the content top.

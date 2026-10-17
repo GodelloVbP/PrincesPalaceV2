@@ -58,11 +58,9 @@ namespace PrincesPalace.Domain.UiKit
     // that stores nothing is worse than an absent one, because the player moves
     // it, believes something changed, and is wrong.
     //
-    // The design asked for six groups. Three survive, because GameSettings
-    // now holds six values (BattleSpeed added) and
-    // nothing else exists to bind to. What was cut and what each would need
-    // is recorded elsewhere rather than
-    // shipped as furniture:
+    // Three groups, because GameSettings holds six values and nothing else
+    // exists to bind to. What the design lists beyond them, and what each
+    // would need, is recorded here rather than shipped as furniture:
     //
     //   Readability (text size, tooltip delay)  - neither value exists
     //   Keybinds                                - no rebind screen and no
@@ -95,20 +93,18 @@ namespace PrincesPalace.Domain.UiKit
                 new OptionRowDef("window", UiStrings.OptionsWindow, OptionKind.Stepper),
                 new OptionRowDef("fps", UiStrings.OptionsFrameLimit, OptionKind.Stepper)),
 
-            // The one Gameplay setting that binds
-            // to a real value. The note says what the design's own footer
-            // now also says for this one row specifically -- a stepped
-            // battle speed does not retime a beat already under way (contract
-            // 4), so "applies immediately" would be wrong here even though
-            // it is true of every other row on this screen.
+            // The one Gameplay setting that binds to a real value. The note
+            // says what the design's own footer says for this one row
+            // specifically -- a stepped battle speed does not retime a beat
+            // already under way (contract 4), so "applies immediately" would
+            // be wrong here even though it is true of every other row on this
+            // screen.
             //
-            // COLUMN 1, not 0 -- option B (OptionsLayout.ColumnCount's own
-            // header): a third card sharing column 0 with Audio and Display
-            // pushed the restore button and its footer note within 3.56px
-            // of each other, and G4's screenshot showed the reworded, longer
-            // footer note landing visibly under the button rather than below
-            // it. Its own column, it does not compete with anything for
-            // height.
+            // COLUMN 1, not 0 (OptionsLayout.ColumnCount's own header): a
+            // third card sharing column 0 with Audio and Display would crowd
+            // the restore button and its footer note until the note landed
+            // under the button rather than below it. Its own column, it does
+            // not compete with anything for height.
             new OptionGroupDef("Gameplay", UiStrings.OptionsGameplay, column: 1,
                 new OptionRowDef("battlespeed", UiStrings.OptionsBattleSpeed, OptionKind.Stepper,
                     note: UiStrings.OptionsBattleSpeedNote)),

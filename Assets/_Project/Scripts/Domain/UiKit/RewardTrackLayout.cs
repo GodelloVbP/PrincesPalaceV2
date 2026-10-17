@@ -3,7 +3,7 @@ using PrincesPalace.Domain.Progression;
 
 namespace PrincesPalace.Domain.UiKit
 {
-    // Where the reward track's hundred nodes sit along one long line, and where
+    // Where the reward track's nodes sit along one long line, and where
     // the three bands around that line sit inside the panel.
     //
     // A BATTLE PASS READS LEFT TO RIGHT, so this is one horizontal rail with a
@@ -118,9 +118,9 @@ namespace PrincesPalace.Domain.UiKit
         // above the rail and never moves, and the text inside it is
         // UiTextAlign.Bottom.
         //
-        // Centred was the first build and it is wrong in a way that only shows
-        // up across a hundred nodes at once. Eighty-seven filler captions are
-        // one line and twelve milestones are two to four, so a centred block
+        // Centred is wrong in a way that only shows up across the whole
+        // track at once. Filler captions are one line and milestones are two
+        // to four, so a centred block
         // puts the last line of a one-line caption 66 above the rail and the
         // last line of a four-line one at 34 -- the gap between a reward's name
         // and its own dot changing by half its own height depending on how long
@@ -148,7 +148,7 @@ namespace PrincesPalace.Domain.UiKit
         public const float RailHeight = 4f;
         public const float RailLitHeight = 3f;
 
-        // The travelling gold gradient. 300px of light crossing 19,000px of
+        // The travelling gold gradient. 300px of light crossing 6,800px of
         // rail, which is what stops a static line reading as a printed rule.
         public const float ShimmerWidth = 300f;
 
@@ -199,13 +199,13 @@ namespace PrincesPalace.Domain.UiKit
         // ---- the NEXT mark ------------------------------------------------------
         //
         // Above node level+1: the word NEXT, and a hairline dropping from it
-        // toward the node, fading out as it goes. ONE group rather than a
-        // hundred -- exactly one level is ever next, and this is the only thing
+        // toward the node, fading out as it goes. ONE group rather than one
+        // per level -- exactly one level is ever next, and this is the only thing
         // on the rail whose x is not fixed forever, so it is placed at runtime
         // and nothing else is.
         //
         // Hanging the caption from a fixed bottom edge opens the space this
-        // marker needs: the strip between the caption's lower edge at 50
+        // marker needs: the strip between the caption's lower edge at 76
         // and the disc's own rim. A word plus a line into that gap is
         // unmistakable.
         // Ends 31 above the rail, clear of a milestone's plate ring (29).
@@ -289,7 +289,7 @@ namespace PrincesPalace.Domain.UiKit
         public static float ContentWidth => NodeCount * NodePitch + EndPadding * 2f;
 
         // The x of `level`'s node, measured from the LEFT EDGE of the content
-        // rect rather than from its centre -- the rect is 19,000px wide and a
+        // rect rather than from its centre -- the rect is 6,800px wide and a
         // centre-relative coordinate would be a large number either side of
         // zero, which is harder to check and harder to read in a test.
         public static float NodeX(int level)
@@ -305,13 +305,12 @@ namespace PrincesPalace.Domain.UiKit
         //
         // Ui.Place.At measures from a parent's CENTRE; NodeX measures from the
         // content rect's LEFT EDGE, because a rail is easier to reason about
-        // and to test as "level 40 is 7,600px along" than as a large signed
-        // offset either side of a midpoint 9,500px from anywhere.
+        // and to test as "level 40 is 6,630px along" than as a large signed
+        // offset either side of a midpoint 3,400px from anywhere.
         //
-        // Getting this wrong is not subtle and was not: placing NodeX directly
-        // put every node half a content-width too far right, and UiAudit
-        // refused the build with "TrackDot100 escapes its parent: 9,330px past
-        // the right".
+        // Getting this wrong is not subtle: placing NodeX directly puts every
+        // node half a content-width too far right, and UiAudit refuses the
+        // build with "escapes its parent ... past the right".
         public static float NodeOffsetX(int level) => NodeX(level) - ContentWidth * 0.5f;
 
         // ---- the four bands -----------------------------------------------------
@@ -354,7 +353,7 @@ namespace PrincesPalace.Domain.UiKit
         // goes.
         public const float SummaryPartsLeft = CollectWidth + 20f;
 
-        // The reward's name takes what is left of the row: 484, for a
+        // The reward's name takes what is left of the row: 474, for a
         // name that measures about 450 at its longest ("YOUR SECOND LIFE
         // RETURNS AT EVERY BOSS" at 20). The text fit audit skips
         // content-derived strings, so this box is checked by arithmetic.
@@ -459,7 +458,7 @@ namespace PrincesPalace.Domain.UiKit
         // silently run under the rule.
         public const float CardRuleGap = 14f;
 
-        // 48 tall, which is two lines at the caption's 22px.
+        // 56 tall, which is two lines at the caption's 22px.
         //
         // The longest reward name measures about 460 against this column's 474,
         // so it fits on one line by fourteen pixels -- and a box sized for one
@@ -473,8 +472,8 @@ namespace PrincesPalace.Domain.UiKit
         //
         // A DEVIATION, and a measured one: at 32px the longest reward the track
         // can name -- "YOUR SECOND LIFE RETURNS AT EVERY BOSS" -- runs about
-        // 700px against the 484 this column has, so it wraps to three lines and
-        // clips out of a 48px box. 32 is right for the milestone names the
+        // 700px against the 474 this column has, so it wraps to three lines and
+        // clips out of a 56px box. 32 is right for the milestone names the
         // design was drawn against and wrong for the filler ones. If the card
         // grows, this is the number that goes back up.
         public const int CardCaptionFont = 22;
@@ -525,7 +524,7 @@ namespace PrincesPalace.Domain.UiKit
         // fights the next level is (right).
         //
         // THE SAME LINE RATHER THAN A NEW ONE, and the card's own geometry is
-        // why. Its content occupies 106 of 150 with 22 of padding above and
+        // why. Its content occupies 104 of 180 with 38 of padding above and
         // below -- the art plate beside it is what sets that -- so a fifth row
         // would have to eat the padding the plate defines. The footer had 455px
         // for a line whose longest string measures under 200, which is where
@@ -599,7 +598,7 @@ namespace PrincesPalace.Domain.UiKit
         // and no node carries a correction of its own.
         public static float RailOffsetY => CentreY(RailYFromTop) - BandCentreY;
 
-        // The ascent ribbon: all 99 levels at once, in space the rail cannot
+        // The ascent ribbon: every level at once, in space the rail cannot
         // use. The brief's sharpest open question was that a player at level 47
         // cannot see level 50 without scrolling; this is the answer to it.
         //
@@ -647,11 +646,10 @@ namespace PrincesPalace.Domain.UiKit
         // ticks ON the edge it measures and its figures beside them.
         public const float RibbonBaseHeight = 1f;
 
-        // A TICK FOR EVERY LEVEL, in two weights. The first build drew one only
-        // where a level was reached and uncollected, so a player who collects
-        // as they go saw a bare line with twelve dots on it -- 99 levels
-        // rendered as 12 marks, which says nothing about how far apart they
-        // are. Every level standing as a hairline is what makes the ribbon a
+        // A TICK FOR EVERY LEVEL, in two weights. A tick only where a level
+        // was reached and uncollected would leave a player who collects as
+        // they go a bare line with ten dots on it -- 39 levels rendered as
+        // 10 marks, which says nothing about how far apart they are. Every level standing as a hairline is what makes the ribbon a
         // measure of the whole ascent rather than a list of its landmarks.
         public const float RibbonTickWidth = 1f;
         public const float RibbonTickHeight = 7f;
@@ -673,7 +671,7 @@ namespace PrincesPalace.Domain.UiKit
 
         // The window box is a BAND across the ruler, not a box around the whole
         // ribbon. At the ribbon's full 86px height it enclosed the numbers as
-        // well, which made the twelve landmarks inside the window look like a
+        // well, which made the landmarks inside the window look like a
         // different kind of landmark from the ones outside it.
         public const float RibbonWindowHeight = 30f;
 
@@ -853,7 +851,7 @@ namespace PrincesPalace.Domain.UiKit
         // WHICH PAINTED MEDALLION THE CARD SHOWS for a reward -- OR NULL,
         // which is now a real answer rather than a gap.
         //
-        // NINE OF TWENTY-ONE, AND THE OTHER TWELVE GET WORDS. Not every kind
+        // NINE OF TWENTY-ONE, AND ELEVEN OF THE OTHER TWELVE GET WORDS. Not every kind
         // has an honest medallion: some would only borrow marks from the
         // STATUS set -- flat cel art in cool violets -- which on a card
         // whose other slots are painted gold medallions reads as a bug
@@ -909,7 +907,7 @@ namespace PrincesPalace.Domain.UiKit
             }
         }
 
-        // THE TWELVE KINDS WITH NO HONEST MEDALLION, as a short word set in the
+        // THE ELEVEN KINDS WITH NO HONEST MEDALLION, as a short word set in the
         // kit's own face on the card's 86px plate.
         //
         // WORDS RATHER THAN INVENTED SYMBOLS, and the choice is about who has
@@ -927,7 +925,7 @@ namespace PrincesPalace.Domain.UiKit
         // kept by RewardTrackScreenTests rather than by eye.
         //
         // WHAT SHOULD BE COMMISSIONED, if a painter is ever pointed at this
-        // screen: twelve small medallions in the talent tree's own hand, one
+        // screen: eleven small medallions in the talent tree's own hand, one
         // per token below. None is urgent -- a word is a worse picture and a
         // perfectly good label -- but the four naming a number a player tunes a
         // build around (ELEM, SPELL, -MANA, -COST) are where a picture helps
@@ -1001,7 +999,7 @@ namespace PrincesPalace.Domain.UiKit
             }
         }
 
-        // The twelve landmarks, in rail order.
+        // The landmarks, in rail order.
         //
         // ONE ENUMERATION FOR THE SCREEN AND THE CONTROLLER, which is the whole
         // reason it is here rather than a loop in each. The ribbon emits a
@@ -1075,7 +1073,7 @@ namespace PrincesPalace.Domain.UiKit
         public static float PrestigeLabelOffsetX =>
             (PrestigeBoundaryOffsetX + NodeOffsetX(RewardTrack.MaxLevel) + NodePitch * 0.5f) * 0.5f;
 
-        // Milestones are drawn larger, because a rail of a hundred identical
+        // Milestones are drawn larger, because a rail of identical
         // dots has no landmarks and nothing for the eye to count from.
         //
         // ASKED OF THE TRACK, not guessed from the reward kind. This started as

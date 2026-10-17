@@ -72,13 +72,14 @@ namespace PrincesPalace.Domain.UiKit
         // to reach further into its box, change these two numbers and every
         // hosted pane moves together.
         //
-        // Every hosted pane's own HalfWidth/HalfHeight reads these instead of
-        // Width * 0.5f / Height * 0.5f -- CharacterDossierScreen,
-        // RewardTrackScreen, OptionsScreen, PartyScreen, RunScreen and
-        // ExitsScreen all lay their content out against these, so a pane's
-        // declared frame (Width/Height, still PanelWidth x ContentHeight --
+        // ExitsLayout, OptionsLayout and PartyLayout read these for their own
+        // HalfWidth/HalfHeight instead of Width * 0.5f / Height * 0.5f, and
+        // Ui's container-inset helper uses the same insets; the other panes
+        // (Glossary, Dossier, RewardTrack, Run) lay out against their own
+        // frame. For the panes that read these, the declared frame
+        // (Width/Height, still PanelWidth x ContentHeight --
         // SystemMenuPaneTests.EveryHostedPaneIsTheSizeOfTheContentArea pins
-        // this) and its usable content region are not the same rect.
+        // this) and the usable content region are not the same rect.
         public const float PaneContentHalfWidth = 744f;
 
         public const float PaneContentHalfHeight = 357.78f;

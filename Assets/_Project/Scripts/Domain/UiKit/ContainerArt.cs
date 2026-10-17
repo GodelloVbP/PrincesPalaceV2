@@ -184,12 +184,9 @@ namespace PrincesPalace.Domain.UiKit
             [(ContainerKind.Container, ContainerRatio.TwoByOne)] = new ContainerSpec(
                 ContainerAspect2x1, new ContentInsetFrac(left: 0.035f, right: 0.035f, top: 0.055f, bottom: 0.055f),
                 new ContentInsetFrac(left: 0.0029f, right: 0.0031f, top: 0.0056f, bottom: 0.0065f), "2x1"),
-            // NEW WITH THIS DELIVERY, and nothing calls it yet -- it is here
-            // so the twelve container_*_5x1 PNGs are reachable, keyed and
-            // pinned like every other group rather than sitting on disk
-            // unreferenced. Insets are the plain raw*1.25: there is no caller
-            // to tune them against, and unlike 3x2/2x1 no prior pin to
-            // preserve. The frame is a 5-9px hairline on a 1530px bar.
+            // The twelve container_*_5x1 PNGs (HubScreen's CurrencyPlate is
+            // the caller). Insets are the plain raw*1.25, with no earlier pin
+            // to preserve. The frame is a 5-9px hairline on a 1530px bar.
             // Per side, raw*1.25 to three decimals: L .0052 -> 0.007,
             // R .0065 -> 0.008, T .0261 -> 0.033, B .0327 -> 0.041. Left and
             // right were both authored 0.009, which is neither side's number.

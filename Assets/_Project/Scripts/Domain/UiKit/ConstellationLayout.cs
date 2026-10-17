@@ -599,10 +599,9 @@ namespace PrincesPalace.Domain.UiKit
 
         // ---- the path-only API: Shawn's figures ----------------------------------
         //
-        // What the screen tree and the controller call today. It predates the
-        // character key and meant "Shawn's" all along, so it says so and
-        // delegates rather than keeping a second lookup. Callers that know the
-        // character move to the overloads above (Phase 3 Unity-side handoff).
+        // Shorthand for Shawn's figures. Callers that know the character pass
+        // its key to the overloads above; these delegate to them with ShawnId
+        // rather than keeping a second lookup.
         public static int PlotCount => PlotCountFor(ShawnId);
 
         public static float StarX(int path, int slot) => StarX(ShawnId, path, slot);
@@ -632,7 +631,9 @@ namespace PrincesPalace.Domain.UiKit
         public const float SeparationFloor = 112f;   // 94 authored, x1.2, rounded down
         public const float SideClearance = 130f;     // 108 authored
 
-        // How wide and tall the widest plot actually is, orbs included.
+        // An UPPER BOUND on the plot's size, orbs included: the width adds a
+        // cap orb to the +/-422 side stones (which are normal orbs), and the
+        // height adds one at the top and none at the root.
         public static float TreeWidth => 422f * 2f + OrbCap;
 
         public static float TreeHeight => 924f + OrbCap;
@@ -751,12 +752,11 @@ namespace PrincesPalace.Domain.UiKit
         // ---- motion ----------------------------------------------------------
         //
         // Every period the screen animates on, in one place, because the whole
-        // point of them is that they DISAGREE. Nine loops running at 2.4, 3.2,
-        // 4.6, 5.0, 6.0, 7.2, 11, 15, 41, 58, 74, 96, 112 and 148 seconds
-        // share no common multiple worth reaching, so the sky never repeats a
-        // frame inside a session -- which is the only thing that separates
-        // "alive" from "looping". Scattered across the controller as literals
-        // that property is invisible and one careless round to 5.0 destroys it.
+        // point of them is that they DISAGREE. Loops whose periods share no
+        // common multiple worth reaching never repeat a frame inside a
+        // session -- which is the only thing that separates "alive" from
+        // "looping". Scattered across the controller as literals that
+        // property is invisible and one careless round to 5.0 destroys it.
 
         // The stagger. A tree of stones that all breathe together is a tree
         // that blinks; 491ms against a 3200ms cycle walks the phase around
@@ -812,9 +812,10 @@ namespace PrincesPalace.Domain.UiKit
 
         // ---- the kindling beat ----------------------------------------------
         //
-        // 1.1 SECONDS, IN FOUR OVERLAPPING PARTS. They overlap on purpose: the
-        // crust cracks while the stone is still catching, and the motes leave
-        // before either has finished. Played in sequence it reads as a machine
+        // 1.1 SECONDS, IN THREE OVERLAPPING PARTS (crust, catch, edge). They
+        // overlap on purpose: the crust cracks while the stone is still
+        // catching, and the edge lights before either has finished. Played in
+        // sequence it reads as a machine
         // completing steps; played over itself it reads as something igniting.
         public const float KindleSeconds = 1.12f;
         public const float KindleCrustSeconds = 0.52f;
@@ -823,8 +824,9 @@ namespace PrincesPalace.Domain.UiKit
         public const float KindleMoteSeconds = 0.70f;
         public const int KindleMoteCount = 6;
 
-        // The six motes leave unevenly -- the gaps widen, 90/70/80/90/90 --
-        // because six embers on an even beat is a metronome.
+        // The mote timing below has no reader: the beat is the three parts
+        // above. Unevenly spaced delays, because embers on an even beat are a
+        // metronome.
         private static readonly float[] MoteDelays = { 0f, 0.09f, 0.16f, 0.24f, 0.33f, 0.42f };
 
         public static float MoteDelay(int index) =>

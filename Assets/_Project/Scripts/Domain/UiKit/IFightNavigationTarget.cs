@@ -1,7 +1,6 @@
 namespace PrincesPalace.Domain.UiKit
 {
-    // The three calls the Fight branch of the input dispatcher makes, moved
-    // verbatim out of FightController.Input.cs's own PollGamepadNavigation
+    // The calls the Fight branch of the input dispatcher makes on a fight
     // (see docs/GAMEPAD_NAVIGATION_PLAN.md section 3). A small interface
     // rather than a direct FightController reference so NavContext (engine-
     // free) can hold a target without ever seeing a MonoBehaviour, and so a
@@ -55,8 +54,8 @@ namespace PrincesPalace.Domain.UiKit
         // A READ-ONLY WINDOW ONTO STATE FIGHT ALREADY KEPT. Nothing about
         // MoveFocus/ConfirmFocus/OnBackPressed changes to serve this: the
         // implementation reads _focusedVerb, _menu.RowSelection,
-        // _hoveredEnemyIndex and _hoveredAllyIndex, every one of which
-        // existed and was already driven by those three.
+        // _hoveredEnemyIndex and _hoveredAllyIndex, which those calls
+        // already drive.
         object FocusedElement { get; }
     }
 }

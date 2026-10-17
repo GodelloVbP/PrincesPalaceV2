@@ -2,19 +2,13 @@ namespace PrincesPalace.Domain.UiKit
 {
     // Where the combat submenu's rows sit, as pure arithmetic.
     //
-    // This exists to kill the one RUNTIME instance of the count-vs-footprint
-    // failure. v1 built these rows at a fixed 8-slot reservation in the Editor
-    // and then RE-ANCHORED them at runtime from a second copy of the same
-    // constants, living in Core because -- in that file's own words --
-    // "Core cannot see Editor-only constants". Two hand-mirrored copies of
-    // 66 / +8 / -486+46, and no build-time guard could see the runtime one.
-    //
-    // Now there is one copy, in Domain, that both the builder and the
-    // controller call. The numbers are v1's exactly, so ported screens land
-    // pixel-identically.
+    // One copy of the submenu's geometry, in Domain, that both the scene
+    // builder and the runtime controller call. The builder cannot see Core
+    // and Core cannot see Editor-only constants, so a number kept in either
+    // would need a hand-mirrored twin that no build-time guard could check.
     public static class FightSubmenuLayout
     {
-        // NOW EQUAL TO VerbRowH: the skill buttons match the main command
+        // EQUAL TO VerbRowH: the skill buttons match the main command
         // buttons' size and border. Reading VerbRowH directly (rather than
         // restating the number and hoping it stays in sync) is what makes
         // "the same size" a fact the compiler can check instead of a
@@ -60,7 +54,7 @@ namespace PrincesPalace.Domain.UiKit
         public static float VisibleBottomLine =>
             CommandBottom + VerbRowH * Ui.PlateVisiblePad(Ui.PlateShapeFor(VerbRowW, VerbRowH)).Bottom;
 
-        // ---- BACK IS A ROW NOW, AND IT IS INSIDE THE FRAME -----------------------
+        // ---- BACK IS A ROW, AND IT IS INSIDE THE FRAME ---------------------------
         //
         // As a row inside the container it inherits the rows' width and x for
         // free, which is the alignment fix -- there is no second number left to
@@ -112,7 +106,7 @@ namespace PrincesPalace.Domain.UiKit
         public const int RowsInView = 5;
 
         // How many of `count` rows the viewport actually shows before it
-        // must scroll for the rest -- VisibleCount above (pool-clamped)
+        // must scroll for the rest -- VisibleCount below (pool-clamped)
         // answers "how many row RECTS exist to scroll to"; this answers "how
         // tall does the window get", which is capped far sooner. Floored at
         // 1 so an empty list still reserves one row's worth of frame rather
@@ -200,10 +194,10 @@ namespace PrincesPalace.Domain.UiKit
         // number that could drift from it the way this file's own header
         // warns about.
         //
-        // NOW EQUAL TO VerbRowW, for the same reason RowHeight reads VerbRowH
+        // EQUAL TO VerbRowW, for the same reason RowHeight reads VerbRowH
         // above -- see that constant's own header. 300x52 is exactly the verb
         // row's own size, so the two pick the identical Row6x1 plate at the
-        // identical dimensions: not merely a close aspect match any more, the
+        // identical dimensions: not merely a close aspect match, the
         // same border, at the same size.
         public const float RowWidth = VerbRowW;
 
@@ -218,7 +212,7 @@ namespace PrincesPalace.Domain.UiKit
         // RelicDraftScreen's DraftFrameFill uses the same flat-fill-plus-Rim
         // shape for the identical reason -- see that file's own header.
         //
-        // EXACTLY THE CONTENT BOX NOW, not bigger: a flat fill has no border
+        // EXACTLY THE CONTENT BOX, not bigger: a flat fill has no border
         // art to leave room for, so FrameWidth/FrameHeight ARE
         // ContainerWidth/ContainerHeight(For) -- no FrameInset, no separate
         // FrameContentCentreY layer.
@@ -279,8 +273,8 @@ namespace PrincesPalace.Domain.UiKit
         // ---- the scrolled content ------------------------------------------------
         //
         // The content rect holds the whole pool at fixed positions and MOVES AS
-        // ONE: sixteen fixed children move with one write, and it is the
-        // only construction that can also scroll.
+        // ONE: the whole pool moves with one write, and it is the only
+        // construction that can also scroll.
 
         public static float ContentHeight => ColumnHeight(PoolSize);
 

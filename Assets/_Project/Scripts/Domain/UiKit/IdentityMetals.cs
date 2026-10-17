@@ -30,8 +30,8 @@ namespace PrincesPalace.Domain.UiKit
         // it -- Image.color multiplies, so anything below white DARKENS the
         // leather and anything at white leaves it alone. These are barely off
         // white on purpose: an emboss is a change in the metal the head is
-        // struck in, not a coloured light shone at it, and the first values
-        // tried (the rim colours above) turned a brown strip grey-blue.
+        // struck in, not a coloured light shone at it: the rim colours above
+        // would turn a brown strip grey-blue.
         public const string EmbossSilver = "#EDF1F8";
         public const string EmbossGold = "#FFEFC9";
 

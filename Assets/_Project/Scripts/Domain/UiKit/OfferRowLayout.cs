@@ -28,12 +28,11 @@ namespace PrincesPalace.Domain.UiKit
         // The painted interior the row has to live inside, edge to edge.
         //
         // DERIVED from the screen that paints the border rather than restated
-        // as 1080, which is what it looks like and is not -- the real figure is
-        // 1080.576, because the inset is 9.8% of a 1344 panel. A rounded copy
-        // would put the three-card row 0.576px inside an interior it is
-        // supposed to exactly fill, and the whole point of BuildOffer's
-        // "run to x 540 against a clip half-width of 540.3" note is that this
-        // row is measured to the fraction.
+        // as a rounded 1156, which is what it looks like and is not -- the
+        // real figure is 1155.84, because the inset is 7% a side of a 1344
+        // panel (half-width 577.92). A rounded copy would put the card row
+        // off an interior it is supposed to exactly fill, and the row is
+        // measured to the fraction.
         //
         // MapLayout sets the precedent for reading a constant from the type
         // that owns it rather than keeping a copy in sync.

@@ -4,8 +4,8 @@ namespace PrincesPalace.Domain.UiKit
 {
     // Where the Divine Principality's buildings stand, and how big they read.
     //
-    // The hub was five equal rectangles on a nebula: no ground, no depth, no
-    // hierarchy. This is the arithmetic that makes it a PLACE -- a forecourt at
+    // Five equal rectangles on a nebula have no ground, no depth and no
+    // hierarchy. This is the arithmetic that makes the hub a PLACE -- a forecourt at
     // the edge of the void, with the gate on the terrace and the annexes
     // floating out over the drop at different distances.
     //
@@ -51,11 +51,10 @@ namespace PrincesPalace.Domain.UiKit
         // A nameplate has to clear THE ART, which is not the same as clearing
         // the box.
         //
-        // Two wrong answers came first. A flat -34 from centre did not move the
-        // labels off the buildings at all. Half the box did move them -- and
-        // landed one under the book, one across the stall and one above the
-        // shrine, because every sprite carries a different amount of transparent
-        // padding and the visible art sits at a different height inside each.
+        // A flat offset from centre or half the box both miss: every sprite
+        // carries a different amount of transparent padding, so the visible art
+        // sits at a different height inside each box and the label lands under
+        // one building, across another and above a third.
         //
         // MEASURED, not guessed: these are the lowest opaque row of each sheet
         // as a fraction of its height, read off the actual PNGs. Same convention
@@ -104,7 +103,7 @@ namespace PrincesPalace.Domain.UiKit
         // without anybody sorting anything -- the same rule the fight stage
         // relies on.
         // The depths are spread wider than "looks about right" because the
-        // audit refused the first pass: at a narrower spread the far building on
+        // overlap audit demands it: at a narrower spread the far building on
         // each side sat inside the near one's box, and uGUI gives the later
         // sibling the click. A distant building you can see and cannot press is
         // the exact bug the overlap check exists to catch, so these are tuned to
