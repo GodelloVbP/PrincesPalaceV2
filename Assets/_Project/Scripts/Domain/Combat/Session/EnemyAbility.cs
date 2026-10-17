@@ -153,8 +153,14 @@ namespace PrincesPalace.Domain.Combat.Session
             }
 
             // Only reachable through float accumulation error at the very top
-            // of the range. The last entry is the honest answer there.
-            return abilities.Count - 1;
+            // of the range. The last entry that can be drawn is the answer
+            // there; a zero-weight one is gated out and never is.
+            for (int i = abilities.Count - 1; i >= 0; i--)
+            {
+                if (abilities[i].Weight > 0f) return i;
+            }
+
+            return -1;
         }
     }
 }

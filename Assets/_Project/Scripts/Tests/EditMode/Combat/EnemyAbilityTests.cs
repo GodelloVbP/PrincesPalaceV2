@@ -23,6 +23,19 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- the draw ------------------------------------------------------------
 
+        // Weights 0.1, 1.1, 1.1 leave float residue after the walk at the top of
+        // the roll range; the zero-weight (gated) tail must not catch it.
+        [Test]
+        public void ARollAtTheTopNeverLandsOnAZeroWeightTail()
+        {
+            var pool = new List<EnemyAbility>
+            {
+                Legacy("A", 1f, 0.1f), Legacy("B", 1f, 1.1f), Legacy("C", 1f, 1.1f), Legacy("Gated", 1f, 0f),
+            };
+
+            Assert.AreEqual(2, EnemyAbilityDraw.Pick(pool, 1f), "the last positive-weight entry, not the gated one");
+        }
+
         [Test]
         public void APoolWithOneEntryAlwaysPicksIt()
         {
