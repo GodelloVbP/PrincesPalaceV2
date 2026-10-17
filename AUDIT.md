@@ -30,13 +30,13 @@ debt), and a struck finding gets its number removed.
 - Combat domain: #97, #105, #120, #124, #194, #210, #235, #264, #265, #266
 - Map: none open
 - Shop: #122, #191, #196, #197, #212, #244
-- Events: #274
+- Events: none open
 - Dossier / Party / Talents / Reward track / Reckoning: #44, #104, #141, #150, #178, #199, #214
 - Menus / Options / Navigation & gamepad: #91, #142, #166, #167, #179, #223, #225, #227, #231, #234, #236, #242, #250, #251, #253, #257, #258, #259, #260, #261
 - Save & run lifecycle: #87, #102, #220, #255
 - Content pipeline & data: #86, #121, #125, #128, #131, #134, #135, #145, #198, #256, #262, #286
-- Art / VFX / stage: #80, #92, #100, #109, #129, #133, #181, #192, #213, #284
-- Tooling / tests / workflow: #95, #96, #98, #103, #137, #164, #263, #269, #282, #283
+- Art / VFX / stage: #80, #92, #100, #109, #129, #133, #181, #192, #213
+- Tooling / tests / workflow: #95, #96, #98, #103, #137, #164, #263, #269
 - Balance / economy: #37, #41, #82, #83, #85
 - Recorded decisions, not debt: #200, #201, #208, #215, #216, #217, #218
 
@@ -2575,38 +2575,5 @@ names the still that fixes it; prompts are in
 
 Each is a question the sweep could not settle from two agreeing sources. Sweep ids
 in brackets; finder text in `C:\Games\sweep-2026-10-17\LEDGER.tsv`.
-
-### 274. Rat caravan: should "Look again" after Odette keep the owl scene?
-Browse with Odette, then "Look again" drops to the generic browse scene (no Odette,
-merchant "pleasure doing business"), and "Walk on" ends at the plain farewell, so
-"Bring the owl back sometime" can't be reached after a second look. Option A: point
-Look again back at the Odette scene. Option B: leave it; the first look is the only
-Odette beat. `ContentData/events.json:1411` [C1-007].
-
-### 282. Test gates: .meta-only changes and spell_feel_test.py
-(a) A change to only a `.meta` (sprite pixels-per-unit, pivot, texture type, font,
-asmdef) is classed "ignored", so the gate runs nothing and art/ui sweeps that read sprite
-size never run. Option A: ignore only `.meta` beside code/docs, route the rest through
-the path areas. Option B: keep ignoring. `tools/test_areas.ps1:686-687` [S85-001].
-(b) `tools/spell_feel_test.py` (339 lines) runs only by hand and pins `skills.json`
-literals that a content edit breaks unseen. Wire it into a gate and TESTING.md, or
-accept as manual? [S84-011].
-
-### 283. Capture and preview tools: four small behaviours
-(a) `focus_check.ps1` fails when you click another window mid-run, even if nothing in the
-launched tree stole focus; fail only on in-tree steals? `:394` [S77-003]. (b)
-`gif.ps1 -Prune` ages runs by folder mtime, so trimmed runs live longer; age by
-`result.json` time? `:124` [S77-007]. (c) `preview.ps1` silently ignores `-Versus`
-without `-Spell` and `-Formation full` with `-Spell`/`-Character` (only `-Element`
-refuses); refuse uniformly? `:667` [S81-005]. (d) `process_reward_art.py --only` with a
-typo matches nothing and exits 0; exit 1? `:169` [S81-012].
-
-### 284. Art tools: measure_bar thresholds and the orphaned map-icon script
-(a) `measure_bar.py` reports earned/resting contrast 1.14x (min 1.40) and lip 0.35x (min
-1.15): BarFillTint #FFC24A vs BarBeforeTint #B5ADA3 may be too close, or the thresholds
-are stale. Retint, or re-bless the thresholds? `:58-67` [S80-004]. (b)
-`process_map_icons.py` and its 7 `map_forest_*`/`forest_map_chest` Processed PNGs have no
-reader since the run-map rebuild. Delete script, PNGs and the ART_PIPELINE row, or keep?
-`:1` [S81-008].
 
 ### ~~286. Two comment-vs-code drifts that need a one-line call~~ — fixed in `99565bc4`: the ContentBuilder bracket comment now states that RealmsPath is made with its first asset (the code was right), and `AudioLevels.cs` no longer cites a nonexistent `MusicLibrary`
