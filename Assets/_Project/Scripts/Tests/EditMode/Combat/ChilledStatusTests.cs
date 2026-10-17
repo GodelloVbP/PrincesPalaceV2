@@ -327,6 +327,23 @@ namespace PrincesPalace.Domain.Tests
                 "a second slow from the same source resets the clock, it does not deepen the malus");
         }
 
+        // A malus past 100% floors Speed at 1; taking it back must land on the
+        // true base, not one above it. Base 100, 150% asked: Speed 1, revoke 100.
+        [Test]
+        public void ARevokedOverlargeSlow_RestoresExactlyTheBaseSpeed()
+        {
+            var actor = Fighter("Hero", true);
+            var target = Fighter("Foe", false, speed: 100);
+            var session = Session(new CombatEncounter(new[] { actor }, new[] { target }));
+
+            session.GrantSpeedMalusPercentForTest(target, EffectKind.LuckyDeck, 150, turns: 1);
+            Assert.AreEqual(1, target.Speed, "fixture: the slow floors at 1");
+
+            session.TickSpeedBuffsForTest(target);
+
+            Assert.AreEqual(100, target.Speed, "revoking the floored slow hands back the base, no +1");
+        }
+
         // ---- composing with the necklace ramp (a BUFF, untouched by this phase) ----
 
         private static ResolvedRelic Relic(EffectKind effect) =>

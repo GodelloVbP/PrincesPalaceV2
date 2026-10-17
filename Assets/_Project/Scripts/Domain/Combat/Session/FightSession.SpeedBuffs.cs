@@ -232,11 +232,14 @@ namespace PrincesPalace.Domain.Combat.Session
             // already floors at 1, and a malus larger than what remains of the
             // BASE would otherwise ask for more than there is to give back.
             if (buff.Granted + wanted < -baseSpeed) wanted = -baseSpeed - buff.Granted;
+            // The grant recorded is what Speed actually lost, so the revoke gives
+            // back exactly that: a floor applied after the fact would hand back
+            // one more than was taken.
+            if (actor.Speed + wanted < 1) wanted = 1 - actor.Speed;
             if (wanted >= 0) return 0;
 
             buff.Granted += wanted;
             actor.Speed += wanted;
-            if (actor.Speed < 1) actor.Speed = 1;
             _encounter.RefreshSpeed(actor);
 
             return wanted;
