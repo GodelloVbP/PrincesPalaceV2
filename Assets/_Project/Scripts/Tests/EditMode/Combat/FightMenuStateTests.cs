@@ -299,6 +299,16 @@ namespace PrincesPalace.Domain.Tests
         // ---- what the HUD reads -------------------------------------------------
 
         [Test]
+        public void TheBreadcrumbNamesTheMoveBranchNotAttack()
+        {
+            var menu = Menu();
+            menu.OpenBranch(MenuBranch.Move);
+
+            StringAssert.Contains("M O V E", FightHudModel.Breadcrumb(menu));
+            StringAssert.DoesNotContain("A T T A C K", FightHudModel.Breadcrumb(menu));
+        }
+
+        [Test]
         public void TheBreadcrumbNamesTheWayIn()
         {
             var menu = Menu();

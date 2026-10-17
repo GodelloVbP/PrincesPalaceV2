@@ -3199,6 +3199,10 @@ namespace PrincesPalace
                     : FightHudModel.DetailForSkill(_session, actor, chosen, actor?.SignaturePool?.DisplayName);
             }
 
+            // THE MOVE LIST HAS NO PER-ROW CARD: FORWARD and BACK are not skills,
+            // and falling through would read kit skill 0 or 1 for them.
+            if (_menu.Branch == MenuBranch.Move) return FightHudModel.DetailForNoSelection(_menu.Branch);
+
             var rows = CurrentRows();
             int index = _menu.Selection;
 

@@ -330,5 +330,56 @@ namespace PrincesPalace.PlayModeTests
                 "an element choice is not a skill -- the row pool must not still show the skill's mark " +
                 "it was carrying one depth up");
         }
+
+        // ---- the Move branch describes itself, not a skill (S15-001/002) --------
+        //
+        // Verb3 is MOVE. Row 0 of FORWARD/BACK used to be read as skill 0 of
+        // the kit by the detail card, so the card named a spell while the
+        // formation list was lit.
+        [UnityTest]
+        public IEnumerator TheMoveBranchDoesNotShowASkillCardOrAttackBreadcrumb()
+        {
+            yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
+            yield return null;
+            yield return null;
+
+            _fight = Object.FindAnyObjectByType<FightController>();
+            Assert.IsNotNull(_fight, "the Fight scene has no FightController");
+
+            var skill = new ResolvedSkill("s", "Spellblade", "", "shawn", 1, SkillEffect.DamageSingle,
+                SkillTargeting.SingleEnemy, manaCost: 5, resourceCost: 0, spendsAllResource: false,
+                power: 1, flatAmount: 0, ignoresDefense: false, damageInstances: null,
+                presentation: SpellPresentation.None, sortOrder: 0);
+            var hero = new CombatantState("Shawn", true, 300, 5, 40, 10);
+            var ally = new CombatantState("Bjorn", true, 300, 5, 40, 8);
+            var foes = new[] { new CombatantState("Front", false, 5000, 10, 8, 4) };
+            var kits = new List<PlayerKit>
+            {
+                new PlayerKit("shawn", CharacterRole.Tank, new List<ResolvedSkill> { skill }, null, null),
+                new PlayerKit("bear", CharacterRole.Tank, new List<ResolvedSkill>(), null, null),
+            };
+            var enemyKit = new EnemyKit(
+                new ResolvedEnemy("front", "Front", new StatBlock(), 5, 3, false,
+                    DamageType.Physical, DamageType.Physical, 0), false);
+            var session = new FightSession(new CombatEncounter(new[] { hero, ally }, foes), kits,
+                new List<EnemyKit> { enemyKit }, new SeededRandom(9));
+            session.Begin();
+
+            _fight.Bind(session, EncounterClass.Normal, new List<SatchelStack>());
+            yield return null;
+
+            Click("Verb3");
+            yield return null;
+
+            Assert.AreEqual("FORWARD", _fight.CurrentRowsForTest()[0].Name,
+                "fixture: Verb3 did not open the Move list");
+            Assert.AreEqual("Move", _fight.CurrentDetailForTest().Name,
+                "the detail card of the open Move list named something else (a skill card)");
+
+            var crumb = Named("Breadcrumb")?.GetComponentInChildren<TMPro.TMP_Text>(true);
+            Assert.IsNotNull(crumb, "fixture: no Breadcrumb text node");
+            StringAssert.Contains("M O V E", crumb.text);
+            StringAssert.DoesNotContain("A T T A C K", crumb.text);
+        }
     }
 }

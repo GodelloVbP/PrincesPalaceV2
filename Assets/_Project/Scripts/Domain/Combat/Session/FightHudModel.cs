@@ -424,6 +424,16 @@ namespace PrincesPalace.Domain.Combat.Session
         // breadcrumb overhead read COMMAND > SKILL.
         public static DetailPanel DetailForNoSelection(MenuBranch branch)
         {
+            if (branch == MenuBranch.Move)
+            {
+                return new DetailPanel
+                {
+                    Name = "Move",
+                    Kind = "FORMATION",
+                    Body = "Choose a direction to trade places.",
+                };
+            }
+
             return new DetailPanel
             {
                 Name = branch == MenuBranch.Item ? "Items" : "Skills",
@@ -1466,6 +1476,7 @@ namespace PrincesPalace.Domain.Combat.Session
 
             string word = menu.Branch == MenuBranch.Skill ? "S K I L L"
                 : menu.Branch == MenuBranch.Item ? "I T E M"
+                : menu.Branch == MenuBranch.Move ? UiStrings.SubmenuMoveTitle.Template
                 : "A T T A C K";
 
             string trail = "C O M M A N D  ›  " + word;
