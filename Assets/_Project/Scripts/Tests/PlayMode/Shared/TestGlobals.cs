@@ -61,25 +61,11 @@ namespace PrincesPalace.PlayModeTests
             SaveSystem.RootOverride = null;
             Navigation.Reset();
 
-            // THE ONE GLOBAL THE LINT CANNOT SEE, and it was missing from here
-            // until 2026-09-11. EscapeKey's frame stamp is written by
-            // PRODUCTION during a test -- SystemMenuController.HandleEscape
-            // calls Consume() -- so no test file writes it, so
-            // GlobalStateLintTests has nothing to scan and would have been
-            // vacuous if given a rule. Its own Reset() exists for exactly this
-            // ("a stamp from a previous test would leak into the next one's
-            // first frame") and was called from SystemMenuTests alone.
-            //
-            // What it leaks is a skipped Escape: a test whose first frame is
-            // the same frame the previous test ended on reads ConsumedThisFrame
-            // as true and the menu silently declines to open.
-            EscapeKey.Reset();
             HoldToConfirm.SubmitLevelOverride = null;
             SoundController.Observer = null;
             SoundController.ClipObserver = null;
 
-            // THE SECOND GLOBAL THE LINT CANNOT SEE, same shape as EscapeKey
-            // above: NavigationInputModule.LastInputWasPad is written by
+            // A GLOBAL THE LINT CANNOT SEE: NavigationInputModule.LastInputWasPad is written by
             // PRODUCTION during a test (TrackInputDevice, every frame the
             // dispatcher runs) and by no test file, so there is nothing for
             // GlobalStateLintTests to scan. It deliberately survives a scene

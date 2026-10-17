@@ -113,7 +113,8 @@ namespace PrincesPalace
                 if (sliderTracks[i] == null || sliderKeys == null || i >= sliderKeys.Length) continue;
                 string key = sliderKeys[i];
                 var bar = sliderTracks[i].gameObject.AddComponent<BarSlider>();
-                bar.Changed = value => SetSlider(key, value);
+                bar.Changed = value => SetSlider(key, value, persist: false);
+                bar.Committed = GameSettings.Save;
             }
 
             for (int i = 0; stepPrev != null && i < stepPrev.Length; i++)
@@ -210,12 +211,12 @@ namespace PrincesPalace
             }
         }
 
-        private void SetSlider(string key, float value)
+        private void SetSlider(string key, float value, bool persist = true)
         {
             switch (key)
             {
-                case "sound": GameSettings.SetSoundVolume(value); break;
-                case "music": GameSettings.SetMusicVolume(value); break;
+                case "sound": GameSettings.SetSoundVolume(value, persist); break;
+                case "music": GameSettings.SetMusicVolume(value, persist); break;
                 default: throw new ArgumentOutOfRangeException(nameof(key), key,
                     "an Options slider has no GameSettings setter behind it");
             }

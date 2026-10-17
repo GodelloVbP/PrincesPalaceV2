@@ -26,6 +26,17 @@ namespace PrincesPalace
     // chime, not a chord of three.
     public static class StatusCues
     {
+        // Declared before ByType: static initialisers run in textual order.
+        private static readonly string[] Ward =
+        {
+            "Audio/Sfx/status_ward_1", "Audio/Sfx/status_ward_2", "Audio/Sfx/status_ward_3",
+        };
+
+        private static readonly string[] Regen =
+        {
+            "Audio/Sfx/status_regen_1", "Audio/Sfx/status_regen_2", "Audio/Sfx/status_regen_3",
+        };
+
         private static readonly Dictionary<StatusEffectType, string[]> ByType =
             new Dictionary<StatusEffectType, string[]>
             {
@@ -38,16 +49,6 @@ namespace PrincesPalace
         // finished fight's combatants go with it and no reset call is needed.
         private static readonly ConditionalWeakTable<CombatantState, HashSet<StatusEffectType>> Seen =
             new ConditionalWeakTable<CombatantState, HashSet<StatusEffectType>>();
-
-        private static string[] Ward => new[]
-        {
-            "Audio/Sfx/status_ward_1", "Audio/Sfx/status_ward_2", "Audio/Sfx/status_ward_3",
-        };
-
-        private static string[] Regen => new[]
-        {
-            "Audio/Sfx/status_regen_1", "Audio/Sfx/status_regen_2", "Audio/Sfx/status_regen_3",
-        };
 
         private static readonly Dictionary<string, int> LastFrame = new Dictionary<string, int>();
 

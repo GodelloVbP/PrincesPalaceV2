@@ -131,16 +131,19 @@ namespace PrincesPalace
             PlayerPrefs.Save();
         }
 
-        public static void SetMusicVolume(float value)
+        // `persist: false` for a caller that sets many values in a gesture (a
+        // slider drag) and calls Save once at the end: Save is a synchronous
+        // registry write on Windows.
+        public static void SetMusicVolume(float value, bool persist = true)
         {
             MusicVolume = Mathf.Clamp01(value);
-            Save();
+            if (persist) Save();
         }
 
-        public static void SetSoundVolume(float value)
+        public static void SetSoundVolume(float value, bool persist = true)
         {
             SoundVolume = Mathf.Clamp01(value);
-            Save();
+            if (persist) Save();
         }
 
         public static void SetResolutionIndex(int index)

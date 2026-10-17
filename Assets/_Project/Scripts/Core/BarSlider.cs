@@ -17,11 +17,22 @@ namespace PrincesPalace
     // need emitting and wiring, to do what twenty lines do. What it would buy
     // is keyboard and gamepad focus, and neither is wired here yet -- when they
     // are, that is the moment to reconsider rather than now.
-    public class BarSlider : MonoBehaviour, IPointerClickHandler, IDragHandler
+    public class BarSlider : MonoBehaviour, IPointerClickHandler, IDragHandler, IEndDragHandler
     {
+        // Every value the pointer sets, per drag tick.
         public Action<float> Changed;
 
-        public void OnPointerClick(PointerEventData eventData) => Set(eventData);
+        // The gesture is over (a click, or the end of a drag): for work that is
+        // too costly to repeat per tick, such as persisting the value.
+        public Action Committed;
+
+        public void OnPointerClick(PointerEventData eventData)
+        {
+            Set(eventData);
+            Committed?.Invoke();
+        }
+
+        public void OnEndDrag(PointerEventData eventData) => Committed?.Invoke();
 
         // Drag and click share a path, so grabbing the bar and sweeping it
         // behaves like the click that started it rather than like a separate

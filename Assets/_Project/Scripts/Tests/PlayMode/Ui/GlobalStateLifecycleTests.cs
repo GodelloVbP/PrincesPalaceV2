@@ -22,13 +22,12 @@ namespace PrincesPalace.PlayModeTests
     // Nothing else in the suite can see that. A fixture calling ResetAll is
     // exempted by the lint precisely BECAUSE it called it, so an absent entry
     // buys the offending global a permanent exemption from both rules at once.
-    // That is E6's shape exactly: EscapeKey's frame stamp is written by
-    // PRODUCTION during a test (SystemMenuController.HandleEscape -> Consume),
-    // so no test file writes it, so the lint has nothing to scan, so the only
-    // thing that could ever have noticed was a person reading ResetAll beside
-    // the list of statics -- which is this file.
+    // That is the shape of NavigationInputModule.LastInputWasPad: PRODUCTION
+    // writes it during a test, so no test file writes it, so the lint has
+    // nothing to scan, so the only thing that could ever notice is a person
+    // reading ResetAll beside the list of statics -- which is this file.
     //
-    // scenarios E5, E6, B25, B26 (docs/hunt/SCENARIOS.md).
+    // scenarios E5, B25, B26 (docs/hunt/SCENARIOS.md).
     public class GlobalStateLifecycleTests
     {
         private string _root;
@@ -48,36 +47,6 @@ namespace PrincesPalace.PlayModeTests
         {
             TestGlobals.ResetAll();
             if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
-        }
-
-        // ---- E6: the stamp nothing was resetting -------------------------------
-
-        // ESCAPE IS CONSUMED BY PRODUCTION, NOT BY THE TEST, which is why this
-        // one hid. A fixture that opens the system menu with Escape leaves
-        // EscapeKey._consumedFrame stamped with the frame number that press
-        // landed on; the next test's first frame is a DIFFERENT frame, so the
-        // stamp is usually harmless -- but PlayMode tests share a player loop,
-        // and a test whose first frame IS the frame the previous one ended on
-        // reads ConsumedThisFrame as true and silently skips whatever Escape
-        // was meant to do.
-        //
-        // EscapeKey.Reset() exists for exactly this, says so in its own
-        // comment, and was called from SystemMenuTests alone. The fix is the
-        // entry in ResetAll, not a call in every fixture.
-        [Test]
-        public void ResetAllClearsTheEscapeStampTheMenuLeavesBehind()
-        {
-            EscapeKey.Consume();
-            Assert.IsTrue(EscapeKey.ConsumedThisFrame,
-                "fixture: Consume did not stamp this frame, so this test proves nothing");
-
-            TestGlobals.ResetAll();
-
-            Assert.IsFalse(EscapeKey.ConsumedThisFrame,
-                "TestGlobals.ResetAll left EscapeKey's frame stamp set, so a later test starting on " +
-                "this same frame sees an Escape it never pressed as already consumed - and nothing " +
-                "else in the suite can see this, because production writes the field and the source " +
-                "lint only scans tests");
         }
 
         // ---- E5: every knob ResetAll claims to put back --------------------------
