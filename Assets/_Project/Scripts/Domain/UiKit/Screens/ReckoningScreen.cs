@@ -30,9 +30,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public const float ContentTop = PanelHeight * 0.5f - PanelHeight * 0.135f;
         public const float ContentBottom = -(PanelHeight * 0.5f - PanelHeight * 0.10f);
 
-        // Kept for the containment test, which asks one question of both axes.
-        public const float ContentHalfHeight = ContentTop;
-
         // How far the painted border reaches in from each side, derived from
         // ContentHalfWidth rather than restating 9.8%. The phase clip and
         // NothingSitsOnThePaintedBorder then cannot drift apart: the box the
@@ -284,7 +281,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // The board's detail, between the haul and Continue.
         public const float BoardTipWidth = 560f;
         public const float BoardTipTitleHeight = 30f;
-        public const float BoardTipMinBody = 60f;
 
         public static float PortraitX(int index, int count) => (index - (count - 1) * 0.5f) * PortraitPitch;
 

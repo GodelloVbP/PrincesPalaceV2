@@ -12,16 +12,16 @@ namespace PrincesPalace.PlayModeTests
     // The ambience movers across a disable, and against the clock they each
     // chose.
     //
-    // TEN COMPONENTS, ONE SHAPE. Seven read Time.time (BeaconPulse,
+    // NINE COMPONENTS, ONE SHAPE. Seven read Time.time (BeaconPulse,
     // HubBuildingLooper, KenBurnsDrift, LanternFlicker, MoteDrift, SlowDrift,
-    // StarTwinkle) and three read Time.unscaledTime (EmberFlare,
-    // TalentEdgeCrackle, TalentEdgeSpark). All ten capture a base in Awake and
+    // StarTwinkle) and two read Time.unscaledTime (TalentEdgeCrackle,
+    // TalentEdgeSpark). All nine capture a base in Awake and
     // write `base + f(clock)` every frame. Nothing accumulates, which is what
     // makes them safe to switch off and on -- and it is a property no test
     // stated, so nothing stops the next one being written the other way.
     //
     // POISONED WHILE DOWN, rather than compared against a twin. Two instances
-    // cannot be compared here: StarTwinkle, TalentEdgeCrackle, EmberFlare and
+    // cannot be compared here: StarTwinkle, TalentEdgeCrackle and
     // (by default) SlowDrift randomise their phase in Awake and expose no
     // setter, deliberately, so a layer does not twinkle in lockstep. So the
     // test displaces the rect or the colour to an absurd value while the mover
@@ -257,42 +257,6 @@ namespace PrincesPalace.PlayModeTests
             return Resources.Load<Sprite>($"Hub/talents/f{index}");
         }
 
-        // ---- B22: the flare restores on enable, before any frame ticks ---------------
-
-        // The Reckoning's summary phase starts inactive and is switched on
-        // mid-fight. EmberFlare is the one mover here with an explicit OnEnable
-        // rather than a pure Update, precisely so the first VISIBLE frame is
-        // the resting pose rather than wherever the last run left it.
-        [UnityTest]
-        public IEnumerator TheFlareIsBackAtRestTheInstantItIsEnabled()
-        {
-            var flare = Mover<EmberFlare>(Base);
-            var rect = (RectTransform)flare.transform;
-            var image = flare.GetComponent<Image>();
-
-            yield return Settle(0.2f);
-
-            flare.gameObject.SetActive(false);
-            rect.localScale = new Vector3(9f, 9f, 1f);
-            rect.anchoredPosition = Poison;
-            image.color = Color.green;
-
-            yield return Settle(0.1f);
-
-            // NO FRAME BETWEEN. SetActive runs OnEnable synchronously, and the
-            // claim is that the restore happens there rather than being left
-            // for the first Update -- which is a frame later and one frame of
-            // a nine-times-size flare on screen.
-            flare.gameObject.SetActive(true);
-
-            Assert.AreEqual(1f, rect.localScale.x, 0.001f,
-                "the flare came back at the scale it was left at and waits for a frame to fix itself");
-            Assert.AreEqual(Base.x, rect.anchoredPosition.x, 0.001f, "the flare came back displaced");
-            Assert.AreEqual(Base.y, rect.anchoredPosition.y, 0.001f, "the flare came back displaced");
-            Assert.AreEqual(BaseColour.a, image.color.a, 0.001f, "the flare came back at the wrong alpha");
-            Assert.AreEqual(BaseColour.g, image.color.g, 0.001f, "the flare came back the wrong colour");
-        }
-
         // ---- B30 / E8: which clock each one chose, and that it is deliberate ------------
 
         // THE SCALED ONES FREEZE WHEN THE MENU PAUSES THE GAME, AND THE
@@ -307,12 +271,10 @@ namespace PrincesPalace.PlayModeTests
             var scaled = Mover<SlowDrift>(Base);
             var crackle = Mover<TalentEdgeCrackle>(Base);
             var spark = Mover<TalentEdgeSpark>(Base, s => s.SetLength(400f));
-            var flare = Mover<EmberFlare>(Base);
 
             var scaledRect = (RectTransform)scaled.transform;
             var sparkRect = (RectTransform)spark.transform;
             var crackleImage = crackle.GetComponent<Image>();
-            var flareRect = (RectTransform)flare.transform;
 
             yield return Settle(0.1f);
 
@@ -322,7 +284,6 @@ namespace PrincesPalace.PlayModeTests
             var scaledAt = scaledRect.anchoredPosition;
             var sparkAt = sparkRect.anchoredPosition;
             float crackleAt = crackleImage.color.a;
-            float flareAt = flareRect.localScale.x;
 
             yield return Settle(0.25f);
 
@@ -335,9 +296,6 @@ namespace PrincesPalace.PlayModeTests
                 "deliberately, because the talent screen is an overlay over a pause");
             Assert.AreNotEqual(crackleAt, crackleImage.color.a,
                 "the edge crackle stopped while the game was paused");
-            Assert.AreNotEqual(flareAt, flareRect.localScale.x,
-                "the ember flare stopped while the game was paused, and the Reckoning it sits on " +
-                "is an overlay over a fight that may well be paused");
         }
 
         // B30's own half: disabled and re-enabled WHILE PAUSED, they come back

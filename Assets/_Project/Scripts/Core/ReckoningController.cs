@@ -86,7 +86,6 @@ namespace PrincesPalace
         [SerializeField] internal RectTransform offerPhase;
         [SerializeField] internal RectTransform summaryPhase;
 
-        private const float ExpandSeconds = 0.28f;
         private const float BarSeconds = 0.55f;
         private const float BarStagger = 0.12f;
 
@@ -203,7 +202,8 @@ namespace PrincesPalace
         // the reward screen has no business knowing what comes after a fight.
         public System.Action Dismissed;
 
-        // WHO OWNS THE GAINED-CHIP TOOLTIP -- the pointer or the selection
+        // WHO OWNS A TOOLTIP -- the pointer or the selection -- for the cards,
+        // whetstones, door, portraits and haul chips
         // (Core/TooltipFocusRouter, docs/GAMEPAD_NAVIGATION_PLAN.md section 7).
         private readonly TooltipFocusRouter _tooltips = new TooltipFocusRouter();
 

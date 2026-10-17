@@ -602,10 +602,9 @@ namespace PrincesPalace
                 var row = _rowTimes[r];
                 var colour = CardColour(i);
 
-                float build = row.BuildFor > 0f
-                    ? Mathf.Clamp01((t - row.BuildFrom) / row.BuildFor)
+                float build = t < row.BuildFrom ? 0f
+                    : row.BuildFor > 0f ? Mathf.Clamp01((t - row.BuildFrom) / row.BuildFor)
                     : (t >= row.FlipFrom ? 1f : 0f);
-                if (t < row.BuildFrom) build = 0f;
                 float afterLand = t >= row.LandAt ? (t - row.LandAt) / scale : -1f;
 
                 // The under-glow: builds, flashes on landing, settles to rest.
@@ -634,7 +633,7 @@ namespace PrincesPalace
                 var ring = Part(offerRings, i);
                 if (reach > 0f && afterLand >= 0f && afterLand < ringSeconds)
                     UiBurst.Ring(ring, afterLand / ringSeconds, colour, reach);
-                else if (ring != null) SetAlpha(ring, 0f);
+                else ClearAlpha(ring);
 
                 bool rays = row.Style == LandStyle.Burst && afterLand >= 0f && afterLand < RevealFeel.RaysSeconds;
                 if (rays)
@@ -644,8 +643,8 @@ namespace PrincesPalace
                 }
                 else
                 {
-                    if (Part(offerRays, i) != null) SetAlpha(Part(offerRays, i), 0f);
-                    if (Part(offerFlashes, i) != null) SetAlpha(Part(offerFlashes, i), 0f);
+                    ClearAlpha(Part(offerRays, i));
+                    ClearAlpha(Part(offerFlashes, i));
                 }
 
                 // A Rare's edge pulse: its halo flares and falls back to rest.
@@ -711,6 +710,11 @@ namespace PrincesPalace
                 if (revealMotes[m] != null && revealMotes[m].color.a > 0f) SetAlpha(revealMotes[m], 0f);
         }
 
+        private static void ClearAlpha(Image image)
+        {
+            if (image != null) SetAlpha(image, 0f);
+        }
+
         // Every card's effects at rest: posed home, the light out, the glow at
         // its resting level, no particles.
         private void RestEffects()
@@ -718,9 +722,9 @@ namespace PrincesPalace
             for (int i = 0; i < offerButtons.Length; i++)
             {
                 PoseCard(i, Vector2.zero, Vector3.one);
-                if (Part(offerRays, i) != null) SetAlpha(Part(offerRays, i), 0f);
-                if (Part(offerFlashes, i) != null) SetAlpha(Part(offerFlashes, i), 0f);
-                if (Part(offerRings, i) != null) SetAlpha(Part(offerRings, i), 0f);
+                ClearAlpha(Part(offerRays, i));
+                ClearAlpha(Part(offerFlashes, i));
+                ClearAlpha(Part(offerRings, i));
                 RestUnderGlow(i);
             }
 

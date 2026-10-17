@@ -124,6 +124,16 @@ namespace PrincesPalace
         private readonly List<HaulEntry> _haul = new List<HaulEntry>();
         private int[] _closesHeard = new int[0];
         private bool _humHeard;
+        private bool _anyRing;
+        // The numeral each member's badge last showed, so the text is
+        // rewritten only when it changes.
+        private int[] _numeralShown = new int[0];
+        private CanvasGroup[] _haulGroups = new CanvasGroup[0];
+
+        private static readonly Color BadgeQuietColour = HexColour(ReckoningScreen.BadgeQuiet);
+        private static readonly Color BadgeLevelledColour = HexColour(ReckoningScreen.BadgeLevelled);
+        private static readonly Color BadgeLevelledNumeralColour = HexColour(ReckoningScreen.BadgeLevelledNumeral);
+        private static readonly Color ParchmentColour = HexColour(ReckoningScreen.Parchment);
         private int _haulHeard;
         private float _boardClock;
         private float _boardEnd;
@@ -359,6 +369,9 @@ namespace PrincesPalace
             _members.AddRange(MembersOf());
             int count = Mathf.Min(_members.Count, portraitButtons?.Length ?? 0);
             _closesHeard = new int[count];
+            _numeralShown = new int[count];
+            for (int i = 0; i < count; i++) _numeralShown[i] = int.MinValue;
+            _anyRing = _members.Any(m => m.HasRing);
 
             for (int i = 0; portraitButtons != null && i < portraitButtons.Length; i++)
             {
@@ -441,13 +454,13 @@ namespace PrincesPalace
 
             if (disc != null)
             {
-                disc.color = HexColour(levelled ? ReckoningScreen.BadgeLevelled : ReckoningScreen.BadgeQuiet);
+                disc.color = levelled ? BadgeLevelledColour : BadgeQuietColour;
                 disc.rectTransform.localScale = Vector3.one * scale;
             }
 
             if (level != null)
             {
-                level.color = HexColour(levelled ? ReckoningScreen.BadgeLevelledNumeral : ReckoningScreen.Parchment);
+                level.color = levelled ? BadgeLevelledNumeralColour : ParchmentColour;
                 level.rectTransform.localScale = Vector3.one * scale;
             }
         }
@@ -584,6 +597,7 @@ namespace PrincesPalace
         private void PaintHaul()
         {
             CollectHaul();
+            _haulGroups = new CanvasGroup[haulChips?.Length ?? 0];
             int count = Mathf.Min(_haul.Count, haulChips?.Length ?? 0);
             for (int j = 0; haulChips != null && j < haulChips.Length; j++)
             {
@@ -672,7 +686,7 @@ namespace PrincesPalace
 
         private void DrawBoard(float t, bool audible)
         {
-            if (!_humHeard && _members.Any(m => m.HasRing))
+            if (!_humHeard && _anyRing)
             {
                 _humHeard = true;
                 if (audible) SoundController.Play(Sound.XpHum);
@@ -782,7 +796,15 @@ namespace PrincesPalace
             PaintBadge(i, levelsIn > 0, LevelFlareAlpha > 0f ? Mathf.Clamp01(flare / LevelFlareAlpha) : 0f);
 
             var level = At(portraitLevels, i);
-            if (level != null) level.Set(UiStrings.ReckoningLevelNumeral, row.LevelBefore + levelsIn);
+            if (level != null)
+            {
+                int numeral = row.LevelBefore + levelsIn;
+                if (i >= _numeralShown.Length || _numeralShown[i] != numeral)
+                {
+                    level.Set(UiStrings.ReckoningLevelNumeral, numeral);
+                    if (i < _numeralShown.Length) _numeralShown[i] = numeral;
+                }
+            }
 
             // A level-up leaves the badge waiting, as the reward track's node
             // waits: it shows something is owed and claims nothing.
@@ -805,8 +827,13 @@ namespace PrincesPalace
                 float k = Mathf.Clamp01((t - j * stagger) / drop);
                 var rect = (RectTransform)chip.transform;
                 rect.anchoredPosition = new Vector2(rect.anchoredPosition.x, HaulDrop * (1f - Easing.OutCubic(k)));
-                var group = chip.GetComponent<CanvasGroup>();
-                if (group == null) group = chip.gameObject.AddComponent<CanvasGroup>();
+                var group = j < _haulGroups.Length ? _haulGroups[j] : null;
+                if (group == null)
+                {
+                    group = chip.GetComponent<CanvasGroup>();
+                    if (group == null) group = chip.gameObject.AddComponent<CanvasGroup>();
+                    if (j < _haulGroups.Length) _haulGroups[j] = group;
+                }
                 group.alpha = k;
 
                 if (k >= 1f && _haulHeard == j)

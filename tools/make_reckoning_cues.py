@@ -110,8 +110,8 @@ def tail_reverb(dry, seconds):
     ir = np.random.default_rng(7).standard_normal(len(t)) * np.exp(-t * 6.9 / seconds)
     ir = lowpassed(ir, 4000)
     ir /= np.sqrt(np.sum(ir ** 2))
-    wet = fftconvolve(np.concatenate([dry, np.zeros(n - len(dry))]), ir)[:n]
-    return np.concatenate([dry, np.zeros(n - len(dry))]) + REVERB_WET * wet
+    padded = np.concatenate([dry, np.zeros(n - len(dry))])
+    return padded + REVERB_WET * fftconvolve(padded, ir)[:n]
 
 
 def render(row):

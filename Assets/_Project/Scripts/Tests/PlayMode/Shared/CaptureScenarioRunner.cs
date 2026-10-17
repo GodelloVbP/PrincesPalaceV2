@@ -440,7 +440,7 @@ namespace PrincesPalace.PlayModeTests
             Time.captureFramerate = Fps;
 
             // The ambient animators (LanternFlicker, SlowDrift, StarTwinkle,
-            // EmberFlare, StageShake) draw their phases from UnityEngine.Random
+            // StageShake) draw their phases from UnityEngine.Random
             // in Awake. Unseeded, two recordings of one scenario differ by
             // about 1.4% of pixels on the idle stage alone; seeded before the
             // scene loads they draw the same phases (docs/PLAN_GIF_CAPTURE.md 2.3).

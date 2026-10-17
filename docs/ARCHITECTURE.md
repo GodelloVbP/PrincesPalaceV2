@@ -124,7 +124,7 @@ four kinds:
 - Domain cannot see `UnityEngine.Random`; Domain code that randomises takes the
   randomness injected as a `Func`.
 - `UnityEngine.Random` in Core is allowed only where the result is not part of
-  the simulation: cosmetic motion (`StarTwinkle`, `SlowDrift`, `EmberFlare`,
+  the simulation: cosmetic motion (`StarTwinkle`, `SlowDrift`,
   `StageShake`), and voice take choice (`CharacterVoice`). Reward pages roll on
   the keyed `RngStreams.Reward`, so they never shift a replay's beats. Apply
   that test to any new use.
