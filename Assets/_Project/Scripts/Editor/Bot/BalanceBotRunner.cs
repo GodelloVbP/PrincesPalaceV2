@@ -225,10 +225,6 @@ namespace PrincesPalace.Editor.Bot
 
         // ---- one run's worth of bookkeeping -----------------------------------------
 
-        // A completed run plus the determinism verdict for it. Kept together
-        // because every metric below is over the FIRST play of a pair -- the
-        // second exists only to compare hashes, and folding its trace into the
-        // numbers would double-count every fight.
         // How many whole runs were actually PLAYED, replays included. Reset
         // with the batch; only the phase report reads it.
         private static int _runPlays;
@@ -247,6 +243,10 @@ namespace PrincesPalace.Editor.Bot
         // no report at all.
         private static readonly List<InvariantHit> LoggedThisRun = new List<InvariantHit>();
 
+        // A completed run plus the determinism verdict for it. Kept together
+        // because every metric below is over the FIRST play of a pair -- the
+        // second exists only to compare hashes, and folding its trace into the
+        // numbers would double-count every fight.
         private sealed class Played
         {
             public ulong Seed;
@@ -632,8 +632,8 @@ namespace PrincesPalace.Editor.Bot
         }
 
         // pages.jsonl: one line per reward page, for tools/reward_cache_rates.py.
-        // A file of its own so traces.jsonl and runs.jsonl stay byte-identical
-        // to a build without it. quality/live are index-aligned per card.
+        // A file of its own so the reward-page cards do not bloat traces.jsonl.
+        // quality/live are index-aligned per card.
         private static void WritePages(StreamWriter w, RunTrace t)
         {
             foreach (var r in t.Rooms)
