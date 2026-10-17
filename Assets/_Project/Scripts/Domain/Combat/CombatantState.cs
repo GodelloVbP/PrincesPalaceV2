@@ -30,19 +30,13 @@ namespace PrincesPalace.Domain.Combat
         // indistinguishable at the call site.
         public ResourcePool PrimaryPool;
 
-        // THE THREE FIELDS THIS REPLACED, kept as read-only views onto the
-        // pool so the ~40 places that only ASK a question -- the bot's
-        // missing-mana sum, the item log line, the relic that reads how much
-        // is missing, the HUD -- did not all have to be retyped to say the
-        // same thing. They are truthful rather than merely compiling: while
-        // every shipped primary pool is mana, "CurrentMana" and
-        // "PrimaryPool.Current" are the same number under two names.
-        //
-        // They will stop being truthful the moment a character's primary pool
-        // is not mana (phase E), which is why they are getters and not
-        // fields: a reader keeps working and a WRITER does not compile, so
-        // the ~25 sites that used to assign mana had to say which pool they
-        // meant. Phase F renames the readers and deletes these.
+        // READ-ONLY VIEWS onto PrimaryPool, whatever it holds: for a
+        // character whose primary pool is not mana (Bjorn's is fury) they
+        // read that pool, so the names are legacy. They serve the places
+        // that only ASK a question -- the bot's missing-mana sum, the item
+        // log line, the relic that reads how much is missing, the HUD.
+        // They are getters and not fields so a WRITER does not compile: a
+        // site that assigns has to say which pool it means.
         public int MaxMana => PrimaryPool != null ? PrimaryPool.Max : 0;
         public int CurrentMana => PrimaryPool != null ? PrimaryPool.Current : 0;
         public int ManaRegen => PrimaryPool != null ? PrimaryPool.GainPerTurn : 0;
@@ -151,7 +145,7 @@ namespace PrincesPalace.Domain.Combat
         // attacker and nothing else — no party list, no encounter — and
         // handing it one would couple the damage formula to the whole fight.
         // The cost is that it can go stale, so there is exactly ONE thing
-        // allowed to write it: FightController.RefreshAttackBonus, called
+        // allowed to write it: FightSession.RefreshAttackBonus, called
         // immediately before any damage this combatant deals. Anything else
         // setting this is a bug.
         public int BonusAttackPercent;
@@ -172,9 +166,10 @@ namespace PrincesPalace.Domain.Combat
         // times in one fight while this must not reset with it.
         public bool CheatDeathSpent;
 
-        // THE PHASE 4 ENGINE SEAMS (docs/PLAN_BJORN_CONSTELLATIONS.md, "Phase
-        // 4 engine seams"). Each is off for everyone until the Juggernaut
-        // wiring sets it, and each is read at exactly one seam in the session.
+        // THE ENGINE SEAMS (docs/PLAN_BJORN_CONSTELLATIONS.md). Each is off
+        // for a combatant whose talents do not switch it on (the Juggernaut
+        // and Sentinel wiring in FightSession sets them), and each is read at
+        // exactly one seam in the session.
         //
         // Cursed Blood (4b): open the window and every heal converts. Read by
         // FightSession.HealAndCount. See HealConversion.
@@ -195,7 +190,7 @@ namespace PrincesPalace.Domain.Combat
         public readonly CrowdControlGuard CrowdControl = new CrowdControlGuard();
 
         // The Sentinel's planted shield and Shieldwall (4a). Nothing placed
-        // and every reactive hook off until the Sentinel wiring touches it.
+        // and every reactive hook off unless Sentinel talents switch it on.
         // Read at FightSession.ResolveWard. See PlantedShield.
         public readonly PlantedShield PlantedShield = new PlantedShield();
 
@@ -204,8 +199,8 @@ namespace PrincesPalace.Domain.Combat
         // CombatActions.IsLegalFor and FightSession.AttackBonusFor.
         public readonly Suppression Suppression = new Suppression();
 
-        // PHASE 2, THE ROOT FURY ENGINES. None = the primary pool's authored
-        // flat gains pay, exactly as before; any other kind replaces them for
+        // THE ROOT FURY ENGINES. None = the primary pool's authored
+        // flat gains pay; any other kind replaces them for
         // this combatant. Read at FightSession.NoteDamageForPools and
         // TickPrimaryPool. See FuryEngine.
         public readonly FuryEngine FuryEngine = new FuryEngine();
@@ -329,14 +324,9 @@ namespace PrincesPalace.Domain.Combat
             Speed = speed;
         }
 
-        // COMPATIBILITY OVERLOAD -- 254 call sites, nearly all of them test
-        // fixtures, hand an int where a fight now hands a pool. Kept rather
-        // than fixed up in this phase for one reason: a rename and a rewiring
-        // are two things to review, and 254 mechanical edits in the same
-        // commit would bury the twelve that are not mechanical.
-        //
-        // REMOVE AFTER PHASE F, when `manaCost` becomes `primaryCost` and
-        // every fixture has to say which pool it means anyway.
+        // COMPATIBILITY OVERLOAD -- call sites, nearly all of them test
+        // fixtures, hand an int where a fight hands a pool. It exists so a
+        // fixture does not have to build a pool to ask for "30 mana".
         //
         // The pool it builds is mana-shaped by construction, not by lookup:
         // Domain cannot reach ContentDatabase, and a fixture asking for "30

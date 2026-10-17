@@ -23,77 +23,45 @@ namespace PrincesPalace.Domain.Combat
             ScalingProfile.None.With(AbilityScore.Strength, ScalingGrade.B);
         // Fallback only — used when no per-character spell tier applies
         // (a non-player CombatantState with no Character behind it; enemies
-        // never use Skill today, but FightController.SkillManaCostFor keeps
-        // this as an honest fallback rather than assuming that). Real
-        // player casters use ContentDatabase.GetSpellTierForLevel's
-        // manaCost instead — see Assets/_Project/ContentData/spells.json.
+        // never use Skill today, but this stays as a fallback rather
+        // than assuming that). Real player casters pay
+        // ContentDatabase.EffectiveSkillManaCost, which reads the spell
+        // tier's manaCost — see Assets/_Project/ContentData/spells.json.
         // Set equal to that file's level-1 manaCost so this constant can't
         // silently drift from what a level-1 character actually pays.
         public const int SkillManaCost = 10;
 
-        // Health pools moved to a x10 scale (a Stone Golem holds 350, not
-        // 35). Stat-derived damage has to move with them or an ordinary
-        // attack stops meaning anything — 200 attacks could not finish a
-        // fight, which is exactly how the regression was caught.
+        // The multiplier Scale() applies to a raw (attack - defense)
+        // difference. Health pools are on a x10 scale (a Stone Golem holds
+        // 350), and a multiplier on the FINAL figure keeps a single point of
+        // Strength worth a visible amount of damage instead of rounding away.
         //
-        // This is a multiplier on the FINAL figure rather than a x10 on the
-        // authored Attack and Defense numbers, and the difference matters in
-        // two places. It keeps a single point of Strength worth a visible
-        // amount of damage instead of rounding away, and it scales the
-        // max(1, ...) floor along with everything else — x10'ing the stats
-        // instead would leave a well-armoured target taking literally 1.
-        //
-        // THAT FLOOR IS NO LONGER load-BEARING against armour, because armour
-        // no longer subtracts -- see DamagePipeline.AfterDefences, the canonical
-        // mitigation equation. It survives as what it says on the tin: a hit is
-        // never zero.
+        // Only Scale() uses it: SkillResolution (percent-of-Attack damage)
+        // and FightSession.Talents (Shatter's and Trample's splash). The
+        // mitigated paths (ComputeAttackDamage, ComputeSkillDamage) are
+        // unscaled and floor at 1, so a hit is never zero.
         //
         // Fixed damage authored directly on a skill (a spell's
-        // damageInstances) is already written on the new scale and is
-        // deliberately NOT routed through here.
-        //
-        // TAKEN FROM 10 TO 5, on request, to make fights -- Giant Rat in
-        // particular -- take more than one hit. Halving this halves EVERY
-        // (attack-defense)-derived damage number in the game uniformly,
-        // player and enemy alike, which is what "all damage just less"
-        // actually needs: one constant, not a pass over every enemy and
-        // skill's own stats. It does NOT reach damageInstances (frost_flare,
-        // lightning_bolt) or a flat statusMagnitude (the rat's own Poison) --
-        // both are already-final numbers by design, per the comment above --
-        // so those were halved by hand alongside this, in skills.json and
-        // enemies.json, to keep them in the same proportion to plain attacks
-        // they were authored in. SignatureAbsorbPerPoint (ContentDatabase.
-        // Effective.cs) was halved too, for the reason its own comment
-        // already documents: it is deliberately NOT coupled to this constant,
-        // calibrated instead against the SIZE of a typical hit -- halve hits
-        // and leave it standing, and two points of Wool absorbs what used to
-        // take four, which is the exact "quietly catastrophic" failure that
-        // comment records happening once already, just approached from the
-        // other direction this time.
+        // damageInstances) and a flat statusMagnitude are already-final
+        // numbers and are NOT routed through here.
+        // SignatureAbsorbPerPoint (ContentDatabase.Effective.cs) is
+        // deliberately NOT coupled to this constant; it is calibrated against
+        // the SIZE of a typical hit (see its own comment).
         public const int DamageScale = 5;
 
         // Basic attack: the raw, unmitigated swing. Mitigation is no longer
         // applied here — see DamagePipeline.AfterDefences, the single place
         // any defense term is ever subtracted, for the canonical equation.
         //
-        // The weapon's SCALING is folded into the attack side, exactly as
-        // before; only the subsequent Mitigate step has moved. `target` is
+        // The weapon's SCALING is folded into the attack side. `target` is
         // kept as a parameter for call-site stability (every production and
-        // test call site already hands one in) even though nothing here
-        // reads it any more — the target only ever mattered for the defense
-        // term that used to live in this function.
+        // test call site hands one in) even though nothing here reads it.
         //
-        // NO LONGER SCALED. D1 says so explicitly ("DamageScale x5 ... are
-        // deleted") and a balance-validation pass (2026-08-26) proved why:
-        // §P's own worked example was hand-derived by feeding WP x M straight
-        // into the mitigation equation with NO x5 — every one of its pinned
-        // "after DEF" figures only reproduces without the multiplier. Two
-        // prior implementation passes left the x5 live here regardless (one
-        // called it out of scope, the other built around it), which meant
-        // every real fight resolved in 2-5 actions instead of the designed
-        // 10-20 for a boss. Floored at 1 rather than run through Scale(),
-        // which still exists and still serves callers OUTSIDE the mitigated-
-        // combat path — see its own header.
+        // NOT SCALED by DamageScale: the figure goes straight into the
+        // mitigation equation (DamagePipeline.AfterDefences), whose pinned
+        // figures only reproduce without the x5. Floored at 1 rather than
+        // run through Scale(), which serves callers outside the mitigated
+        // path — see its own header.
         public static int ComputeAttackDamage(CombatantState attacker, CombatantState target)
         {
             // Enemy attacks retain their authored balance. The basic-action
@@ -309,36 +277,20 @@ namespace PrincesPalace.Domain.Combat
             return Rounding.AwayFromZero(attacker.Attack * scaled);
         }
 
-        // NOT part of the mitigated-combat path any more. ComputeAttackDamage
-        // and ComputeSkillDamage — the two entry points every real player and
-        // enemy swing/cast reaches DamagePipeline through — stopped calling
-        // this on 2026-08-26 (see their own headers): D1 always said the x5
-        // was deleted, but two prior implementation passes left it live here
-        // regardless, which meant every fight in the game resolved in 2-5
-        // actions instead of the designed 10-20 for a boss. Confirmed root
-        // cause by a dedicated balance-validation pass (2026-08-26): feeding
-        // §P's own WP x M straight into the mitigation equation with no x5
-        // reproduces every one of its pinned "after DEF" figures exactly.
+        // NOT part of the mitigated-combat path. ComputeAttackDamage and
+        // ComputeSkillDamage, the two entry points every real player and
+        // enemy swing/cast reaches DamagePipeline through, do not call it.
         //
-        // KEPT rather than deleted outright, because it still legitimately
-        // serves callers that are NOT on the mitigated-combat path and were
-        // never part of the bug: FightHudModel's POWER/PreviewBasicSpellPower
-        // readouts read ComputeAttackDamage/ComputeSkillDamage directly now
-        // instead, but FightSession.Talents.cs's two unmitigated splash
-        // sites (Shatter, Trample's kill splash) still call this directly —
-        // a percent of raw Attack, never mitigated, deliberately left on the
-        // old x5 scale by the same designer call that fixed the two entry
-        // points above (see the session report for why that is worth a
-        // second look before the next playtest: those two abilities now hit
-        // for roughly 5x a plain swing of the same nominal size, which used
-        // to not be true).
+        // It serves the callers that never reach the mitigation equation:
+        // SkillResolution (a percent of raw Attack) and
+        // FightSession.Talents' two unmitigated splash sites (Shatter,
+        // Trample's kill splash). All three scale a percent of raw Attack by
+        // DamageScale, so those abilities hit for roughly 5x a plain swing
+        // of the same nominal size.
         //
-        // NO LONGER SUBTRACTIVE-SHAPED in the sense its name once implied —
-        // "raw difference" is history from when this took (attack - defense)
-        // directly. Mitigation — HOW MUCH OF A SWING GETS PAST ARMOUR — now
-        // lives entirely in DamagePipeline.AfterDefences, via TotalDefense/
-        // BroadDefense above and AfterResistance below, which is what
-        // replaced this file's own Mitigate/ArmourSoftening (deleted).
+        // Mitigation — HOW MUCH OF A SWING GETS PAST ARMOUR — lives entirely
+        // in DamagePipeline.AfterDefences, via TotalDefense/BroadDefense
+        // above and AfterResistance below.
         public static int Scale(int rawDifference)
         {
             return Math.Max(1, rawDifference) * DamageScale;
@@ -348,7 +300,7 @@ namespace PrincesPalace.Domain.Combat
         // powerMultiplier. The multiplier is a required parameter, not a
         // hardcoded constant, specifically so it can scale with the
         // caster's level — see ContentDatabase.GetSpellTierForLevel and
-        // FightController.SpellTierFor, which is where a real player
+        // FightEncounterAdapter, which is where a real player
         // caster's multiplier actually comes from. This function itself
         // stays level-agnostic; Domain has no concept of Character or
         // level at all.
@@ -610,7 +562,7 @@ namespace PrincesPalace.Domain.Combat
             }
 
             // Last Stand T2's spike cap lands here rather than in
-            // FightController.AfterDefences, even though that is where every
+            // DamagePipeline.AfterDefences, even though that is where every
             // other reduction lives. This is the tighter funnel of the two:
             // AfterDefences has two overloads and is bypassed entirely by a
             // status tick, and a "no hit may exceed X" rule that a poison
@@ -722,8 +674,7 @@ namespace PrincesPalace.Domain.Combat
         //
         // Returns how much actually landed, so a caller can say the true
         // number (or say nothing) rather than announcing an amount it hoped
-        // for. Was void; every existing caller ignores the result and still
-        // compiles.
+        // for.
         public static int RestoreMana(CombatantState combatant, int amount)
         {
             return CanRestoreMana(combatant) ? combatant.PrimaryPool.Gain(amount) : 0;

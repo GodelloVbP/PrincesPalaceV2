@@ -698,8 +698,7 @@ namespace PrincesPalace.Domain.Combat
 
         // Re-reads a combatant's Speed into the scheduler's charge rate.
         //
-        // Speed was a construction-time constant until a transform could
-        // change it mid-fight. Without this, Black Ram Mode's +30% Speed
+        // Without this, Black Ram Mode's +30% Speed
         // would show on the character plate and change nothing whatsoever
         // about how often he acts — the failure would be entirely invisible,
         // which is the kind worth a named method rather than a comment at a

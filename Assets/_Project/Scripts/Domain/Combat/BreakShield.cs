@@ -6,8 +6,8 @@ namespace PrincesPalace.Domain.Combat
     // matches its elemental weakness, and hitting zero BREAKS it. A broken
     // combatant skips its next turn and — see CombatMath.BroadDefense —
     // its armour stops counting for as long as it stays broken, which is
-    // exactly one turn: FightController resets the shield the moment that
-    // turn is actually skipped, so the window is always the same length
+    // exactly one turn: FightSession (Enemies) resets the shield the moment
+    // that turn is actually skipped, so the window is always the same length
     // regardless of how it was reached.
     //
     // Independent of health entirely, same as ResourcePool is: a fully
@@ -18,13 +18,13 @@ namespace PrincesPalace.Domain.Combat
     //
     // Engine-free and pure, same as ResourcePool — the rules about
     // who has one and how big live in Content (EnemyDefinition) and Core
-    // (FightController), not here.
+    // (FightEncounterAdapter), not here.
     public sealed class BreakShield
     {
         public int Current;
         public int Max;
 
-        // True from the instant Current reaches zero until FightController
+        // True from the instant Current reaches zero until FightSession
         // actually skips the broken turn and calls Reset. A hit that lands
         // while this is already true does nothing further to the shield —
         // see Deplete — so a multi-packet spell cannot "double break" it.
