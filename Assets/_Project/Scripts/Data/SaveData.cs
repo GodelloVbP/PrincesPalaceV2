@@ -736,70 +736,6 @@ namespace PrincesPalace
             // resolve (ContentDatabase.Effective.cs), so a renamed or removed
             // modifier sits inert instead of failing the load.
 
-            // A saved run gets the same tolerant pruning as the stockpile: a
-            // content update between quitting and resuming can remove an item
-            // or a character the run was carrying, and a run is not worth
-            // discarding over one dangling id. The map does not need pruning
-            // because it is regenerated rather than stored, and generation
-            // reads no content at all.
-            activeRun ??= new RunSnapshot();
-            activeRun.currentHealth ??= new List<RunHealthEntry>();
-            activeRun.clearedNodeIds ??= new List<int>();
-            activeRun.relicIds ??= new List<string>();
-
-            // The two lists RunSettlement actually reads, and the two this
-            // method walked past. Every other run list above is guarded here
-            // and pruned somewhere; bossesKilled and ledger were neither, which
-            // left the only run-scoped values a load hands straight to a payout
-            // as the only ones nothing checked.
-            activeRun.bossesKilled ??= new List<string>();
-            activeRun.ledger ??= new List<RunLedgerEntry>();
-            activeRun.currentHealth.RemoveAll(entry => entry == null || ContentDatabase.GetCharacter(entry.characterId) == null);
-
-            // The run's own relics, which this method pruned everything but.
-            // FightEncounterAdapter.ResolveRelics skips an unresolvable id
-            // harmlessly, but RunOrchestrator.DraftHasAnotherRound counts
-            // relicIds.Count against RelicPool.StartingRelicsPerDescent -- so
-            // a relic renamed between quitting and resuming ends the draft a
-            // round early, having handed over one fewer relic than it says.
-            activeRun.relicIds.RemoveAll(id => ContentDatabase.GetRelic(id) == null);
-
-            // The run's event buffs, beside its relics and for the same
-            // reason: a kind a later build dropped would otherwise ride along
-            // unread, and a null row would be one every reader has to guard.
-            activeRun.eventBuffs ??= new List<EventBuffEntry>();
-            EventBuffs.Prune(activeRun.eventBuffs);
-
-            // The run's boss kills, which are money. RunSettlement pays an
-            // ember per boss the profile has never killed and then writes that
-            // id into save.defeatedBossIds permanently, where
-            // DefeatDistinctBosses counts it. A boss renamed in enemies.json
-            // between quitting and resuming would therefore pay for a dead id
-            // AND leave it on the lifetime list, while the same boss under its
-            // new id pays again -- one rename, two embers, and a distinct-boss
-            // count that names something the game no longer has.
-            //
-            // Loud, unlike the tolerant prunes above. Dropping a dangling item
-            // costs the player nothing they can see; dropping a boss kill takes
-            // away a payout they earned, and that should be in the log if
-            // anyone ever comes looking for the missing ember.
-            foreach (var bossId in activeRun.bossesKilled
-                         .Where(id => ContentDatabase.GetEnemy(id) == null)
-                         .ToList())
-            {
-                UnityEngine.Debug.LogWarning(
-                    $"[Reconcile] the run says it killed '{bossId}', which is no longer an enemy in content. " +
-                    "Dropping the kill rather than paying an ember for an id nothing can name.");
-
-                activeRun.bossesKilled.Remove(bossId);
-            }
-
-            ReconcileLearnedSpells(activeRun);
-            ReconcileShopStock(activeRun);
-            ReconcileOpenEvent(activeRun);
-            ReconcilePendingFight(activeRun);
-            ReconcileShelves(activeRun);
-
             eventCounters ??= new List<EventCounterEntry>();
             eventCounters.RemoveAll(e => e == null || string.IsNullOrEmpty(e.id));
 
@@ -968,6 +904,74 @@ namespace PrincesPalace
             }
 
             squadSizeSeen = effectiveMax;
+
+            // LAST, because the run reconciles judge the squad: a pending event
+            // fight asks who is standing, and that has to be the roster and
+            // selection as cleaned above, not a removed character still named in
+            // either.
+            // A saved run gets the same tolerant pruning as the stockpile: a
+            // content update between quitting and resuming can remove an item
+            // or a character the run was carrying, and a run is not worth
+            // discarding over one dangling id. The map does not need pruning
+            // because it is regenerated rather than stored, and generation
+            // reads no content at all.
+            activeRun ??= new RunSnapshot();
+            activeRun.currentHealth ??= new List<RunHealthEntry>();
+            activeRun.clearedNodeIds ??= new List<int>();
+            activeRun.relicIds ??= new List<string>();
+
+            // The two lists RunSettlement actually reads, and the two this
+            // method walked past. Every other run list above is guarded here
+            // and pruned somewhere; bossesKilled and ledger were neither, which
+            // left the only run-scoped values a load hands straight to a payout
+            // as the only ones nothing checked.
+            activeRun.bossesKilled ??= new List<string>();
+            activeRun.ledger ??= new List<RunLedgerEntry>();
+            activeRun.currentHealth.RemoveAll(entry => entry == null || ContentDatabase.GetCharacter(entry.characterId) == null);
+
+            // The run's own relics, which this method pruned everything but.
+            // FightEncounterAdapter.ResolveRelics skips an unresolvable id
+            // harmlessly, but RunOrchestrator.DraftHasAnotherRound counts
+            // relicIds.Count against RelicPool.StartingRelicsPerDescent -- so
+            // a relic renamed between quitting and resuming ends the draft a
+            // round early, having handed over one fewer relic than it says.
+            activeRun.relicIds.RemoveAll(id => ContentDatabase.GetRelic(id) == null);
+
+            // The run's event buffs, beside its relics and for the same
+            // reason: a kind a later build dropped would otherwise ride along
+            // unread, and a null row would be one every reader has to guard.
+            activeRun.eventBuffs ??= new List<EventBuffEntry>();
+            EventBuffs.Prune(activeRun.eventBuffs);
+
+            // The run's boss kills, which are money. RunSettlement pays an
+            // ember per boss the profile has never killed and then writes that
+            // id into save.defeatedBossIds permanently, where
+            // DefeatDistinctBosses counts it. A boss renamed in enemies.json
+            // between quitting and resuming would therefore pay for a dead id
+            // AND leave it on the lifetime list, while the same boss under its
+            // new id pays again -- one rename, two embers, and a distinct-boss
+            // count that names something the game no longer has.
+            //
+            // Loud, unlike the tolerant prunes above. Dropping a dangling item
+            // costs the player nothing they can see; dropping a boss kill takes
+            // away a payout they earned, and that should be in the log if
+            // anyone ever comes looking for the missing ember.
+            foreach (var bossId in activeRun.bossesKilled
+                         .Where(id => ContentDatabase.GetEnemy(id) == null)
+                         .ToList())
+            {
+                UnityEngine.Debug.LogWarning(
+                    $"[Reconcile] the run says it killed '{bossId}', which is no longer an enemy in content. " +
+                    "Dropping the kill rather than paying an ember for an id nothing can name.");
+
+                activeRun.bossesKilled.Remove(bossId);
+            }
+
+            ReconcileLearnedSpells(activeRun);
+            ReconcileShopStock(activeRun);
+            ReconcileOpenEvent(activeRun);
+            ReconcilePendingFight(activeRun);
+            ReconcileShelves(activeRun);
         }
 
         // A trailing hole carries no positional information -- there is nobody

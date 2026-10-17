@@ -33,7 +33,7 @@ debt), and a struck finding gets its number removed.
 - Events: #274
 - Dossier / Party / Talents / Reward track / Reckoning: #44, #104, #141, #150, #178, #199, #214
 - Menus / Options / Navigation & gamepad: #91, #142, #166, #167, #179, #223, #225, #227, #231, #234, #236, #242, #250, #251, #253, #257, #258, #259, #260, #261
-- Save & run lifecycle: #87, #102, #220, #255, #281
+- Save & run lifecycle: #87, #102, #220, #255
 - Content pipeline & data: #86, #121, #125, #128, #131, #134, #135, #145, #198, #256, #262, #286
 - Art / VFX / stage: #80, #92, #100, #109, #129, #133, #181, #192, #213, #284
 - Tooling / tests / workflow: #95, #96, #98, #103, #137, #164, #263, #269, #282, #283
@@ -2582,13 +2582,6 @@ merchant "pleasure doing business"), and "Walk on" ends at the plain farewell, s
 "Bring the owl back sometime" can't be reached after a second look. Option A: point
 Look again back at the Odette scene. Option B: leave it; the first look is the only
 Odette beat. `ContentData/events.json:1411` [C1-007].
-
-### 281. Save reconcile order and the v8 run migration
-(a) `Reconcile` judges "nobody standing" on the squad before the roster/selection
-cleanup runs, so a removed character can still count. Move the run reconciles below the
-roster block? `SaveData.cs:849-851` [S37-002]. (b) `RealmMigration.ToRealmMap` places an
-old in-flight party on a map nobody resumes; the run is settled on entry anyway. Keep
-(plan-mandated) or reduce to "just close it"? `RealmMigration.cs:30-62` [S37-010].
 
 ### 282. Test gates: .meta-only changes and spell_feel_test.py
 (a) A change to only a `.meta` (sprite pixels-per-unit, pivot, texture type, font,

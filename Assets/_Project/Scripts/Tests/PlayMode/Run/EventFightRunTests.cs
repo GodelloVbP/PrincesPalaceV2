@@ -339,6 +339,32 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual("gate", Run.eventPageId);
         }
 
+        // A character content has since removed is not standing: the squad is
+        // judged after the roster and selection cleanup, so a removed name in
+        // the squad cannot keep a fight alive when everyone else is down
+        // (AUDIT #281a).
+        [Test]
+        public void Reconcile_DoesNotCountARemovedCharacterAsStanding()
+        {
+            OpenFightFixture();
+            Assert.AreEqual(EventChoiceOutcome.Ok, EventPicks.OnCurrentPage(Brawl).Outcome, "fixture");
+
+            Save.roster.Add(new Character("removed_in_a_patch"));
+            Save.selectedCharacterIds = new List<string> { "removed_in_a_patch" };
+            Run.currentHealth.RemoveAll(e => e == null);
+            foreach (var member in Save.roster.Where(c => c.definitionId != "removed_in_a_patch"))
+            {
+                Run.currentHealth.RemoveAll(e => e.characterId == member.definitionId);
+                Run.currentHealth.Add(new RunHealthEntry { characterId = member.definitionId, hp = 0 });
+            }
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex("nobody in its party is standing"));
+            Save.Reconcile();
+
+            Assert.AreEqual("", Run.pendingFight);
+            Assert.AreEqual("gate", Run.eventPageId);
+        }
+
         // ---- 3. settling ------------------------------------------------------------
 
         [Test]
