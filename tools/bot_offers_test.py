@@ -25,8 +25,7 @@ def room(step, favor, cls, offers, picked, floor=1):
         "step": step, "floor": floor, "nodeId": step, "roomType": "Fight",
         "offerItemIds": [o[0] for o in offers], "pickedIndex": picked,
         "favor": favor, "encounterClass": cls,
-        "offers": [{"itemId": o[0], "tier": o[1], "plus": o[2], "riftTier": o[3], "modifierCount": o[3]}
-                   for o in offers],
+        "offers": [{"itemId": o[0], "tier": o[1], "modifierCount": o[2]} for o in offers],
         "equippedItemIds": [],
     }
 
@@ -40,21 +39,21 @@ def run(seed, archetype, profile, rooms):
 FRESH = [
     run(1, "RandomLegal", "Fresh", [
         room(1, 4, "", [], -1),
-        room(2, 4, "Normal", [("a", 0, 0, 0), ("b", 1, 1, 0), ("c", 0, 0, 1)], 1),
-        room(6, 4, "Elite", [("d", 1, 0, 0), ("e", 2, 3, 0), ("f", 1, 0, 0)], -1),
+        room(2, 4, "Normal", [("a", 0, 0), ("b", 1, 0), ("c", 0, 1)], 1),
+        room(6, 4, "Elite", [("d", 1, 0), ("e", 2, 0), ("f", 1, 0)], -1),
     ]),
     run(2, "GreedyAggressive", "Fresh", [
-        room(2, 4, "Normal", [("a", 0, 0, 0), ("b", 0, 0, 0), ("c", 1, 0, 0)], 2),
+        room(2, 4, "Normal", [("a", 0, 0), ("b", 0, 0), ("c", 1, 0)], 2),
     ]),
 ]
 
 # Late: two runs, favor 9, one Elite at step 10.
 LATE = [
     run(1, "RandomLegal", "Late", [
-        room(10, 9, "Elite", [("g", 2, 1, 2), ("h", 3, 0, 0), ("i", 2, 0, 0)], 0, floor=2),
+        room(10, 9, "Elite", [("g", 2, 2), ("h", 3, 0), ("i", 2, 0)], 0, floor=2),
     ]),
     run(2, "GreedyAggressive", "Late", [
-        room(3, 9, "Normal", [("j", 0, 0, 0), ("k", 0, 4, 0), ("l", 0, 5, 3)], 1),
+        room(3, 9, "Normal", [("j", 0, 0), ("k", 0, 0), ("l", 0, 3)], 1),
     ]),
 ]
 
@@ -106,17 +105,11 @@ class OffersTests(unittest.TestCase):
         row = self.find(t, "5-8", "Elite")
         self.assertEqual(row[3:], ["0 (0.0%)", "2 (66.7%)", "1 (33.3%)", "1.0", "1.8"])
 
-    def test_plus_pools_four_and_above(self):
-        t = bot_offers.table_plus(self.late())
-        row = self.find(t, "1-4", "Normal")
-        # +0, +4, +5 -> +0 one, +4+ two
-        self.assertEqual(row[3], "1 (33.3%)")
-        self.assertEqual(row[7], "2 (66.7%)")
-
-    def test_rift_distribution(self):
-        t = bot_offers.table_rift(self.late())
-        row = self.find(t, "9-12", "Elite")
-        self.assertEqual(row[3:7], ["2 (66.7%)", "0 (0.0%)", "1 (33.3%)", "0 (0.0%)"])
+    def test_no_plus_or_rift_tables_the_bot_does_not_write(self):
+        titles = [title for _, tables in bot_offers.build(self.rows)[0] for title, *_ in tables]
+        self.assertFalse(any("Plus" in t or "Rift" in t or "plus" in t for t in titles), titles)
+        self.assertFalse(hasattr(bot_offers, "table_plus"))
+        self.assertFalse(hasattr(bot_offers, "table_rift"))
 
     def test_favor_table_lists_distinct_values(self):
         t = bot_offers.table_favor(self.rows)
@@ -126,15 +119,15 @@ class OffersTests(unittest.TestCase):
 
     def test_picked_vs_shown(self):
         t = bot_offers.table_picked_vs_shown(self.fresh())
-        # (tier 1, plus 1): shown once out of 9, picked once out of 2 picks.
-        self.assertEqual(self.find(t, "1", "+1"), ["1", "+1", "1", "11.1%", "1", "50.0%", "100.0%"])
-        self.assertEqual(self.find(t, "2", "+3")[4:], ["0", "0.0%", "0.0%"])
+        # Tier 1: four shown out of 9; two picks out of two picked cards.
+        self.assertEqual(self.find(t, "T1"), ["T1", "4", "44.4%", "2", "100.0%", "50.0%"])
+        self.assertEqual(self.find(t, "T2"), ["T2", "1", "11.1%", "0", "0.0%", "0.0%"])
 
     def test_first_appearance(self):
         t = bot_offers.table_first_appearance(self.fresh())
-        # plus>=1: seed 1 at step 2, seed 2 never -> 1 of 2 runs, median 2.
-        self.assertEqual(self.find(t, "plus >= 1"), ["plus >= 1", "1", "50.0%", "2", "2", "2"])
-        self.assertEqual(self.find(t, "plus >= 2"), ["plus >= 2", "1", "50.0%", "6", "6", "6"])
+        # tier>=1: seed 1 at step 2, seed 2 at step 2 -> 2 of 2 runs.
+        self.assertEqual(self.find(t, "tier >= 1"), ["tier >= 1", "2", "100.0%", "2", "2", "2"])
+        # tier>=2: seed 1 at step 6, seed 2 never -> 1 of 2 runs, median 6.
         self.assertEqual(self.find(t, "tier >= 2"), ["tier >= 2", "1", "50.0%", "6", "6", "6"])
 
     def test_favor_note_says_profiles_differ(self):

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Item-offer analysis for a balance-bot batch: which tier, plus and rift
-tier show up at which step, at what favor, from which encounter class.
+"""Item-offer analysis for a balance-bot batch: which tier shows up at which
+step, at what favor, from which encounter class.
 
     python tools/bot_offers.py reports/bot/<timestamp>
     python tools/bot_offers.py reports/bot/<timestamp> --out somewhere/offers.html
@@ -15,7 +15,7 @@ field existed reports "no offer axes" rather than pretending.
 
 Every table is grouped by PROFILE (Fresh/Mid/Late) and POOLS ARCHETYPES:
 the roll is a function of step, favor and encounter class, none of which an
-archetype controls -- only the PICK is a policy decision, and table 6
+archetype controls -- only the PICK is a policy decision, and table 4
 (picked vs shown) is where that pooling is a real simplification.
 
 Stdlib only, same as bot_merge.py and bot_report.py.
@@ -35,10 +35,9 @@ import bot_merge  # noqa: E402  (find_shard_dirs, _read_jsonl)
 
 MAX_STEP = 40
 BAND_WIDTH = 4
-PLUS_CAP = 4  # +0..+3 shown as-is, +4 and above pooled as "+4+"
 CLASSES = ["Normal", "Elite", "Boss"]
 
-# Cited excerpts, for table 8. Kept as data so the HTML and the text render
+# Cited excerpts, for table 6. Kept as data so the HTML and the text render
 # the same lines; line numbers were read from the files, not remembered.
 FORMULA_REFERENCE = [
     ("Assets/_Project/Scripts/Domain/Rewards/RarityTable.cs:40-47",
@@ -81,7 +80,7 @@ def load_runs(batch_dir):
 
 def offer_rows(runs):
     """One flat row per SHOWN item: (profile, archetype, seed, step, floor,
-    favor, class, tier, plus, rift, mods, picked). Rooms with no offers[]
+    favor, class, tier, mods, picked). Rooms with no offers[]
     (no offer made, or a pre-field batch) contribute nothing."""
     rows = []
     for run in runs:
@@ -103,8 +102,6 @@ def offer_rows(runs):
                     "favor": int(room.get("favor", 0)),
                     "class": room.get("encounterClass") or "?",
                     "tier": int(offer.get("tier", 0)),
-                    "plus": int(offer.get("plus", 0)),
-                    "rift": int(offer.get("riftTier", 0)),
                     "mods": int(offer.get("modifierCount", 0)),
                     "index": index,
                     "picked": picked == index,
@@ -127,14 +124,6 @@ def band_of(step):
 
 def bands():
     return [band_of(s) for s in range(1, MAX_STEP + 1, BAND_WIDTH)]
-
-
-def plus_key(plus):
-    return "+{}".format(plus) if plus < PLUS_CAP else "+{}+".format(PLUS_CAP)
-
-
-def plus_keys():
-    return [plus_key(p) for p in range(PLUS_CAP + 1)]
 
 
 def pct(part, whole):
@@ -196,7 +185,7 @@ def table_per_step(rows):
 
 def _dist_table(rows, axis, labels, label_of, title, extra_stats=True):
     """Distribution of `axis` per (band x class): one row per band+class,
-    columns per label, plus median / p90 of the raw axis."""
+    columns per label, median / p90 of the raw axis."""
     header = ["band", "class", "n"] + labels + (["median", "p90"] if extra_stats else [])
     out = []
     grouped = by(rows, lambda r: (band_of(r["step"]), r["class"]))
@@ -236,17 +225,6 @@ def table_tier(rows):
                        "2. Tier distribution per step band x encounter class")
 
 
-def table_plus(rows):
-    return _dist_table(rows, "plus", plus_keys(), plus_key,
-                       "3. Plus distribution per step band x encounter class")
-
-
-def table_rift(rows):
-    labels = ["R0", "R1", "R2", "R3"]
-    return _dist_table(rows, "rift", labels, lambda r: "R{}".format(min(r, 3)),
-                       "4. Rift tier distribution per step band x encounter class")
-
-
 def favor_groups(rows):
     """Distinct favor values, or bands of them if there are many."""
     values = sorted({r["favor"] for r in rows})
@@ -267,52 +245,48 @@ def table_favor(rows):
     values = sorted({r["favor"] for r in rows})
     max_tier = max((r["tier"] for r in rows), default=0)
     tier_labels = ["T{}".format(t) for t in range(max_tier + 1)]
-    header = ["favor", "n"] + tier_labels + plus_keys() + ["med tier", "med plus"]
+    header = ["favor", "n"] + tier_labels + ["med tier"]
     out = []
     for label, match in favor_groups(rows):
         items = [r for r in rows if match(r["favor"])]
         if not items:
             continue
-        tc, pc = {}, {}
+        tc = {}
         for r in items:
             tc[r["tier"]] = tc.get(r["tier"], 0) + 1
-            pc[plus_key(r["plus"])] = pc.get(plus_key(r["plus"]), 0) + 1
         out.append([label, str(len(items))]
                    + [fmt_cell(tc.get(t, 0), len(items)) for t in range(max_tier + 1)]
-                   + [fmt_cell(pc.get(k, 0), len(items)) for k in plus_keys()]
-                   + ["{:.1f}".format(percentile([r["tier"] for r in items], 0.5)),
-                      "{:.1f}".format(percentile([r["plus"] for r in items], 0.5))])
+                   + ["{:.1f}".format(percentile([r["tier"] for r in items], 0.5))])
     notes = ["distinct favor values seen: {}".format(", ".join(str(v) for v in values) or "none")]
-    return ("5. Tier / plus by favor", header, out, notes)
+    return ("3. Tier by favor", header, out, notes)
 
 
 def table_picked_vs_shown(rows):
-    header = ["tier", "plus", "shown", "shown share", "picked", "picked share", "pick rate"]
-    shown = by(rows, lambda r: (r["tier"], r["plus"]))
+    header = ["tier", "shown", "shown share", "picked", "picked share", "pick rate"]
+    shown = by(rows, lambda r: r["tier"])
     picked_rows = [r for r in rows if r["picked"]]
-    picked = by(picked_rows, lambda r: (r["tier"], r["plus"]))
+    picked = by(picked_rows, lambda r: r["tier"])
     out = []
     for key in sorted(shown):
         s = len(shown[key])
         p = len(picked.get(key, []))
-        out.append([str(key[0]), "+{}".format(key[1]), str(s), "{:.1f}%".format(pct(s, len(rows))),
+        out.append(["T{}".format(key), str(s), "{:.1f}%".format(pct(s, len(rows))),
                     str(p), "{:.1f}%".format(pct(p, len(picked_rows))), "{:.1f}%".format(pct(p, s))])
-    return ("6. Picked vs shown per (tier, plus)", header, out,
+    return ("4. Picked vs shown per tier", header, out,
             ["'shown share' and 'picked share' are each out of their own total; a card whose picked share "
              "sits well under its shown share is one the archetypes pass over. Archetypes are POOLED here, "
              "which is the one table where that flattens a real policy difference."])
 
 
 def table_first_appearance(rows):
-    """Per run, the first step at which +1/+2/+3 (and each tier) appears in
-    ANY shown card. Runs that never see it are counted, not dropped."""
+    """Per run, the first step at which each tier appears in ANY shown card.
+    Runs that never see it are counted, not dropped."""
     per_run = by(rows, lambda r: (r["seed"], r["archetype"]))
     total = len(per_run)
     header = ["threshold", "runs seeing it", "share", "median first step", "p10", "p90"]
     out = []
     max_tier = max((r["tier"] for r in rows), default=0)
-    thresholds = [("plus >= {}".format(p), lambda r, p=p: r["plus"] >= p) for p in (1, 2, 3)]
-    thresholds += [("tier >= {}".format(t), lambda r, t=t: r["tier"] >= t) for t in range(1, max_tier + 1)]
+    thresholds = [("tier >= {}".format(t), lambda r, t=t: r["tier"] >= t) for t in range(1, max_tier + 1)]
     for label, test in thresholds:
         firsts = []
         for items in per_run.values():
@@ -325,7 +299,7 @@ def table_first_appearance(rows):
         out.append([label, str(len(firsts)), "{:.1f}%".format(pct(len(firsts), total)),
                     "{:.0f}".format(percentile(firsts, 0.5)), "{:.0f}".format(percentile(firsts, 0.1)),
                     "{:.0f}".format(percentile(firsts, 0.9))])
-    return ("7. First appearance (per run, across all shown cards)", header, out,
+    return ("5. First appearance (per run, across all shown cards)", header, out,
             ["{} runs in this profile made at least one offer; 'share' is out of those. A run that died "
              "before seeing the threshold is not in the median, which is why 'share' sits beside it.".format(total)])
 
@@ -350,8 +324,6 @@ def build(rows):
         sections.append((profile, [
             table_per_step(items),
             table_tier(items),
-            table_plus(items),
-            table_rift(items),
             table_favor(items),
             table_picked_vs_shown(items),
             table_first_appearance(items),
@@ -389,7 +361,7 @@ def render_text(sections, notes, batch_dir, total_runs, rows):
             for n in tnotes:
                 lines.append("  note: " + n)
     lines.append("")
-    lines.append("8. Formula reference (file:line -> what it says)")
+    lines.append("6. Formula reference (file:line -> what it says)")
     for where, what in FORMULA_REFERENCE:
         lines.append("  {}".format(where))
         lines.append("      {}".format(what))
@@ -432,7 +404,7 @@ def render_html(sections, notes, batch_dir, total_runs, rows):
             for row in body:
                 parts.append("<tr>" + "".join("<td>{}</td>".format(esc(c)) for c in row) + "</tr>")
             parts.append("</table>")
-    parts.append("<h2>8. Formula reference</h2><table><tr><th>file:line</th><th>what it says</th></tr>")
+    parts.append("<h2>6. Formula reference</h2><table><tr><th>file:line</th><th>what it says</th></tr>")
     for where, what in FORMULA_REFERENCE:
         parts.append("<tr><td><code>{}</code></td><td style='text-align:left'>{}</td></tr>".format(
             esc(where), esc(what)))
