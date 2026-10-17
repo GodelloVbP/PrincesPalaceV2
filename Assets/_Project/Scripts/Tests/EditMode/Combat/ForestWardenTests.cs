@@ -142,8 +142,8 @@ namespace PrincesPalace.Domain.Tests
         {
             var victim = Fighter("Shawn", true, maxHealth: 5000, attack: 7, defense: defence, speed: 10);
 
-            int raw = SkillResolution.Amount(skill.Effect, attacker, victim,
-                skill.Power, skill.FlatAmount, 0, skill.IgnoresDefense);
+            int raw = SkillResolution.Amount(skill.Effect, attacker,
+                skill.Power, skill.FlatAmount, 0);
 
             // ignoresDefense now has to be threaded to the pipeline
             // explicitly -- SkillResolution.Amount no longer mitigates at

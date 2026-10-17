@@ -47,8 +47,8 @@ namespace PrincesPalace.Domain.Tests
                 null, SpellPresentation.None, 0, wardTurns: 2, scalingAxis: ScalingAxis.Spell);
 
         private static int WardPoints(ResolvedSkill skill, CombatantState caster) =>
-            SkillResolution.Amount(SkillEffect.Ward, caster, caster, skill.Power, skill.FlatAmount,
-                resourceSpent: 0, ignoresDefense: false, type: DamageType.Physical, axis: skill.ScalingAxis,
+            SkillResolution.Amount(SkillEffect.Ward, caster, skill.Power, skill.FlatAmount,
+                resourceSpent: 0, type: DamageType.Physical, axis: skill.ScalingAxis,
                 percentOfMaxHealthPerPoint: 0, percentOfCasterMaxHealth: skill.PercentOfCasterMaxHealth);
 
         // 18 + spell attack, the shape prism_ward already uses, so the two

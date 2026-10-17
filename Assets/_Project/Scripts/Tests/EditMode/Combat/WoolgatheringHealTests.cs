@@ -38,8 +38,8 @@ namespace PrincesPalace.Domain.Tests
         }
 
         private static int Woolgathering(CombatantState caster) =>
-            SkillResolution.Amount(SkillEffect.HealSelf, caster, caster,
-                WoolgatheringPower, WoolgatheringFlat, WoolgatheringWool, false);
+            SkillResolution.Amount(SkillEffect.HealSelf, caster,
+                WoolgatheringPower, WoolgatheringFlat, WoolgatheringWool);
 
         // ANCHOR ONE: a fresh Shawn. Wisdom 12 as characters.json authors him,
         // against a level-1 health pool the balance bot measures at 360-390.
@@ -93,7 +93,7 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.AreEqual(0, CombatMath.WisdomHealBonus(monster));
             Assert.AreEqual(2, SkillResolution.Amount(
-                SkillEffect.HealSelf, monster, monster, 0, 2, 0, false));
+                SkillEffect.HealSelf, monster, 0, 2, 0));
         }
 
         // MANA IS NOT HEALTH. RestorePartyMana shares the flat-plus-resource
@@ -105,7 +105,7 @@ namespace PrincesPalace.Domain.Tests
             var caster = Caster(maxHealth: 1000, wisdom: 40);
 
             Assert.AreEqual(48, SkillResolution.Amount(
-                SkillEffect.RestorePartyMana, caster, caster, 2, 40, 4, false));
+                SkillEffect.RestorePartyMana, caster, 2, 40, 4));
         }
     }
 }

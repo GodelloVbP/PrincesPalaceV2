@@ -455,8 +455,8 @@ namespace PrincesPalace.Domain.Combat.Session
             }
             else
             {
-                raw = SkillResolution.Amount(skill.Effect, enemy, against,
-                    skill.Power, skill.FlatAmount, 0, skill.IgnoresDefense, castType, skill.ScalingAxis);
+                raw = SkillResolution.Amount(skill.Effect, enemy,
+                    skill.Power, skill.FlatAmount, 0, castType, skill.ScalingAxis);
             }
 
             if (heals) return raw;

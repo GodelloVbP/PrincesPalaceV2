@@ -384,26 +384,11 @@ namespace PrincesPalace.Domain.Combat.Session
             type == StatusEffectType.Stun ? "Stunned" : type.ToString();
 
         // Whether the tooltip adds "across N stacks": the statuses whose
-        // instances sum into one number. The others are a state (Rooted,
-        // Marked) or a one-shot (Stun, Empowered, Provoked, Feared) that a
-        // second application does not add to, and Fortified is not summed.
-        public static bool StacksInTooltip(StatusEffectType type)
-        {
-            switch (type)
-            {
-                case StatusEffectType.Poison:
-                case StatusEffectType.Regen:
-                case StatusEffectType.Protect:
-                case StatusEffectType.Vulnerable:
-                case StatusEffectType.Chilled:
-                case StatusEffectType.Burn:
-                case StatusEffectType.Thorned:
-                case StatusEffectType.Bleed:
-                    return true;
-                default:
-                    return false;
-            }
-        }
+        // instances sum into one number, which is every status StackPolicyOf
+        // stacks. A ward is summed too but is spelled by its own row.
+        public static bool StacksInTooltip(StatusEffectType type) =>
+            type != StatusEffectType.Shielded
+            && StatusEffects.StackPolicyOf(type) == StackingPolicy.Stack;
 
         // The clauses of the presentation-only statuses (no StatusEffectType
         // behind them), so the row builders below and the glossary read one

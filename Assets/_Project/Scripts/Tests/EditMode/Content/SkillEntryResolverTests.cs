@@ -866,9 +866,9 @@ namespace PrincesPalace.Domain.Tests
         {
             // 5 attack + 2 power x 6 spent = 17.
             Assert.AreEqual(17, SkillResolution.Amount(
-                SkillEffect.DamageSingle, Actor(), Target(8), power: 2, flatAmount: 0, resourceSpent: 6, ignoresDefense: false));
+                SkillEffect.DamageSingle, Actor(), power: 2, flatAmount: 0, resourceSpent: 6));
             Assert.AreEqual(17, SkillResolution.Amount(
-                SkillEffect.DamageSingle, Actor(), Target(8), power: 2, flatAmount: 0, resourceSpent: 6, ignoresDefense: true));
+                SkillEffect.DamageSingle, Actor(), power: 2, flatAmount: 0, resourceSpent: 6));
         }
 
         // WHAT A WALL COSTS is nothing at all, at THIS layer — see the
@@ -881,9 +881,9 @@ namespace PrincesPalace.Domain.Tests
         public void ADefendedTarget_NoLongerChangesTheRawFigureAtAll()
         {
             int againstAWall = SkillResolution.Amount(
-                SkillEffect.DamageSingle, Actor(), Target(99), power: 2, flatAmount: 0, resourceSpent: 6, ignoresDefense: false);
+                SkillEffect.DamageSingle, Actor(), power: 2, flatAmount: 0, resourceSpent: 6);
             int againstNothing = SkillResolution.Amount(
-                SkillEffect.DamageSingle, Actor(), Target(0), power: 2, flatAmount: 0, resourceSpent: 6, ignoresDefense: false);
+                SkillEffect.DamageSingle, Actor(), power: 2, flatAmount: 0, resourceSpent: 6);
 
             Assert.AreEqual(17, againstAWall);
             Assert.AreEqual(againstNothing, againstAWall);
@@ -892,7 +892,7 @@ namespace PrincesPalace.Domain.Tests
             // twice the 17 above, and the returned figure doubles with it --
             // no floor anywhere near this range to blunt the difference.
             int geared = SkillResolution.Amount(
-                SkillEffect.DamageSingle, Actor(22), Target(99), power: 2, flatAmount: 0, resourceSpent: 6, ignoresDefense: false);
+                SkillEffect.DamageSingle, Actor(22), power: 2, flatAmount: 0, resourceSpent: 6);
 
             Assert.AreEqual(34, geared, "twice the attack (17 -> 34 raw) is twice the damage (17 -> 34)");
         }
@@ -903,7 +903,7 @@ namespace PrincesPalace.Domain.Tests
             // 4 flat + 3 power x 5 spent = 19. The caster's Attack of 5 must
             // not leak into a heal.
             Assert.AreEqual(19, SkillResolution.Amount(
-                SkillEffect.HealSelf, Actor(), null, power: 3, flatAmount: 4, resourceSpent: 5, ignoresDefense: false));
+                SkillEffect.HealSelf, Actor(), power: 3, flatAmount: 4, resourceSpent: 5));
         }
 
         // ---- scaling axis (Phase 4 of the stat-scaling plan) -------------
@@ -928,8 +928,8 @@ namespace PrincesPalace.Domain.Tests
         public void PhysicalTypeWithAutoAxis_UsesWeaponScaling()
         {
             var actor = ScaledActor();
-            int damage = SkillResolution.Amount(SkillEffect.DamageSingle, actor, Target(0),
-                power: 0, flatAmount: 0, resourceSpent: 0, ignoresDefense: false,
+            int damage = SkillResolution.Amount(SkillEffect.DamageSingle, actor,
+                power: 0, flatAmount: 0, resourceSpent: 0,
                 type: DamageType.Physical, axis: ScalingAxis.Auto);
 
             Assert.AreEqual(10, damage, "5 Attack x 2.00 (WeaponScaling S) = 10, raw");
@@ -942,8 +942,8 @@ namespace PrincesPalace.Domain.Tests
         public void NonPhysicalTypeWithAutoAxis_UsesSkillScaling()
         {
             var actor = ScaledActor();
-            int damage = SkillResolution.Amount(SkillEffect.DamageSingle, actor, Target(0),
-                power: 0, flatAmount: 0, resourceSpent: 0, ignoresDefense: false,
+            int damage = SkillResolution.Amount(SkillEffect.DamageSingle, actor,
+                power: 0, flatAmount: 0, resourceSpent: 0,
                 type: DamageType.Nature, axis: ScalingAxis.Auto);
 
             Assert.AreEqual(9, damage, "5 Attack x 1.70 (SkillScaling A) = 8.5, rounded away from zero to 9, raw");
@@ -956,8 +956,8 @@ namespace PrincesPalace.Domain.Tests
         public void AnExplicitAxisOverride_WinsOverTheTypeDerivedOne()
         {
             var actor = ScaledActor();
-            int damage = SkillResolution.Amount(SkillEffect.DamageSingle, actor, Target(0),
-                power: 0, flatAmount: 0, resourceSpent: 0, ignoresDefense: false,
+            int damage = SkillResolution.Amount(SkillEffect.DamageSingle, actor,
+                power: 0, flatAmount: 0, resourceSpent: 0,
                 type: DamageType.Nature, axis: ScalingAxis.Weapon);
 
             Assert.AreEqual(10, damage, "Weapon override should read WeaponScaling (2.00x) even though the type is Nature");
@@ -967,8 +967,8 @@ namespace PrincesPalace.Domain.Tests
         public void NoneAxis_NeverScalesAttackAtAll()
         {
             var actor = ScaledActor();
-            int damage = SkillResolution.Amount(SkillEffect.DamageSingle, actor, Target(0),
-                power: 0, flatAmount: 0, resourceSpent: 0, ignoresDefense: false,
+            int damage = SkillResolution.Amount(SkillEffect.DamageSingle, actor,
+                power: 0, flatAmount: 0, resourceSpent: 0,
                 type: DamageType.Physical, axis: ScalingAxis.None);
 
             Assert.AreEqual(5, damage, "None should leave Attack completely unscaled: 5, raw");
@@ -981,8 +981,8 @@ namespace PrincesPalace.Domain.Tests
         public void ScalingMultipliesOnlyAttack_NeverFlatAmountOrPower()
         {
             var actor = ScaledActor();
-            int damage = SkillResolution.Amount(SkillEffect.DamageSingle, actor, Target(0),
-                power: 2, flatAmount: 3, resourceSpent: 4, ignoresDefense: false,
+            int damage = SkillResolution.Amount(SkillEffect.DamageSingle, actor,
+                power: 2, flatAmount: 3, resourceSpent: 4,
                 type: DamageType.Physical, axis: ScalingAxis.Weapon);
 
             // Scaled attack 10 (as in the first test above) + flatAmount 3 +
@@ -1056,7 +1056,7 @@ namespace PrincesPalace.Domain.Tests
                     $"skills.json authors an effect '{name}' SkillEffect has no member for at all");
 
                 Assert.DoesNotThrow(() => SkillResolution.Amount(
-                    effect, actor, target, power: 2, flatAmount: 3, resourceSpent: 1, ignoresDefense: false),
+                    effect, actor, power: 2, flatAmount: 3, resourceSpent: 1),
                     $"SkillResolution.Amount has no case for {effect}, which skills.json authors at least once");
             }
         }

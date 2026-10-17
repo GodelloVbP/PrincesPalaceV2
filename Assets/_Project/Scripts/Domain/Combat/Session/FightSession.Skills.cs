@@ -618,7 +618,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 {
                     BeginBeat(actor, actor, isCast: true);
                     RecordSpellPresentation(skill);
-                    int amount = SkillResolution.Amount(skill.Effect, actor, actor, skill.Power, skill.FlatAmount, resourceSpent, false);
+                    int amount = SkillResolution.Amount(skill.Effect, actor, skill.Power, skill.FlatAmount, resourceSpent);
 
                     // SUMMED, NOT ASSUMED. CombatMath.RestoreMana "returns how
                     // much actually landed, so a caller can say the true number
@@ -770,8 +770,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // Second Wind) would have been the day two of them silently did not
         // get it.
         private static int HealAmountOf(ResolvedSkill skill, CombatantState actor, int pointsSpent) =>
-            SkillResolution.Amount(skill.Effect, actor, actor, skill.Power, skill.FlatAmount, pointsSpent,
-                ignoresDefense: false, type: DamageType.Physical, axis: skill.ScalingAxis,
+            SkillResolution.Amount(skill.Effect, actor, skill.Power, skill.FlatAmount, pointsSpent, type: DamageType.Physical, axis: skill.ScalingAxis,
                 percentOfMaxHealthPerPoint: skill.PercentOfMaxHealthPerPoint);
 
         // Which of the CASTER'S OWN stance folders plays for this skill —
@@ -978,8 +977,8 @@ namespace PrincesPalace.Domain.Combat.Session
                 }
                 else
                 {
-                    baseAmount = SkillResolution.Amount(skill.Effect, actor, target, skill.Power,
-                        skill.FlatAmount, resourceSpent, skill.IgnoresDefense, castType, skill.ScalingAxis);
+                    baseAmount = SkillResolution.Amount(skill.Effect, actor, skill.Power,
+                        skill.FlatAmount, resourceSpent, castType, skill.ScalingAxis);
 
                     // THE FURY TIER'S MULTIPLIER, applied to the skill's own
                     // computed damage and BEFORE defences -- so a x4 slam is a
@@ -1542,7 +1541,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // only one of them loses a place.
             var struckAndLanded = new List<CombatantState>();
 
-            foreach (var enemy in _encounter.OpponentsOf(actor).ToList())
+            foreach (var enemy in struck)
             {
                 // An earlier enemy THIS SAME SWEEP already fell to might have
                 // splashed a kill onto this one (ApplyKillSplash,
@@ -1607,8 +1606,8 @@ namespace PrincesPalace.Domain.Combat.Session
                 // same fight.
                 // Per enemy, because the base itself is per enemy -- defence
                 // differs. The CHARGE was decided once for the whole cast.
-                int baseAmount = SkillResolution.Amount(skill.Effect, actor, enemy, skill.Power,
-                    skill.FlatAmount, resourceSpent, skill.IgnoresDefense, castType, skill.ScalingAxis);
+                int baseAmount = SkillResolution.Amount(skill.Effect, actor, skill.Power,
+                    skill.FlatAmount, resourceSpent, castType, skill.ScalingAxis);
 
                 // THE FURY TIER'S MULTIPLIER, applied per enemy and BEFORE
                 // defences -- identical treatment to ResolveDamageSingle's,
@@ -1926,8 +1925,8 @@ namespace PrincesPalace.Domain.Combat.Session
 
                 var castType = CastTypeOf(actor, skill);
 
-                int amount = SkillResolution.Amount(skill.Effect, actor, null, skill.Power,
-                    skill.FlatAmount, pointsSpent, skill.IgnoresDefense, castType, skill.ScalingAxis,
+                int amount = SkillResolution.Amount(skill.Effect, actor, skill.Power,
+                    skill.FlatAmount, pointsSpent, castType, skill.ScalingAxis,
                     skill.PercentOfMaxHealthPerPoint, skill.PercentOfCasterMaxHealth);
 
                 // The cast's whole worth: a finisher reads its target's wounds

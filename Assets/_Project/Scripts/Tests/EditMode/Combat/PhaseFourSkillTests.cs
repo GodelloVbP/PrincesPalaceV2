@@ -114,8 +114,8 @@ namespace PrincesPalace.Domain.Tests
             var bjorn = Hero(attack: 10);
             var foe = Foe();
 
-            int perTarget = SkillResolution.Amount(rampage.Effect, bjorn, foe, rampage.Power, rampage.FlatAmount,
-                resourceSpent: 0, ignoresDefense: false, type: DamageType.Physical, axis: rampage.ScalingAxis);
+            int perTarget = SkillResolution.Amount(rampage.Effect, bjorn, rampage.Power, rampage.FlatAmount,
+                resourceSpent: 0, type: DamageType.Physical, axis: rampage.ScalingAxis);
 
             Assert.AreEqual(SkillEffect.DamageAll, rampage.Effect);
             Assert.AreEqual(19, perTarget);
@@ -127,8 +127,8 @@ namespace PrincesPalace.Domain.Tests
             var slam = Authored("placeholder_brawler_slam");
             var bjorn = Hero(attack: 10);
 
-            int hit = SkillResolution.Amount(slam.Effect, bjorn, Foe(), slam.Power, slam.FlatAmount,
-                resourceSpent: 0, ignoresDefense: false, type: DamageType.Physical, axis: slam.ScalingAxis);
+            int hit = SkillResolution.Amount(slam.Effect, bjorn, slam.Power, slam.FlatAmount,
+                resourceSpent: 0, type: DamageType.Physical, axis: slam.ScalingAxis);
 
             Assert.AreEqual(27, hit, "Rampage's 19 is authored as 70% of this, so the two move together");
         }
@@ -181,8 +181,8 @@ namespace PrincesPalace.Domain.Tests
             var secondWind = Authored("second_wind");
             var bjorn = Hero(health: 500, pool: 100);
 
-            int healed = SkillResolution.Amount(secondWind.Effect, bjorn, bjorn, secondWind.Power,
-                secondWind.FlatAmount, furySpent, ignoresDefense: false, type: DamageType.Physical,
+            int healed = SkillResolution.Amount(secondWind.Effect, bjorn, secondWind.Power,
+                secondWind.FlatAmount, furySpent, type: DamageType.Physical,
                 axis: secondWind.ScalingAxis, percentOfMaxHealthPerPoint: secondWind.PercentOfMaxHealthPerPoint);
 
             Assert.AreEqual(1, secondWind.PercentOfMaxHealthPerPoint);
@@ -228,8 +228,8 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(6, mend.ManaCost);
             Assert.AreEqual(ScalingAxis.Spell, mend.ScalingAxis);
 
-            int healed = SkillResolution.Amount(mend.Effect, odette, odette, mend.Power, mend.FlatAmount,
-                resourceSpent: 0, ignoresDefense: false, type: DamageType.Physical, axis: mend.ScalingAxis);
+            int healed = SkillResolution.Amount(mend.Effect, odette, mend.Power, mend.FlatAmount,
+                resourceSpent: 0, type: DamageType.Physical, axis: mend.ScalingAxis);
 
             Assert.AreEqual(24, healed);
         }
@@ -375,8 +375,8 @@ namespace PrincesPalace.Domain.Tests
         // WHAT ONE WARD IS WORTH, in one place, so nine assertions above
         // cannot drift into nine slightly different calls.
         private static int WardPoints(ResolvedSkill skill, CombatantState caster, int resourceSpent = 0) =>
-            SkillResolution.Amount(SkillEffect.Ward, caster, caster, skill.Power, skill.FlatAmount,
-                resourceSpent, ignoresDefense: false, type: DamageType.Physical, axis: skill.ScalingAxis,
+            SkillResolution.Amount(SkillEffect.Ward, caster, skill.Power, skill.FlatAmount,
+                resourceSpent, type: DamageType.Physical, axis: skill.ScalingAxis,
                 percentOfMaxHealthPerPoint: 0, percentOfCasterMaxHealth: skill.PercentOfCasterMaxHealth);
 
         // ---- Tuck In -------------------------------------------------------
@@ -416,8 +416,8 @@ namespace PrincesPalace.Domain.Tests
                 tuckIn.SpendsAllResource, tuckIn.ResourceSpendCap);
 
             Assert.AreEqual(4, spent);
-            Assert.AreEqual(32, SkillResolution.Amount(SkillEffect.Ward, shawn, shawn, tuckIn.Power + 3,
-                tuckIn.FlatAmount, spent, ignoresDefense: false, type: DamageType.Physical,
+            Assert.AreEqual(32, SkillResolution.Amount(SkillEffect.Ward, shawn, tuckIn.Power + 3,
+                tuckIn.FlatAmount, spent, type: DamageType.Physical,
                 axis: tuckIn.ScalingAxis));
         }
 

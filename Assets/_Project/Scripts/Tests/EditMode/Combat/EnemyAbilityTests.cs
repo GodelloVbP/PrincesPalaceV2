@@ -587,8 +587,8 @@ namespace PrincesPalace.Domain.Tests
             var victim = new CombatantState("Shawn", true, 5000, 30, 7, 10);
             victim.PhysicalDefense = defence;
 
-            int raw = SkillResolution.Amount(skill.Effect, attacker, victim,
-                skill.Power, skill.FlatAmount, 0, skill.IgnoresDefense);
+            int raw = SkillResolution.Amount(skill.Effect, attacker,
+                skill.Power, skill.FlatAmount, 0);
 
             return DamagePipeline.AfterDefences(raw, attacker, victim,
                 attackType: null, affinity: ElementalAffinity.Neutral,

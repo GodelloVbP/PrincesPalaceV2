@@ -26,11 +26,9 @@ namespace PrincesPalace.Domain.Combat
         public static int Amount(
             SkillEffect effect,
             CombatantState actor,
-            CombatantState target,
             int power,
             int flatAmount,
             int resourceSpent,
-            bool ignoresDefense,
             DamageType type = DamageType.Physical,
             ScalingAxis axis = ScalingAxis.Auto,
             // APPENDED LAST, same convention as type/axis above: percent of
@@ -53,7 +51,7 @@ namespace PrincesPalace.Domain.Combat
             {
                 case SkillEffect.DamageSingle:
                 case SkillEffect.DamageAll:
-                    return Damage(actor, target, power, flatAmount, resourceSpent, ignoresDefense, type, axis);
+                    return Damage(actor, power, flatAmount, resourceSpent, type, axis);
 
                 // A HEAL ALSO SCALES WITH THE CASTER'S WISDOM. Split off from
                 // the mana restore below, which shares the flat-plus-resource
@@ -292,34 +290,10 @@ namespace PrincesPalace.Domain.Combat
             };
         }
 
-        // Armour no longer applies HERE at all, regardless of `ignoresDefense`
-        // — mitigation is a DamagePipeline-only concern now (see its own
-        // header for the canonical equation), so this always returns the
-        // raw, scaled figure. `target` and `ignoresDefense` are kept as
-        // parameters for call-site stability (SkillEntryResolverTests and
-        // FightSession.Enemies.cs/Skills.cs already have both in hand at
-        // every call site) even though neither is read below any more —
-        // `ignoresDefense` in particular still matters, just one layer up:
-        // every caller of this method also calls DamagePipeline.
-        // AfterDefences with the SAME flag, which is the one place it is now
-        // actually consulted.
-        //
-        // WHAT THE FLAG USED TO ANSWER is worth keeping because it describes
-        // a bug rather than a design:
-        //
-        //   "damage is max(1, attack - defense) with no variance, his Attack
-        //    is 5, and the Throne Colossus has Defense 9. Every ordinary
-        //    action he has bottoms out on the floor against it -- 10 damage
-        //    into a 950-point pool, i.e. 95 turns of nothing. A
-        //    defense-ignoring line is the only thing that answers a wall."
-        //
-        // That described the subtraction cliff the diminishing-returns curve
-        // (now DamagePipeline.AfterDefences) already removed once, long
-        // before this rename -- there is no wall any more, so the flag is
-        // what it always read as: a strong property on one line of Shawn's
-        // kit, not the difference between playing and not. He still gets
-        // exactly one, and his AOE still deliberately does not.
-        private static int Damage(CombatantState actor, CombatantState target, int power, int flatAmount, int resourceSpent, bool ignoresDefense,
+        // The raw, scaled figure; armour and resistance apply in
+        // DamagePipeline.AfterDefences, which each caller runs with the skill's
+        // IgnoresDefense flag.
+        private static int Damage(CombatantState actor, int power, int flatAmount, int resourceSpent,
             DamageType type, ScalingAxis axis)
         {
             // MULTIPLIES ONLY THE ATTACK TERM, not the whole raw figure —

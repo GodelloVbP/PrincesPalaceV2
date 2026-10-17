@@ -374,8 +374,8 @@ namespace PrincesPalace.Domain.Combat.Session
         // scales whatever it lands on.
         private int ApplyWard(CombatantState caster, CombatantState wearer, ResolvedSkill skill, int resourceSpent)
         {
-            int points = SkillResolution.Amount(SkillEffect.Ward, caster, wearer, skill.Power, skill.FlatAmount,
-                resourceSpent, ignoresDefense: false, type: DamageType.Physical, axis: skill.ScalingAxis,
+            int points = SkillResolution.Amount(SkillEffect.Ward, caster, skill.Power, skill.FlatAmount,
+                resourceSpent, type: DamageType.Physical, axis: skill.ScalingAxis,
                 percentOfCasterMaxHealth: skill.PercentOfCasterMaxHealth);
             if (points <= 0) return 0;
 
