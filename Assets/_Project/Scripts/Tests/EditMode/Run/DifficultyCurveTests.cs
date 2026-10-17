@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using NUnit.Framework;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Dungeon;
@@ -136,7 +137,7 @@ namespace PrincesPalace.Domain.Tests
         {
             int atCeiling = DifficultyCurve.ScaleHealth(1000, DifficultyCurve.MaxScaledStep);
 
-            Assert.Greater(atCeiling, 0);
+            Assert.AreEqual(1000000000, atCeiling);
             Assert.AreEqual(atCeiling, DifficultyCurve.ScaleHealth(1000, 999999));
             Assert.Greater(DifficultyCurve.ScaleHealth(int.MaxValue / 1000, 999999), 0);
             Assert.Greater(DifficultyCurve.ScaleAttack(int.MaxValue / 1000, 999999), 0);
@@ -148,10 +149,14 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void RewardsRideTheSameCurveAsTheThreat()
         {
-            foreach (int step in new[] { 0, 8, 16, 40, 100 })
+            var pinned = new Dictionary<int, int>
             {
-                Assert.AreEqual(DifficultyCurve.ScaleHealth(250, step), DifficultyCurve.ScaleReward(250, step),
-                    $"pay and threat disagree at step {step}");
+                { 0, 250 }, { 8, 445 }, { 16, 795 }, { 40, 4511 }, { 100, 345769 },
+            };
+            foreach (var row in pinned)
+            {
+                Assert.AreEqual(row.Value, DifficultyCurve.ScaleReward(250, row.Key), $"pay at step {row.Key}");
+                Assert.AreEqual(row.Value, DifficultyCurve.ScaleHealth(250, row.Key), $"threat at step {row.Key}");
             }
         }
 
