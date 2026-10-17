@@ -1621,7 +1621,13 @@ namespace PrincesPalace
             {
                 foreach (var result in beat.Results)
                 {
-                    if (result.Amount > 0) FlashOne(beat, result.Target);
+                    // Amount is what reached health, so a ward that ate the
+                    // whole blow leaves it 0 with Absorbed set: the barrier
+                    // still has to show on that target.
+                    if (result.Amount > 0 || result.Absorbed > 0)
+                    {
+                        FlashOne(beat, result.Target, result.Amount, result.Absorbed);
+                    }
                 }
 
                 return;
@@ -1638,28 +1644,25 @@ namespace PrincesPalace
             // nothing.
             if (beat.Amount <= 0 && beat.Absorbed <= 0) return;
 
-            FlashOne(beat, beat.Target);
+            // CombatBeat.Amount is the pre-shield figure; health got Amount less Absorbed.
+            FlashOne(beat, beat.Target, Mathf.Max(0, beat.Amount - beat.Absorbed), beat.Absorbed);
         }
 
         // Read off the BEAT, not off the target's health -- by the time this
         // plays, live health has already moved through the rest of the round.
-        private void FlashOne(CombatBeat beat, CombatantState target)
+        private void FlashOne(CombatBeat beat, CombatantState target, int healthDamage, int absorbed)
         {
             var flash = HitFlashFor(target);
             if (flash == null) return;
 
             // A SHIELD TOOK SOME OR ALL OF IT -- the barrier reaction,
             // distinct from the ordinary hit flash (FightHudPalette.
-            // WardBright rather than white/typed/heal). What actually
-            // reached health is Amount less Absorbed, CLAMPED: a
-            // Ward-status full absorb can leave Amount at 0 while Absorbed
-            // is positive (see CombatBeat.Absorbed's own header), which
-            // would read as negative health damage without the clamp.
-            if (beat.Absorbed > 0)
+            // WardBright rather than white/typed/heal). `healthDamage` and
+            // `absorbed` are this target's own, never the beat's total, so
+            // one warded victim of a sweep does not arm the barrier on the
+            // others.
+            if (absorbed > 0)
             {
-                int healthDamage = beat.Amount - beat.Absorbed;
-                if (healthDamage < 0) healthDamage = 0;
-
                 if (healthDamage <= 0)
                 {
                     // FULLY ABSORBED: the barrier is the whole story. No
@@ -1691,6 +1694,10 @@ namespace PrincesPalace
                 else flash.Flash(beat.DamageType);
             }
         }
+
+        public StageHitFlash HitFlashForTest(CombatantState combatant) => HitFlashFor(combatant);
+
+        public void FlashCombatantForTest(CombatBeat beat) => FlashCombatant(beat);
 
         // ---- resolving art from content ----------------------------------------
 

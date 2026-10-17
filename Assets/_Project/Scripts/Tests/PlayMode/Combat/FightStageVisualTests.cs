@@ -197,6 +197,46 @@ namespace PrincesPalace.PlayModeTests
         // ---- the slots exist and are populated ----------------------------------
 
         [UnityTest]
+        public IEnumerator ASweepFlashesEachTargetByItsOwnWardNotTheBeatsTotal()
+        {
+            yield return LoadFightWithTwoEnemies();
+            var back = _fight.Session.Encounter.Enemies[1];
+
+            var texture = new Texture2D(4, 4);
+            var sprite = Sprite.Create(texture, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0f));
+            _fight.HitFlashForTest(_front).SetSprite(sprite);
+            _fight.HitFlashForTest(back).SetSprite(sprite);
+
+            // The sweep hit Front for 10 clean, and Back's whole 10 went into a ward.
+            var beat = new CombatBeat
+            {
+                Actor = _hero,
+                Target = _front,
+                Amount = 10,
+                Absorbed = 10,
+                DamageType = DamageType.Physical,
+                Results = new List<BeatTargetResult>
+                {
+                    new BeatTargetResult(_front, 10, false),
+                    new BeatTargetResult(back, 0, false, absorbed: 10),
+                },
+            };
+
+            _fight.FlashCombatantForTest(beat);
+
+            var clean = _fight.HitFlashForTest(_front).OverlayColourForTest;
+            var warded = _fight.HitFlashForTest(back).OverlayColourForTest;
+            Assert.Greater(clean.a, 0f, "Front took a clean hit and flashes");
+            Assert.AreEqual(StageHitFlash.TintFor(DamageType.Physical).r, clean.r, 0.01f,
+                "Front's flash is the ordinary hit, not the barrier the other target's ward earned");
+            Assert.Greater(warded.a, 0f, "Back's ward ate the blow and flashes the barrier");
+            Assert.Greater(Mathf.Abs(clean.r - warded.r), 0.1f, "Back's barrier is not Front's hit colour");
+
+            Object.Destroy(sprite);
+            Object.Destroy(texture);
+        }
+
+        [UnityTest]
         public IEnumerator OnlyTheOccupiedSlotsAreShown()
         {
             yield return LoadFight();

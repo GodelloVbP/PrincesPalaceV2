@@ -90,6 +90,10 @@ namespace PrincesPalace
             Clear();
         }
 
+        // The overlay's colour this instant: the first pulse's tint at its peak
+        // on the frame a flash starts. For a test that reads which flash fired.
+        public Color OverlayColourForTest => image != null ? image.color : default;
+
         // Kept in step with whatever stance the actor is wearing. Called by the
         // stage visuals whenever the sprite under it changes, because a flash
         // shaped like the PREVIOUS pose is worse than no flash.
