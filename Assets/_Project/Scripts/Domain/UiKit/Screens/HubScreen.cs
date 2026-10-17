@@ -8,16 +8,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
     // Coordinates are v1's exactly, because the composition was tuned by eye
     // against the real background and is worth preserving. What changed is that
     // they are now DECLARED positions the audit checks, rather than arithmetic
-    // scattered across a builder — and the two corner buttons, the currency
-    // plate and the five buildings are all siblings in one tree, so a collision
+    // scattered across a builder — and the corner button, the currency
+    // plate, the four buildings and the gate are all siblings in one tree, so a collision
     // between any pair of them fails the build.
     public sealed class HubScreen
     {
         public const string BackgroundKey = "Backgrounds/Divine_principality_nebula.png";
 
-        // Hub building art is Resources-loaded at runtime in v1 (frame folders
-        // for HubBuildingAnimator). Until that animator is ported, the first
-        // frame is referenced directly as a static sprite.
+        // Hub building art is Resources-loaded at runtime (frame folders for
+        // the building animator). The tree references the first frame as the
+        // static sprite the animator replaces.
         private const string HubArtRoot = "Assets/_Project/Resources/Hub";
 
         // Sizes and positions now come from HubAnchors, which stages them at
