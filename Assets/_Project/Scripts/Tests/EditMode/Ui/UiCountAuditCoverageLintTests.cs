@@ -104,7 +104,6 @@ namespace PrincesPalace.Domain.Tests
             "WireParty:controller.seatDragSources",
             "WireParty:controller.cardDragSources",
             "WireExits:controller.exitLabels",
-            "WireDossier:controller.icons",
             "WireGlossary:controller.icons",
         };
 
