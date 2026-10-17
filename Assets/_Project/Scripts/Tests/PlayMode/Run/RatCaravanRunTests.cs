@@ -289,10 +289,13 @@ namespace PrincesPalace.PlayModeTests
             {
                 var result = BotRunDriver.PlayRun(seed, "GreedyAggressive", ProfilePresets.Fresh, 8,
                     ShopNodeMode.WhenOffered, probe);
-                if (!result.Trace.Rooms.Any(r => r.EventForced)) continue;
+                var forced = result.Trace.Rooms.FirstOrDefault(r => r.EventForced);
+                if (forced == null) continue;
 
                 robbed++;
-                var fight = result.Trace.Fights.SingleOrDefault(f => f.EventId == Caravan);
+                // The room the probe forced, by step: a returning caravan can
+                // also sit in another room's up-front reservation.
+                var fight = result.Trace.Fights.SingleOrDefault(f => f.EventId == Caravan && f.Step == forced.Step);
                 Assert.IsNotNull(fight, $"seed {seed}: the forced caravan played no rob");
                 CollectionAssert.AreEqual(new[] { "rat", "rat", "rat" }, fight.EnemyIds, $"seed {seed}");
                 CollectionAssert.Contains(new[] { "Defeated", "Fell" }, fight.EndReason, $"seed {seed}");
