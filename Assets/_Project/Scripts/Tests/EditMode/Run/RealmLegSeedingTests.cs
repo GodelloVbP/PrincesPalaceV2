@@ -50,16 +50,16 @@ namespace PrincesPalace.Domain.Tests
                 Shape(RealmMapGenerator.Generate(new SeededRandom(RunSeed), 8, profile)));
         }
 
-        [TestCase(0, 1)]
-        [TestCase(8, 2)]
-        [TestCase(792, 100)]
-        public void ForRealm_IsTheDefaultProfileOfThatFloor(int legStartStep, int floor)
+        // Rows read: first step of the leg, then pockets, anchors, forks.
+        [TestCase(0, 1, 1, 0)]
+        [TestCase(8, 2, 1, 0)]
+        [TestCase(792, 6, 6, 3)]
+        public void ForRealm_IsTheDefaultProfileOfThatFloor(int legStartStep, int pockets, int anchors, int forks)
         {
             var resolved = RealmProfiles.ForRealm(legStartStep);
-            var expected = RealmProfiles.Default(floor);
-            Assert.AreEqual(expected.pocketCount, resolved.pocketCount);
-            Assert.AreEqual(expected.anchorCount, resolved.anchorCount);
-            Assert.AreEqual(expected.forkCount, resolved.forkCount);
+            Assert.AreEqual(pockets, resolved.pocketCount);
+            Assert.AreEqual(anchors, resolved.anchorCount);
+            Assert.AreEqual(forks, resolved.forkCount);
         }
     }
 }
