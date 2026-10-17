@@ -201,9 +201,9 @@ namespace PrincesPalace
             _victoryVoicesRoutine = null;
         }
 
-        // The kill registering: every body still fading sags first, then
-        // fades , and a boss shudders the
-        // stage once more. Stage only; Time.timeScale is never touched.
+        // The kill registering: a boss shudders the stage once more, and
+        // every body still fading collapses (sags and tilts) as it fades.
+        // Stage only; Time.timeScale is never touched.
         private void ReleaseTheKill(RunUpSchedule schedule)
         {
             var look = schedule.Look;

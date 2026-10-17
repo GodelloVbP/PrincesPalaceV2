@@ -12,9 +12,9 @@ namespace PrincesPalace
     // Putting the actors on the stage: which sprite, which way round, and how
     // far off the floor.
     //
-    // Ported from v1's FightController.StageVisuals.cs. The two hard-won rules
-    // travel with it, because both were playtest bugs that read as art problems:
-    // the ground line comes from the MANIFEST rather than from measuring alpha,
+    // Two rules here are easy to break, because getting them wrong reads as an
+    // art problem: the ground line comes from the MANIFEST rather than from
+    // measuring alpha,
     // and the shadow's X is measured from the IDLE frame only.
     public partial class FightController
     {
@@ -286,10 +286,10 @@ namespace PrincesPalace
                           animators != null && slot < animators.Length ? animators[slot] : null,
                           mark, new Vector3(scale, scale, 1f), placed, slot);
 
-                // THE PAINTER'S ORDER, now that a figure can change rank.
+                // THE PAINTER'S ORDER, for a figure that can change rank.
                 // FightScreen.BuildStage declares the slots far-to-near so
-                // slot 0 draws last, which was the whole answer while a slot's
-                // rank never changed. A Move swaps two ranks without moving
+                // slot 0 draws last, which is only right while a slot's
+                // rank never changes. A Move swaps two ranks without moving
                 // either figure's slot, so the nearer one has to be re-parented
                 // to the end or the back rank draws over the front one.
                 // Compared before assigning: SetSiblingIndex dirties the
@@ -534,8 +534,8 @@ namespace PrincesPalace
 
         // Resources.Load every frame would be wasteful and, worse, hides a
         // missing file behind a per-frame retry. Resolved once per kind,
-        // through the same IconCache<TKind> StatusSprites in
-        // FightController.Hud.cs now uses -- see that type's own header for
+        // through the same IconCache<TKind> the status sprites in
+        // FightController.Hud.cs use -- see that type's own header for
         // the one deliberate behavioural difference between the two icon
         // systems (this one disables its Image on a miss; that one restores
         // a captured default sprite instead).
@@ -585,8 +585,7 @@ namespace PrincesPalace
             // Bind() runs before Start() when the adapter builds the fight, so
             // the first paint arrived with the glyph refs still unresolved and
             // every icon switched on carrying no character at all. Resolving on
-            // demand makes the two call orders commutative, which is the same
-            // fix RefreshStage's own comment describes for the party art map.
+            // demand makes the two call orders commutative.
             if (_intentGlyphs == null) WireIntentIcons();
 
             var enemies = _session.Encounter.Enemies;
@@ -1259,8 +1258,8 @@ namespace PrincesPalace
         // PlayMode tests (StageAnimationTests: FlatArtStillBreathesEven
         // ThoughItsDrawingCannot, ABreathOnlyEverMakesTheFigureTallerThanIts
         // Mark, ReHomingAFigureMidBreathDoesNotFoldTheBreathIntoItsSize,
-        // APunchStillLandsOnAFigureThatIsBreathing) were each waiting out a
-        // real ~3s deadline for exactly that reason. Set in [UnitySetUp],
+        // APunchStillLandsOnAFigureThatIsBreathing) would each wait out a
+        // real ~3s deadline otherwise. Set in [UnitySetUp],
         // reset in [UnityTearDown], same shape as BeatSpeedMultiplier.
         public static float BreathSpeedMultiplier = 1f;
 
@@ -1465,9 +1464,11 @@ namespace PrincesPalace
         // fight invisible, and its slot is reused rather than rebuilt.
         private void ResetStagePresentation()
         {
-            // Both of these are `static readonly Dictionary`s keyed by folder
+            // These four caches (ContentCentreCache, the opaque-box cache,
+            // the VFX-padding cache and the shield props) are
+            // `static readonly` and keyed by folder or sprite
             // -- they cache a PIXEL MEASUREMENT taken the
-            // first time each key is asked for, and nothing ever invalidated
+            // first time each key is asked for, and nothing else invalidates
             // them. Resources.Load happily picks up a re-sliced/re-ordered
             // sprite the moment its .meta reimports, but these dictionaries
             // do not know that happened -- a script recompile clears them
@@ -1526,8 +1527,7 @@ namespace PrincesPalace
             // C4: no holder from a fight that just ended can ever be
             // compared against again -- a fresh Bind means every combatant's
             // remembered status-code set starts empty, exactly as a fresh
-            // WireAllStatusBadges always left the (then row-keyed) dictionary
-            // for a new fight anyway.
+            // WireAllStatusBadges leaves the dictionary for a new fight.
             _statusRowActiveCodes.Clear();
 
             // AND NOBODY IS BEING INSPECTED. The same reasoning one line up,

@@ -1131,22 +1131,7 @@ namespace PrincesPalace
         // decision of WHICH beats get this (see its WantsContactFx); all this
         // owns is where the two effects go.
         //
-        // MEMBERS 0 AND 1 OF THE SPELL POOL, borrowed rather than pooled
-        // separately. FightBeatPlayer only calls this for a beat with no
-        // authored VFX path, and PlaySpellVfx returns on its first line for
-        // exactly that beat -- so the whole pool is idle whenever this runs,
-        // and a second pool would be three more Images on the canvas for a
-        // case that cannot overlap the first.
-        //
-        // THE ARC IS SKIPPED FOR A CHARGE. The slash arc reads a lean-and-cut
-        // language for Slash, not for a committed rush, and a Charge is a
-        // bump rather than a cut -- the same table's "Blunt" row calls for a
-        // burst and a longer hit-stop instead of an arc. This is the burst
-        // half of that: the simplest honest version of the distinction, and
-        // it costs nothing the pool did not already have. The hit-stop half
-        // is not implemented -- HitStopFor is keyed on the blow's weight for
-        // every approach alike, and giving Charge a longer one is a separate,
-        // undecided change to that shared curve.
+        // The arc is skipped for a Charge; see ContactPresentation.
         private void PlayContactFx(CombatBeat beat)
         {
             if (beat?.Target == null || performancePlayer == null) return;
@@ -1242,11 +1227,13 @@ namespace PrincesPalace
         // THE ARC IS SKIPPED FOR A CHARGE. The slash arc reads a lean-and-cut
         // and a Charge is a bump rather than a cut; the same table's "Blunt"
         // row calls for a burst and a longer hit-stop instead of an arc. This
-        // is the burst half of that distinction.
+        // is the burst half of that distinction; the hit-stop half is not
+        // implemented, since HitStopFor is keyed on the blow's weight for
+        // every approach alike.
         //
         // BUILT ONCE, NOT PER BEAT. Every plain melee blow in the game calls
-        // this, and until this fix it allocated a List<SpellLayer> plus one or
-        // two SpellLayer objects fresh every single time even though there are
+        // this, and allocating a List<SpellLayer> plus one or
+        // two SpellLayer objects every time would be waste: there are
         // only ever two possible outputs -- neither of which varies with
         // anything about `beat` beyond the Charge/not-Charge branch. Caching
         // is safe because the mutable half of a cast (Box/To/From/Placed) was
