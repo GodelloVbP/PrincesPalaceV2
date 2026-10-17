@@ -11,7 +11,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
     // WHAT IS NOT HERE is deliberate and is the design's own rule applied:
     // every row binds to a real GameSettings value or it is not drawn. Four of
     // the six groups the design asked for have nothing behind them yet. See
-    // OptionRows for the list and REMAINING.md for what each would need.
+    // OptionRows for the list.
     public sealed class OptionsScreen
     {
         private const string CardFill = FightHudPalette.CardFill;
