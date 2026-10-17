@@ -650,8 +650,7 @@ namespace PrincesPalace
                 // else.
                 if (elementSkill.Targeting == Domain.Combat.SkillTargeting.SingleAlly)
                 {
-                    _hoveredAllyIndex = -1;
-                    _menu.EnterTargeting(TargetSide.Allies);
+                    EnterAllyTargeting(elementSkill.Effect);
                 }
 
                 RefreshUi();
@@ -749,12 +748,7 @@ namespace PrincesPalace
                         // the count of 1 is what makes that literally the
                         // same code path rather than a preserved special
                         // case.
-                        _hoveredAllyIndex = -1;
-                        _hoveredSeat = -1;
-                        var effect = options[index].Skill.Effect;
-                        _menu.EnterTargeting(TargetSide.Allies,
-                            Domain.Combat.SkillEffects.PicksRequired(effect),
-                            Domain.Combat.SkillEffects.LastPickIsSeat(effect));
+                        EnterAllyTargeting(options[index].Skill.Effect);
                         RefreshUi();
                         return;
                     }
@@ -767,6 +761,18 @@ namespace PrincesPalace
             _hoveredEnemyIndex = FirstLivingEnemyIndex();
             _menu.EnterTargeting();
             RefreshUi();
+        }
+
+        // The ally rack, entered once for the skill list and the element list
+        // alike. The count and the seat-last flag are the effect's answer
+        // (SkillEffects), and a fresh pick starts with both cursors unset.
+        private void EnterAllyTargeting(Domain.Combat.SkillEffect effect)
+        {
+            _hoveredAllyIndex = -1;
+            _hoveredSeat = -1;
+            _menu.EnterTargeting(TargetSide.Allies,
+                Domain.Combat.SkillEffects.PicksRequired(effect),
+                Domain.Combat.SkillEffects.LastPickIsSeat(effect));
         }
 
         // ---- confirming a target ---------------------------------------------

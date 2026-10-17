@@ -382,6 +382,57 @@ namespace PrincesPalace.PlayModeTests
             StringAssert.DoesNotContain("A T T A C K", crumb.text);
         }
 
+        // ---- an elemental single-ally skill enters its pick with its real count (S05-002)
+
+        [UnityTest]
+        public IEnumerator AnElementalSingleAllySkillEntersTargetingWithItsPickCount()
+        {
+            yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
+            yield return null;
+            yield return null;
+
+            _fight = Object.FindAnyObjectByType<FightController>();
+            Assert.IsNotNull(_fight, "the Fight scene has no FightController");
+
+            var swap = new ResolvedSkill("swap", "Elemental Swap", "", "shawn", 1, SkillEffect.SwapAllies,
+                SkillTargeting.SingleAlly, manaCost: 0, resourceCost: 0, spendsAllResource: false,
+                power: 0, flatAmount: 0, ignoresDefense: false, damageInstances: null,
+                presentation: SpellPresentation.None, sortOrder: 0, freeAction: true,
+                elements: new[]
+                {
+                    new ElementChoice { Type = DamageType.Fire },
+                    new ElementChoice { Type = DamageType.Nature },
+                });
+            var hero = new CombatantState("Shawn", true, 300, 5, 40, 10);
+            var ally = new CombatantState("Bjorn", true, 300, 5, 40, 8);
+            var foes = new[] { new CombatantState("Front", false, 5000, 10, 8, 4) };
+            var kits = new List<PlayerKit>
+            {
+                new PlayerKit("shawn", CharacterRole.Tank, new List<ResolvedSkill> { swap }, null, null),
+                new PlayerKit("bear", CharacterRole.Tank, new List<ResolvedSkill>(), null, null),
+            };
+            var enemyKit = new EnemyKit(
+                new ResolvedEnemy("front", "Front", new StatBlock(), 5, 3, false,
+                    DamageType.Physical, DamageType.Physical, 0), false);
+            var session = new FightSession(new CombatEncounter(new[] { hero, ally }, foes), kits,
+                new List<EnemyKit> { enemyKit }, new SeededRandom(9));
+            session.Begin();
+
+            _fight.Bind(session, EncounterClass.Normal, new List<SatchelStack>());
+            yield return null;
+
+            Click("Verb1");
+            yield return null;
+            Click("CharacterSkill0");
+            yield return null;
+            Click("CharacterSkill0");
+            yield return null;
+
+            Assert.IsTrue(_fight.IsPickingAllyForTest, "fixture: the element press did not open the ally pick");
+            Assert.AreEqual(2, _fight.PicksRequiredForTest,
+                "a two-pick effect entered through the element list asked for one pick");
+        }
+
         // ---- a Move that swaps plate occupants snaps the HP ghost (S03-001) -----
 
         [UnityTest]
