@@ -381,5 +381,55 @@ namespace PrincesPalace.PlayModeTests
             StringAssert.Contains("M O V E", crumb.text);
             StringAssert.DoesNotContain("A T T A C K", crumb.text);
         }
+
+        // ---- a Move that swaps plate occupants snaps the HP ghost (S03-001) -----
+
+        [UnityTest]
+        public IEnumerator AMoveThatSwapsPlateOccupantsSnapsTheGhostToTheNewOccupant()
+        {
+            yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
+            yield return null;
+            yield return null;
+
+            _fight = Object.FindAnyObjectByType<FightController>();
+            Assert.IsNotNull(_fight, "the Fight scene has no FightController");
+
+            var hero = new CombatantState("Shawn", true, 300, 5, 40, 10);
+            var ally = new CombatantState("Bjorn", true, 300, 5, 40, 8);
+            ally.CurrentHealth = 90;
+            var foes = new[] { new CombatantState("Front", false, 5000, 10, 8, 4) };
+            var kits = new List<PlayerKit>
+            {
+                new PlayerKit("shawn", CharacterRole.Tank, new List<ResolvedSkill>(), null, null),
+                new PlayerKit("bear", CharacterRole.Tank, new List<ResolvedSkill>(), null, null),
+            };
+            var enemyKit = new EnemyKit(
+                new ResolvedEnemy("front", "Front", new StatBlock(), 5, 3, false,
+                    DamageType.Physical, DamageType.Physical, 0), false);
+            var session = new FightSession(new CombatEncounter(new[] { hero, ally }, foes), kits,
+                new List<EnemyKit> { enemyKit }, new SeededRandom(9));
+            session.Begin();
+
+            _fight.Bind(session, EncounterClass.Normal, new List<SatchelStack>());
+
+            // Let the opening paint's own ease (1.0 -> 0.30 on Bjorn's plate)
+            // finish, so the ghosts rest at their occupants' live values.
+            yield return new WaitForSecondsRealtime(1f);
+
+            var ghosts = (Image[])typeof(FightController).GetField("pcGhostFills",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).GetValue(_fight);
+            float Ghost(int plate) => ((RectTransform)ghosts[plate].transform).anchorMax.x;
+
+            Assert.AreSame(hero, session.Current, "fixture: Shawn must be the one acting");
+            Assert.AreEqual(1f, Ghost(0), 0.001f, "fixture: Shawn's plate rests full");
+            Assert.AreEqual(0.30f, Ghost(1), 0.001f, "fixture: Bjorn's plate rests at 90/300");
+
+            Assert.IsTrue(session.Move(MoveDirection.Back), "fixture: the swap was refused");
+            _fight.RefreshUi();
+
+            Assert.AreEqual(0.30f, Ghost(0), 0.001f,
+                "Bjorn now holds plate 0: his ghost must snap to 90/300, not ease down from Shawn's full bar");
+            Assert.AreEqual(1f, Ghost(1), 0.001f, "Shawn now holds plate 1 at full");
+        }
     }
 }

@@ -1000,6 +1000,11 @@ namespace PrincesPalace
             {
                 var member = party != null && i < party.Count ? party[i] : null;
 
+                // A NEW OCCUPANT HAS NOTHING TO TRAIL: a Move that trades two
+                // members hands each plate the other's bar, and an eased ghost
+                // would play that as damage the newcomer never took.
+                if (member != null && _plateOccupants[i] != member) SnapPcGhost(i, member);
+
                 _plateOccupants[i] = member;
 
                 // AN ALLY ALREADY PICKED READS AS UNPICKABLE, which is how a
@@ -1561,6 +1566,21 @@ namespace PrincesPalace
             {
                 routines = new Coroutine[length];
             }
+        }
+
+        private void SnapPcGhost(int plate, CombatantState member)
+        {
+            if (!Has(pcGhostFills, plate)) return;
+
+            EnsureGhostRoutineArray(ref _pcGhostRoutines, pcPlates.Length);
+            if (_pcGhostRoutines[plate] != null)
+            {
+                StopCoroutine(_pcGhostRoutines[plate]);
+                _pcGhostRoutines[plate] = null;
+            }
+
+            float fraction = member.MaxHealth <= 0 ? 0f : Mathf.Clamp01(member.CurrentHealth / (float)member.MaxHealth);
+            SetFillFraction(pcGhostFills[plate], fraction);
         }
 
         // `shown` is read straight off the ghost Image's OWN current anchor
