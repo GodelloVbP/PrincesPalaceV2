@@ -32,7 +32,7 @@ debt), and a struck finding gets its number removed.
 - Shop: #122, #191, #196, #197, #212, #244
 - Events: none open
 - Dossier / Party / Talents / Reward track / Reckoning: #44, #104, #141, #150, #178, #199, #214
-- Menus / Options / Navigation & gamepad: #91, #142, #166, #167, #168, #179, #223, #225, #227, #231, #234, #236, #242, #250, #251, #253, #257, #258, #259, #260, #261
+- Menus / Options / Navigation & gamepad: #91, #142, #166, #167, #179, #223, #225, #227, #231, #234, #236, #242, #250, #251, #253, #257, #258, #259, #260, #261
 - Save & run lifecycle: #87, #102, #220, #255
 - Content pipeline & data: #86, #121, #125, #128, #131, #134, #135, #145, #198, #256, #262
 - Art / VFX / stage: #80, #92, #100, #109, #129, #133, #181, #192, #213
@@ -1431,7 +1431,7 @@ living with it is the owner's call.
 
 ## Findings from hardware round 1's visual pass, 2026-09-18
 
-### 168. The pad-focus indicator was five indicators and three absences, and its size was a property of the control
+### ~~168. The pad-focus indicator was five indicators and three absences, and its size was a property of the control~~ — fixed in `ce405df9`
 
 The owner's play-test produced four complaints that read as four bugs on four screens -- "the
 selector on the start descent is huge and looks weird", "the gold halo (e.g. in party screen) is
@@ -2366,17 +2366,14 @@ Blocked: owner decision #225.
 
 ### 258. Numbers are formatted ad hoc
 
-Gold appears via at least seven `UiStrings` templates with no shared
-formatter: `wallet_summary` (`UiStrings.cs:35`, whose own comment records an
-earlier divergence bug), `hub.wallet` (~295), `map.gold` (311,
-`MapController.cs:323`), `reckoning.gold` (515, `ReckoningController.cs:581`),
-`defeat.gold_lost` (570, `DefeatController.cs:135`), `shop.gold` (698,
-`ShopController.cs:474`), `slot_gold` (957, `SaveSlotController.cs:101`), plus
-`debug.gold`/`debug.run_gold` (~614-616). `shop.gold`'s own sample promises
-"9,999,999 G" but nothing groups thousands. The only correct formatter in the
-codebase is `RunStatsController.Figure` (53-67, `"N0"` invariant). Signs are
-hand-rolled elsewhere too (`SheetStats.cs`, `Domain/Combat/Session/
-StatusHud.cs`).
+Gold appears via several `UiStrings` templates with no shared formatter:
+`hub.wallet`, `map.gold`, `reckoning.gold_count`, `defeat.gold_lost`,
+`shop.gold`, `slot_gold`, plus `debug.gold`/`debug.run_gold` (all in
+`Domain/UiKit/UiStrings.cs`; the `wallet_summary` template is gone).
+`shop.gold`'s own sample promises "9,999,999 G" but nothing groups thousands.
+The only grouping formatter is the `"N0"` invariant one in `RunController.cs`
+(~205, run-stats figures). Signs are hand-rolled elsewhere too (`Domain/UiKit/SheetStats.cs`,
+`Domain/Combat/Session/StatusHud.cs`).
 
 Fix: one `Domain/UiKit` `NumberFormat` (Gold, Signed, Percent, Fraction x/y)
 with `[D]` tests; route every site above through it.
@@ -2386,8 +2383,7 @@ sites; gate: tools/run_tests_parallel.ps1 -Changed.
 
 ### 259. Transient messages have four mechanisms
 
-`PartyToast` (`Core/PartyToast.cs`, hold 2.0s/fade 0.4s; wired from
-`PartyController.cs` ~1103-1138), `ShopController._refusal` (~159,304-308,
+`PartyToast` (since removed, see Progress), `ShopController._refusal` (~159,304-308,
 784-786), `CharacterDossierController._alreadyKnownRefusal` (~1259,1293-1301,
 1350-1354 — the mechanism #146 is about), and `MapController.roomMessageLabel`
 (~47,340-344). Fix: one notice component (text + optional timer) that #220's
