@@ -11,12 +11,9 @@ namespace PrincesPalace.Domain.Combat.Session
     // components also ends the class of bug where a caller reads `.z` and has
     // to remember which resource that was.
     //
-    // `Mana` BECAME `Primary` when mana became one pool among several: the
-    // slot always held "whatever this combatant's skills spend", and calling
-    // that mana was true only for as long as everyone spent mana. Nothing
-    // about the beat snapshot changed -- the same number, recorded at the
-    // same two moments, replayed by the same painter (FightController's
-    // PaintVitals).
+    // `Primary` is whatever this combatant's skills spend; it is mana only for
+    // a combatant whose skills spend mana. FightController's PaintVitals
+    // replays it.
     public readonly struct Vitals : IEquatable<Vitals>
     {
         public readonly int Health;

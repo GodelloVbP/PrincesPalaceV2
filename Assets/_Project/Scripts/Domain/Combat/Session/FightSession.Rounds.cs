@@ -32,7 +32,7 @@ namespace PrincesPalace.Domain.Combat.Session
     // ROUNDS, the round limit, the enemy rally and Toll of the Flock
     // (docs/PLAN_EVENTS_BELL_AND_CARAVAN.md 3.2 and 1.4).
     //
-    // TurnOrder has always counted rounds; nothing read them. A round here is
+    // TurnOrder counts rounds. A round here is
     // the scheduler's -- the time a baseline-speed combatant takes to earn a
     // turn -- so it can advance by more than one between two turns, and every
     // round in between still starts, in order.

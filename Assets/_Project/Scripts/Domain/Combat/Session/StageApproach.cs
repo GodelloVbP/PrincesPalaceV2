@@ -57,7 +57,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // graceful posture the catalogue takes everywhere: a typo should change
         // how one thing moves, not stop the content building. The caller
         // chooses the fallback because "unset" means different things -- a cast
-        // that names no approach holds, a plain attack that names none lunges.
+        // that names no approach holds, a plain attack that names none closes.
         public static StageApproach Parse(string approach, StageApproach fallback)
         {
             switch (approach?.Trim().ToLowerInvariant())

@@ -5,10 +5,7 @@ namespace PrincesPalace.Domain.Combat.Session
     // The one merged code/slug/tooltip table for every status badge, on
     // every surface (party plate, roster mini-plate, enemy row, and the
     // enemy plate's own text line) -- see PLAN_STATUS_EFFECT_UI.md section
-    // 4. Two tables disagreed before this: FightHudModel.StatusBadge spelled
-    // three letters for ten statuses and two for Feared/Marked, PillCode
-    // spelled two letters for all twelve. This is the one table either side
-    // reads now.
+    // 4. This is the one table every surface reads.
     //
     // A SEPARATE FILE from FightHudModel on purpose: that file already
     // carries the command menu, the detail panel, enemy naming and the
@@ -19,10 +16,12 @@ namespace PrincesPalace.Domain.Combat.Session
     // fixes those two names, so the other packages compile against
     // FightHudModel, never against this file.
     //
-    // PUBLIC SURFACE IS SentinelTurns, CodeFor, SlugFor, SortKeyFor, RowFor,
-    // SpeedRow and TransformRow (S6's review) -- every one of those has a real caller
-    // outside this file (FightHudModel.StatusRowsFor, the icon resource
-    // lookups, StatusHudCoverageTests' own CodeFor/SortKeyFor coverage).
+    // The public surface is the members with a real caller outside this file
+    // (FightHudModel.StatusRowsFor, the icon resource lookups,
+    // StatusHudCoverageTests): SentinelTurns, the per-type CodeFor / SlugFor /
+    // SortKeyFor / NameFor lookups, the row builders (RowFor, WardRow, SpeedRow,
+    // TransformRow, RallyRow, SilenceRow, DisarmRow) and the Speed / Transform /
+    // Rally / Silence / Disarm code, slug and effect constants.
     // CounterFor, SpeedSortKey and TooltipFor are composition
     // steps RowFor/SpeedRow assemble from -- nothing outside this file has
     // ever called one of those three directly, so they stay private.
@@ -85,7 +84,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // ---- the two speed presentations -------------------------------------
         //
         // No enum member for these -- PLAN_STATUS_EFFECT_UI.md section 4 is
-        // explicit that speed stays a presentation id, not a thirteenth
+        // explicit that speed stays a presentation id, not a
         // StatusEffectType, because the row model is keyed on what to show,
         // not on what mechanism produced it.
         public const string SpeedUpCode = "SP+";
@@ -97,8 +96,8 @@ namespace PrincesPalace.Domain.Combat.Session
         //
         // A presentation id like speed's, and for the same reason: a
         // Transformation is a live object on the combatant (Domain/Combat/
-        // Transformation.cs), not a StatusEffectType, and adding a thirteenth
-        // enum member to give it a badge would mean every switch in this file
+        // Transformation.cs), not a StatusEffectType, and adding an enum
+        // member to give it a badge would mean every switch in this file
         // pretending it has a magnitude and a duration in the ActiveStatus
         // sense.
         //
@@ -170,7 +169,7 @@ namespace PrincesPalace.Domain.Combat.Session
 
         // Every current StatusEffectType slugs to its own lower-cased name,
         // which is exactly the filename STATUS_ICON_PROMPTS.md commissions
-        // for each of the twelve -- no per-type table entry needed here.
+        // for each type -- no per-type table entry needed here.
         public static string SlugFor(StatusEffectType type) => type.ToString().ToLowerInvariant();
 
         public static bool IsPositive(StatusEffectType type)

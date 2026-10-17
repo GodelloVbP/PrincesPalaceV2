@@ -10,10 +10,7 @@ namespace PrincesPalace.Domain.Combat.Session
     // the Fragile Lamb's wards, the Black Ram's transform and splashes, and
     // Provoke.
     //
-    // Ported from v1's FightController.Talents.cs, which is the single largest
-    // body of pure rules that was trapped behind a MonoBehaviour. Nothing here
-    // touches the engine; the reasoning comments are carried over intact,
-    // because every one of them records a decision rather than a mechanic.
+    // Nothing here touches the engine.
     public sealed partial class FightSession
     {
         // ---- the wool engines -------------------------------------------------
@@ -804,13 +801,9 @@ namespace PrincesPalace.Domain.Combat.Session
                     int percent = caster.Effects.Magnitude(EffectKind.GiftManaPercent);
                     int amount = System.Math.Max(1, ally.MaxMana * percent / 100);
 
-                    // THE RETURN, NOT THE REQUEST. CombatMath.RestoreMana is
-                    // measured for exactly this -- "returns how much actually
-                    // landed, so a caller can say the true number (or say
-                    // nothing) rather than announcing an amount it hoped for"
-                    // -- and this line printed `amount` regardless. It clamps
-                    // at the recipient's own maximum, so a gift to a nearly
-                    // full ally said 24 and moved 5.
+                    // CombatMath.RestoreMana returns what landed and clamps at the
+                    // recipient's own maximum, so the message reports that, not
+                    // the requested amount.
                     int landed = CombatMath.RestoreMana(ally, amount);
 
                     // The pool NAMES ITSELF, the same way the potion's line

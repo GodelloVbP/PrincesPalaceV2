@@ -154,10 +154,8 @@ namespace PrincesPalace.Domain.Combat.Session
         // would mean retuning one every time the other needed to move.
         public const int ChilledOnHitSpeedPercent = 20;
 
-        // ONE affected turn, authored 2 until plan D1 moved Chilled onto the
-        // turn-end clock. A 2 under the old turn-start countdown slowed the
-        // target for exactly one of its turns; the number changed so the
-        // behaviour would not. StatusDurationMigrationTests pins it.
+        // One affected turn on the turn-end clock; ChilledOnHitTurns_Pin
+        // (FightTuningItemModifierConstantsTests) pins it.
         public const int ChilledOnHitTurns = 1;
 
         // ---- rooted (Phase D3, item-modifier plan) -----------------------------
@@ -168,8 +166,8 @@ namespace PrincesPalace.Domain.Combat.Session
         // fixed constant. No sibling "strength" constant -- Rooted has no
         // Magnitude of its own to author (EffectKind.RootChancePercent's
         // own comment), only a duration.
-        // ONE affected turn -- see ChilledOnHitTurns just above for why this
-        // read 2 before plan D1 and means the same thing now that it reads 1.
+        // One affected turn on the turn-end clock; RootOnHitTurns_Pin
+        // (FightTuningItemModifierConstantsTests) pins it.
         public const int RootOnHitTurns = 1;
 
         // ---- the balance pass -- mechanics a-g, and the relics built on them ----
@@ -185,9 +183,8 @@ namespace PrincesPalace.Domain.Combat.Session
         public const int CursedIdolStackTurns = 3;
         public const string CursedIdolStackKey = "cursed_idol";
 
-        // Rampaging Bull's Horn: how long its damage reduction lasts. ONE
-        // affected turn -- see ChilledOnHitTurns for why this read 2 before
-        // plan D1 and means the same thing now that it reads 1.
+        // Rampaging Bull's Horn: how long its damage reduction lasts. One affected
+        // turn on the turn-end clock.
         public const int BullsHornDurationTurns = 1;
 
         // ---- balance pass 2 -- see FightSession.BalanceRelics2 ----------------

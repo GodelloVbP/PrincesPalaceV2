@@ -16,12 +16,10 @@ namespace PrincesPalace.Domain.Combat.Session
     // checks. FightBeatPlayer keeps the yielding, which genuinely needs an
     // engine.
     //
-    // (An earlier draft of this comment cited "DamagePopupCurve" as the
-    // precedent. There is no such type -- DamagePopup's curves are in Core and
-    // reachable only from PlayMode, which is the counter-example rather than
-    // the precedent. FlickerCurve is the real one: its own header records
-    // moving to Domain because in Core it was "pure, seam-shaped, and
-    // unreachable by every test in the project".)
+    // FlickerCurve is the precedent: its own header records moving to Domain
+    // because in Core it was "pure, seam-shaped, and unreachable by every test
+    // in the project". DamagePopup's curves are in Core and reachable only from
+    // PlayMode.
     public static class HitStop
     {
         // What fraction of a health bar counts as "as hard as it gets".
@@ -40,13 +38,10 @@ namespace PrincesPalace.Domain.Combat.Session
 
         // And none gets much.
         //
-        // RAISED FROM 0.10 ON REQUEST, after the first pass went in and the
-        // blows still did not land. The old comment argued that past a tenth of
-        // a second the player reads a hitch rather than weight; against this
-        // game's pacing -- a whole beat is 0.45s and a stance 0.48s on top of
-        // it -- a tenth was simply lost inside the animation it was meant to
-        // punctuate. Still a judgement about perception rather than a
-        // derivation, which is why it stays a named constant with a test on it.
+        // Against this game's pacing -- a whole beat is 0.45s and a stance 0.48s
+        // on top of it -- a tenth of a second is lost inside the animation it
+        // punctuates. A judgement about perception rather than a derivation,
+        // which is why it stays a named constant with a test on it.
         public const float MaxSeconds = 0.18f;
 
         // HOW MUCH OF AN EFFECT A GIVEN WEIGHT BUYS, and the second half of

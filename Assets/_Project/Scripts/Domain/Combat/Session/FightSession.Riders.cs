@@ -9,14 +9,12 @@ namespace PrincesPalace.Domain.Combat.Session
     // What happens BETWEEN actions: the extra turns an action can earn, and the
     // turn-start bookkeeping the next actor gets.
     //
-    // Ported from v1's FightController.Turns.cs. The ordering here is the whole
-    // content of the file and it had no test of its own before this one.
+    // The ordering here is the whole content of the file.
     public sealed partial class FightSession
     {
         // Set by an action that killed something, read once by the rider block.
         // WRITTEN IN EXACTLY ONE PLACE -- SettleDeath (FightSession.Ledger.cs),
-        // which DealDamage calls for every death it causes. It was assigned at
-        // five call sites until 2026-09-06 and one of them had already stopped.
+        // which DealDamage calls for every death it causes.
         private bool _killedThisAction;
 
         // TWO KILL RIDERS, EACH ON ITS OWN RULE (owner 2026-09-24).
@@ -32,12 +30,9 @@ namespace PrincesPalace.Domain.Combat.Session
         // new FightSession. A FightSession is one fight, so a set on it is the
         // whole of "once per fight" -- nothing has to clear it.
         //
-        // This replaced one shared streak both riders counted against
-        // (baa92f9e), which existed to stop Trample 1 + a chaining Bloodlust
-        // (cap 2) stacking into a four-attack turn. Once Bloodlust can only
-        // ever grant one action a fight, no turn can exceed Trample's cap
-        // plus one, and the plus-one happens once a fight -- the coupling
-        // bought nothing that bound does not already give.
+        // The two counts are independent: Bloodlust grants one action a fight,
+        // so no turn can exceed Trample's cap plus one, and a shared streak
+        // would add nothing that bound does not already give.
         private CombatantState _trampleChainActor;
         private int _trampleChainCount;
         private readonly HashSet<CombatantState> _bloodlustSpent = new HashSet<CombatantState>();
@@ -83,21 +78,12 @@ namespace PrincesPalace.Domain.Combat.Session
         // is wound, sitting immediately before every `AdvanceTurnAndSeat()`
         // in the session.
         //
-        // IT USED TO LIVE INSIDE AdvanceAfterAction, and that was a hole with
-        // a growing blast radius. AdvanceAfterAction is reached only by the
-        // four PLAYER commands (attack, cast, item, move); an enemy's turn and
-        // every skipped turn on either side advance through StepToNextTurn
-        // instead, and an egg's through AutoResolveEggTurns. So no AtTurnEnd
-        // status on a monster ever aged, and no skipped turn aged anything --
-        // which was invisible while wards were the only thing on this clock
-        // (a monster rarely wears one) and became live the moment plan D1
-        // moved Protect, Vulnerable, Chilled, Rooted and Marked onto it in
-        // milestone A. Winter's Rebuke's two-turn Chill was permanent;
-        // milestone D's two-turn Root would have been permanent AND
-        // self-sustaining, because a rooted monster with nothing legal
-        // forfeits, and a forfeited turn was exactly the kind that aged
-        // nothing. Found by TheSecondOfTwoShackledTurns_IsStillRestricted
-        // failing on its THIRD turn.
+        // It sits here, not in AdvanceAfterAction, because AdvanceAfterAction is
+        // reached only by the four PLAYER commands (attack, cast, item, move);
+        // an enemy's turn and every skipped turn on either side advance through
+        // StepToNextTurn instead, and an egg's through AutoResolveEggTurns.
+        // Winding the clock anywhere narrower leaves AtTurnEnd statuses on
+        // monsters, and after skipped turns, aging nothing.
         //
         // SKIPPED WHEN THE SAME ACTOR IS ABOUT TO ACT AGAIN: an extra action
         // is the SAME turn (AUDIT #113), so a trample chain must not age a
@@ -586,26 +572,20 @@ namespace PrincesPalace.Domain.Combat.Session
         // Current, AUDIT #113), to the turn-end tick that sits immediately
         // before the next AdvanceTurn.
         //
-        // NOT CLEARED BY ANYBODY'S TURN OPENING. This was
-        // _statusesAppliedThisTurn, which took every entry applied during any
-        // turn and was emptied inside OpenTurnFor -- a few lines AFTER
-        // ApplyRunicWardConversion had already raised that turn's ward, so
-        // the Runic ward aged at the end of the very turn it went up on.
-        // Entries now go in only for the wearer whose turn it is and leave
-        // only when that wearer's turn end spends them, so "the turn it went
-        // up on" belongs to the wearer and the entry, not to whoever acts
-        // next. A status put on somebody else never goes in: their next turn
-        // end is the first of their N, exactly as for one they raise themselves.
+        // NOT CLEARED BY ANYBODY'S TURN OPENING. Entries go in only for the
+        // wearer whose turn it is and leave only when that wearer's turn end
+        // spends them, so "the turn it went up on" belongs to the wearer and
+        // the entry, not to whoever acts next. A status put on somebody else
+        // never goes in: their next turn end is the first of their N, exactly
+        // as for one they raise themselves.
         //
         // Holds the ActiveStatus itself rather than the wearer and the type:
         // two chills of the same size on the same clock are told apart by
         // nothing else, and since 2026-09-20 a combatant really can be carrying
         // two of them.
         //
-        // It used to be _wardsRaisedThisTurn, filled only by RaiseWard, because
-        // a ward was the only thing on the turn-end clock. Five more statuses
-        // joined that clock with plan D1 and they need the identical exemption:
-        // a Vulnerable a caster puts on THEMSELVES (Court of Whispers, Ashen
+        // Every AtTurnEnd status needs the same exemption as a ward: a
+        // Vulnerable a caster puts on THEMSELVES (Court of Whispers, Ashen
         // Reckoning) must not be aged by the end of the turn that applied it.
         private readonly HashSet<ActiveStatus> _sparedAtWearersTurnEnd = new HashSet<ActiveStatus>();
 
@@ -762,13 +742,10 @@ namespace PrincesPalace.Domain.Combat.Session
             if (thornedNow.Count > 0) _thornedAtTurnStart[actor] = thornedNow;
             else _thornedAtTurnStart.Remove(actor);
 
-            // CHILLED'S TEARDOWN IS NOT HERE ANY MORE. It moved to
-            // TickStatusesAtTurnEnd with the clock (plan D1): Chilled is an
-            // AtTurnEnd status now, so the turn-start tick never reports it
-            // expired and a revoke here would be dead code waiting to be read
-            // as coverage. The teardown follows whichever clock removed the
-            // entry -- that is the general rule, and this is the one status
-            // that currently has a teardown at all.
+            // Chilled's teardown is not here: Chilled is an AtTurnEnd status, so
+            // the turn-start tick never reports it expired. The teardown follows
+            // whichever clock removed the entry, and TickStatusesAtTurnEnd runs
+            // it.
 
             // THE DAMAGING ROWS, ONE AT A TIME, THROUGH THE FUNNEL (2026-09-25).
             //
@@ -875,19 +852,16 @@ namespace PrincesPalace.Domain.Combat.Session
         private static string TickVerb(StatusEffectType type) =>
             type == StatusEffectType.Poison ? "poison" : type.ToString().ToLowerInvariant();
 
-        // PLAN 1.11'S POST-ACTION HOOK, PLACED WHERE A COMPLETED ACTION IS
-        // ACTUALLY KNOWN ON BOTH SIDES OF THE FIGHT -- not at the top of
-        // AdvanceAfterAction, which is the plan's own first draft and is
-        // wrong for an enemy: AdvanceAfterAction is reached only by the four
-        // PLAYER commands (see EndTurnStatusesForCurrent's own header for the
-        // identical lesson D already paid for). Thorn Tithe is cast on
-        // ENEMIES, so a hook that only ever fired for the player would never
-        // retaliate at all. Called from two seams instead, one per side:
-        // AdvanceAfterAction (this file) for the four player commands, and
-        // FightSession.Enemies.AutoResolveEnemyTurns for a monster's own
-        // action -- both know, at the point they call this, whether what just
-        // happened was a completed PHYSICAL MOVE, which is 1.11's whole
-        // trigger condition.
+        // Plan 1.11's post-action hook sits where a completed action is known on
+        // both sides of the fight, not at the top of AdvanceAfterAction, which
+        // only the four PLAYER commands reach (see EndTurnStatusesForCurrent's
+        // own header). Thorn Tithe is cast on ENEMIES, so a hook that fired
+        // only for the player would never retaliate. Called from two seams,
+        // one per side: AdvanceAfterAction (this file) for the four player
+        // commands, and FightSession.Enemies.AutoResolveEnemyTurns for a
+        // monster's own action -- both know, at the point they call this,
+        // whether what just happened was a completed PHYSICAL MOVE, which is
+        // 1.11's whole trigger condition.
         //
         // SELF-INFLICTED. Thorned punishes its OWN HOLDER for moving, not
         // whoever they moved against -- "whenever it strikes or charges"
@@ -1095,10 +1069,9 @@ namespace PrincesPalace.Domain.Combat.Session
         // exercises.
         public void TickStatusesForTest(CombatantState actor) => TickStatuses(actor);
 
-        // The other end of the same turn. Five statuses moved onto this clock
-        // with plan D1, and Chilled's speed teardown moved with them, so a test
-        // about a standing modifier expiring has to drive THIS rather than the
-        // turn-start tick.
+        // The other end of the same turn. Several statuses sit on this clock,
+        // and Chilled's speed teardown with them, so a test about a standing
+        // modifier expiring has to drive THIS rather than the turn-start tick.
         public void TickStatusesAtTurnEndForTest(CombatantState actor) => TickStatusesAtTurnEnd(actor);
 
         // THE TURN BOUNDARY ITSELF, for a test that drives the two tick seams
