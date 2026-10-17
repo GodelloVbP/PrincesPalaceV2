@@ -1257,5 +1257,40 @@ namespace PrincesPalace.Domain.Tests
             vfx.bodyRim = new SpellBodyRim { tint = "#B58CFF", pulses = 3, spacing = 2f };
             StringAssert.Contains("vfx.bodyRim.spacing 2 is outside 0..0.5 seconds", Only(vfx));
         }
+
+        // ---- scale and particle size are multipliers: above zero ---------------
+
+        [TestCase(0f)]
+        [TestCase(-1f)]
+        public void ALayerScaleAtOrBelowZeroIsRefused(float scale)
+        {
+            var layer = Sprite();
+            layer.scale = scale;
+
+            StringAssert.Contains("vfx.layers[0].scale", Only(With(layer)));
+        }
+
+        [TestCase(0f)]
+        [TestCase(-0.5f)]
+        public void AnEmitterSizeMinAtOrBelowZeroIsRefused(float sizeMin)
+        {
+            var streaks = Streaks();
+            streaks.emitter.sizeMin = sizeMin;
+
+            string message = Only(With(Spear(), streaks));
+            StringAssert.Contains("vfx.layers[1].emitter.sizeMin", message);
+        }
+
+        [Test]
+        public void ASmallPositiveScaleAndSizeMinStillResolve()
+        {
+            var layer = Sprite();
+            layer.scale = 0.05f;
+            var streaks = Streaks();
+            streaks.emitter.sizeMin = 0.05f;
+            streaks.emitter.sizeMax = 0.05f;
+
+            CollectionAssert.IsEmpty(Problems(With(Spear(), streaks, layer)));
+        }
     }
 }

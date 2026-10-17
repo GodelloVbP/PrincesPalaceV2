@@ -606,6 +606,13 @@ namespace PrincesPalace.Domain.Content
             Positive(at, "punch", layer.punch, problems);
             Positive(at, "glow", layer.glow, problems);
 
+            // A multiplier, not an offset: zero collapses the layer to a point it
+            // still schedules and pools, and a negative one mirrors it.
+            if (!(layer.scale > 0f))
+            {
+                problems.Add($"{at}.scale {Num(layer.scale)} must be above 0.");
+            }
+
             if (!string.IsNullOrEmpty(layer.tint))
             {
                 if (!SpellTint.TryParse(layer.tint, out _, out _, out _))
@@ -686,6 +693,12 @@ namespace PrincesPalace.Domain.Content
             {
                 problems.Add($"{at}.emitter.speedMax {Num(emitter.speedMax)} is slower than speedMin " +
                              $"{Num(emitter.speedMin)}, so no particle could leave at a legal speed.");
+            }
+
+            if (!(emitter.sizeMin > 0f))
+            {
+                problems.Add($"{at}.emitter.sizeMin {Num(emitter.sizeMin)} must be above 0; a particle scaled to " +
+                             "nothing draws nothing.");
             }
 
             if (emitter.sizeMax < emitter.sizeMin)
