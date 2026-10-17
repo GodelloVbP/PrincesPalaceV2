@@ -170,9 +170,6 @@ namespace PrincesPalace.Domain.UiKit
                 case SheetStat.PhysicalDefense: return new[] { AbilityScore.Constitution };
                 case SheetStat.Speed: return new[] { AbilityScore.Dexterity };
                 case SheetStat.MaxMana:
-                    return primaryPoolRule == PoolCapacityRule.WisdomDerived
-                        ? new[] { AbilityScore.Wisdom }
-                        : System.Array.Empty<AbilityScore>();
                 case SheetStat.ManaRegen:
                     return primaryPoolRule == PoolCapacityRule.WisdomDerived
                         ? new[] { AbilityScore.Wisdom }
