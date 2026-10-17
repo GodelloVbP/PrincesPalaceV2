@@ -161,6 +161,11 @@ if (-not $SkipSync) {
     robocopy "$SourceProject\Assets" "$TestProject\Assets" /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
     robocopy "$SourceProject\Packages" "$TestProject\Packages" /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
     robocopy "$SourceProject\ProjectSettings" "$TestProject\ProjectSettings" /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
+    # The mirror copied the real project's productName; a copy that keeps it
+    # shares persistentDataPath, so a capture fixture would read and write the
+    # real save slots.
+    $ProductLeaf = ($ProjectLeaf -replace "[^A-Za-z0-9]", "")
+    Set-ProjectProductName -SettingsPath (Join-Path $TestProject "ProjectSettings\ProjectSettings.asset") -Product "${ProductLeaf}TestRunner"
 }
 
 $logPath = Join-Path $TestProject "screenshot.log"
