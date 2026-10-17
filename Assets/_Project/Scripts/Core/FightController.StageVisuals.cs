@@ -1464,9 +1464,9 @@ namespace PrincesPalace
         // fight invisible, and its slot is reused rather than rebuilt.
         private void ResetStagePresentation()
         {
-            // These four caches (ContentCentreCache, the opaque-box cache,
-            // the VFX-padding cache and the shield props) are
-            // `static readonly` and keyed by folder or sprite
+            // The first three calls below (ContentCentreCache, the
+            // opaque-box cache, the VFX-padding cache) clear
+            // `static readonly` caches keyed by folder or sprite
             // -- they cache a PIXEL MEASUREMENT taken the
             // first time each key is asked for, and nothing else invalidates
             // them. Resources.Load happily picks up a re-sliced/re-ordered
