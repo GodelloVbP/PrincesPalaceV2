@@ -28,12 +28,14 @@ import os
 import sys
 
 try:
+    import numpy as np
     from PIL import Image
 except ImportError:
-    sys.exit("Pillow is required: pip install Pillow")
+    sys.exit("Pillow and numpy are required: pip install Pillow numpy")
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from key_green_screen import force_sprite_import
+from sheet_slicing import ALPHA_THRESHOLD
 
 Image.MAX_IMAGE_PIXELS = None
 
@@ -44,10 +46,6 @@ Image.MAX_IMAGE_PIXELS = None
 FULLY_TRANSPARENT_ABOVE = 8
 FULLY_OPAQUE_BELOW = 40
 
-# Alpha level a pixel must clear to count as real content when tightening a
-# cell's crop -- same reasoning as sheet_slicing.ALPHA_THRESHOLD.
-ALPHA_THRESHOLD = 16
-
 # Transparent breathing room left around each trimmed cell.
 PADDING = 12
 
@@ -56,35 +54,19 @@ PADDING = 12
 COLORS = ["gold", "crimson", "violet", "blue", "green", "silver"]
 
 
-def whiteness_distance(r, g, b):
-    """How far this pixel is from pure white, as the worst single channel."""
-    return max(255 - r, 255 - g, 255 - b)
-
-
 def key_out_white(image):
     """RGB on flat white -> RGBA, with a soft edge at the plate boundary."""
-    rgba = image.convert("RGBA")
-    pixels = rgba.load()
-    width, height = rgba.size
+    arr = np.array(image.convert("RGBA"))
     span = FULLY_OPAQUE_BELOW - FULLY_TRANSPARENT_ABOVE
 
-    for y in range(height):
-        for x in range(width):
-            r, g, b, _ = pixels[x, y]
-            distance = whiteness_distance(r, g, b)
+    # The worst single channel's distance from 255 is 255 minus the darkest.
+    distance = 255 - arr[..., :3].min(axis=-1).astype(np.int32)
+    ramp = (255 * (distance - FULLY_TRANSPARENT_ABOVE) / span).astype(np.int32)
+    arr[..., 3] = np.where(distance >= FULLY_OPAQUE_BELOW, 255, ramp)
 
-            if distance <= FULLY_TRANSPARENT_ABOVE:
-                pixels[x, y] = (255, 255, 255, 0)
-                continue
-
-            if distance >= FULLY_OPAQUE_BELOW:
-                alpha = 255
-            else:
-                alpha = int(255 * (distance - FULLY_TRANSPARENT_ABOVE) / span)
-
-            pixels[x, y] = (r, g, b, alpha)
-
-    return rgba
+    clear = distance <= FULLY_TRANSPARENT_ABOVE
+    arr[clear] = (255, 255, 255, 0)
+    return Image.fromarray(arr, "RGBA")
 
 
 def tight_bbox(rgba, x0, y0, x1, y1):

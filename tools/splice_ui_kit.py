@@ -36,15 +36,10 @@ except ImportError:
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from key_green_screen import force_sprite_import
+from sheet_slicing import ALPHA_THRESHOLD
+from slice_ui_palette_sheet import BUTTONS_DIR, COLORS, OUT_DIR
 
 Image.MAX_IMAGE_PIXELS = None
-
-BUTTONS_DIR = "Assets/_Project/Art/UI/Buttons"
-OUT_DIR = os.path.join(BUTTONS_DIR, "Processed")
-
-# A pixel counts as real content once alpha clears this -- same threshold
-# slice_ui_palette_sheet.py uses for its own tight-bbox pass.
-ALPHA_THRESHOLD = 16
 
 # Transparent breathing room left around each trimmed cell.
 MARGIN = 2
@@ -62,10 +57,6 @@ THEME_HUES = {
     "green": 132.0,
 }
 SILVER_MAX_SATURATION = 0.18
-
-# Reading order (left-to-right, top-to-bottom) every existing sheet in this
-# kit uses -- see slice_ui_palette_sheet.py's own COLORS constant.
-COLORS = ["gold", "crimson", "violet", "blue", "green", "silver"]
 
 # (source sheet, output name template) -- output name gets the matched theme.
 SHEETS = [
@@ -91,13 +82,14 @@ def find_cells(rgba_array):
     dilated = ndimage.binary_dilation(mask, structure=structure, iterations=2)
     labels, count = ndimage.label(dilated, structure=structure)
 
+    own = np.where(mask, labels, 0)
+    sizes = np.bincount(own.ravel(), minlength=count + 1)
     boxes = []
-    for label_id in range(1, count + 1):
-        region = mask & (labels == label_id)
-        ys, xs = np.where(region)
-        if len(ys) < 500:  # discard speckle noise, not a real cell
+    for label_id, found in enumerate(ndimage.find_objects(own), start=1):
+        if found is None or sizes[label_id] < 500:  # discard speckle noise, not a real cell
             continue
-        boxes.append((ys.min(), ys.max() + 1, xs.min(), xs.max() + 1))
+        ys, xs = found
+        boxes.append((ys.start, ys.stop, xs.start, xs.stop))
     return boxes
 
 
