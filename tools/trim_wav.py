@@ -1,9 +1,7 @@
 """Trim a .wav to a given length, with a short fade so the cut is inaudible.
 
-Written for the button click, which shipped at 0.93s: its attack peaks around
-150ms and everything past ~300ms is a decay tail under 12%. Clicked through a
-menu at a normal pace that tail is still sounding two or three clicks later,
-which reads as mush rather than as a click.
+For a sound whose decay tail outlasts its attack: a click that rings on after
+~300ms is still sounding two or three clicks later, which reads as mush.
 
 Cutting a waveform at an arbitrary sample leaves a discontinuity, and a
 discontinuity is a click in the literal DSP sense -- an audible tick at the
@@ -53,7 +51,9 @@ def parse_wav(raw):
     # file is worse than refusing.
     if audio_format != 1:
         raise ValueError(f"only uncompressed PCM is supported, got format {audio_format}")
-    if bits not in (8, 16, 24, 32):
+    # 8-bit WAV is unsigned (silence is 128), so the signed fade below would
+    # ramp toward full negative and add a step of its own.
+    if bits not in (16, 24, 32):
         raise ValueError(f"unsupported bit depth {bits}")
 
     return fmt, data, channels, rate, bits
@@ -106,6 +106,8 @@ def trim(path, keep_ms, fade_ms, dry_run):
     # describing a length that no longer exists.
     body = b"fmt " + struct.pack("<I", len(fmt)) + fmt
     body += b"data" + struct.pack("<I", len(kept)) + bytes(kept)
+    if len(kept) & 1:
+        body += b"\x00"  # RIFF chunks pad to an even size
     out = b"RIFF" + struct.pack("<I", 4 + len(body)) + b"WAVE" + body
 
     io.open(path, "wb").write(out)
@@ -121,6 +123,9 @@ def main():
     parser.add_argument("--fade", type=float, default=15.0, help="fade-out length in ms (default 15)")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
+
+    if args.keep_ms < 0 or args.fade < 0:
+        parser.error("keep_ms and --fade must be 0 or more")
 
     if not os.path.isfile(args.path):
         sys.exit(f"No file at {args.path}")
