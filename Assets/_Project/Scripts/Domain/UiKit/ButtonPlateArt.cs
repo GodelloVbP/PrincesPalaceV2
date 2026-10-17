@@ -3,9 +3,9 @@ using System;
 namespace PrincesPalace.Domain.UiKit
 {
     // Which shape of button plate a themed button wears. The suffixes ARE the
-    // ratios now -- this delivery of the kit is at true nominal aspect on
-    // every file; see ButtonPlateArt's own comment, including why Legacy and
-    // ThreeByOne have become the same shape.
+    // ratios: the kit is at true nominal aspect on every file; see
+    // ButtonPlateArt's own comment, including why Legacy and ThreeByOne are
+    // the same shape.
     public enum ButtonPlateShape
     {
         Legacy,
@@ -18,7 +18,7 @@ namespace PrincesPalace.Domain.UiKit
     // (Art/UI/Buttons/Processed/button_plate_<theme>[_3x1|_5x1].png and
     // row_plate_<theme>_6x1.png).
     //
-    // THIS DELIVERY IS AT TRUE NOMINAL ASPECT -- same as ContainerArt: every
+    // THE KIT IS AT TRUE NOMINAL ASPECT -- same as ContainerArt: every
     // PNG measures (`PIL.Image.size`) to all six themes of every shape
     // landing on exactly one size, exactly on the fraction the filename
     // claims:
@@ -28,31 +28,28 @@ namespace PrincesPalace.Domain.UiKit
     //   button_plate_<theme>_5x1.png:   1530x306  -> 5.0  (all six identical)
     //   row_plate_<theme>_6x1.png:      1536x256  -> 6.0  (all six identical)
     //
-    // LEGACY AND THREEBYONE ARE NOW THE SAME PICTURE. button_plate_<theme>.png
+    // LEGACY AND THREEBYONE ARE THE SAME PICTURE. button_plate_<theme>.png
     // is byte-identical to button_plate_<theme>_3x1.png for all six themes
-    // (verified by hash), which is what the regeneration did to a "legacy"
-    // plate whose only distinction was being off-nominal at 2.79. Both keys
-    // are kept -- the files exist, callers name both, and deleting art is not
-    // this change's business -- and both are pinned at 3.0. The consequence
-    // to know: ShapeFor's nearest-aspect loop now TIES between them, and
+    // (verified by hash). Both keys are kept -- the files exist and callers
+    // name both -- and both are pinned at 3.0. The consequence to know:
+    // ShapeFor's nearest-aspect loop TIES between them, and
     // Legacy is first in the loop, so any rect nearer 3.0 than to 5.0 or 6.0
     // resolves to Legacy. ThreeByOne is therefore unreachable from ShapeFor
     // and only reachable by an explicit .Plate(ThreeByOne) override -- which
-    // costs nothing, because the two now load the same pixels.
+    // costs nothing, because the two load the same pixels.
     internal static class ButtonPlateArt
     {
-        // width / height. Exact, for this delivery.
+        // width / height. Exact.
         internal const float LegacyAspect = 3f;
         internal const float ThreeByOneAspect = 3f;
         internal const float FiveByOneAspect = 5f;
         internal const float Row6x1Aspect = 6f;
 
         // Content inset, worst raw fraction across the six themes, measured
-        // by tools/splice_ui_kit.py's measure_inset (which gates on alpha
-        // now -- see ContainerArt.Inset's own note on why its older readings
-        // were zeros). Button text is centred by layout today, not inset, so
-        // nothing consumes these; they are recorded for whoever wires
-        // per-shape text padding next:
+        // by tools/splice_ui_kit.py's measure_inset (which gates on alpha,
+        // since an RGB gate reads zeros on these files). Button text is
+        // centred by layout, not inset, so nothing consumes these; they are
+        // recorded for whoever wires per-shape text padding:
         //   button_plate_*      raw max: L0.0182 T0.0469 R0.0182 B0.0684
         //   button_plate_*_3x1  raw max: L0.0182 T0.0469 R0.0182 B0.0684  (same art)
         //   button_plate_*_5x1  raw max: L0.0105 T0.0359 R0.0111 B0.0588
@@ -78,7 +75,7 @@ namespace PrincesPalace.Domain.UiKit
         // and ThreeByOne read the same numbers because they are the same
         // file.
         //
-        // Row6x1.Bottom is the one this phase actually reads:
+        // Row6x1.Bottom is the one that is actually read:
         // FightSubmenuLayout.VisibleBottomLine is built from the verb row's
         // own visible bottom, and the verb row (300x52) resolves to Row6x1
         // via ShapeFor below.
@@ -113,7 +110,7 @@ namespace PrincesPalace.Domain.UiKit
         // symmetric under swapping which one is "wider" where a plain
         // subtraction is not.
         //
-        // LEGACY WINS THE 3.0 TIE. Legacy and ThreeByOne now share an aspect
+        // LEGACY WINS THE 3.0 TIE. Legacy and ThreeByOne share an aspect
         // (they share a file), and Legacy is first in the loop below, so
         // `distance < bestDistance` keeps it. That is deliberate rather than
         // incidental: the two resolve to identical pixels, so which one is

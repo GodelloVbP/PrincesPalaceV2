@@ -57,7 +57,7 @@ namespace PrincesPalace.Domain.UiKit
         // HEIGHT to keep the old width was the alternative and it is much the
         // worse one: a 456-wide 9:16 panel is 810.7 tall, and every row in it
         // is placed against a 1080-tall column.
-        public const float PanelWidth = PanelHeight * ContainerArt.ContainerAspect9x16; // 607.5, was 440.96
+        public const float PanelWidth = PanelHeight * ContainerArt.ContainerAspect9x16; // 607.5
         public static float PanelCentreX => UiFrames.Reference.X * 0.5f - PanelWidth * 0.5f;
 
         // Where slot 0 sits, in this project's own frame: the handoff's
@@ -68,24 +68,23 @@ namespace PrincesPalace.Domain.UiKit
         // panel takes the right-hand column and the constellation keeps the
         // middle of what is left. Derived from PanelWidth for the same reason
         // SkyWidth is, above.
-        public static float TreeOriginX => -PanelWidth * 0.5f;   // -303.75, was -228
-        // 540 - 1027 authored, then raised 11px. The figure is 1071 tall once
-        // the root's NAME and the capstone's gate reading are counted -- 8px of
-        // slack in a 1080 canvas -- and the authored origin spent all of it at
-        // the top, clipping the root's name off the bottom edge. Centred here
-        // instead, and held there by
+        public static float TreeOriginX => -PanelWidth * 0.5f;   // -303.75
+        // The figure is 1071 tall once the root's NAME and the capstone's gate
+        // reading are counted -- 8px of slack in a 1080 canvas -- so it is
+        // centred: an origin that spends the slack at the top clips the root's
+        // name off the bottom edge. Held by
         // ConstellationLayoutTests.TheWholeFigureFitsTheCanvas.
         public const float TreeOriginY = -476f;
 
         // The stage arrows, at the sky's own edges rather than the canvas's --
         // and MEASURED FROM THE TREE'S CENTRE, not the canvas's.
         //
-        // Symmetric about the screen they landed the right-hand one at x 665,
+        // Symmetric about the screen, the right-hand one would sit at x 665,
         // underneath a panel that spans 504 to 960: an arrow drawn beneath an
         // opaque column, taking clicks meant for whatever is under it. The sky
         // is offset left by half the panel width for exactly this reason and
-        // the arrows have to follow it, which makes them an asymmetric pair
-        // about the canvas and a symmetric one about the thing they page.
+        // the arrows follow it, which makes them an asymmetric pair about the
+        // canvas and a symmetric one about the thing they page.
         public const float ArrowWidth = 53f;      // 44 authored
         public const float ArrowHeight = 115f;    // 96 authored
         private const float ArrowInset = 67f;
@@ -195,15 +194,15 @@ namespace PrincesPalace.Domain.UiKit
         public const float PanelRefusalY = -132f;
         public const float PanelActionY = -320f;
         public const float PanelMeterY = -420f;
-        public const float PanelRespecY = -459f;  // was -468, 9x16 container's bottom inset
+        public const float PanelRespecY = -459f;  // the 9x16 container's bottom inset
 
         public const float PanelActionWidth = 320f;
 
-        // Was 72f (320x72 = 4.444:1, 11.1% off the FiveByOne plate's true
-        // 5:1 -- ThemedButtonAspectLintTests). static readonly, not const,
-        // because Ui.PlateNominalSizeFor is not a compile-time constant.
-        // Shrinking 72 -> 64 only opens more clearance before PanelMeterY
-        // (-420), so nothing below it had to move.
+        // 320 wide at the FiveByOne plate's true 5:1 (ThemedButtonAspectLintTests
+        // rejects 320x72, 11.1% off). static readonly, not const, because
+        // Ui.PlateNominalSizeFor is not a compile-time constant. The height
+        // asked for is an upper bound (72); the plate's aspect makes it 64,
+        // which leaves clearance before PanelMeterY (-420).
         public static readonly float PanelActionHeight = Ui.PlateNominalSizeFor(PanelActionWidth, 72f).Y;
 
         // ---- gate collars --------------------------------------------------------
@@ -636,13 +635,12 @@ namespace PrincesPalace.Domain.UiKit
 
         // THE UNLIT CONNECTION IS A HAIRLINE. The lit one is not.
         //
-        // Both were drawn at EdgeWidth, on the argument recorded below that a
-        // 3px line reads as a wiring diagram rather than as a limb. Measured off
-        // the design's recording, its unlit connections run 3 to 4px and its lit
-        // ones 5 to 21 -- so the argument holds, and it holds for the LIT edge
-        // only. An unlit connection is meant to recede until something travels
-        // it; ten pixels of it between every pair of ash stones is a lattice
-        // drawn over the sky at the same weight as the constellation.
+        // EdgeWidth is the LIT edge's weight: a 3px line reads as a wiring
+        // diagram rather than as a limb. The design's recording measures its
+        // unlit connections at 3 to 4px and its lit ones at 5 to 21. An unlit
+        // connection is meant to recede until something travels it; drawn at
+        // the lit weight, every pair of ash stones would be joined by a lattice
+        // at the same weight as the constellation.
         public const float EdgeDimWidth = 4f;
 
         // The lit layers, as multiples of the base so they cannot drift from
@@ -669,13 +667,11 @@ namespace PrincesPalace.Domain.UiKit
         // THE SCREEN, NOT THE STAGE, and the sky being narrower than the screen
         // is not a reason to shorten it.
         //
-        // This was briefly SkyWidth, on the argument that the stage is what
-        // slides and the panel covers the rest. Half of that is true: the panel
-        // covers the neighbour on the RIGHT. Nothing covers the one on the
-        // LEFT, and a 1464 stride on a 1920 canvas leaves 228px of the previous
-        // constellation standing in the open beside the current one -- which is
-        // exactly what ConstellationLayoutTests.TheNeighboursAreGenuinelyOffStage
-        // measures, and how it was caught.
+        // SkyWidth would be wrong: the panel covers the neighbour on the
+        // RIGHT, but nothing covers the one on the LEFT, and a 1464 stride on
+        // a 1920 canvas leaves 228px of the previous constellation standing in
+        // the open beside the current one. That is what
+        // ConstellationLayoutTests.TheNeighboursAreGenuinelyOffStage measures.
         public static float PageStride => UiFrames.Reference.X;
 
         public static float PageX(int index, int current) => (index - current) * PageStride;
@@ -685,9 +681,9 @@ namespace PrincesPalace.Domain.UiKit
         // A pure static seam like every other animation curve in this project:
         // the shape can be pinned by an EditMode test with no scene, no
         // coroutine and no frame.
-        // 620ms, the handoff's own figure, up from 420. A stage-wide slide is
-        // a longer journey than the screen-wide one this was tuned for and
-        // wants the time; the curve below is the ease it asks for.
+        // 620ms, the handoff's own figure. A stage-wide slide is a longer
+        // journey than a screen-wide one and wants the time; the curve below
+        // is the ease it asks for.
         public const float SlideSeconds = 0.62f;
 
         // No divide-by-zero guard here, deliberately. SlideSeconds is a const,
@@ -695,12 +691,12 @@ namespace PrincesPalace.Domain.UiKit
         // unreachable (CS0162) -- a guard that cannot fire is not protection,
         // it is noise that hides the next real unreachable-code warning.
         //
-        // What it was guarding against is real, though: at SlideSeconds 0 and
-        // elapsed 0 the division is NaN, every comparison below is false, and
-        // this returns NaN rather than a progress. So the guarantee moved to
-        // where it can actually hold -- ConstellationLayoutTests asserts the
-        // constant is positive, which fails at test time instead of producing
-        // a NaN slide at play time.
+        // The hazard is real, though: at SlideSeconds 0 and elapsed 0 the
+        // division is NaN, every comparison below is false, and this returns
+        // NaN rather than a progress. So the guarantee lives where it can
+        // actually hold -- ConstellationLayoutTests asserts the constant is
+        // positive, which fails at test time instead of producing a NaN slide
+        // at play time.
         public static float SlideProgress(float elapsed)
         {
             float t = elapsed / SlideSeconds;
@@ -804,8 +800,8 @@ namespace PrincesPalace.Domain.UiKit
         // 1.1 SECONDS, IN THREE OVERLAPPING PARTS (crust, catch, edge). They
         // overlap on purpose: the crust cracks while the stone is still
         // catching, and the edge lights before either has finished. Played in
-        // sequence it reads as a machine
-        // completing steps; played over itself it reads as something igniting.
+        // sequence it reads as a machine completing steps; played over itself
+        // it reads as something igniting.
         public const float KindleSeconds = 1.12f;
         public const float KindleCrustSeconds = 0.52f;
         public const float KindleCatchSeconds = 0.90f;

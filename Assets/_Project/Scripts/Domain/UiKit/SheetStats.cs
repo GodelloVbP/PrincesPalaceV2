@@ -38,10 +38,10 @@ namespace PrincesPalace.Domain.UiKit
         PhysicalDefense,
         MagicalDefense,
 
-        // ADDED so the attribute-to-stat link is not dead for half the sheet.
         // Wisdom and Charisma both feed something real -- the mana pool and the
-        // signature resource -- and neither had a row, so hovering either lit
-        // nothing and the feature read as broken rather than as empty.
+        // signature resource -- so each has a row; without one, hovering the
+        // attribute would light nothing and the feature would read as broken
+        // rather than as empty.
         MaxMana,
         SignatureGain,
     }
@@ -124,8 +124,8 @@ namespace PrincesPalace.Domain.UiKit
         //
         // Physical/Magical Defense are fed by Constitution/Wisdom
         // respectively (see AbilityDerivation.PhysicalDefenseBonus/
-        // MagicalDefenseBonus) -- armour is no longer the only source of
-        // either, ability scores are too.
+        // MagicalDefenseBonus) -- armour is not the only source of either,
+        // ability scores are too.
         //
         // ATTACK IS FED BY NOTHING, PERMANENTLY -- not a placeholder pending a
         // later phase. Strength does not derive a flat Attack bonus, because

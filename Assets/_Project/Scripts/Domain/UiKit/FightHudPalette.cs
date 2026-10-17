@@ -4,16 +4,13 @@ namespace PrincesPalace.Domain.UiKit
 {
     // The battle HUD's colours, as hex.
     //
-    // These were `private static readonly Color` fields in v1's
-    // SceneBuilder.Widgets.cs, which put them in the Editor assembly -- so the
-    // runtime controller, which recolours the same elements as state changes
-    // (a verb going active, a pip filling, a plate being targeted), could not
-    // read them and restated the ones it needed. Hex strings in Domain are
-    // reachable from both.
+    // Hex strings in Domain are reachable from both the Editor scene builder
+    // and the runtime controller, which recolours the same elements as state
+    // changes (a verb going active, a pip filling, a plate being targeted)
+    // and so must not restate them.
     //
     // Alpha is encoded in the eighth and last two digits, matching the rest of
-    // the DSL. v1 wrote it as a separate float argument; folding it in is what
-    // lets one constant be a complete colour rather than half of one.
+    // the DSL, so one constant is a complete colour rather than half of one.
     public static class FightHudPalette
     {
         // --- panels -----------------------------------------------------------
@@ -67,9 +64,9 @@ namespace PrincesPalace.Domain.UiKit
         // constant.
         //
         // Opacity is the whole point of the first one. The shop is drawn over
-        // the run map and the design closes it off completely; the screen used
-        // PanelViolet (0.90) before, which left the map legible underneath and
-        // made the surface read as an overlay rather than as a room.
+        // the run map and the design closes it off completely; PanelViolet
+        // (0.90) would leave the map legible underneath and make the surface
+        // read as an overlay rather than as a room.
         public const string ShopGround = "#0B0612FF";        // 1.00
         public const string HeadingGold = "#E7B25CFF";       // 1.00
 
@@ -84,11 +81,10 @@ namespace PrincesPalace.Domain.UiKit
         public const string RowNameText = "#E9DFF8";
         public const string PartyNameText = "#FFF3DE";
         public const string PartyClassText = "#C8A879";
-        // RED, because it is the one row in the list that leaves. It was
-        // #A695BC -- the same muted violet as every other piece of secondary
-        // text on the screen -- which was fine while BACK was a separate button
-        // below the frame and is not now it is a row among the skills. Colour
-        // is the only thing separating it from an entry that commits.
+        // RED, because it is the one row in the list that leaves. The muted
+        // violet of the other secondary text (#A695BC) would pass for a skill
+        // row, and colour is the only thing separating BACK from an entry
+        // that commits.
         public const string BackRowText = "#D9604A";
         public const string QuietHotkey = "#6D5F85";
         public const string LoudHotkey = "#FFDCAA8C";        // 0.55
@@ -187,9 +183,8 @@ namespace PrincesPalace.Domain.UiKit
         // these through ForDamageType, so a hit and the card describing the
         // skill that caused it cannot disagree about what colour "Fire" is.
         //
-        // Physical is carried over as a token rather than changed (0.93,
-        // 0.26, 0.24): this file adds colour to the OTHER five types, it
-        // does not restyle Physical.
+        // Physical keeps its red (0.93, 0.26, 0.24): the other five types
+        // are coloured around it.
         public const string DamageTypePhysical = "#ED423DFF";
         public const string DamageTypeFire = "#FF6A2AFF";
         public const string DamageTypeIce = "#9FD8F5FF";
@@ -214,9 +209,8 @@ namespace PrincesPalace.Domain.UiKit
         // other numeric HUD readout on this screen is tinted with.
         public const string DamageTypeArcane = "#C69AF1FF";
 
-        // FIVE MORE, added the moment DamageType grew five more members.
-        // Earth/Water/Wind/Lightning are read straight off the brief with no
-        // clash against the six above (ochre, sky blue and electric yellow
+        // The remaining types. Earth/Water/Wind/Lightning clash with none of
+        // the six above (ochre, sky blue and electric yellow
         // each sit in a different hue band from anything already claimed).
         public const string DamageTypeEarth = "#C98A3AFF";
         public const string DamageTypeWater = "#3F9BE8FF";

@@ -130,17 +130,17 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // and investing is what lights the path behind it.
         public List<NodeRef> EdgeGlows = new List<NodeRef>();
 
-        // Which slot each edge arrives at, parallel to Edges. "The parent
-        // necessarily already is [invested]" turned out false for a merge or
-        // capstone slot, which authors more than one incoming edge for the
-        // same child and only requires ONE of them to be met (TalentPage.
-        // MeetsPrerequisites) -- the child-only test lit every edge into it,
-        // including the strand the player never climbed. EdgeParentSlots
-        // below is the other half the controller now checks.
+        // Which slot each edge arrives at, parallel to Edges. A merge or
+        // capstone slot authors more than one incoming edge for the same child
+        // and only requires ONE of them to be met (TalentPage.
+        // MeetsPrerequisites), so the child alone cannot decide which edge
+        // lights: a child-only test would light every edge into it, including
+        // the strand the player never climbed. EdgeParentSlots below is the
+        // other half the controller checks.
         public List<int> EdgeChildSlots = new List<int>();
 
         // Which slot each edge LEAVES, parallel to EdgeChildSlots -- the
-        // other endpoint PaintEdges' own header now requires. A parent stored
+        // other endpoint PaintEdges' own header requires. A parent stored
         // per edge, not just per child, because a merge/capstone slot has
         // more than one parent and only the edges from the ones actually
         // invested may light.
@@ -199,9 +199,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.PrevPathButton = prevPath;
             screen.NextPathButton = nextPath;
 
-            // 190x52 was 3.654:1 against the Legacy plate's true 3:1 --
-            // ThemedButtonAspectLintTests. Height up to nominal, width kept;
-            // a corner button with nothing else nearby vertically.
+            // Width 190 kept, height raised to the Legacy plate's true 3:1
+            // (ThemedButtonAspectLintTests rejects 190x52, 3.654:1); a corner
+            // button with nothing else nearby vertically.
             var backSize = Ui.PlateNominalSizeFor(190f, 52f);
             var back = Ui.Button("TalentBackButton", UiStrings.TalentBack, backSize, 15,
                     Place.At(-UiFrames.Reference.X * 0.5f + 119f, UiFrames.Reference.Y * 0.5f - 50f))
@@ -499,8 +499,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // Cancel/Confirm, not two Golds: at most one gold button per
             // screen state, so the confirmation gets it and backing out reads
             // as ordinary navigation, same as Back everywhere else.
-            // 260x64 was 4.063:1 against the FiveByOne plate's true 5:1 --
-            // ThemedButtonAspectLintTests. Height down to nominal, width kept.
+            // Width 260 kept, height lowered to the FiveByOne plate's true 5:1
+            // (ThemedButtonAspectLintTests rejects 260x64, 4.063:1).
             var respecButtonSize = Ui.PlateNominalSizeFor(260f, 64f);
             var cancel = Ui.Button("RespecCancelButton", UiStrings.TalentRespecCancel,
                     respecButtonSize, 18, Place.At(-150f, -104f))
@@ -559,10 +559,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .AllowOverlap("edges pass beneath the orbs they connect, which is what makes them read as connections");
         }
 
-        // PER PATH, not per (dx, depth). The tree is hand-plotted now: each
+        // PER PATH, not per (dx, depth). The tree is hand-plotted: each
         // allegiance draws its own figure out of the same 21 slots, so where a
-        // stone sits depends on which constellation it belongs to and no longer
-        // on a column index times a pitch.
+        // stone sits depends on which constellation it belongs to, not on a
+        // column index times a pitch.
         //
         // BUILT FOR SHAWN, the default when a scene opens with nothing loaded.
         // TalentController.Relayout moves every stone and edge to the selected
@@ -744,11 +744,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             // THE LIT LAYER, a sibling rather than a child.
             //
-            // v1 hangs the core off the glow so it inherits the rotation for
-            // free, and that is right there -- but here the glow is what the
-            // controller switches, and a switched-off parent takes its children
-            // with it whether or not that was meant. Sibling and child are the
-            // same picture; only one of them can be reasoned about.
+            // The glow is what the controller switches, and a switched-off
+            // parent takes its children with it whether or not that was meant.
+            // Sibling and child are the same picture; only one of them can be
+            // reasoned about.
             var glow = Ui.Sprite($"Edge{path}_{parent}_{slot}Glow", EdgeStripeKey,
                     new UiVec(length, ConstellationLayout.EdgeGlowWidth),
                     Place.At(midX, midY))
@@ -760,25 +759,23 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             // AT ZERO, AND UNROTATED, BECAUSE IT IS A CHILD.
             //
-            // This carried the glow's own midpoint and the glow's own angle,
-            // which are both correct for a SIBLING and both wrong for a child:
-            // a child's position composes with its parent's, so the core landed
-            // at twice the midpoint, turned to twice the angle, somewhere else
-            // in the sky entirely. Every lit edge drew a second gold line at a
-            // reflected position -- visible in a runtime capture as loose
-            // hairlines with no stone at either end, and invisible to UiAudit
-            // because the AllowOverflow below waives exactly the containment
-            // check that would have caught it. The spark beside it was already
-            // local and was the clue.
+            // The glow's own midpoint and angle are correct for a SIBLING and
+            // wrong for a child: a child's position composes with its
+            // parent's, so those values would land the core at twice the
+            // midpoint, turned to twice the angle, somewhere else in the sky --
+            // a second gold line at a reflected position, loose hairlines with
+            // no stone at either end. UiAudit cannot see that, because the
+            // AllowOverflow below waives exactly the containment check that
+            // would. The spark beside it is local too.
             var core = Ui.Sprite($"Edge{path}_{parent}_{slot}Core", EdgeStripeKey,
                     new UiVec(length, ConstellationLayout.EdgeCoreWidth),
                     Place.At(0f, 0f))
                 .Coloured(EdgeCore)
                 // NOT Inactive. It is a CHILD of the glow, which is the thing
                 // the controller switches, so it comes and goes with its
-                // parent -- and switching it off here as well meant it never
-                // came back on at all. A lit edge showed its halo and no crack,
-                // and the crackle rode an object that never ran.
+                // parent -- and switching it off here as well would keep it
+                // off for good: a lit edge would show its halo and no crack,
+                // and the crackle would ride an object that never runs.
                 .AsDecor()
                 .AllowOverflow("a rotated edge's axis-aligned box is wider than the line inside it");
 

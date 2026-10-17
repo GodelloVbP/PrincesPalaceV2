@@ -4,8 +4,8 @@ using System.Collections.Generic;
 namespace PrincesPalace.Domain.UiKit
 {
     // Which shape of container/banner art a screen wants. The names ARE the
-    // ratios now -- this delivery of the kit is at true nominal aspect on
-    // every file; see ContainerArt's own comment.
+    // ratios: the kit is at true nominal aspect on every file; see
+    // ContainerArt's own comment.
     public enum ContainerRatio
     {
         ThreeByFour,
@@ -20,7 +20,7 @@ namespace PrincesPalace.Domain.UiKit
     // banner_flag_<theme>_<ratio>.png), and the safe interior every one of
     // them shares.
     //
-    // THIS DELIVERY IS AT TRUE NOMINAL ASPECT. Every PNG measures
+    // THE KIT IS AT TRUE NOMINAL ASPECT. Every PNG measures
     // (`PIL.Image.size`) to all six themes of every group landing on
     // exactly one size, exactly on the fraction their filename claims:
     //
@@ -28,22 +28,17 @@ namespace PrincesPalace.Domain.UiKit
     //   container_*_9x16:   576x1024  -> 0.5625  (all six identical)
     //   container_*_3x2:    1536x1024 -> 1.5     (all six identical)
     //   container_*_2x1:    1536x768  -> 2.0     (all six identical)
-    //   container_*_5x1:    1530x306  -> 5.0     (all six identical, NEW)
+    //   container_*_5x1:    1530x306  -> 5.0     (all six identical)
     //   banner_flag_*_3x4:  768x1024  -> 0.75    (all six identical)
     //   banner_flag_*_9x16: 576x1024  -> 0.5625  (all six identical)
     //
     // So the constants below are the clean fractions, not a cluster average,
-    // and a screen that declares a nominal box now gets an exact fit.
-    //
-    // HISTORY, one line, because the screens still carry its fingerprints:
-    // every earlier delivery was spliced off sheets and came out several
-    // percent off nominal (3x4 measured 0.588, 9x16 0.4083, banner 3x4
-    // 0.5145, banner 9x16 0.3004, 3x2 1.49, 2x1 1.98), and every screen was
-    // sized against those numbers -- which is why repinning this file moves
-    // real layout rather than only a comment.
+    // and a screen that declares a nominal box gets an exact fit. Screens are
+    // sized against these numbers, so repinning this file moves real layout
+    // rather than only a comment.
     internal static class ContainerArt
     {
-        // width / height. Exact, for this delivery.
+        // width / height. Exact.
         internal const float ContainerAspect3x4 = 0.75f;
         internal const float ContainerAspect9x16 = 0.5625f;
         internal const float BannerAspect3x4 = 0.75f;
@@ -81,7 +76,7 @@ namespace PrincesPalace.Domain.UiKit
         // panel interior. The figures below are real measurements for every
         // group, including 3x2/2x1.
         //
-        // Raw worst-per-side, this delivery:
+        // Raw worst-per-side:
         //
         //   container_*_3x4    L.0534 T.0410 R.0547 B.0439   (border 34-45px of 768/1024)
         //   container_*_9x16   L.0660 T.0371 R.0660 B.0381   (border 31-39px of 576/1024)
@@ -155,9 +150,7 @@ namespace PrincesPalace.Domain.UiKit
         //
         //   (Container, ThreeByFour) LEFT: silver's paint starts at column 20
         //   and violet's at 18, where the other four start at 26-27 -- a 9px
-        //   spread. This is the same silver/violet splice offset the previous
-        //   delivery carried; it was 3-4px then, so the regeneration made it
-        //   worse rather than better.
+        //   spread (a silver/violet splice offset).
         //   (Container, ThreeByFour) TOP: blue starts at row 28 and crimson
         //   at 26 -- a 2px spread.
         //   (Container, NineBySixteen) LEFT: the same two themes as the 3x4

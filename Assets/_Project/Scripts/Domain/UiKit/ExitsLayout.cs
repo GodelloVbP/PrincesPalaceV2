@@ -44,9 +44,8 @@ namespace PrincesPalace.Domain.UiKit
         // ---- the two exits ------------------------------------------------------
 
         // Wide and tall enough to be the thing the pane is about. At 520x76
-        // they were three small controls adrift in 1600x804; the pane has no
-        // other content to give them scale, so they have to carry it
-        // themselves.
+        // they would be three small controls adrift in 1600x804; the pane has
+        // no other content to give them scale, so they carry it themselves.
         public const float ExitWidth = 720f;
 
         // They wear a Silver kit plate, so the height comes from
@@ -55,8 +54,8 @@ namespace PrincesPalace.Domain.UiKit
         // ResetHoldHeight is -- PlateNominalSizeFor is not a compile-time
         // constant. It resolves to Row6x1 (nominal 6:1, height 120), which
         // StackFits below confirms clears the pane's vertical rhythm -- the
-        // note underneath each button (NoteGap/NoteHeight, unchanged) still
-        // sits clear of it by construction of
+        // note underneath each button (NoteGap/NoteHeight) sits clear of it by
+        // construction of
         // ExitNoteCentreY/ExitButtonCentreY below.
         public static readonly float ExitHeight = Ui.PlateNominalSizeFor(ExitWidth, 96f).Y;
 
@@ -143,7 +142,7 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly float HoldHeight = Ui.PlateNominalSizeFor(HoldWidth, 80f).Y;
 
         // A PROPERTY, not a const, for the same reason ExitBlockHeight above
-        // is -- HoldHeight is no longer a compile-time literal.
+        // is -- HoldHeight is not a compile-time literal.
         public static float AbandonHeight =>
             AbandonPadY * 2f + AbandonHeadingHeight + AbandonHeadingGap +
             AbandonNoteHeight + AbandonNoteGap + HoldHeight;
@@ -151,8 +150,8 @@ namespace PrincesPalace.Domain.UiKit
         public static float AbandonCentreY => SeparatorY - SeparatorGap - AbandonHeight * 0.5f;
 
         // Pair, both separator gaps, and the card. The rule itself is 1px and
-        // sits inside the gap rather than adding to it. A PROPERTY now, for
-        // the same reason as its two dependencies above.
+        // sits inside the gap rather than adding to it. A PROPERTY, for the
+        // same reason as its two dependencies above.
         public static float StackHeight => PairHeight + SeparatorGap * 2f + AbandonHeight;
 
         private static float AbandonHalf => AbandonHeight * 0.5f;

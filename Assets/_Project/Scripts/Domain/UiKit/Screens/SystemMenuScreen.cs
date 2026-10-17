@@ -108,10 +108,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             var barChildren = new List<UiNode>();
 
-            // The bar's own plate. OPAQUE, and that is the fix for the single
-            // biggest thing the skeleton got wrong: the bar was transparent
-            // over whatever was behind it, so hub text read straight through it
-            // and "BETWEEN DESCENTS" collided with "MAIN MENU".
+            // The bar's own plate. OPAQUE: a transparent bar would show whatever
+            // is behind it, so hub text would read straight through it and
+            // "BETWEEN DESCENTS" would collide with "MAIN MENU".
             barChildren.Add(Ui.Solid("SystemMenuBarPlate", BarPlate,
                     new UiVec(SystemMenuLayout.PanelWidth, SystemMenuLayout.BarHeight),
                     Place.At(0f, 0f))
@@ -131,8 +130,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 float w = bar.Widths[i];
 
                 // The hover plate, under the label and the size of the whole
-                // box. The skeleton popped the tab to 1.03 instead, and the
-                // design pass killed that outright: it wobbles a bar whose
+                // box. Scaling the tab instead would wobble a bar whose
                 // positions are arithmetic, and a tab that moves when you
                 // approach it is harder to hit than one that lights up.
                 var hover = Ui.Solid($"SystemTab{def.Key}Hover", TabHover,
