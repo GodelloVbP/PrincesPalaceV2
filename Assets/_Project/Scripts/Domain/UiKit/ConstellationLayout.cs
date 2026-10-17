@@ -597,17 +597,6 @@ namespace PrincesPalace.Domain.UiKit
                 (float)(System.Math.Atan2(dy, dx) * 180.0 / System.Math.PI));
         }
 
-        // ---- the path-only API: Shawn's figures ----------------------------------
-        //
-        // Shorthand for Shawn's figures. Callers that know the character pass
-        // its key to the overloads above; these delegate to them with ShawnId
-        // rather than keeping a second lookup.
-        public static int PlotCount => PlotCountFor(ShawnId);
-
-        public static float StarX(int path, int slot) => StarX(ShawnId, path, slot);
-
-        public static float StarY(int path, int slot) => StarY(ShawnId, path, slot);
-
         // ---- what the plots guarantee -------------------------------------------
         //
         // The floors the design set, at x1.2. Not used to PLACE anything -- the
@@ -821,16 +810,6 @@ namespace PrincesPalace.Domain.UiKit
         public const float KindleCrustSeconds = 0.52f;
         public const float KindleCatchSeconds = 0.90f;
         public const float KindleEdgeSeconds = 0.62f;
-        public const float KindleMoteSeconds = 0.70f;
-        public const int KindleMoteCount = 6;
-
-        // The mote timing below has no reader: the beat is the three parts
-        // above. Unevenly spaced delays, because embers on an even beat are a
-        // metronome.
-        private static readonly float[] MoteDelays = { 0f, 0.09f, 0.16f, 0.24f, 0.33f, 0.42f };
-
-        public static float MoteDelay(int index) =>
-            index < 0 || index >= MoteDelays.Length ? 0f : MoteDelays[index];
 
         // Each part clamps at its own end rather than at the beat's, so a part
         // that finishes early STAYS finished instead of easing back.

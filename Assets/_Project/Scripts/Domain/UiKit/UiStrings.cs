@@ -678,8 +678,6 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString DebugNextLeg = UiString.Define("debug.next_leg", "SKIP TO THE NEXT LEG");
         public static readonly UiString DebugClearStash =
             UiString.Define("debug.clear_stash", "CLEAR STASH ({0} STACKS)", "CLEAR STASH (999 STACKS)");
-        public static readonly UiString DebugClearRunBag =
-            UiString.Define("debug.clear_run_bag", "CLEAR RUN BAG ({0} STACKS)", "CLEAR RUN BAG (999 STACKS)");
         public static readonly UiString DebugResetTalents =
             UiString.Define("debug.reset_talents", "RESET TALENTS, REFUND EMBERS");
         public static readonly UiString DebugResetTracks =

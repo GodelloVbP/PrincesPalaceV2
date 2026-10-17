@@ -13,7 +13,7 @@ using UnityEngine;
 // so both are generated, from code, like scenes and content.
 public static partial class TmpBootstrap
 {
-    private const string FontOutputDir = "Assets/_Project/Fonts";
+    internal const string FontOutputDir = "Assets/_Project/Fonts";
 
     // Deliberately NOT under Resources/Content: ContentBuilder deletes that
     // whole tree with no prompt on every run, and a font asset vanishing
@@ -21,7 +21,7 @@ public static partial class TmpBootstrap
     private const string SourceFontDir = "Assets/_Project/Resources/Fonts";
 
     // Typography-role static SDF fonts and materials (TmpBootstrap.Typography.cs).
-    private const string TypographyMaterialDir = "Assets/_Project/Fonts/Materials";
+    internal const string TypographyMaterialDir = "Assets/_Project/Fonts/Materials";
     private const string LiberationSansSdfPath = "Assets/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF.asset";
     private const int TypographyAtlasSize = 2048;
     private const int TypographyAtlasPadding = 9;

@@ -29,7 +29,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // +-557.5, still well inside the frame's own +-697.5 content bound,
         // and every child inside the card (the 230-wide body being the
         // widest) has room to spare.
-        public const float CardWidth = 345f; // was 270, was 380
+        public const float CardWidth = 345f;
         public const float CardHeight = 460f;
         private const float CardGap = 40f;
 

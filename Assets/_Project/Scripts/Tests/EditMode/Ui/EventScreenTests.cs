@@ -171,7 +171,7 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.IsTrue(screen.DialogueStage.Node.StartInactive);
             Assert.IsTrue(screen.DialogueStage.Node.Masks, "the cover-cropped backdrop would draw past the canvas");
-            Assert.IsTrue(screen.StageBusts[1].Node.StartInactive, "the second bust is D3's slide partner");
+            Assert.IsTrue(screen.StageBusts[1].Node.StartInactive, "the second bust is the incoming slide partner");
             Assert.IsTrue(screen.StageEpithet.Node.StartInactive, "no character has an epithet yet");
             Assert.IsFalse(screen.ArtFrame.Node.StartInactive, "the legacy layout is the default");
             Assert.IsFalse(screen.TextColumn.Node.StartInactive);

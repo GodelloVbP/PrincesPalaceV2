@@ -502,7 +502,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     UiSize.Fixed(RewardTrackLayout.ContentWidth,
                                  RewardTrackLayout.ScrollContentHeight),
                     railChildren)
-                .AllowOverflow("the content rect is deliberately wider than the window it sits in - that overflow IS the scroll, and TrackViewport clips it - and it is twelve pixels taller because everything inside is measured from the rail at its centre while the band around it reaches further above that line than below");
+                .AllowOverflow("the content rect is deliberately wider than the window it sits in - that overflow IS the scroll, and TrackViewport clips it - and it is taller than the rail's own band because everything inside is measured from the rail at its centre while the band around it reaches further above that line than below");
             screen.Content = content;
 
             // The window. A coordinate frame and a mask, never a surface. The

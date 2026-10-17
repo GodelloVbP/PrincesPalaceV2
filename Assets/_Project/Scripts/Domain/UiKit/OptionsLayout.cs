@@ -39,7 +39,7 @@ namespace PrincesPalace.Domain.UiKit
         // HalfWidth * 2f, not PaneWidth -- the content region is the pane's
         // own declared inset, narrower than the declared frame.
         public static float ColumnWidth =>
-            (HalfWidth * 2f - PadX * 2f - ColumnGap * (ColumnCount - 1f)) / ColumnCount;   // 1480
+            (HalfWidth * 2f - PadX * 2f - ColumnGap * (ColumnCount - 1f)) / ColumnCount;
 
         public static float ColumnCentreX(int column) =>
             -HalfWidth + PadX + ColumnWidth * 0.5f + column * (ColumnWidth + ColumnGap);

@@ -1385,7 +1385,7 @@ public static class ProceduralSpriteBaker
         importer.spriteImportMode = SpriteImportMode.Single;
         importer.alphaIsTransparency = true;
 
-        // MIPMAPS, WHICH THIS EXPLICITLY TURNED OFF.
+        // MIPMAPS, ON EXCEPT FOR THE SHAPES IN DrawnAsBars.
         //
         // Off is the usual advice for UI, and the usual advice assumes UI art
         // drawn at roughly the size it was authored. None of this is: every

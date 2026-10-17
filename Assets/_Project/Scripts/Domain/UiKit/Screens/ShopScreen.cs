@@ -543,18 +543,20 @@ namespace PrincesPalace.Domain.UiKit.Screens
             return parts;
         }
 
+        // Themed(Silver). 210x40 (5.25) is close enough to the FiveByOne
+        // plate's 5.0 that the swap costs no visible stretch.
+        private static UiNode RerollButton(string name, float panelWidth) =>
+            Ui.Button(name, UiStrings.ShopReroll, new UiVec(RerollWidth, RerollHeight), 22,
+                    Place.At(panelWidth * 0.5f - PanelPad - RerollWidth * 0.5f, HeaderCentreY))
+                .Themed(ButtonTheme.Silver);
+
         // One shelf panel: a header with its own REROLL, then `count` cards
         // stacked down the content box.
         private UiNode BuildShelf(string prefix, UiString header, float centreX, float centreY,
             float width, int count, out NodeRef headerRef, out NodeRef reroll, out NodeRef rerollLabel,
             List<OfferCard> cards)
         {
-            // Themed(Silver). 210x40 (5.25) is close enough to the
-            // FiveByOne plate's 5.0 that the swap costs no visible stretch.
-            var rerollButton = Ui.Button($"Shop{prefix}Reroll", UiStrings.ShopReroll,
-                    new UiVec(RerollWidth, RerollHeight), 22,
-                    Place.At(width * 0.5f - PanelPad - RerollWidth * 0.5f, HeaderCentreY))
-                .Themed(ButtonTheme.Silver);
+            var rerollButton = RerollButton($"Shop{prefix}Reroll", width);
             reroll = rerollButton;
             rerollLabel = Ui.CaptionOf(rerollButton);
 
@@ -581,12 +583,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // right) re-flows instead of overflowing.
         private UiNode BuildGearPanel()
         {
-            // Themed(Silver) -- same conversion and same 5.25-vs-5.0 fit as
-            // BuildShelf's own reroll above.
-            var rerollButton = Ui.Button("ShopGearReroll", UiStrings.ShopReroll,
-                    new UiVec(RerollWidth, RerollHeight), 22,
-                    Place.At(GearWidth * 0.5f - PanelPad - RerollWidth * 0.5f, HeaderCentreY))
-                .Themed(ButtonTheme.Silver);
+            var rerollButton = RerollButton("ShopGearReroll", GearWidth);
             GearReroll = rerollButton;
             GearRerollLabel = Ui.CaptionOf(rerollButton);
 

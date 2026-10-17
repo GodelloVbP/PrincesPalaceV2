@@ -265,10 +265,9 @@ namespace PrincesPalace
             // AND THE PACK: stockpiledItems is "the single live inventory
             // for now" -- FightBootstrap's own words -- and it is what the
             // pack draws, what the fight satchel is built from, and what the
-            // Reckoning drops loot into. RunSnapshot.inventory is vestigial:
-            // one stats readout reads it and nothing ever puts loot there.
-            // Clearing only RunSnapshot would leave the run's actual haul
-            // sitting on the PROFILE, surviving every death and abandon.
+            // Reckoning drops loot into. It lives on the PROFILE, not the
+            // RunSnapshot, so it has to be cleared here or the run's haul
+            // survives every death and abandon.
             save.stockpiledItems?.Clear();
 
             save.activeRun = new RunSnapshot { hasRun = false };

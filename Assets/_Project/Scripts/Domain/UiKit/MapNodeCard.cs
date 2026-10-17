@@ -49,22 +49,19 @@ namespace PrincesPalace.Domain.UiKit
         public readonly int SkipHealPercent;
         public readonly bool GuardsHeart;
 
-        // How many rooms stepping here shuts off for good; 0 for most choices.
-        public readonly int ClosesRooms;
-
         // An event room's title, as the run's own roll will open it; "" for
         // any other room, or when no event is eligible.
         public readonly string EventTitle;
 
         public MapNodeFacts(RoomType type, IReadOnlyList<string> enemyNames = null, int experience = 0,
                             int gold = 0, int stashGold = 0)
-            : this(type, enemyNames, experience, gold, stashGold, 0, default, 0, false, 0, "")
+            : this(type, enemyNames, experience, gold, stashGold, 0, default, 0, false, "")
         {
         }
 
         private MapNodeFacts(RoomType type, IReadOnlyList<string> enemyNames, int experience, int gold,
                              int stashGold, int strength, MapNodeChip chip, int skipHealPercent, bool guardsHeart,
-                             int closesRooms, string eventTitle)
+                             string eventTitle)
         {
             Type = type;
             EnemyNames = enemyNames ?? new string[0];
@@ -75,21 +72,16 @@ namespace PrincesPalace.Domain.UiKit
             Chip = chip;
             SkipHealPercent = skipHealPercent;
             GuardsHeart = guardsHeart;
-            ClosesRooms = closesRooms;
             EventTitle = eventTitle ?? "";
         }
 
         public MapNodeFacts WithRealm(int strength, MapNodeChip chip, int skipHealPercent, bool guardsHeart) =>
             new MapNodeFacts(Type, EnemyNames, Experience, Gold, StashGold, strength, chip, skipHealPercent,
-                guardsHeart, ClosesRooms, EventTitle);
-
-        public MapNodeFacts WithCloses(int rooms) =>
-            new MapNodeFacts(Type, EnemyNames, Experience, Gold, StashGold, Strength, Chip, SkipHealPercent,
-                GuardsHeart, rooms, EventTitle);
+                guardsHeart, EventTitle);
 
         public MapNodeFacts WithEventTitle(string title) =>
             new MapNodeFacts(Type, EnemyNames, Experience, Gold, StashGold, Strength, Chip, SkipHealPercent,
-                GuardsHeart, ClosesRooms, title);
+                GuardsHeart, title);
     }
 
     // THE ONE LINE OF MAP COPY THAT NAMES A KEY: the overview hint, and the

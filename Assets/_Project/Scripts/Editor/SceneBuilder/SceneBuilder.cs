@@ -41,8 +41,8 @@ public static partial class SceneBuilder
     // SceneBuilder.Typography.cs: role lookups over TmpBootstrap.Typography.cs's
     // generated assets. Kept here per the partial-class convention (root file
     // owns fields/consts, parts own methods) -- see docs/CODE_STANDARDS.md "Partial classes".
-    private const string TypographyFontDir = "Assets/_Project/Fonts";
-    private const string TypographyMaterialDir = "Assets/_Project/Fonts/Materials";
+    private const string TypographyFontDir = TmpBootstrap.FontOutputDir;
+    private const string TypographyMaterialDir = TmpBootstrap.TypographyMaterialDir;
     private static readonly Dictionary<TypographyRole, TMP_FontAsset> _typographyFonts =
         new Dictionary<TypographyRole, TMP_FontAsset>();
     private static readonly Dictionary<TypographyRole, Material> _typographyMaterials =

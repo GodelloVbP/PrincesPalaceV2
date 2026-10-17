@@ -151,10 +151,7 @@ public static class ScreenRegistry
                 // fe40bd36 wired this exact table into the shop and the
                 // dossier and missed the fight's own submenu; this closes
                 // that gap rather than adding a second copy of the bake.
-                fight.skillArt = ContentDatabase.Skills
-                    .Where(i => i != null && !string.IsNullOrEmpty(i.iconPath))
-                    .Select(i => new IconEntry(i.id, SceneBuilder.LoadSpriteByKey(i.iconPath)))
-                    .ToArray();
+                fight.skillArt = SkillIconTable();
 
                 // NO CountBindings for fight.skillArt above -- same reason
                 // WireShop's own block gives: a lookup TABLE keyed by
@@ -790,15 +787,9 @@ public static class ScreenRegistry
         // same graceful path a gear card with no art already takes.
         shop.itemArt = ItemIconTable();
 
-        shop.relicArt = ContentDatabase.Relics
-            .Where(r => r != null && !string.IsNullOrEmpty(r.iconPath))
-            .Select(r => new IconEntry(r.id, SceneBuilder.LoadSpriteByKey(r.iconPath)))
-            .ToArray();
+        shop.relicArt = RelicIconTable();
 
-        shop.skillArt = ContentDatabase.Skills
-            .Where(i => i != null && !string.IsNullOrEmpty(i.iconPath))
-            .Select(i => new IconEntry(i.id, SceneBuilder.LoadSpriteByKey(i.iconPath)))
-            .ToArray();
+        shop.skillArt = SkillIconTable();
 
         // NO CountBindings for itemArt/relicArt/skillArt above. Each is a
         // lookup TABLE keyed by content id, filtered down to whichever
@@ -1249,6 +1240,14 @@ public static class ScreenRegistry
             .Select(r => new IconEntry(r.id, SceneBuilder.LoadSpriteByKey(r.iconPath)))
             .ToArray();
 
+    // Every skill that authored an icon (the book-only skills), same shape as
+    // RelicIconTable.
+    private static IconEntry[] SkillIconTable() =>
+        ContentDatabase.Skills
+            .Where(i => i != null && !string.IsNullOrWhiteSpace(i.iconPath))
+            .Select(i => new IconEntry(i.id, SceneBuilder.LoadSpriteByKey(i.iconPath)))
+            .ToArray();
+
     // The same lookup-table shape as RelicIconTable.
     private static IconEntry[] ItemIconTable() =>
         ItemArt()
@@ -1440,15 +1439,7 @@ public static class ScreenRegistry
         // concat-then-select shape WireGlossary already uses. A skill's
         // iconPath carries the glyph baked into the book art, so the book
         // slots and the pack's books read off the same table as the gear.
-        var withArt = ItemArt()
-            .Select(a => (a.Key, a.Path))
-            .Concat(ContentDatabase.Skills
-                .Where(i => i != null && !string.IsNullOrWhiteSpace(i.iconPath))
-                .Select(i => (i.id, i.iconPath)))
-            .ToList();
-        controller.icons = withArt
-            .Select(a => new IconEntry(a.Item1, SceneBuilder.LoadSpriteByKey(a.Item2)))
-            .ToArray();
+        controller.icons = ItemIconTable().Concat(SkillIconTable()).ToArray();
 
         return controller;
     }

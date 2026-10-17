@@ -259,6 +259,5 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.AbandonCard = card;
             return card;
         }
-
-                    }
+    }
 }

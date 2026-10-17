@@ -140,7 +140,7 @@ namespace PrincesPalace.Domain.Tests
             {
                 if (Talents.TalentSkeleton.DxSlot[slot] != 0) continue;
 
-                float y = ConstellationLayout.StarY(0, slot);
+                float y = ConstellationLayout.StarY(ConstellationLayout.ShawnId, 0, slot);
 
                 foreach (var plot in EveryPlot())
                 {
@@ -331,27 +331,17 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual("spire", ConstellationLayout.PlotId(character, path));
         }
 
-        // The path-only API predates the character key and meant Shawn's all
-        // along -- the screen tree and controller still call it, and nothing
-        // they draw may move until they are switched over.
+        // Shawn's figures are the sheep key's; the pins hold the stones where
+        // the screen draws them.
         [Test]
-        public void ThePathOnlyApiIsShawns()
+        public void ShawnsFiguresAreTheSheepKeys()
         {
-            Assert.AreEqual(ConstellationLayout.PlotCountFor("sheep"), ConstellationLayout.PlotCount);
+            Assert.AreEqual(ConstellationLayout.PlotCountFor("sheep"), ConstellationLayout.PlotCountFor(ConstellationLayout.ShawnId));
 
-            Assert.AreEqual(-149f, ConstellationLayout.StarX("sheep", 0, 1));
-            Assert.AreEqual(118f, ConstellationLayout.StarY("sheep", 0, 1));
-            Assert.AreEqual(134f, ConstellationLayout.StarX("sheep", 1, 3));
-            Assert.AreEqual(120f, ConstellationLayout.StarY("sheep", 1, 3));
-
-            for (int path = -1; path <= ConstellationLayout.PlotCount; path++)
-            {
-                for (int slot = 0; slot < Talents.TalentSkeleton.SlotCount; slot++)
-                {
-                    Assert.AreEqual(ConstellationLayout.StarX("sheep", path, slot), ConstellationLayout.StarX(path, slot));
-                    Assert.AreEqual(ConstellationLayout.StarY("sheep", path, slot), ConstellationLayout.StarY(path, slot));
-                }
-            }
+            Assert.AreEqual(-149f, ConstellationLayout.StarX(ConstellationLayout.ShawnId, 0, 1));
+            Assert.AreEqual(118f, ConstellationLayout.StarY(ConstellationLayout.ShawnId, 0, 1));
+            Assert.AreEqual(134f, ConstellationLayout.StarX(ConstellationLayout.ShawnId, 1, 3));
+            Assert.AreEqual(120f, ConstellationLayout.StarY(ConstellationLayout.ShawnId, 1, 3));
         }
 
         // Different characters draw different figures -- the whole point of
@@ -814,7 +804,7 @@ namespace PrincesPalace.Domain.Tests
                 for (int slot = 0; slot < Talents.TalentSkeleton.SlotCount; slot++)
                 {
                     string kind = Talents.TalentSkeleton.Kind[slot];
-                    float y = ConstellationLayout.TreeOriginY + ConstellationLayout.StarY(path, slot);
+                    float y = ConstellationLayout.TreeOriginY + ConstellationLayout.StarY(ConstellationLayout.ShawnId, path, slot);
 
                     // The name, which every stone draws.
                     float nameBottom = y + ConstellationLayout.LabelY(kind)

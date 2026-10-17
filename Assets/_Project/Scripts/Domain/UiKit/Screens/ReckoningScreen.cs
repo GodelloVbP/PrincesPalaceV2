@@ -419,7 +419,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             // The focus detail, last so it draws over the cards it describes.
             var tip = ItemComparisonPanel.Build("ReckoningCardTip", Place.At(0f, 0f),
-                new UiVec(CardTipWidth, CardTipHeight), CardTipTitleHeight, 20, "#F2DB9E", 15, "#D9CCF2");
+                new UiVec(CardTipWidth, System.Math.Min(CardTipHeight, CardTipMaxHeight)), CardTipTitleHeight, 20, "#F2DB9E", 15, "#D9CCF2");
             tip.Panel.Inactive();
             screen.CardTip = tip.Panel;
             screen.CardTipTitle = tip.Title;

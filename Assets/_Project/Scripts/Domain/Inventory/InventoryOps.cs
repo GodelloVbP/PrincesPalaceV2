@@ -5,11 +5,10 @@ namespace PrincesPalace
 {
     // Add/count/remove over a List<InventoryEntry>, in one place.
     //
-    // There are two such lists — RunState.inventory (this run's loot) and
-    // SaveData.stockpiledItems (the between-runs stash) — and equipping has
-    // to work against whichever one the player is looking at. RunState grew
-    // these three methods first; lifting them out is what lets the stash use
-    // the identical rules instead of a second, subtly different copy.
+    // SaveData.stockpiledItems is the one live inventory (pack, stash and the
+    // Reckoning's loot), and any other list of entries -- a shelf, a fight
+    // satchel -- has to follow the same rules, so they live here once rather
+    // than as a second, subtly different copy per list.
     //
     // The rule that actually matters: an entry whose count reaches zero is
     // removed, never left behind. "Absent" and "count 0" must not both be
