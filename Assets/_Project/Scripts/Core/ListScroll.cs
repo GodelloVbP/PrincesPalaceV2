@@ -64,7 +64,7 @@ namespace PrincesPalace
             // IDragHandler, so the drag bubbles here and a click still lands.
             if (Scrolled != null)
             {
-                Scrolled(-eventData.delta.y);
+                Scrolled(-RailScroll.CanvasUnits(this, eventData.delta.y));
                 return;
             }
 

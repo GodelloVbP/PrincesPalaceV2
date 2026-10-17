@@ -5,7 +5,7 @@ using UnityEngine.EventSystems;
 namespace PrincesPalace
 {
     // Wheel and drag over a horizontally scrolled rail, reported as a DELTA in
-    // canvas pixels.
+    // canvas units.
     //
     // A delta rather than a value, which is the whole difference between this
     // and BarSlider next door. That one maps a pointer POSITION onto 0..1 and
@@ -61,15 +61,24 @@ namespace PrincesPalace
 
         public void OnBeginDrag(PointerEventData eventData) => Grabbed?.Invoke();
 
-        // 1:1 against screen scale, so the node under the cursor stays under
-        // the cursor. eventData.delta is already in canvas pixels for a
-        // ScreenSpaceOverlay canvas, which is what every screen here uses.
+        // 1:1 against the canvas, so the node under the cursor stays under
+        // the cursor. eventData.delta is in screen pixels and the canvas
+        // scales with the window (CanvasScaler.ScaleWithScreenSize), so it is
+        // divided down to canvas units first.
         public void OnDrag(PointerEventData eventData)
         {
             if (Scrolled == null) return;
             if (Mathf.Approximately(eventData.delta.x, 0f)) return;
 
-            Scrolled(eventData.delta.x);
+            Scrolled(CanvasUnits(this, eventData.delta.x));
+        }
+
+        // Screen pixels to canvas units under the root canvas's current scale.
+        internal static float CanvasUnits(Component under, float screenPixels)
+        {
+            var canvas = under.GetComponentInParent<Canvas>();
+            float scale = canvas != null && canvas.rootCanvas.scaleFactor > 0f ? canvas.rootCanvas.scaleFactor : 1f;
+            return screenPixels / scale;
         }
 
         // One wheel notch moves a third of a pitch, so a scroll is a sweep

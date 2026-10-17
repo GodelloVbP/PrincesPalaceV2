@@ -80,6 +80,37 @@ namespace PrincesPalace.PlayModeTests
         // ---- the strip -------------------------------------------------------------------
 
         // seats are Front, Middle, Rear; the strip reads Rear, Middle, Front.
+        // eventData.delta is in screen pixels; the drag callbacks report canvas
+        // units, so a canvas scaled 2x moves the content half as far.
+        [Test]
+        public void ADragIsReportedInCanvasUnits_NotScreenPixels()
+        {
+            var root = new GameObject("DragCanvas", typeof(Canvas));
+            try
+            {
+                var canvas = root.GetComponent<Canvas>();
+                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                canvas.scaleFactor = 2f;
+
+                var rail = new GameObject("Rail", typeof(RectTransform), typeof(RailScroll));
+                rail.transform.SetParent(root.transform, false);
+                var list = new GameObject("List", typeof(RectTransform), typeof(ListScroll));
+                list.transform.SetParent(root.transform, false);
+
+                float railMoved = 0f, listMoved = 0f;
+                rail.GetComponent<RailScroll>().Scrolled = d => railMoved = d;
+                list.GetComponent<ListScroll>().Scrolled = d => listMoved = d;
+
+                var drag = new UnityEngine.EventSystems.PointerEventData(null) { delta = new Vector2(10f, 10f) };
+                rail.GetComponent<RailScroll>().OnDrag(drag);
+                list.GetComponent<ListScroll>().OnDrag(drag);
+
+                Assert.AreEqual(5f, railMoved, 0.0001f, "the rail moved by screen pixels, not canvas units");
+                Assert.AreEqual(-5f, listMoved, 0.0001f, "the list moved by screen pixels, not canvas units");
+            }
+            finally { Object.DestroyImmediate(root); }
+        }
+
         [UnityTest]
         public IEnumerator TheStripShowsTheSeatedPartyInStageOrder()
         {
