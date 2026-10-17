@@ -30,7 +30,7 @@ debt), and a struck finding gets its number removed.
 - Combat domain: #97, #105, #120, #124, #194, #210, #235, #264, #265, #266
 - Map: none open
 - Shop: #122, #191, #196, #197, #212, #244, #285
-- Events: #274, #275
+- Events: #274
 - Dossier / Party / Talents / Reward track / Reckoning: #44, #104, #141, #150, #178, #199, #214, #278
 - Menus / Options / Navigation & gamepad: #91, #142, #166, #167, #179, #223, #225, #227, #231, #234, #236, #242, #250, #251, #253, #257, #258, #259, #260, #261, #279
 - Save & run lifecycle: #87, #102, #220, #255, #281
@@ -2582,13 +2582,6 @@ merchant "pleasure doing business"), and "Walk on" ends at the plain farewell, s
 "Bring the owl back sometime" can't be reached after a second look. Option A: point
 Look again back at the Odette scene. Option B: leave it; the first look is the only
 Odette beat. `ContentData/events.json:1411` [C1-007].
-
-### 275. Does a bot run need to decide each node's event up front like the screen does?
-The screen previews every map card, which reserves events so no two rooms share one.
-A bot run that never previews decides at arrival, so the same seed can field different
-events and bot event stats may not match what a player sees. Option A: bot previews
-per node at leg start. Option B: accept the difference. `RunOrchestrator.Event.cs:167,218`
-[S24-010].
 
 ### 278. Dossier and Party screens: what resets when you reopen them?
 (a) Dossier Skills list reopens scrolled where you left it; the pack resets to the top.

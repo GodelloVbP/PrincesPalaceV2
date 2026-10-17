@@ -219,6 +219,23 @@ namespace PrincesPalace
             return FindEvent(DecideEvent(save, run, run.legStartStep + node.Offset, node.Id))?.StartPage?.Title ?? "";
         }
 
+        // THE BOT'S LEG-START DECISION: every event room of the open realm is
+        // decided now, in map order, through PreviewEventTitle -- the seam the
+        // map card preview uses -- so the bot meets the events a player's map
+        // reserves and no two rooms share one. Idempotent: a decided room keeps
+        // its pick.
+        public static void ReserveLegEvents()
+        {
+            var run = RunManager.Run;
+            var map = RunManager.Map;
+            if (run == null || map == null) return;
+
+            foreach (var node in map.Nodes)
+            {
+                if (node.Type == RoomType.Event) PreviewEventTitle(run, node);
+            }
+        }
+
         // The cache event's id (events.json). It sits on floor 999 so the
         // ordinary roll never draws it; a Cache room opens it by name.
         public const string CacheEventId = "the_cache";
