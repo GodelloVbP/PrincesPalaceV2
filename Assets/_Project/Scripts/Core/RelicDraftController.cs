@@ -6,6 +6,7 @@ using UnityEngine.UI;
 using PrincesPalace.Content;
 using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Progression;
+using PrincesPalace.Domain.UiKit;
 using PrincesPalace.Domain.Relics;
 using PrincesPalace.Domain.UiKit;
 
@@ -95,7 +96,7 @@ namespace PrincesPalace
 
         // The run's seed, held so a later round can re-roll from it. The ROUND
         // is not held -- it is derived from run.relicIds.Count, so it survives
-        // a reload; see Roll().
+        // a reload; see RunOrchestrator.RelicDraftOffer.
         private ulong _seed;
 
         // Which page of the offer is on screen. Never non-zero today -- see
@@ -158,22 +159,14 @@ namespace PrincesPalace
             _selected = -1;
             _page = 0;
             _offer.Clear();
-            _offer.AddRange(Roll(seed));
+            _offer.AddRange(RunOrchestrator.RelicDraftOffer(seed));
 
             Paint();
         }
 
-        // What the CURRENT round offers -- RunOrchestrator.RelicDraftOffer,
-        // where the roll moved so the bot drafts from the same pool with the
-        // same weighting (docs/PLAN_BALANCE_BOT.md F2). Everything about WHY
-        // the seed is offset by the round travelled with it.
-        private IEnumerable<RelicOption> Roll(ulong seed) =>
-            RunOrchestrator.RelicDraftOffer(seed);
-
         // How many pages the current offer needs. At least one, so an empty
         // pool still reads as a page rather than dividing by zero.
-        private int PageCount =>
-            _offer.Count == 0 ? 1 : (_offer.Count + cards.Length - 1) / cards.Length;
+        private int PageCount => Paging.PageCount(_offer.Count, cards.Length);
 
         // The offer index that card `cardIndex` is currently showing.
         private int AbsoluteIndex(int cardIndex) => _page * cards.Length + cardIndex;
@@ -375,7 +368,7 @@ namespace PrincesPalace
                 _selected = -1;
                 _page = 0;
                 _offer.Clear();
-                _offer.AddRange(Roll(_seed));
+                _offer.AddRange(RunOrchestrator.RelicDraftOffer(_seed));
 
                 if (_offer.Count > 0)
                 {
