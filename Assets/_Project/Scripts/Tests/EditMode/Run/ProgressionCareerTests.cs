@@ -30,11 +30,6 @@ namespace PrincesPalace.Domain.Tests
     //   death, 1,221 for leg 3, 2,642 for leg 5, 10,153 for a full deep run,
     //   all from xp_model.md Part B at 25 permille. The random version, with
     //   its spread, is ProgressionEncounterRangeTests.
-    //
-    // THREE OF THE PLAN'S OWN NUMBERS DO NOT COME OUT. They are kept below as
-    // ignored tests carrying the plan's literal, beside the passing test
-    // carrying the computed one, so the disagreement is in the file rather
-    // than in a report nobody re-reads. Each says which it believes and why.
     public class ProgressionCareerTests
     {
         // ---- the inputs, from the plan ---------------------------------------
@@ -132,33 +127,15 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(remainder, gotExp, $"remainder after run {runs}");
         }
 
-        // RUN 2 IS THE ONE ROW THAT DISAGREES, and the level is not the part
-        // that does -- see the ignored test below for the plan's own figure.
-        // 1,931 total, less the 1,610 that levels 2 to 8 cost (75 + 85 + 150 +
-        // 250 + 300 + 350 + 400), is 321.
+        // RUN 2: 1,931 total, less the 1,610 that levels 2 to 8 cost
+        // (75 + 85 + 150 + 250 + 300 + 350 + 400), is 321.
         [Test]
-        public void AfterTwoRunsTheRemainderIs321Not246()
+        public void AfterTwoRunsTheRemainderIs321()
         {
             var (level, exp) = After(Career(2));
 
             Assert.AreEqual(8, level);
             Assert.AreEqual(321, exp);
-        }
-
-        [Ignore("PLAN DISAGREES WITH ITS OWN COST TABLE. PLAN_PROGRESSION_V2.md section 3 gives run 2 as " +
-                "'level 8, 246 of 450'. The level is right and the remainder is not: 710 + 1,221 = 1,931, " +
-                "and levels 2-8 cost 75+85+150+250+300+350+400 = 1,610, leaving 321. 246 would need a " +
-                "cumulative cost of 1,685, which is 75 more than the table in the same section adds up to -- " +
-                "the level-2 row, counted twice or the sum started one row late. Every other row of that " +
-                "table reproduces exactly. Owner's call whether the table or the row is wrong; the passing " +
-                "pin beside this one asserts 321.")]
-        [Test]
-        public void ThePlansRunTwoRemainderOf246()
-        {
-            var (level, exp) = After(Career(2));
-
-            Assert.AreEqual(8, level);
-            Assert.AreEqual(246, exp);
         }
 
         // The end of the ladder. 217,786 against a cumulative 215,760, so the
@@ -233,27 +210,13 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(14, After(KnockoutCareer(4)).Level);
         }
 
-        // LEVEL 30 LANDS ON RUN 17, NOT 15. See the ignored test below.
+        // LEVEL 30 LANDS ON RUN 17.
         [Test]
         public void KnockedOutAtEveryBossReachesLevelThirtyOnRunSeventeen()
         {
             Assert.AreEqual(28, After(KnockoutCareer(15)).Level, "run 15");
             Assert.AreEqual(29, After(KnockoutCareer(16)).Level, "run 16");
             Assert.AreEqual(30, After(KnockoutCareer(17)).Level, "run 17");
-        }
-
-        [Ignore("PLAN DISAGREES. PLAN_PROGRESSION_V2.md section 3 says the knockout trajectory 'reaches " +
-                "level 30 on run 15'. It reaches 28 there and 30 on run 17. The plan's own leg-2 figure " +
-                "for this trajectory (562) does not reproduce either -- it comes out 576, and 562 is not " +
-                "reachable by rounding the halves either way -- so the paragraph looks computed against a " +
-                "boss table other than the one in xp_model.md. The standing career and the stuck-player " +
-                "trajectory in the same section both reproduce exactly, so this is that one paragraph " +
-                "rather than the model. Owner's call; the passing pins beside this assert 28/29/30 on runs " +
-                "15/16/17 and a leg-2 total of 576.")]
-        [Test]
-        public void ThePlansKnockoutLevelThirtyOnRunFifteen()
-        {
-            Assert.AreEqual(30, After(KnockoutCareer(15)).Level);
         }
 
         // ---- the stuck player ---------------------------------------------------
