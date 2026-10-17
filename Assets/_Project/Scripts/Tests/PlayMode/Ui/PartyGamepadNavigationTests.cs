@@ -499,6 +499,36 @@ namespace PrincesPalace.PlayModeTests
             StringAssert.StartsWith("PartyCard", focused.name, "Down from a seat should reach the roster's cards");
         }
 
+        // A roster shorter than the card count hides the spare cards; Down from
+        // every seat clamps to the last card that exists (AUDIT #278c).
+        [UnityTest]
+        public IEnumerator Down_FromAnySeat_WithAShortRoster_LandsOnAShownCard()
+        {
+            yield return OpenTheParty();
+
+            var save = SaveSlotManager.CurrentSave;
+            save.roster.RemoveAll(c => c.definitionId == "bear");
+            save.selectedCharacterIds = new List<string> { "owl" };
+            _party.Refresh();
+            yield return null;
+
+            for (int seat = 0; seat < PartySeat.Count; seat++)
+            {
+                Select(Seat(seat));
+                yield return null;
+
+                _input.Vertical = -1f;
+                yield return DriveFrame();
+                _input.Vertical = 0f;
+
+                var focused = EventSystem.current.currentSelectedGameObject;
+                Assert.IsNotNull(focused, $"seat {seat}: Down cleared focus");
+                StringAssert.StartsWith("PartyCard", focused.name, $"seat {seat}");
+                int card = int.Parse(focused.name.Substring("PartyCard".Length, 1));
+                Assert.Less(card, save.roster.Count, $"seat {seat}: Down landed on {focused.name}, a card with nobody on it");
+            }
+        }
+
         [UnityTest]
         public IEnumerator CarryingFromTheRoster_OnlyCancelIsReachable_NotBench()
         {

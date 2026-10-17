@@ -31,7 +31,7 @@ debt), and a struck finding gets its number removed.
 - Map: none open
 - Shop: #122, #191, #196, #197, #212, #244, #285
 - Events: #274
-- Dossier / Party / Talents / Reward track / Reckoning: #44, #104, #141, #150, #178, #199, #214, #278
+- Dossier / Party / Talents / Reward track / Reckoning: #44, #104, #141, #150, #178, #199, #214
 - Menus / Options / Navigation & gamepad: #91, #142, #166, #167, #179, #223, #225, #227, #231, #234, #236, #242, #250, #251, #253, #257, #258, #259, #260, #261, #279
 - Save & run lifecycle: #87, #102, #220, #255, #281
 - Content pipeline & data: #86, #121, #125, #128, #131, #134, #135, #145, #198, #256, #262, #286
@@ -2582,16 +2582,6 @@ merchant "pleasure doing business"), and "Walk on" ends at the plain farewell, s
 "Bring the owl back sometime" can't be reached after a second look. Option A: point
 Look again back at the Odette scene. Option B: leave it; the first look is the only
 Odette beat. `ContentData/events.json:1411` [C1-007].
-
-### 278. Dossier and Party screens: what resets when you reopen them?
-(a) Dossier Skills list reopens scrolled where you left it; the pack resets to the top.
-Reset it too, or keep the scroll? `CharacterDossierController.cs:449` [S01-002].
-(b) Character rows keep their old order across closes, even after a level-up or gear
-change should re-sort them. Re-sort each visit, or freeze for the whole session?
-`CharacterDossierController.Sections.cs:97` [S01-003]. (c) Party gamepad Down from a seat
-can land on a hidden card when the roster is shorter than the card count (latent, roster
-normally equals card count). Clamp to the roster? `PartyController.cs:461,515-529`
-[S09-001].
 
 ### 279. Pane layout: re-base Glossary, Dossier and Run on the shared pane size?
 `SystemMenuLayout` says all panes lay out against `PaneContentHalf*` (744 x 357.78);

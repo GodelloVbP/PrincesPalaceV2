@@ -9,6 +9,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 using PrincesPalace.Content;
+using PrincesPalace.Domain.Stats;
 using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace.PlayModeTests
@@ -206,6 +207,63 @@ namespace PrincesPalace.PlayModeTests
             var root = Rect("CharacterDossier");
             Assert.AreEqual(SystemMenuLayout.PanelWidth, root.rect.width, 1f);
             Assert.AreEqual(SystemMenuLayout.ContentHeight, root.rect.height, 1f);
+        }
+
+
+        // ---- REOPENING (AUDIT #278a, #278b) ---------------------------------------------------
+
+        // The Skills list opens at its head each visit, like the pack, even when
+        // Skills was the section left open.
+        [UnityTest]
+        public IEnumerator TheSkillsListReopensAtItsHead()
+        {
+            yield return OpenTheCharacterTab("sheep", "bear", "owl");
+
+            var character = Fresh("bear");
+            character.level = 40;
+            character.claimedTrackLevel = 40;
+            foreach (var talent in ContentDatabase.Talents) character.unlockedTalentIds.Add(talent.id);
+
+            _dossier.SelectCharacter("bear");
+            DossierPane.Press(DossierPane.SectionRow(CharacterSection.Skills));
+            _dossier.Refresh();
+            yield return null;
+
+            _dossier.ScrollSkills(1);
+            Assert.AreEqual(1, _dossier.SkillsTop, "fixture: the list did not scroll");
+
+            _menu.Close();
+            _menu.Open(SystemMenuTab.Character);
+            yield return null;
+
+            Assert.AreEqual(CharacterSection.Skills, _dossier.Section, "fixture: the section memory moved");
+            Assert.AreEqual(0, _dossier.SkillsTop, "the Skills list reopened where it was left");
+        }
+
+        // The attribute rows sort by score each visit: a score raised while the
+        // pane was closed leads the list on reopening.
+        [UnityTest]
+        public IEnumerator TheAttributeRowsResortOnEachVisit()
+        {
+            yield return OpenTheCharacterTab("sheep", "bear", "owl");
+
+            var character = Fresh("sheep");
+            _dossier.SelectCharacter("sheep");
+            DossierPane.Press(DossierPane.SectionRow(CharacterSection.Attributes));
+            _dossier.Refresh();
+            yield return null;
+
+            string lastName = Rect($"DossierAttrName{SheetStats.Abilities.Length - 1}").GetComponent<TMP_Text>().text;
+            var lowest = AbilityScores.All.First(s => AbilityScores.ShortName(s) == lastName);
+            Assert.AreNotEqual(lastName, Rect("DossierAttrName0").GetComponent<TMP_Text>().text, "fixture: one score leads and trails");
+
+            _menu.Close();
+            character.investedAbilityScores = character.investedAbilityScores.With(lowest, 100);
+            _menu.Open(SystemMenuTab.Character);
+            yield return null;
+
+            Assert.AreEqual(lastName, Rect("DossierAttrName0").GetComponent<TMP_Text>().text,
+                "the raised score kept its old row on reopening");
         }
 
         // ---- SKILLS ------------------------------------------------------------------------

@@ -105,9 +105,15 @@ namespace PrincesPalace
             Wire();
 
             // The pack's view is per visit: a filter or scroll left from the
-            // last opening would hide gear that has landed since.
+            // last opening would hide gear that has landed since. The Skills
+            // list opens at its head for the same reason, and the attribute
+            // rows re-sort by score (they hold their order only while a visit
+            // spends points, so the row under the cursor does not jump).
             _filter = PackFilter.All;
             _scrollRow = 0;
+            _skillsTop = 0;
+            _skillsFocus = -1;
+            _rowOrder.Clear();
             Refresh();
 
             // The section the player last used here (plan C7).

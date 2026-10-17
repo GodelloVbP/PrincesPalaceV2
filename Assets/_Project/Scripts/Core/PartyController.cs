@@ -445,7 +445,7 @@ namespace PrincesPalace
             // A hidden roster is not a group and has no cross links: Down from a
             // seat has nowhere to go, rather than into cards nobody can see.
             bool rosterShown = rosterSection != null && rosterSection.activeSelf;
-            var cards = rosterShown ? (IEnumerable<Selectable>)cardButtons : new Selectable[0];
+            var cards = rosterShown ? ShownCards() : new List<Selectable>();
 
             var allLinks = new List<UiNavLink<Selectable>?>(rosterShown ? CrossLinks() : new UiNavLink<Selectable>?[0]);
             if (links.Count > 0)
@@ -496,9 +496,21 @@ namespace PrincesPalace
             return -1;
         }
 
+        // The cards with a character on them: a roster shorter than the card
+        // array leaves the spare buttons live but empty (HideCard), and focus
+        // must not land there.
+        private List<Selectable> ShownCards()
+        {
+            var shown = new List<Selectable>();
+            int count = Mathf.Min(cardButtons?.Length ?? 0, _rosterIds.Count);
+            for (int i = 0; i < count; i++) shown.Add(cardButtons[i]);
+            return shown;
+        }
+
         private IEnumerable<UiNavLink<Selectable>?> CrossLinks()
         {
-            int cards = cardButtons?.Length ?? 0;
+            var shown = ShownCards();
+            int cards = shown.Count;
             if (seatButtons == null || seatButtons.Length == 0 || cards == 0) yield break;
 
             for (int column = 0; column < PartySeat.Count; column++)
@@ -507,13 +519,13 @@ namespace PrincesPalace
                 if (seat == null) continue;
 
                 yield return RuntimeNavWiring.Link(
-                    seat, UiNavDirection.Down, cardButtons[Mathf.Min(column, cards - 1)]);
+                    seat, UiNavDirection.Down, shown[Mathf.Min(column, cards - 1)]);
             }
 
             for (int j = 0; j < cards; j++)
             {
                 var seat = At(seatButtons, SeatAtColumn(Mathf.Min(j, PartySeat.Count - 1)));
-                yield return RuntimeNavWiring.Link(cardButtons[j], UiNavDirection.Up, seat);
+                yield return RuntimeNavWiring.Link(shown[j], UiNavDirection.Up, seat);
             }
         }
 
