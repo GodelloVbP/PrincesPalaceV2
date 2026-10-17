@@ -69,7 +69,7 @@ namespace PrincesPalace
         // ColorUtility's own magenta.
         private static readonly Color PhysicalFallback = new Color(0.93f, 0.26f, 0.24f, 1f);
 
-        // PHASE D1: a dodge's own colour -- neither the alarm-red of damage
+        // A dodge's own colour -- neither the alarm-red of damage
         // nor the relief-green of a heal, because a miss is neither. Pale
         // and cool on purpose so "Miss" reads as a DIFFERENT kind of news
         // from a number, not a quiet or a loud version of the same one --
@@ -110,10 +110,10 @@ namespace PrincesPalace
         // ATTACK's element and a heal is never elemental, so reading it here
         // would tint a heal by whatever the healer's basic attack happens to
         // be.
-        // No default on damageType any more: lifeSeconds has none either
-        // (there is no honest default for a scaled duration), and a
-        // parameter after one without a default cannot itself carry one.
-        // FightBeatPlayer.PopNumber, the only call site, always passes both.
+        // damageType has no default: lifeSeconds has none either (a scaled
+        // duration has no sensible default), and a parameter after one
+        // without a default cannot itself carry one. Callers
+        // (FightBeatPlayer.PopNumber, PopPackets) always pass both.
         //
         // `crit` restyles a damaging number (see CritColor); a heal never
         // crits, so it is ignored there rather than restyling a heal.
@@ -140,7 +140,7 @@ namespace PrincesPalace
                 ? parsed
                 : PhysicalFallback;
 
-        // PHASE D1: the dodge/miss reading -- "Miss" rather than a number, so
+        // The dodge/miss reading -- "Miss" rather than a number, so
         // a dodged attack cannot be mistaken for "0 damage from armour" (see
         // DamagePipeline.Outcome.IsMiss's own header on why those two must
         // never look like the same information to the player). Shares the
@@ -195,12 +195,11 @@ namespace PrincesPalace
 
         // Hands the popup back to the pool immediately, wherever it was.
         //
-        // THIS IS THE FIX for a leak v1 shipped: its equivalent had zero call
-        // sites, so a fight abandoned mid-playback (a scene change, a defeat, a
-        // player quitting to the hub) left every in-flight popup permanently
+        // A fight abandoned mid-playback (a scene change, a defeat, a player
+        // quitting to the hub) must call this, or every in-flight popup stays
         // un-free. The pool is six deep and never refilled, so a few abandoned
-        // fights in one session and the next fight showed no numbers at all --
-        // with nothing in the log to say why.
+        // fights in one session would leave the next fight with no numbers at
+        // all and nothing in the log to say why.
         public void Reclaim()
         {
             if (_running != null)
