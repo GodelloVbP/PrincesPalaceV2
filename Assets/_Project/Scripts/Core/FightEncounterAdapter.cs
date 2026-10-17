@@ -49,7 +49,7 @@ namespace PrincesPalace
 
         // ---- content -> Domain ------------------------------------------------
 
-        // A NO-OP: the asset now STORES the ResolvedEnemy, so there is
+        // A NO-OP: the asset stores the ResolvedEnemy, so there is
         // nothing here to convert or drop.
         public static ResolvedEnemy Resolve(EnemyDefinition definition) => definition.Data;
 
@@ -62,20 +62,6 @@ namespace PrincesPalace
         private const float EliteAttackMultiplier = 1.15f;
         private const float EliteDefenseMultiplier = 1.15f;
 
-        // DEPTH IS APPLIED HERE, and this is the only place it is applied.
-        //
-        // DifficultyCurve was written to scale enemies and then called by
-        // nothing but VictoryRewards, so every fight at every depth used the
-        // authored baseStats verbatim -- the "infinite corridor of trivial
-        // fights" that file exists to prevent is what shipped. This line is
-        // the fix; the curve itself only needed retuning.
-        //
-        // Health and attack take DIFFERENT rates because the player's own two
-        // axes grow at different speeds. See DifficultyCurve. A fight with a
-        // round limit is the exception, and it is decided in the curve, not
-        // here: its attack rides the health rate (DifficultyCurve.
-        // ScaleEnemyAttack), because a fixed-length fight does not grow
-        // longer with depth the way a room fight does.
         // An enemy's stats as this fight fields them, before depth: authored,
         // elite-scaled when the encounter is an elite.
         private static StatBlock FieldedStats(ResolvedEnemy enemy, bool isElite) =>
@@ -101,6 +87,16 @@ namespace PrincesPalace
             return new FighterBody(stats.maxHealth, ContentDatabase.EquippedWeaponPower(character) ?? stats.attack);
         }
 
+        // DEPTH IS APPLIED IN THE ENEMY PATHS (this method, EnemyBody and the
+        // summon closure), through DifficultyCurve.
+        //
+        // Health and attack take DIFFERENT rates because the player's own two
+        // axes grow at different speeds. See DifficultyCurve. A fight with a
+        // round limit is the exception, and it is decided in the curve, not
+        // here: its attack rides the health rate (DifficultyCurve.
+        // ScaleEnemyAttack), because a fixed-length fight does not grow
+        // longer with depth the way a room fight does.
+        //
         // atHeart: a boss room's anchor, fielded at its heart share of max HP
         // (HeartAnchors.HealthAtHeart).
         private static CombatantState ToCombatant(EnemyDefinition definition, int depthStep, bool isElite,
@@ -117,16 +113,15 @@ namespace PrincesPalace
             // every such skill unusable.
             //
             // NEUTRAL SCORES AND NO RELICS, passed explicitly: an enemy has
-            // never had a Wisdom term or a relic on its pool, and saying so
-            // in the arguments is what keeps that true now that the capacity
+            // no Wisdom term or relic on its pool, and saying so
+            // in the arguments is what keeps that true while the capacity
             // chain is shared with the two character paths.
             // Speed is NOT depth-scaled. It is a rate, feeding a scheduler that
             // clamps at 2.5x anyway, and the same reasoning AbilityDerivation
             // applies to the player's Dexterity applies to a monster: an enemy
             // at 40,000 Speed does not act more often, it acts always. (An
             // Elite's speed DOES ride the elite multiplier above, same as its
-            // health -- ScaledForElite's own main `multiplier` parameter,
-            // unchanged behaviour from before this phase.)
+            // health -- ScaledForElite's own main `multiplier` parameter.)
             //
             // MANA REGEN IS NOT IN THAT LIST: stats.manaRegen is never read
             // on this path at all, the call below passes manaRegen: 0
@@ -173,10 +168,7 @@ namespace PrincesPalace
                 var definition = ContentDatabase.Relics.FirstOrDefault(r => r != null && r.id == id);
                 if (definition == null) continue;
 
-                // Was a ten-argument copy out of RelicDefinition and back into
-                // a ResolvedRelic, with a second hand-written conversion
-                // (ToModifiers) for the modifier list. The asset stores the
-                // resolved value now.
+                // The asset stores the resolved value; no conversion is needed.
                 resolved.Add(definition.Data);
             }
 
@@ -260,24 +252,23 @@ namespace PrincesPalace
 
             state.AbilityScores = scores;
 
-            // Never assigned anywhere in the real adapter path before this --
-            // see ContentDatabase.EffectiveWeaponScaling's own header. Without
-            // it every real fight built combatants with ScalingSet.None
-            // regardless of what was equipped, so a weapon's own ATK grade and
-            // a spell tier's INT/WIS grade never touched real damage at all.
+            // See ContentDatabase.EffectiveWeaponScaling's own header. Without
+            // these two lines every real fight would build combatants with
+            // ScalingSet.None regardless of what was equipped, so a weapon's
+            // own ATK grade and a spell tier's INT/WIS grade would never touch
+            // real damage.
             state.WeaponScaling = ContentDatabase.EffectiveWeaponScaling(character);
             state.SkillScaling = ContentDatabase.EffectiveSkillScaling(character);
 
-            // Set by neither path before this. A resistance rolled onto a
-            // breastplate was written to the save, shown on the sheet, folded
-            // into EffectiveStats -- and then dropped on the way into the one
+            // Without this, a resistance rolled onto a breastplate would be
+            // written to the save, shown on the sheet, folded into
+            // EffectiveStats -- and then dropped on the way into the one
             // system it exists for.
             //
-            // EffectStat.Defence APPLIES TO BOTH broad Defenses now -- there is
-            // no longer one generic Defense stat for a relic modifier to name,
-            // so "Defence" reads as "both of them", exactly the reading
-            // whetstone_heart's -10% needs to keep meaning what it always
-            // meant.
+            // EffectStat.Defence APPLIES TO BOTH broad Defenses -- there is
+            // no one generic Defense stat for a relic modifier to name,
+            // so "Defence" reads as "both of them", the reading
+            // whetstone_heart's -10% needs.
             state.PhysicalDefense = EffectFold.Apply(stats.physicalDefense, EffectStat.Defence, effects);
             state.MagicalDefense = EffectFold.Apply(stats.magicalDefense, EffectStat.Defence, effects);
 
@@ -292,8 +283,7 @@ namespace PrincesPalace
             state.TypedResistance = EffectFold.ApplyResistance(state.TypedResistance, effects);
 
             // Built from the CHARACTER, so a signature whose capacity a talent
-            // widened arrives at that width. Its single call site until now was
-            // its own definition.
+            // widened arrives at that width.
             state.SignaturePool = ContentDatabase.BuildSignatureResource(character);
 
             state.Effects = effects;
@@ -455,11 +445,9 @@ namespace PrincesPalace
             // THE RUN'S RELICS, resolved once and given to the whole party.
             //
             // Party-wide rather than per-character because a relic is drafted
-            // for the DESCENT, not for a person -- see RelicDraftScreen. Until
-            // this existed, KitFor passed null and no relic had ever fired in
-            // an actual fight: the three effects were implemented in
-            // FightSession, covered by Domain tests that hand-build their own
-            // kits, and unreachable from play.
+            // for the DESCENT, not for a person -- see RelicDraftScreen. The
+            // three relic effects live in FightSession and are reachable
+            // from play only through the relics passed to KitFor here.
             var relics = ResolveRelics(relicIds);
 
             foreach (string id in partyIds ?? new List<string>())
@@ -738,9 +726,9 @@ namespace PrincesPalace
         private static PlayerKit KitFor(Character character, CharacterDefinition definition,
                                         IReadOnlyList<ResolvedRelic> relics)
         {
-            // PHASE 3: SpellCostDelta/SkillCostDelta/SkillFlatDelta applied
+            // SpellCostDelta/SkillCostDelta/SkillFlatDelta are applied
             // ONCE HERE, at kit-build time -- the same "the kit is built once
-            // per fight" seam already
+            // per fight" seam
             // establishes for AvailableSkillsFor itself. Every later reader
             // of a kit skill (affordability, the charge, the HUD's cost
             // label) sees the same already-discounted ResolvedSkill, so
@@ -767,11 +755,11 @@ namespace PrincesPalace
         // THROUGH ContentDatabase, not a private re-walk of SpellTiers: the
         // in-run overload above uses EffectiveSkillPowerMultiplier, which is
         // ability-score-aware (a tier's `requirements` can gate it, same as
-        // AvailableSkillsFor's own level gate). A first cut of this method
-        // re-implemented the tier lookup locally, level-only, with no scores
-        // parameter -- silently correct today only because no authored tier
-        // carries a non-zero requirement yet, and a live divergence from
-        // every other Effective* consumer the moment one does. This overload
+        // AvailableSkillsFor's own level gate). A local level-only tier
+        // lookup with no scores parameter would be silently correct only
+        // while no authored tier carries a non-zero requirement, and a
+        // divergence from every other Effective* consumer the moment one
+        // does. This overload
         // has no Character to ask (see its own header: "no run to ask"), so
         // it falls back to the level-only GetSpellTierForLevel instead --
         // still one canonical lookup, not a second one.
