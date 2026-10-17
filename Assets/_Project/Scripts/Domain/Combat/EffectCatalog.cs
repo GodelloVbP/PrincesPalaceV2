@@ -28,7 +28,7 @@ namespace PrincesPalace.Domain.Combat
         Relic = 1,
         Affix = 2,
 
-        // The reward track's elemental terms (ContentDatabase.Effects).
+        // The reward track's elemental terms (ContentDatabase.CharacterEffects).
         Track = 4,
 
         // An unlocked talent node (ContentDatabase.TalentEffects).
