@@ -50,19 +50,22 @@ def scrim_layers():
 
     keys = dict(re.findall(r'Scrim(\w+)Key\s*=\s*"proc:(\w+)"', source))
 
+    # A layer is either Fixed(w, h) or FillWidth(h), which spans the canvas.
     pattern = re.compile(
         r'Ui\.Sprite\("Scrim(\w+)",\s*Scrim\w+Key,\s*Place\.At\(\s*(-?[\d.]+)f\s*,\s*(-?[\d.]+)f\s*\),'
-        r'\s*UiSize\.Fixed\(\s*(-?[\d.]+)f\s*,\s*(-?[\d.]+)f\s*\)', re.S)
+        r'\s*UiSize\.(?:Fixed\(\s*(-?[\d.]+)f\s*,\s*(-?[\d.]+)f\s*\)|FillWidth\(\s*(-?[\d.]+)f\s*\))', re.S)
 
     layers = []
-    for name, x, y, w, h in pattern.findall(source):
+    for name, x, y, w, h, fill_h in pattern.findall(source):
         if name not in colours or name not in keys:
             sys.exit(f"scrim layer '{name}' has no matching colour or key constant")
         hexa = colours[name]
         layers.append({
             "name": name,
             "sprite": keys[name],
-            "x": float(x), "y": float(y), "w": float(w), "h": float(h),
+            "x": float(x), "y": float(y),
+            "w": float(w) if w else CANVAS_W,
+            "h": float(h or fill_h),
             "rgb": (int(hexa[0:2], 16), int(hexa[2:4], 16), int(hexa[4:6], 16)),
             "alpha": int(hexa[6:8], 16) / 255.0,
         })

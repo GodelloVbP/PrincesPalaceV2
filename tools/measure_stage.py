@@ -93,13 +93,10 @@ def constants():
                           - (c["plate_columns"] * c["plate_w"]
                              + (c["plate_columns"] - 1) * c["plate_gap"])
                           + c["plate_w"] / 2.0)
-    c["verb_x"] = grab(f, r"VerbColumnX\s*=\s*(-?[\d.]+)f", "VerbColumnX")
-    # READ FROM FightSubmenuLayout, which is where the literals live --
-    # FightScreen's own VerbRowW/VerbRowH are forwards onto these two, and a
-    # regex looking for a number found a symbol name and gave up.
-    c["verb_w"] = grab(m, r"VerbRowW\s*=\s*(-?[\d.]+)f", "VerbRowW")
+    # The verb literals live in FightSubmenuLayout; FightScreen's own
+    # VerbRowH/VerbPitch are forwards onto them, which a number regex cannot read.
     c["verb_h"] = grab(m, r"VerbRowH\s*=\s*(-?[\d.]+)f", "VerbRowH")
-    c["verb_pitch"] = grab(f, r"VerbPitch\s*=\s*(-?[\d.]+)f", "VerbPitch")
+    c["verb_pitch"] = grab(m, r"VerbPitch\s*=\s*(-?[\d.]+)f", "VerbPitch")
 
     c["command_bottom"] = grab(m, r"CommandBottom\s*=\s*(-?[\d.]+)f", "CommandBottom")
 
