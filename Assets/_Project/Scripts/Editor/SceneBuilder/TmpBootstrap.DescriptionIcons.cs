@@ -22,6 +22,9 @@ using UnityEngine.TextCore;
 public static partial class TmpBootstrap
 {
     private const string DescriptionIconsDir = "Assets/_Project/Resources/Icons/DescriptionIcons";
+    // Loaded by path: Shader.Find returns null in a batch-mode build (see
+    // PipelineBuilder.BuildSilhouetteMaterial).
+    private const string SpriteShaderPath = "Assets/TextMesh Pro/Shaders/TMP_Sprite.shader";
     private const string DescriptionIconSourceDir = "Assets/_Project/Resources/Icons/Ability";
     private const int DescriptionIconCell = 64;
     private const int DescriptionIconGutter = 4;
@@ -120,7 +123,7 @@ public static partial class TmpBootstrap
 
         if (asset.material == null)
         {
-            var material = new Material(Shader.Find("TextMeshPro/Sprite")) { name = asset.name + " Material" };
+            var material = new Material(AssetDatabase.LoadAssetAtPath<Shader>(SpriteShaderPath)) { name = asset.name + " Material" };
             asset.material = material;
             AssetDatabase.AddObjectToAsset(material, asset);
         }
