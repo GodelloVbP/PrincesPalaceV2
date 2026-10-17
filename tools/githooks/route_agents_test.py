@@ -163,6 +163,20 @@ class DeniesUnroutedSubagentTypesTests(unittest.TestCase):
         self.assertDenied({"subagent_type": "Fixer"})
 
 
+def run_main(payload_text):
+    """Feed one payload to main() the way the hook is invoked; return (exit code, stdout)."""
+    import io
+
+    stdin, stdout = sys.stdin, sys.stdout
+    sys.stdin = io.StringIO(payload_text)
+    sys.stdout = io.StringIO()
+    try:
+        code = route_agents.main()
+        return code, sys.stdout.getvalue()
+    finally:
+        sys.stdin, sys.stdout = stdin, stdout
+
+
 class FailsClosedOnAMalformedAgentCallTests(unittest.TestCase):
     """Once tool_name is known to be Agent, a missing or malformed
     tool_input is not treated as garbage to wave through -- it is a real
@@ -170,7 +184,7 @@ class FailsClosedOnAMalformedAgentCallTests(unittest.TestCase):
     as any other unrouted call."""
 
     def test_missing_tool_input_on_an_agent_call(self):
-        code, out = PayloadHandlingTests().run_main(json.dumps({"tool_name": "Agent"}))
+        code, out = run_main(json.dumps({"tool_name": "Agent"}))
         self.assertEqual(0, code)
         self.assertEqual(
             "deny",
@@ -178,7 +192,7 @@ class FailsClosedOnAMalformedAgentCallTests(unittest.TestCase):
         )
 
     def test_non_object_tool_input_on_an_agent_call(self):
-        code, out = PayloadHandlingTests().run_main(
+        code, out = run_main(
             json.dumps({"tool_name": "Agent", "tool_input": "not an object"})
         )
         self.assertEqual(0, code)
@@ -186,6 +200,13 @@ class FailsClosedOnAMalformedAgentCallTests(unittest.TestCase):
             "deny",
             json.loads(out)["hookSpecificOutput"]["permissionDecision"],
         )
+
+
+class NonStringModelTests(unittest.TestCase):
+    def test_a_non_string_model_is_denied_not_a_crash(self):
+        for model in (5, ["opus"], {"a": 1}, True):
+            reason = decision("Agent", {"subagent_type": "implementer", "model": model})
+            self.assertIsNotNone(reason, repr(model))
 
 
 class DeniesModelOverridesOnRoutedAgentsTests(unittest.TestCase):
@@ -267,20 +288,8 @@ class PayloadHandlingTests(unittest.TestCase):
     call, matching deny_broad_staging.py's posture: bad input is allowed
     through silently rather than raising."""
 
-    def run_main(self, payload_text):
-        import io
-
-        stdin, stdout = sys.stdin, sys.stdout
-        sys.stdin = io.StringIO(payload_text)
-        sys.stdout = io.StringIO()
-        try:
-            code = route_agents.main()
-            return code, sys.stdout.getvalue()
-        finally:
-            sys.stdin, sys.stdout = stdin, stdout
-
     def test_a_denial_is_a_deny_decision_on_stdout(self):
-        code, out = self.run_main(json.dumps({"tool_name": "Workflow", "tool_input": {}}))
+        code, out = run_main(json.dumps({"tool_name": "Workflow", "tool_input": {}}))
 
         self.assertEqual(0, code)
         self.assertEqual(
@@ -289,7 +298,7 @@ class PayloadHandlingTests(unittest.TestCase):
         )
 
     def test_silence_for_a_routed_agent_call(self):
-        code, out = self.run_main(
+        code, out = run_main(
             json.dumps({"tool_name": "Agent", "tool_input": {"subagent_type": "reader"}})
         )
 
@@ -305,7 +314,7 @@ class PayloadHandlingTests(unittest.TestCase):
             json.dumps(None),
             json.dumps([1, 2, 3]),
         ):
-            code, out = self.run_main(payload)
+            code, out = run_main(payload)
             self.assertEqual(0, code, "payload should not crash main(): " + repr(payload))
             self.assertEqual("", out, "malformed input should be allowed through silently: " + repr(payload))
 

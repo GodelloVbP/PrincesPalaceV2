@@ -5,8 +5,8 @@
 #
 # Runtime is a few milliseconds for the first two: one `git ls-files` and one
 # awk pass for the pairing check, plus one grep per staged .ps1. The third
-# only fires when Domain/ or the EditMode tests are staged, and costs ~2s warm
-# (a `dotnet build`, not a test run). The fourth only fires when a .cs file is
+# only fires when Domain/, tools/domain-tests or the EditMode tests are staged,
+# and costs ~2s warm (a `dotnet build`, not a test run). The fourth only fires when a .cs file is
 # staged and is one diff plus a small Python pass. None of this runs tests -
 # the test gate stays `tools/run_tests_parallel.ps1`, deliberately, because a
 # 4-minute pre-commit hook is a hook people learn to bypass.
@@ -110,7 +110,7 @@ fi
 # worst kind of failure to debug, because the error names the wrong place.
 #
 # Comment lines are exempt: a dash in a `#` line never reaches the parser as
-# string content, and run_tests_parallel.ps1 has seven such lines today. A
+# string content. A
 # trailing comment on a code line is still flagged, which is conservative on
 # purpose - distinguishing a comment `#` from one inside a string needs a real
 # parser, and being wrong in the permissive direction is what this check exists
@@ -119,8 +119,10 @@ fi
 
 git diff --cached --name-only --diff-filter=ACMR -- '*.ps1' > "$TMPDIR_HOOK/ps1"
 while IFS= read -r f; do
-    [ -n "$f" ] && [ -f "$f" ] || continue
-    hits=$(LC_ALL=C grep -n "[^ -~$TAB]" "$f" | grep -v "^[0-9]*:[[:space:]]*#")
+    [ -n "$f" ] || continue
+    # The staged blob, not the working copy: `git add -p` can stage an ASCII
+    # hunk of a file whose worktree has non-ASCII elsewhere, and the reverse.
+    hits=$(git show ":$f" | LC_ALL=C grep -n "[^ -~$TAB]" | grep -v "^[0-9]*:[[:space:]]*#")
     if [ -n "$hits" ]; then
         fail "pre-commit: non-ASCII outside a comment in $f"
         fail ""

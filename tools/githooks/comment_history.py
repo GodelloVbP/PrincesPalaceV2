@@ -4,7 +4,7 @@
 Reads a unified diff on stdin (the pre-commit hook feeds it
 `git diff --cached -U0 -- '*.cs'`) and looks only at ADDED lines - lines
 whose diff marker is a single leading '+' ('+++' file headers do not
-count. An existing comment is never flagged, only a new one: history and
+count). An existing comment is never flagged, only a new one: history and
 dates belong in the commit message, not in code, and a line already in
 the tree passed that bar when it was added.
 
@@ -59,9 +59,19 @@ def find_violations(diff_text):
     """Yield (file, line_number, line_text) for each offending added line."""
     current_file = None
     new_lineno = None
+    # Lines left in the current hunk, from the @@ header. A `+++`/`---` line is
+    # a file header only outside a hunk; inside one it is an added or removed
+    # line whose content starts with `++` or `--`.
+    old_left = new_left = 0
 
     for raw in diff_text.splitlines():
-        if raw.startswith("+++ "):
+        in_hunk = old_left > 0 or new_left > 0
+
+        if raw.startswith("diff --git"):
+            old_left = new_left = 0
+            continue
+
+        if not in_hunk and raw.startswith("+++ "):
             path = raw[4:].strip()
             if path == "/dev/null":
                 current_file = None
@@ -72,12 +82,19 @@ def find_violations(diff_text):
         if raw.startswith("@@"):
             match = re.search(r"\+(\d+)", raw)
             new_lineno = int(match.group(1)) if match else None
+            counts = re.match(r"@@ -\d+(?:,(\d+))? \+\d+(?:,(\d+))? @@", raw)
+            if counts:
+                old_left = int(counts.group(1) if counts.group(1) is not None else 1)
+                new_left = int(counts.group(2) if counts.group(2) is not None else 1)
+            else:
+                old_left = new_left = 0
             continue
 
-        if raw.startswith("+++") or raw.startswith("---"):
+        if not in_hunk and raw.startswith("---"):
             continue
 
         if raw.startswith("+"):
+            new_left = max(0, new_left - 1)
             if new_lineno is None:
                 continue
             content = raw[1:]
@@ -88,8 +105,11 @@ def find_violations(diff_text):
                     yield (current_file, new_lineno, content)
             new_lineno += 1
         elif raw.startswith("-"):
+            old_left = max(0, old_left - 1)
             continue
         else:
+            old_left = max(0, old_left - 1)
+            new_left = max(0, new_left - 1)
             if new_lineno is not None:
                 new_lineno += 1
 

@@ -141,6 +141,13 @@ def check_agent(tool_input):
 
     model = tool_input.get("model")
     if model is not None and model != "":
+        if not isinstance(model, str):
+            return (
+                "model must be a string, got {}. Drop the model field and "
+                "let '{}' use its own pinned model.".format(
+                    type(model).__name__, subagent_type
+                )
+            )
         if "fable" in model.lower():
             return (
                 "Fable is not used on this project. "

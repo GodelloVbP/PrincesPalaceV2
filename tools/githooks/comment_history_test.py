@@ -49,9 +49,21 @@ class IgnoresWhatItShouldTests(unittest.TestCase):
         v = violations('@@ -1,0 +3 @@\n+    var s = "2026-09-28"; // fine\n')
         self.assertEqual([], v)
 
-    def test_a_double_slash_inside_a_string_before_the_real_comment(self):
+    def test_a_slash_pair_inside_a_string_is_not_a_comment(self):
         v = violations('@@ -1,0 +3 @@\n+    var s = "a // b 2026-01-01";\n')
         self.assertEqual([], v)
+
+    def test_an_added_line_starting_with_plus_plus_is_still_scanned(self):
+        v = violations("@@ -1,0 +3,2 @@\n+++count; // 2026-10-01 reason\n+x; // 2026-10-02 b\n")
+        self.assertEqual([3, 4], [x[1] for x in v])
+
+    def test_a_second_file_header_after_a_hunk_is_a_header(self):
+        diff = (
+            "diff --git a/A.cs b/A.cs\n--- a/A.cs\n+++ b/A.cs\n@@ -1,0 +1 @@\n+int a;\n"
+            "diff --git a/B.cs b/B.cs\n--- a/B.cs\n+++ b/B.cs\n@@ -1,0 +7 @@\n+// 2026-01-01 x\n"
+        )
+        v = list(comment_history.find_violations(diff))
+        self.assertEqual([("B.cs", 7)], [(x[0], x[1]) for x in v])
 
     def test_non_cs_hunks_are_ignored(self):
         v = violations("@@ -1,0 +5 @@\n+    // Changed on 2026-09-28 because it moved.\n", filename="Foo.txt")

@@ -78,6 +78,16 @@ COMMAND_PREFIXES = {
     "env", "nice", "time", "sudo", "command",
 }
 
+# Options of each wrapper that take a separate value, so `nice -n 10 git ...`
+# does not leave `10` standing where the program name should be.
+WRAPPER_VALUE_OPTIONS = {
+    "env": {"-u", "-C", "-S", "--unset", "--chdir", "--split-string"},
+    "nice": {"-n", "--adjustment"},
+    "sudo": {"-u", "-g", "-C", "-D", "-h", "-p", "-R", "-T", "-U", "-r", "-t"},
+    "time": {"-f", "-o", "--format", "--output"},
+    "command": set(),
+}
+
 ASSIGNMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 
 # Global options that take a separate value, so the subcommand is one token
@@ -137,15 +147,42 @@ def commands(command):
             yield segment
 
     lines = command.splitlines()
-    if len(lines) < 2:
-        return
+    if len(lines) >= 2:
+        for line in lines:
+            tokens = tokenise(line)
+            if tokens is None:
+                continue
+            for segment in segments(tokens):
+                yield segment
 
-    for line in lines:
-        tokens = tokenise(line)
-        if tokens is None:
-            continue
-        for segment in segments(tokens):
-            yield segment
+    # POSIX lexing eats a backslash in an unquoted word, so a PowerShell path
+    # like `Assets\_Project` loses its separators. Lex once more with them
+    # turned into slashes; the extra pass can only add refusals.
+    if "\\" in command:
+        tokens = tokenise(command.replace("\\", "/"))
+        if tokens is not None:
+            for segment in segments(tokens):
+                yield segment
+
+
+# `git commit` short options that take a value, attached or optional-attached
+# (-mfix, -Fmsg.txt, -uno). Letters after one are its value, not more flags.
+COMMIT_VALUE_FLAGS = set("mFCcStu")
+
+
+def short_flag_cluster(arg):
+    """The flag letters of a short-option argument, up to its first value."""
+    letters = ""
+    for ch in arg[1:]:
+        if ch in COMMIT_VALUE_FLAGS:
+            break
+        letters += ch
+    return letters
+
+
+def is_glob_pathspec(arg):
+    """True for a pathspec that git expands to many files."""
+    return any(ch in arg for ch in "*?[") or arg.startswith(":(")
 
 
 def is_directory_arg(arg):
@@ -168,7 +205,17 @@ def offence(segment):
     # command without being it. Stripped before the program name is read, or
     # `(git add -A)` reads as a program called `(`.
     while segment and (segment[0] in COMMAND_PREFIXES or ASSIGNMENT.match(segment[0])):
+        wrapper = segment[0]
         segment = segment[1:]
+        # A wrapper's own options (and their values) sit between it and the
+        # real command; `env -i git add -A` must not read `-i` as the program.
+        value_options = WRAPPER_VALUE_OPTIONS.get(wrapper)
+        if value_options is not None:
+            while segment and segment[0].startswith("-"):
+                option = segment[0]
+                segment = segment[1:]
+                if option in value_options and segment:
+                    segment = segment[1:]
 
     if not segment:
         return None
@@ -222,7 +269,7 @@ def offence(segment):
                 continue
             if not past_separator and arg.startswith("-"):
                 continue
-            if is_directory_arg(arg):
+            if is_glob_pathspec(arg) or is_directory_arg(arg):
                 return (
                     "`git {} {}` stages a whole directory, including any "
                     "change belonging to another session sharing this "
@@ -237,7 +284,7 @@ def offence(segment):
                 len(arg) > 1
                 and arg[0] == "-"
                 and arg[1] != "-"
-                and "a" in arg[1:]
+                and "a" in short_flag_cluster(arg)
             ):
                 return (
                     "`git commit {}` carries -a, which stages every tracked "

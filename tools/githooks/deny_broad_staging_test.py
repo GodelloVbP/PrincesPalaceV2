@@ -10,7 +10,7 @@ it is the pipeline from "what the model actually typed into the Bash tool" to
 offence() ever saw a token (how the string is split into commands, and which
 token is taken to be the program).
 
-The banned spellings come from CLAUDE.md's "Never `git add -A`" section:
+The banned spellings come from CLAUDE.md's Verification bullet "Staging: explicit paths only":
 `git add -A`, `git add .`, `git add -u`, `git commit -a`. The controls matter
 as much as the denials -- a hook that refuses `git add <path>` is a hook that
 gets uninstalled.
@@ -72,13 +72,12 @@ class DeniesEverySpellingOfTheBannedCommandsTests(unittest.TestCase):
         self.assertDenied(GIT + " add -- .")
 
 
-class ShellShapesThatUsedToWalkStraightPastItTests(unittest.TestCase):
-    """The five bypasses this file was written for.
+class ShellShapesThatHideTheCommandTests(unittest.TestCase):
+    """Shell shapes that put something in front of the git command.
 
-    Each is a real shape a multi-step Bash call takes. They got through
-    because SEPARATORS did not know a newline ends a command, and because the
-    program name was read as "token 0 of the segment" with no allowance for
-    the shell words that can legally sit in front of it.
+    Each is a real shape a multi-step Bash call takes. A newline ends a
+    command, and the program name is not simply "token 0 of the segment":
+    the shell words that can legally sit in front of it are skipped.
     """
 
     def assertDenied(self, command):
@@ -117,11 +116,51 @@ class ShellShapesThatUsedToWalkStraightPastItTests(unittest.TestCase):
         self.assertDenied("sudo " + GIT + " add -A")
 
 
+class WrapperOptionsDoNotHideTheCommandTests(unittest.TestCase):
+    def assertDenied(self, command):
+        self.assertIsNotNone(decision(command), "should have been denied: " + command)
+
+    def test_options_and_option_values_after_a_wrapper(self):
+        self.assertDenied("env -i " + GIT + " add -A")
+        self.assertDenied("nice -n 10 " + GIT + " add -A")
+        self.assertDenied("sudo -u x " + GIT + " add -A")
+        self.assertDenied("time -p " + GIT + " add -A")
+        self.assertDenied("env -u FOO " + GIT + " add -A")
+
+    def test_a_wrapper_around_another_program_is_still_not_git(self):
+        self.assertIsNone(decision("nice -n 10 echo " + GIT + " add -A"))
+
+
+class BackslashPathsAreStillDirectoriesTests(unittest.TestCase):
+    def test_a_windows_style_directory_argument(self):
+        self.assertIsNotNone(decision(GIT + r" add Assets\_Project\Scripts"))
+        self.assertIsNotNone(decision(GIT + " add Assets" + chr(92)))
+
+
+class PathspecGlobsAreSweepsTests(unittest.TestCase):
+    def test_globs_and_magic_pathspecs(self):
+        self.assertIsNotNone(decision(GIT + ' add "Assets/_Project/**"'))
+        self.assertIsNotNone(decision(GIT + ' add "Assets/*"'))
+        self.assertIsNotNone(decision(GIT + " add ':(top)Assets'"))
+
+    def test_a_plain_file_is_not_a_glob(self):
+        self.assertIsNone(decision(GIT + " add Assets/_Project/Art/x.png"))
+
+
+class CommitMessageFlagsAreNotAllTests(unittest.TestCase):
+    def test_an_attached_message_value_containing_an_a(self):
+        self.assertIsNone(decision(GIT + ' commit "-mfix data"'))
+        self.assertIsNone(decision(GIT + " commit -Fmsg.txt"))
+
+    def test_a_before_the_value_flag_is_still_all(self):
+        self.assertIsNotNone(decision(GIT + " commit -amx"))
+
+
 class DeniesStagingADirectoryTests(unittest.TestCase):
-    """CLAUDE.md's rule is titled "Stage by explicit path, always" -- a
-    directory is not a file path. SWEEPING_ADD_ARGS only knew the four named
-    shortcuts (-A/--all/-u/./etc); a broad subtree staged by name walked
-    straight past it, sweeping exactly what -A sweeps, just scoped smaller.
+    """CLAUDE.md requires staging by explicit path -- a directory is not a
+    file path. SWEEPING_ADD_ARGS names only the shortcuts (-A/--all/-u/./etc);
+    a broad subtree staged by name sweeps exactly what -A sweeps, just scoped
+    smaller, so it is refused separately.
     """
 
     def assertDenied(self, command):
