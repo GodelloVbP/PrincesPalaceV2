@@ -23,14 +23,14 @@ namespace PrincesPalace
         // per-character currency alongside it.
         public List<string> unlockedTalentIds = new List<string>();
 
-        // Skills gated behind something OTHER than level — right now, only
-        // an Event room's mage encounter grants one (see GameplayManager's
-        // RoomType.Event case). Kept separate from unlockedTalentIds rather
-        // than reusing it: a talent point is spent on a choice the player
-        // made in the tree, this is handed over unconditionally by the
-        // event, and conflating the two would make a respec (which only
-        // ever refunds unlockedTalentIds) either strip an event-taught
-        // spell it never granted or silently fail to strip a talent.
+        // Skills gated behind something OTHER than level. Nothing writes this
+        // yet; it is the seam for a future grant (an event teaching a spell).
+        // Kept separate from unlockedTalentIds rather than reusing it: a
+        // talent point is spent on a choice the player made in the tree, a
+        // grant would be handed over unconditionally, and conflating the two
+        // would make a respec (which only ever refunds unlockedTalentIds)
+        // either strip a spell it never sold or silently fail to strip a
+        // talent.
         public List<string> unlockedSkillIds = new List<string>();
 
         // LEGACY, migration source only. This was the whole equipment
@@ -69,20 +69,17 @@ namespace PrincesPalace
         // returning character starts their next descent at whatever tier they
         // had reached, not at tier 1.
         //
-        // Living on Character rather than RunState is still the deliberate
-        // choice it was, and now a cheaper one: every consumer picks these up
-        // for free, and there is no snapshot work to get wrong at either end
-        // of a run.
+        // Living on Character rather than RunState means every consumer picks
+        // these up for free, with no snapshot work at either end of a run.
         public int level = 1;
         public int exp;
 
         // THIS CHARACTER'S embers, not the profile's.
         //
-        // They were a single wallet figure, which meant investing in whoever
-        // you actually play starved everyone else -- and worse, the reverse:
-        // a character you have never fielded could be kindled to the top of
-        // their tree out of a pool someone else earned. Progression is supposed
-        // to reflect who you played.
+        // Per character rather than one wallet, so investing in whoever you
+        // play cannot starve everyone else, and a character you have never
+        // fielded cannot be kindled out of a pool someone else earned.
+        // Progression reflects who you played.
         //
         // Purely additive, so CurrentVersion does not move: an older save has
         // no such field, JsonUtility leaves it at zero, and SaveData.Migrate
@@ -155,9 +152,8 @@ namespace PrincesPalace
         // squad member, win or wipe or abandon alike -- whichever step the
         // run's own RunSnapshot.deepestStep had reached when it closed) and
         // read by the hub's reward-track card so "about N fights to go" can
-        // price a fight at the depth this character actually plays, instead
-        // of the room-0 rate every character shared before this field
-        // existed. THE LAST RUN, not the deepest ever: a character who has
+        // price a fight at the depth this character actually plays.
+        // THE LAST RUN, not the deepest ever: a character who has
         // fallen back to shallow retries after a deep failed one should see
         // the hub estimate get cheaper again, which lifetimeDeepestStep
         // (SaveData, a save-wide high-water mark used for the ember gate)
@@ -227,9 +223,7 @@ namespace PrincesPalace
 
         // What the next level costs. The arithmetic is
         // Domain.Progression.LevelCurve; this stays as the name every caller
-        // asks, so it is tunable without touching callers -- tuned twice now
-        // (a formula retune, then a whole authored table), and no caller has
-        // moved either time.
+        // asks, so the curve is tunable without touching callers.
         //
         // THIS IS THE ONE PLACE THE TABLE IS FETCHED. LevelCurve is engine-
         // free and cannot reach ContentDatabase, so somebody in Core has to
@@ -270,12 +264,10 @@ namespace PrincesPalace
         //
         // The loop itself is LevelCurve.AddExperience, in Domain. What is
         // left here is the save-side wrapper: fetch the table, apply,
-        // copy the three fields back. The loop moved so a career's worth of
-        // level-ups can be pinned under `dotnet test` without a save, a scene
-        // or Unity -- docs/CODE_STANDARDS.md "Layering"'s "arithmetic to Domain, wrapper
-        // stays" -- and so that the cap at RewardTrack.MaxLevel is enforced
-        // in exactly one place rather than wherever experience happens to be
-        // added.
+        // copy the three fields back. The loop lives in Domain so a career's
+        // worth of level-ups can be pinned under `dotnet test` without a save,
+        // a scene or Unity (docs/CODE_STANDARDS.md "Layering"), and so the cap
+        // at RewardTrack.MaxLevel is enforced in exactly one place.
         public int AddExperience(int amount)
         {
             var after = LevelCurve.AddExperience(Content.ContentDatabase.LevelCosts, level, exp, amount);
@@ -314,16 +306,17 @@ namespace PrincesPalace
             embersSpent > 0 || unlockedTalentIds.Count > 0 || InvestedPointTotal > 0;
 
         // Takes back every choice this character has spent, and hands the
-        // currency back to spend again. Level 20 of the reward track.
+        // currency back to spend again. Paid by the Respec node of the reward
+        // track.
         //
         // BOTH KINDS OF SPEND, because there are two and a player asking to
         // rebuild means both: embers committed to talent orbs, and stat points
         // placed into ability scores.
         //
         // WHAT IT MUST NOT TOUCH is `unlockedSkillIds`. Those are handed over
-        // by an Event room's mage, not bought, and this is exactly why they are
-        // a separate list from `unlockedTalentIds` -- see that field's comment,
-        // which named this hazard before a respec existed. Stripping them would
+        // by a grant, not bought, and this is exactly why they are a separate
+        // list from `unlockedTalentIds` -- see that field's comment.
+        // Stripping them would
         // take away something the player never spent anything on and cannot get
         // back.
         //

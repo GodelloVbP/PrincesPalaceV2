@@ -127,21 +127,9 @@ namespace PrincesPalace
         // Purely additive, so CurrentVersion does not move.
         public int bankedGold;
 
-        // `grantedGold` is gone: a tree-wide grep found exactly one hit, the
-        // declaration. Neither EndRun nor RunSettlement read or wrote it, and
-        // there is no banking left to subtract from -- a run's gold is
-        // forfeited whole (RunSettlement.cs, GoldLost). The "start with N
-        // gold" reward it was for does not exist.
-        //
-        // Deleted rather than re-commented, because the hazard was not the
-        // field, it was a stated safety mechanism that would be trusted. The
-        // next person adding a head-start reward could read a stale header as
-        // "already handled" and ship a money printer. An absent field asks
-        // the question; a lying one answers it wrong.
-        //
-        // Nothing on disk carries a meaning for it: JsonUtility ignores a
-        // field it cannot map, so an old save's `grantedGold: 0` simply
-        // drops, and there was never a non-zero one to drop.
+        // There is no starting-gold grant to bank against: a run's gold is
+        // forfeited whole (RunSettlement.cs, GoldLost). A head-start reward
+        // must add its own field and its own settlement rule.
 
         public List<InventoryEntry> inventory = new List<InventoryEntry>();
         public List<RunHealthEntry> currentHealth = new List<RunHealthEntry>();
@@ -278,8 +266,7 @@ namespace PrincesPalace
         // rule fixed at run start.
         public bool restBeforeBoss;
 
-        // How many second lives this descent has spent -- level 90 of the
-        // reward track.
+        // How many second lives this descent has spent.
         //
         // NO MID-RUN REFRESH: this climbs at most once per descent, with
         // nothing that clears it back to zero before the run ends.

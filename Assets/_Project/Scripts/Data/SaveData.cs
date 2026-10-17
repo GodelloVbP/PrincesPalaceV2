@@ -69,11 +69,6 @@ namespace PrincesPalace
         // node ids name nothing on the new map.
         public const int CurrentVersion = 9;
 
-        // Meta-progression: the "extra_recruit_slot" Principality upgrade
-        // raises this. Matches the id ContentBuilder authors it under —
-        // the same plain-string-content-id convention already used
-        // elsewhere in this codebase (e.g. "health_potion"), not a
-        // dedicated registry for what is currently a single lookup.
         // Solo (Shawn only) when the two placeholder seats aren't authored —
         // see SquadOfThreeReady below for when this widens to 3 on its own.
         private const int BaseMaxSquadSize = 1;
@@ -81,9 +76,9 @@ namespace PrincesPalace
 
         // THE single switch, but its DEFAULT is derived rather than hardcoded
         // false. Null (the state every fresh process starts in) means "decide
-        // from content": once both bear (Bjorn) and owl (Odette)
-        // resolve in ContentDatabase.Characters, a new save fields all three
-        // without anyone having to flip anything. Set true/false to override
+        // from content": once content flags three starters
+        // (SquadOfThreeReady), a new save fields all three without anyone
+        // having to flip anything. Set true/false to override
         // that either way -- BalanceBotRunner forces true regardless of
         // content shape, and a test pinning the solo-default behaviour forces
         // false. A caller that overrides it must set it back to null, since
@@ -94,13 +89,11 @@ namespace PrincesPalace
         // can be (re)loaded mid-process (Editor domain reload, tests), and a
         // stale "yes" here would field a seat content no longer has.
         //
-        // ASKS THE FLAG, NOT TWO IDS. This named bear and owl
-        // literally, which made "can we field three" a question about two
-        // specific characters rather than about the roster -- rename either
-        // and every fresh profile silently drops back to a solo Shawn with
-        // nothing failing. characters.json says who starts now
-        // (RawCharacterEntry.startsInSquad), and CharacterEntryResolver
-        // refuses the file unless exactly three do, so this can simply count.
+        // ASKS THE FLAG, NOT TWO IDS. "Can we field three" is a question about
+        // the roster, not about two specific characters: characters.json says
+        // who starts (RawCharacterEntry.startsInSquad), and
+        // CharacterEntryResolver refuses the file unless exactly three do, so
+        // this can simply count.
         private static bool SquadOfThreeReady =>
             DefaultSquadIds().Count >= TestSquadOfThreeSize;
 
@@ -120,6 +113,13 @@ namespace PrincesPalace
                 .ThenBy(c => c.id, StringComparer.Ordinal)
                 .Select(c => c.id)
                 .ToList();
+
+        // Meta-progression: the "extra_recruit_slot" Principality upgrade
+        // raises the squad ceiling. Matches the id ContentBuilder authors it
+        // under -- the plain-string content-id convention used elsewhere
+        // (e.g. "health_potion"), not a dedicated registry for what is a
+        // single lookup.
+        //
         // PUBLIC because the squad's ceiling has to be assertable against the
         // stage's slot count, and a test that wrote "extra_recruit_slot" as a
         // literal would be the drift it is meant to catch.
@@ -152,14 +152,11 @@ namespace PrincesPalace
 
         // THE PARTY'S SEATS, IN SEAT ORDER, AND AN EMPTY SEAT IS ONE OF THEM.
         //
-        // This was a compact list of whoever is fielded, and the compaction
-        // was the bug (AUDIT #93): PartyFormation keeps seats by index and
-        // leaves a hole where one is vacated, because "POSITIONS ARE
+        // Not a compact list of whoever is fielded (AUDIT #93): PartyFormation
+        // keeps seats by index and leaves a hole where one is vacated, because "POSITIONS ARE
         // MECHANICAL, not cosmetic -- seat 0 is the front rank enemy melee
-        // concentrates on". Benching the front-ranker and reloading therefore
-        // promoted whoever was in Middle into Front, silently, and combat had
-        // already promoted them before any reload because ActiveSquad reads
-        // this same list.
+        // concentrates on". Compacting would promote whoever was in Middle into
+        // Front on a bench-and-reload, and ActiveSquad reads this same list.
         //
         // An empty seat is EmptySeat (the empty string) in place. Trailing
         // empties are not written -- a hole carries positional information
@@ -229,18 +226,9 @@ namespace PrincesPalace
         // compared for equality or fed into a formula the way damage is.
         public float totalPlaySeconds;
 
-        // relicLoadout is gone: a `(characterId, relicId)` map that was
-        // written and pruned on every Reconcile but read by nothing in the
-        // tree. What actually carries a character's relic is
-        // RunSnapshot.relicIds plus FightEncounterAdapter.ResolveRelics,
-        // run-scoped rather than save-scoped; per-character assignment,
-        // which is the only thing this shape was for, exists nowhere. It
-        // was written as `{}` on every save, so JsonUtility simply drops the
-        // unknown key on the next load and nothing is lost.
-        //
-        // Kept as a comment rather than removed outright because the hazard
-        // was never the field, it was a future reader seeing a relic loadout
-        // on the save and assuming relics were already handled.
+        // There is no per-character relic assignment on the save: a character's
+        // relic is RunSnapshot.relicIds plus FightEncounterAdapter.ResolveRelics,
+        // run-scoped rather than save-scoped.
 
         // Items bought in the Divine Principality store with permanent
         // currency. GameplayManager.StartRun() copies these into the fresh
@@ -311,9 +299,8 @@ namespace PrincesPalace
         }
 
         // How many roster members can be active in the squad at once.
-        // Character Select is out of the active flow for now (see #21
-        // follow-up), so this isn't enforced by picking — it caps how many
-        // of the roster get auto-selected in CreateNew()/Reconcile().
+        // The party screen picks the seats, and CreateNew()/Reconcile() trim
+        // an over-long selection to this cap and fill seats up to it.
         //
         // CAPPED AT THE STAGE, always -- FightHudSpec.StageSlotsPerSide (3)
         // is how many fight-scene slots exist on the player's side of the
@@ -335,25 +322,6 @@ namespace PrincesPalace
             return Math.Min(withUpgrade, FightHudSpec.StageSlotsPerSide);
         }
 
-        // THE single definition of "who is in the party right now".
-        //
-        // This existed six times, copy-pasted across GameplayManager,
-        // FightController, DungeonController, TalentController,
-        // CharacterSheetController and InventoryController — and the copies
-        // disagreed. Five fell back to the full roster when the selection was
-        // empty; GameplayManager.StartRun did not. That divergence is a real
-        // bug, not untidiness (AUDIT.md #12): with an empty selection StartRun
-        // seeded currentHealth for nobody while the fight built a full-roster
-        // party at full HP, so RunState.IsSquadWiped could never fire and the
-        // run became unloseable.
-        //
-        // Unified on the fallback, because that is what five of the six did
-        // and what every screen needs: a save with no selection must still
-        // show and field SOMEONE rather than an empty party.
-        //
-        // Ids that no longer resolve are dropped rather than throwing — a save
-        // written before a character was renamed stays loadable, matching
-        // Reconcile's posture everywhere else.
         // Embers are held PER CHARACTER, not in the wallet -- wallet.embers is
         // a migration source and nothing live reads it. So "how many embers do
         // I have" is a sum over the roster, and it lives here rather than in
@@ -383,6 +351,19 @@ namespace PrincesPalace
 
         public static bool IsEmptySeat(string id) => string.IsNullOrEmpty(id);
 
+        // THE single definition of "who is in the party right now".
+        //
+        // Every screen and the run start share it, so they cannot disagree
+        // about who is fielded (AUDIT.md #12: a start that seeded health for
+        // nobody while the fight built a full-roster party made
+        // RunState.IsSquadWiped unable to fire).
+        //
+        // Falls back to the whole roster: a save with no selection must still
+        // show and field SOMEONE rather than an empty party.
+        //
+        // Ids that no longer resolve are dropped rather than throwing — a save
+        // written before a character was renamed stays loadable, matching
+        // Reconcile's posture everywhere else.
         public List<Character> ActiveSquad()
         {
             // An empty seat resolves to nobody and drops out here, exactly as
@@ -421,16 +402,10 @@ namespace PrincesPalace
                 data.roster.Add(new Character(definition.id));
             }
 
-            // WHO CONTENT SAYS STARTS, not who sorts first.
-            //
-            // This was `roster.Take(EffectiveMaxSquadSize())` over authored
-            // file order, which meant a character appended to the end of
-            // characters.json was in the roster and could never be fielded,
-            // and one inserted at position three silently benched whoever was
-            // there. Neither said anything; the only way to find out was to
-            // read this line. characters.json now flags its three starters
-            // and CharacterEntryResolver refuses the file unless exactly three
-            // do -- so the roster's order is once again just an order.
+            // WHO CONTENT SAYS STARTS, not who sorts first. characters.json
+            // flags its three starters and CharacterEntryResolver refuses the
+            // file unless exactly three do, so the roster's order is just an
+            // order: appending or inserting a character cannot bench anyone.
             //
             // Filtered against the roster rather than trusted: a flagged
             // character with no roster entry is impossible today (the roster
@@ -569,12 +544,6 @@ namespace PrincesPalace
             return true;
         }
 
-        // The whole old shared pool to the FIRST roster member, then cleared.
-        //
-        // Not split evenly: a split silently reduces what any single character
-        // can afford, and since nothing recorded who earned the embers there is
-        // no honest way to divide them. Giving them to one character is at
-        // least a decision somebody can see and undo.
         // The one-time sweep for saves written before "a run keeps nothing".
         //
         // Only ever runs on the way from 3 to 4, so a player who buys something
@@ -680,6 +649,12 @@ namespace PrincesPalace
             }
         }
 
+        // The whole old shared pool to the FIRST roster member, then cleared.
+        //
+        // Not split evenly: a split silently reduces what any single character
+        // can afford, and since nothing recorded who earned the embers there is
+        // no honest way to divide them. Giving them to one character is at
+        // least a decision somebody can see and undo.
         private void MoveEmbersOntoTheRoster()
         {
             int pooled = wallet.embers;
@@ -770,19 +745,9 @@ namespace PrincesPalace
             stockpiledItems.RemoveAll(entry => FakeWear.IsWornOut(entry.provenance,
                 ContentDatabase.GetItem(entry.itemId)?.IsEquippable == true));
 
-            // No modifierIds pruning here yet, and that is correct for now --
-            // Phase A (this one) adds only the storage, and no path in the
-            // game today can write a real id into modifierIds, so there is no
-            // content to have gone stale. A populated-but-unresolvable
-            // modifierIds list (the future case: a modifier renamed or
-            // removed from modifiers.json) is still perfectly safe to load --
-            // it just sits there meaning nothing until something reads it --
-            // so this does not crash or misbehave either way. Once Phase A2
-            // ships modifiers.json, this needs the same tolerant-prune
-            // treatment stockpiledItems and character.equipment already get
-            // above: drop ids ContentDatabase no longer resolves, same
-            // posture, not yet written because there is nothing to prune
-            // against.
+            // modifierIds is not pruned: readers skip ids that no longer
+            // resolve (ContentDatabase.Effective.cs), so a renamed or removed
+            // modifier sits inert instead of failing the load.
 
             // A saved run gets the same tolerant pruning as the stockpile: a
             // content update between quitting and resuming can remove an item
@@ -902,19 +867,19 @@ namespace PrincesPalace
                 // talent prune directly above — but the pieces are handed
                 // BACK to the stash rather than deleted, because a slot
                 // holding a real item the player earned should not be
-                // silently emptied by an authoring change.
-                // Returned at the plus, roll, modifierIds and riftTier it
-                // left with, not re-added at the default -- otherwise a
-                // renamed content id would quietly turn a +5 heirloom into a
-                // plain one while the item count stayed correct, so nothing
-                // would catch it. Nothing puts a real id into modifierIds
-                // yet, so that part is inert until modifiers.json ships, and
-                // the plumbing is already correct for when it does.
+                // silently emptied by an authoring change. The orphan loop
+                // below does it.
+                //
                 // The same worn-out-fake rule as the bag, on the body. Removed
                 // outright, not returned to the bag: a broken fake is gone.
                 character.equipment.slots?.RemoveAll(e => e != null && FakeWear.IsWornOut(e.provenance,
                     ContentDatabase.GetItem(e.itemId)?.IsEquippable == true));
 
+                // Returned at the plus, roll, modifierIds and riftTier it
+                // left with, not re-added at the default -- otherwise a
+                // renamed content id would quietly turn a +5 heirloom into a
+                // plain one while the item count stayed correct, so nothing
+                // would catch it.
                 foreach (var orphan in character.equipment.RemoveEntriesWhere(
                              id => ContentDatabase.GetItem(id)?.IsEquippable != true))
                 {
@@ -946,11 +911,6 @@ namespace PrincesPalace
             }
 
             purchasedUpgradeIds.RemoveAll(id => ContentDatabase.GetUpgrade(id) == null);
-
-            // relicLoadout's null-guard and prune stood here, tolerantly
-            // dropping assignments nothing could resolve. Both went with the
-            // field (#119): a prune that cannot be observed is upkeep on a
-            // fact nothing asks for.
 
             // AN EMPTY SEAT IS NOT A DANGLING REFERENCE. This drop is for ids
             // naming content that is gone -- a renamed character -- and those
@@ -1055,25 +1015,6 @@ namespace PrincesPalace
             return order;
         }
 
-        // THE SHOP SHELF, RECONCILED THE SAME TOLERANT WAY EVERYTHING ELSE
-        // IN Reconcile IS -- a content update between quitting and resuming
-        // is not worth discarding a run over (docs/PLAN_SHOP.md §2e).
-        //
-        // Four rules, and each one is a different kind of broken:
-        //
-        //  - A contentId that no longer resolves becomes NO OFFER IN PLACE.
-        //    Not removed: removal renumbers the indices the screen binds
-        //    cards by, so a deleted item would silently shift every card
-        //    after it onto the wrong slot.
-        //  - A SOLD entry stays sold whatever happened to its content. The
-        //    gold was spent; the card is not a refund.
-        //  - Stock belonging to a node the party is not standing on is
-        //    dropped whole, rerolls and all. It cannot be repaired -- it is
-        //    an answer to a question about somewhere else -- and arriving at
-        //    a shop rolls a fresh shelf anyway.
-        //  - The reroll array is normalised to SectionCount. See
-        //    RunSnapshot.shopRerollsUsed for what can make it the wrong
-        //    length.
         // Tolerant pruning for docs/PLAN_SHOP.md §1b, same posture
         // stockpiledItems gets above: a content edit under a live run is not
         // worth discarding the run over.
@@ -1262,6 +1203,25 @@ namespace PrincesPalace
             }
         }
 
+        // THE SHOP SHELF, RECONCILED THE SAME TOLERANT WAY EVERYTHING ELSE
+        // IN Reconcile IS -- a content update between quitting and resuming
+        // is not worth discarding a run over (docs/PLAN_SHOP.md §2e).
+        //
+        // Four rules, and each one is a different kind of broken:
+        //
+        //  - A contentId that no longer resolves becomes NO OFFER IN PLACE.
+        //    Not removed: removal renumbers the indices the screen binds
+        //    cards by, so a deleted item would silently shift every card
+        //    after it onto the wrong slot.
+        //  - A SOLD entry stays sold whatever happened to its content. The
+        //    gold was spent; the card is not a refund.
+        //  - Stock belonging to a node the party is not standing on is
+        //    dropped whole, rerolls and all. It cannot be repaired -- it is
+        //    an answer to a question about somewhere else -- and arriving at
+        //    a shop rolls a fresh shelf anyway.
+        //  - The reroll array is normalised to SectionCount. See
+        //    RunSnapshot.shopRerollsUsed for what can make it the wrong
+        //    length.
         private static void ReconcileShopStock(RunSnapshot run)
         {
             run.shopStock ??= new List<ShopStockEntry>();
