@@ -126,7 +126,8 @@ namespace PrincesPalace
         {
             var rows = run == null || !run.hasRun
                 ? new List<RunEffectRow>()
-                : RunEffectRows.Rows(run.eventBuffs, run.legStartStep, run.bonusDamagePercent,
+                : RunEffectRows.Rows(run.eventBuffs, run.legStartStep, ItemOfferRoll.CurrentSquadFavor(),
+                    run.bonusDamagePercent,
                     SquadTrack.SecondLivesLeft(run));
 
             if (effectsEmptyHint != null) effectsEmptyHint.SetActive(rows.Count == 0);

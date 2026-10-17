@@ -89,7 +89,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheEffectsListLeavesRoomForEveryEffectThePaneCanShow()
         {
-            // The buff kinds, plus bonus damage and second lives.
+            // The buff kinds (Favor's row stands in for its buff), plus bonus damage and second lives.
             int most = RunEffectRows.Buffs.Count + 2;
 
             Assert.GreaterOrEqual(RunLayout.EffectRows, most,

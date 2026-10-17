@@ -41,39 +41,45 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void NothingActiveIsNoRows()
         {
-            var rows = RunEffectRows.Rows(new List<EventBuffEntry>(), legStartStep: 3, bonusDamagePercent: 0, secondLivesLeft: 0);
+            var rows = RunEffectRows.Rows(new List<EventBuffEntry>(), legStartStep: 3, squadFavor: 0,
+                bonusDamagePercent: 0, secondLivesLeft: 0);
 
             Assert.IsEmpty(rows);
         }
 
+        // Shawn's authored 4 plus a +10 event gift is the 14 the offers roll
+        // with; the gift is inside the figure, so it gets no row of its own.
         [Test]
-        public void AFavorBuffReadsAsThePrincesFavorWithItsAmount()
+        public void TheSquadFavorIsOneRowWithTheFigureTheOffersUse()
         {
-            var rows = RunEffectRows.Rows(new List<EventBuffEntry> { Buff(EventBuffs.PrincesFavor, 2) }, 0, 0, 0);
+            var rows = RunEffectRows.Rows(new List<EventBuffEntry> { Buff(EventBuffs.PrincesFavor, 10) }, 0,
+                squadFavor: 14, bonusDamagePercent: 0, secondLivesLeft: 0);
 
             Assert.AreEqual(1, rows.Count);
             Assert.AreEqual("Prince's favor", rows[0].Label);
-            Assert.AreEqual("+2", rows[0].Value);
+            Assert.AreEqual("14", rows[0].Value);
+            Assert.AreEqual(
+                "The best Favor among your squad, plus any gifts this run: the higher it is, the better the items you are offered.",
+                rows[0].Detail);
         }
 
+        // Zero hides the row, as every other figure on the pane does; it
+        // appears the moment the squad has any.
         [Test]
-        public void TwoFavorGrantsStackIntoOneRow()
+        public void FavorAtZeroHasNoRowAndAtOneHasOne()
         {
-            var rows = RunEffectRows.Rows(new List<EventBuffEntry>
-            {
-                Buff(EventBuffs.PrincesFavor, 2),
-                Buff(EventBuffs.PrincesFavor, 3),
-            }, 0, 0, 0);
+            Assert.IsEmpty(RunEffectRows.Rows(null, 0, squadFavor: 0, bonusDamagePercent: 0, secondLivesLeft: 0));
 
+            var rows = RunEffectRows.Rows(null, 0, squadFavor: 1, bonusDamagePercent: 0, secondLivesLeft: 0);
             Assert.AreEqual(1, rows.Count);
-            Assert.AreEqual("+5", rows[0].Value);
+            Assert.AreEqual("1", rows[0].Value);
         }
 
         [Test]
         public void ALegBuffSaysThisLegAndAWholeRunBuffSaysThisRun()
         {
-            var leg = RunEffectRows.Rows(new List<EventBuffEntry> { Buff(EventBuffs.FillSpecialPool, 0, leg: 4) }, 4, 0, 0);
-            var run = RunEffectRows.Rows(new List<EventBuffEntry> { Buff(EventBuffs.FillSpecialPool, 0) }, 4, 0, 0);
+            var leg = RunEffectRows.Rows(new List<EventBuffEntry> { Buff(EventBuffs.FillSpecialPool, 0, leg: 4) }, 4, 0, 0, 0);
+            var run = RunEffectRows.Rows(new List<EventBuffEntry> { Buff(EventBuffs.FillSpecialPool, 0) }, 4, 0, 0, 0);
 
             Assert.AreEqual("Special pools full each turn — this leg", leg[0].Label);
             Assert.AreEqual("", leg[0].Value);
@@ -84,27 +90,27 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ALegBuffFromAnEarlierLegIsNotShown()
         {
-            var rows = RunEffectRows.Rows(new List<EventBuffEntry> { Buff(EventBuffs.FillSpecialPool, 0, leg: 2) }, 4, 0, 0);
+            var rows = RunEffectRows.Rows(new List<EventBuffEntry> { Buff(EventBuffs.FillSpecialPool, 0, leg: 2) }, 4, 0, 0, 0);
 
             Assert.IsEmpty(rows);
         }
 
         [Test]
-        public void BonusDamageAndSecondLivesFollowTheBuffsInThatOrder()
+        public void FavorThenBuffsThenBonusDamageThenSecondLives()
         {
-            var rows = RunEffectRows.Rows(new List<EventBuffEntry> { Buff(EventBuffs.PrincesFavor, 1) }, 0,
-                bonusDamagePercent: 6, secondLivesLeft: 1);
+            var rows = RunEffectRows.Rows(new List<EventBuffEntry> { Buff(EventBuffs.FillSpecialPool, 0) }, 0,
+                squadFavor: 4, bonusDamagePercent: 6, secondLivesLeft: 1);
 
             CollectionAssert.AreEqual(
-                new[] { "Prince's favor", "Bonus damage", "Second lives" },
+                new[] { "Prince's favor", "Special pools full each turn — this run", "Bonus damage", "Second lives" },
                 rows.Select(r => r.Label).ToList());
-            CollectionAssert.AreEqual(new[] { "+1", "+6 %", "1" }, rows.Select(r => r.Value).ToList());
+            CollectionAssert.AreEqual(new[] { "4", "", "+6 %", "1" }, rows.Select(r => r.Value).ToList());
         }
 
         [Test]
         public void AFigureAtZeroHasNoRow()
         {
-            var rows = RunEffectRows.Rows(null, 0, bonusDamagePercent: 0, secondLivesLeft: 0);
+            var rows = RunEffectRows.Rows(null, 0, squadFavor: 0, bonusDamagePercent: 0, secondLivesLeft: 0);
 
             Assert.IsEmpty(rows);
         }

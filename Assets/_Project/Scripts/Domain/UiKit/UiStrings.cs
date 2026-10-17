@@ -1542,7 +1542,9 @@ namespace PrincesPalace.Domain.UiKit
         // One definition per EventBuffs kind (RunEffectRows).
         public static readonly UiString RunEffectFavor = UiString.Define("run.effect.favor", "Prince's favor");
         public static readonly UiString RunEffectFavorAmount =
-            UiString.Define("run.effect.favor_amount", "+{0}", "+99");
+            UiString.Define("run.effect.favor_amount", "{0}", "99");
+        public static readonly UiString RunEffectFavorDetail = UiString.Define("run.effect.favor_detail",
+            "The best Favor among your squad, plus any gifts this run: the higher it is, the better the items you are offered.");
         public static readonly UiString RunEffectFillLeg =
             UiString.Define("run.effect.fill_leg", "Special pools full each turn — this leg");
         public static readonly UiString RunEffectFillRun =

@@ -10,10 +10,15 @@ namespace PrincesPalace.Domain.UiKit
         public readonly string Label;
         public readonly string Value;
 
-        public RunEffectRow(string label, string value)
+        // One plain sentence on what the effect does; empty where the label
+        // says it all.
+        public readonly string Detail;
+
+        public RunEffectRow(string label, string value, string detail = "")
         {
             Label = label;
             Value = value;
+            Detail = detail;
         }
     }
 
@@ -42,9 +47,9 @@ namespace PrincesPalace.Domain.UiKit
         }
     }
 
-    // What the RUN pane's effects column says: the event buffs in force, the
-    // run-wide bonus damage, and the second lives left. Pure: Core hands in
-    // the run's plain values (RunController).
+    // What the RUN pane's effects column says: the squad's Favor, the event
+    // buffs in force, the run-wide bonus damage, and the second lives left.
+    // Pure: Core hands in the run's plain values (RunController).
     public static class RunEffectRows
     {
         public static readonly IReadOnlyList<RunEffectDef> Buffs = new[]
@@ -65,17 +70,32 @@ namespace PrincesPalace.Domain.UiKit
             return null;
         }
 
-        // The rows, in a fixed order: the buff kinds as EventBuffs lists them,
-        // then bonus damage, then second lives. A kind with nothing active,
-        // and a figure at zero, has no row; an empty result is the pane's cue
-        // to say so in words.
+        // The rows, in a fixed order: Favor, the buff kinds as EventBuffs
+        // lists them, then bonus damage, then second lives. A kind with
+        // nothing active, and a figure at zero, has no row; an empty result
+        // is the pane's cue to say so in words.
+        //
+        // squadFavor is the whole figure the item offers read
+        // (ItemOfferRoll.CurrentSquadFavor), event gifts already inside it.
+        // The PrincesFavor buff therefore has no row of its own: a second
+        // line would show the same gift twice and read as two stats.
         public static List<RunEffectRow> Rows(
-            IReadOnlyList<EventBuffEntry> buffs, int legStartStep, int bonusDamagePercent, int secondLivesLeft)
+            IReadOnlyList<EventBuffEntry> buffs, int legStartStep, int squadFavor,
+            int bonusDamagePercent, int secondLivesLeft)
         {
             var rows = new List<RunEffectRow>();
 
+            if (squadFavor > 0)
+            {
+                rows.Add(new RunEffectRow(
+                    UiStrings.RunEffectFavor.Format(),
+                    UiStrings.RunEffectFavorAmount.Format(squadFavor),
+                    UiStrings.RunEffectFavorDetail.Format()));
+            }
+
             foreach (var def in Buffs)
             {
+                if (def.Kind == EventBuffs.PrincesFavor) continue;
                 if (!EventBuffs.AnyActive(buffs, def.Kind, legStartStep)) continue;
 
                 bool wholeRun = false;

@@ -181,9 +181,10 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsFalse(Named("RunRelicsEmpty").activeSelf);
             Assert.AreEqual(RelicRowsRarityText(ids[0]), TextOf("RunRelic0Rarity"));
 
-            // effects: the buff, the run-wide bonus damage
+            // effects: the squad's Favor (Shawn's authored 4 plus the buff's 2),
+            // the run-wide bonus damage
             Assert.AreEqual("Prince's favor", TextOf("RunEffect0Name"));
-            Assert.AreEqual("+2", TextOf("RunEffect0Value"));
+            Assert.AreEqual("6", TextOf("RunEffect0Value"));
             Assert.AreEqual("Bonus damage", TextOf("RunEffect1Name"));
             Assert.AreEqual("+6 %", TextOf("RunEffect1Value"));
             Assert.IsFalse(Named("RunEffect2").activeSelf, "a third effect row with nothing in it");
@@ -219,8 +220,12 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual("You carry no relics on this descent.", TextOf("RunRelicsEmpty"));
             Assert.IsFalse(Named("RunRelic0").activeSelf);
 
-            Assert.IsTrue(Named("RunEffectsEmpty").activeSelf);
-            Assert.AreEqual("No effects on this descent.", TextOf("RunEffectsEmpty"));
+            // The squad's own Favor (Shawn's authored 4) is always in force,
+            // so the effects column holds that one row and nothing else.
+            Assert.IsFalse(Named("RunEffectsEmpty").activeSelf);
+            Assert.AreEqual("Prince's favor", TextOf("RunEffect0Name"));
+            Assert.AreEqual("4", TextOf("RunEffect0Value"));
+            Assert.IsFalse(Named("RunEffect1").activeSelf, "a second effect row with nothing in it");
 
             Assert.IsTrue(Named("RunSuppliesEmpty").activeSelf);
             Assert.IsFalse(Named("RunRelicPageLabel").activeSelf, "a pager with one page");
