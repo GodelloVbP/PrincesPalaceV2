@@ -113,7 +113,7 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
             _input.Vertical = 0f;
             yield return WaitReal(0.3f);
-            Assert.AreEqual("ReckoningGainedChip0", EventSystem.current.currentSelectedGameObject?.name);
+            Assert.AreEqual("ReckoningHaulChip0", EventSystem.current.currentSelectedGameObject?.name);
             yield return Shoot("Reckoning_chip_tooltip_pad.png");
 
             reckoning.gameObject.SetActive(false);

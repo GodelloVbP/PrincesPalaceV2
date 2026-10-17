@@ -450,8 +450,8 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheBoardsRowsStayApart_AtEveryFrame()
         {
-            // Top to bottom: portraits, deeds, the detail's band, the haul, the
-            // gained chips, Continue. Nothing on the board carries an overlap
+            // Top to bottom: portraits, deeds, the haul (receipts included),
+            // the detail's band, Continue. Nothing on the board carries an overlap
             // waiver, so this also holds the audit's word; asserted on the
             // solved rects so a row creeping into the next one names itself.
             foreach (var frame in UiFrames.All)
@@ -461,8 +461,8 @@ namespace PrincesPalace.Domain.Tests
 
                 var column = new[]
                 {
-                    "ReckoningPortrait0", "ReckoningDeeds0", "ReckoningBoardTip", "ReckoningHaul",
-                    "ReckoningGainedStrip", "ReckoningContinueButton",
+                    "ReckoningPortrait0", "ReckoningDeeds0", "ReckoningHaul", "ReckoningBoardTip",
+                    "ReckoningContinueButton",
                 };
                 for (int i = 1; i < column.Length; i++)
                 {

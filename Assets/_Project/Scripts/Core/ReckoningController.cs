@@ -77,7 +77,7 @@ namespace PrincesPalace
         // does not serialise dictionaries. Same shape the overlay uses.
         [SerializeField] internal IconEntry[] icons;
 
-        // Relic art, by relic id: the gained chips and the haul's relics.
+        // Relic art, by relic id: the haul's relics and receipts.
         [SerializeField] internal IconEntry[] relicArt;
 
         [SerializeField] internal Image dimmer;
@@ -85,17 +85,6 @@ namespace PrincesPalace
 
         [SerializeField] internal RectTransform offerPhase;
         [SerializeField] internal RectTransform summaryPhase;
-
-        // The "Gained" chips (RelicChipStrip) and their tooltip.
-        [SerializeField] internal GameObject gainedStrip;
-        [SerializeField] internal RectTransform gainedCaption;
-        [SerializeField] internal Button[] gainedChips;
-        [SerializeField] internal Image[] gainedChipIcons;
-        [SerializeField] internal TMP_Text[] gainedChipNames;
-        [SerializeField] internal GameObject gainedTooltip;
-        [SerializeField] internal TMP_Text gainedTooltipName;
-        [SerializeField] internal TMP_Text gainedTooltipMeta;
-        [SerializeField] internal TMP_Text gainedTooltipBody;
 
         private const float ExpandSeconds = 0.28f;
         private const float BarSeconds = 0.55f;
@@ -171,7 +160,10 @@ namespace PrincesPalace
 
         private CombatReward _reward;
         private ReckoningRequest _request = ReckoningRequest.Full(null, null);
-        private RelicChipStrip _gained;
+
+        // The event relics' receipts the haul shows, in grant order: exactly
+        // what leaving the screen acknowledges (C2).
+        private readonly List<string> _receiptsShown = new List<string>();
 
         // The run's pending pages, by reference: every choice resolves them in
         // place, so opening the screen again resumes where it was left.
@@ -257,10 +249,6 @@ namespace PrincesPalace
             continueButton.onClick.AddListener(Dismiss);
             WireBoard();
 
-            // Pressing a chip is "done reading": focus goes to Continue.
-            Gained.Pressed = () =>
-                UnityEngine.EventSystems.EventSystem.current?.SetSelectedGameObject(continueButton.gameObject);
-            Gained.Wire(_tooltips);
 
             _flying = new int[offerButtons.Length];
             _iconHome = HomesOf(offerIcons);
@@ -402,12 +390,11 @@ namespace PrincesPalace
             else
             {
                 // THE BOARD (C8): Continue is the entry; Up reaches the haul
-                // strip (this fight's chips, then the event relics' receipts),
-                // Up again the portraits. ReckoningBoardNav owns the shape and
+                // (this fight's chips, then the event relics' receipts), Up
+                // again the portraits. ReckoningBoardNav owns the shape and
                 // ReckoningBoardNavTests pins it.
                 var portraits = ShownPortraits();
                 var haul = ShownHaulChips();
-                haul.AddRange(Gained.Selectables);
                 var board = ReckoningBoardNav<Selectable>.For(portraits, haul, continueButton);
                 groups.AddRange(board.Groups);
                 links.AddRange(board.Links.Select(l => (UiNavLink<Selectable>?)l));
@@ -449,7 +436,7 @@ namespace PrincesPalace
         // since nothing else moves on dismissal.
         private void Dismiss()
         {
-            RunOrchestrator.AcknowledgeRelicReceipts(Gained.Displayed.ToList());
+            RunOrchestrator.AcknowledgeRelicReceipts(_receiptsShown.ToList());
             Dismissed?.Invoke();
         }
 
@@ -521,7 +508,7 @@ namespace PrincesPalace
             _choosing = choosing;
             PaintEmbers();
 
-            Gained.Show(_request.Receipts);
+            TakeReceipts(_request.Receipts);
 
             // AFTER Paint/PaintOffers, never on OnEnable: which cards exist
             // is decided by what was just handed in, and a context pushed
@@ -877,7 +864,7 @@ namespace PrincesPalace
 
         private static readonly Color InertTint = new Color(0.5f, 0.5f, 0.55f, 1f);
         private static readonly Color BandLit = new Color(0.95f, 0.82f, 0.45f, 1f);
-        private static readonly Color BandDim = new Color(0.54f, 0.48f, 0.65f, 1f);
+        private static readonly Color BandDim = new Color(0.91f, 0.86f, 0.75f, 0.7f);
 
         // From four cards up the name truncates to one line.
         private void PaintNameWrap(int i, bool narrow)
@@ -1640,14 +1627,8 @@ namespace PrincesPalace
             }
         }
 
-        // The one chip presenter, over this screen's own widgets.
-        private RelicChipStrip Gained =>
-            _gained ?? (_gained = new RelicChipStrip(new RelicChipWidgets(
-                gainedStrip, gainedCaption, centred: true, gainedChips, gainedChipIcons, gainedChipNames,
-                gainedTooltip, gainedTooltipName, gainedTooltipMeta, gainedTooltipBody, relicArt)));
-
-        // The ids the chips are showing: what leaving the screen acknowledges.
-        public IReadOnlyList<string> DisplayedReceipts => Gained.Displayed;
+        // The ids the haul is showing as receipts: what leaving acknowledges.
+        public IReadOnlyList<string> DisplayedReceipts => _receiptsShown;
 
         public bool IsOutcomeForm => _request.IsOutcomeForm;
 

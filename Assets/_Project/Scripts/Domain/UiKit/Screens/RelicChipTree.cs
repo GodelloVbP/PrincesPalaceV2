@@ -4,9 +4,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
 {
     // THE "GAINED" CHIP STRIP (docs/PLAN_BUGS_QA.md C2): one chip per
     // relic the player has just received, icon and name, plus the detail
-    // tooltip a chip opens. One builder, two surfaces -- the Reckoning above its
-    // Continue, the event page above its choice rows -- painted by the one
-    // presenter (Core/RelicChipStrip.cs) over the relic row model.
+    // tooltip a chip opens, above the event page's choice rows, painted by
+    // the presenter (Core/RelicChipStrip.cs) over the relic row model. The
+    // Reckoning shows its receipts in its haul row instead.
     //
     // The strip and the tooltip are separate nodes because they live in
     // different places: the strip sits where the surface puts it, the tooltip

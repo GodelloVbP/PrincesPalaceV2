@@ -129,20 +129,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef BoardTipTitle;
         public NodeRef BoardTipBody;
 
-        // THE "GAINED" CHIPS (RelicChipTree): the event relics' receipts,
-        // directly above Continue, with their tooltip.
-        public NodeRef GainedStrip;
-        public NodeRef GainedCaption;
-        public List<NodeRef> GainedChips = new List<NodeRef>();
-        public List<NodeRef> GainedChipIcons = new List<NodeRef>();
-        public List<NodeRef> GainedChipNames = new List<NodeRef>();
-        public NodeRef GainedTooltip;
-        public NodeRef GainedTooltipName;
-        public NodeRef GainedTooltipMeta;
-        public NodeRef GainedTooltipBody;
-
-        public const float GainedStripWidth = 1040f;
-
         public List<NodeRef> OfferButtons = new List<NodeRef>();
         public List<NodeRef> OfferHalos = new List<NodeRef>();
         public List<NodeRef> OfferBursts = new List<NodeRef>();
@@ -201,18 +187,30 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef LeaveCoinGlyph;
         public NodeRef LeaveCoinCount;
 
-        // THE EXPERIENCE RING'S THREE TINTS. The violet is where the member
-        // already stood, the amber what this fight paid, and the track the
-        // channel both are cut into. tools/measure_bar.py reads all three out
-        // of this file rather than carrying copies.
+        // THE EXPERIENCE RING'S THREE TINTS. The light neutral is where the
+        // member already stood, the amber what this fight paid, and the track
+        // the channel both are cut into. tools/measure_bar.py reads all three
+        // out of this file rather than carrying copies.
         //
-        // The amber is saturated rather than a desaturated cream: against a
-        // violet panel a desaturated yellow has nothing to push against and
-        // reads as beige, and this is the one element on the board meant to
-        // look like a reward.
+        // Neutral, not violet: a violet track and arc on a violet cloth hid
+        // the before-arc. The amber is saturated rather than a desaturated
+        // cream: against the cloth a desaturated yellow reads as beige, and
+        // this is the one element on the board meant to look like a reward.
         public const string BarFillTint = "#FFC24A";
-        public const string BarBeforeTint = "#6B58A8";
-        private const string BarTrackTint = "#33224F";
+        public const string BarBeforeTint = "#B5ADA3";
+        private const string BarTrackTint = "#0A0A0A99";
+
+        // THE BOARD'S TEXT TIERS. Primary (a level-up, the gold) is gold and
+        // amber; secondary (the deeds, a quiet badge's numeral) is muted
+        // parchment, its glyphs tinted the same. Each reads at 4.5:1 or better
+        // on the darkened cloth under it (BoardShadeTint).
+        public const string Parchment = "#E8DCC0";
+        public const string ParchmentMuted = "#E8DCC0D9";
+        public const string GoldText = "#FFC84A";
+        public const string BadgeQuiet = "#1A1022F2";
+        public const string BadgeLevelled = "#FFC24AFF";
+        public const string BadgeLevelledNumeral = "#2A1406";
+        public const float BadgeLevelledScale = 1.3f;
 
         // The ring is the talent collar's baked ring, radial-filled by the
         // controller (Image.type Filled / Radial360), so it needs no shader.
@@ -233,40 +231,57 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // The gold stack, inside the content box's top-right corner: clear of
         // the offer row's top (CardTop) and of the board's right portrait.
-        public const float GoldStackWidth = 150f;
-        public const float GoldStackHeight = 48f;
+        public const float GoldStackWidth = 176f;
+        public const float GoldStackHeight = 52f;
         public const float GoldStackX = ContentHalfWidth - GoldStackWidth * 0.5f;
         public const float GoldStackY = ContentTop - 2f - GoldStackHeight * 0.5f;
-        public const float GoldGlyphSize = 36f;
+        public const float GoldGlyphSize = 46f;
 
         // THE PORTRAITS. Fixed at build time, so it must cover the largest
         // party the save can field: EffectiveMaxSquadSize caps the squad at
         // FightHudSpec.StageSlotsPerSide, which is 3; unused portraits are
         // hidden. Pinned against EffectiveMaxSquadSize by ReckoningTests.
         public const int RowCount = 3;
-        public const float RingSize = 168f;
-        public const float FaceSize = 120f;
+        public const float RingSize = 150f;
+        public const float FaceSize = 108f;
         public const float PortraitPitch = 300f;
-        public const float PortraitY = ContentTop - 34f - RingSize * 0.5f;
         public const float BadgeSize = 44f;
-        public const float BadgeOffset = 60f;
+        public const float BadgeOffset = 53f;
         public const float MarkSize = 36f;
 
         // The deeds under each portrait: dealt, taken, healed, felled.
         public const int DeedsPerRow = 4;
         public const float DeedsWidth = 280f;
         public const float DeedsHeight = 32f;
-        public const float DeedsY = PortraitY - RingSize * 0.5f - 6f - DeedsHeight * 0.5f;
+        public const float DeedsGap = 8f;
 
-        // The haul strip: one chip per thing held, a clamped rail.
+        // The haul: one chip per thing the fight left the party holding and
+        // per event relic received, each in a dark round socket, a clamped
+        // rail. No caption; focus names a chip.
         public const int HaulChipCount = 12;
-        public const float HaulChipSize = 48f;
-        public const float HaulChipPitch = 56f;
-        public const float HaulHeight = 56f;
+        public const float HaulChipSize = 64f;
+        public const float HaulIconSize = 44f;
+        public const float HaulChipPitch = 76f;
+        public const float HaulHeight = 64f;
         public const float HaulWidth = HaulChipCount * HaulChipPitch;
-        public const float HaulGap = 8f;
+        public const float HaulGap = 24f;
 
-        // The board's detail, in the band between the deeds and the haul.
+        // THE BOARD'S BLOCK: portraits, deeds and the haul read as one group,
+        // centred in the cloth between the content box's top and Continue's
+        // top, so no band of empty cloth splits the party from its haul.
+        public static readonly UiVec ContinueSize = Ui.PlateNominalSizeFor(300f, 80f);
+        public static readonly float ContinueY = ContentBottom + ContinueSize.Y * 0.5f + 1f;
+        public const float BoardBlockHeight = RingSize + DeedsGap + DeedsHeight + HaulGap + HaulHeight;
+        public static readonly float BoardBlockCentre = (ContentTop + ContinueY + ContinueSize.Y * 0.5f) * 0.5f;
+        public static readonly float PortraitY = BoardBlockCentre + BoardBlockHeight * 0.5f - RingSize * 0.5f;
+        public static readonly float DeedsY = PortraitY - RingSize * 0.5f - DeedsGap - DeedsHeight * 0.5f;
+        public static readonly float HaulY = DeedsY - DeedsHeight * 0.5f - HaulGap - HaulHeight * 0.5f;
+
+        // The darkening under the block: a soft radial in near-black, so the
+        // cloth recedes behind the text without a plate's edge.
+        public const string BoardShadeTint = "#0A050CC7";
+
+        // The board's detail, between the haul and Continue.
         public const float BoardTipWidth = 560f;
         public const float BoardTipTitleHeight = 30f;
         public const float BoardTipMinBody = 60f;
@@ -420,26 +435,26 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             // ---- phase two: the board (C8) ------------------------------
             var summaryChildren = new List<UiNode>();
+
+            // FIRST, under everything on the board: the cloth darkened behind
+            // the block, a radial with no edge, not a plate.
+            var shade = Ui.Sprite("ReckoningBoardShade", "proc:radial_glow", Place.At(0f, BoardBlockCentre),
+                    UiSize.Fixed(ContentHalfWidth * 2f, (ContentTop - BoardBlockCentre) * 2f))
+                .Coloured(BoardShadeTint)
+                .AsDecor();
+            summaryChildren.Add(shade);
+
             for (int i = 0; i < RowCount; i++)
             {
                 summaryChildren.Add(screen.BuildPortrait(i));
                 summaryChildren.Add(screen.BuildDeeds(i));
             }
 
-            // Continue sits on the content box's floor, the event relics' chips
-            // 1px above it, the haul strip above them.
-            var continueSize = Ui.PlateNominalSizeFor(300f, 80f);
-            var continueY = ContentBottom + continueSize.Y * 0.5f + 1f;
-            float gainedY = continueY + continueSize.Y * 0.5f + 1f + RelicChipTree.StripHeight * 0.5f;
-            float haulY = gainedY + RelicChipTree.StripHeight * 0.5f + HaulGap + HaulHeight * 0.5f;
+            // Continue sits on the content box's floor.
+            var continueSize = ContinueSize;
+            var continueY = ContinueY;
 
-            summaryChildren.Add(screen.BuildHaul(haulY));
-
-            var gained = RelicChipTree.Build("ReckoningGained", Place.At(0f, gainedY), GainedStripWidth,
-                Place.At(0f, 0f));
-            screen.TakeGained(gained);
-            foreach (var chip in gained.Chips) chip.Node.Quiet();
-            summaryChildren.Add(gained.Strip);
+            summaryChildren.Add(screen.BuildHaul(HaulY));
 
             var notice = Ui.Label("ReckoningNoticeLabel", UiString.Runtime, new UiVec(360f, 54f), 15,
                     "#E8A07A", Place.At(-ContentHalfWidth + 180f, continueY))
@@ -459,17 +474,17 @@ namespace PrincesPalace.Domain.UiKit.Screens
             summaryChildren.Add(continueButton);
 
             // The details last, so each draws over what it describes.
-            float deedsBottom = DeedsY - DeedsHeight * 0.5f;
-            float haulTop = haulY + HaulHeight * 0.5f;
-            var boardTip = ItemComparisonPanel.Build("ReckoningBoardTip", Place.At(0f, (deedsBottom + haulTop) * 0.5f),
-                new UiVec(BoardTipWidth, deedsBottom - haulTop - 8f), BoardTipTitleHeight, 20, "#F2DB9E", 15,
+            float haulBottom = HaulY - HaulHeight * 0.5f;
+            float continueTop = continueY + continueSize.Y * 0.5f;
+            var boardTip = ItemComparisonPanel.Build("ReckoningBoardTip",
+                Place.At(0f, (haulBottom + continueTop) * 0.5f),
+                new UiVec(BoardTipWidth, haulBottom - continueTop - 8f), BoardTipTitleHeight, 20, "#F2DB9E", 15,
                 "#D9CCF2");
             boardTip.Panel.Inactive();
             screen.BoardTip = boardTip.Panel;
             screen.BoardTipTitle = boardTip.Title;
             screen.BoardTipBody = boardTip.Body;
             summaryChildren.Add(boardTip.Panel);
-            summaryChildren.Add(gained.Tooltip);
 
             var summaryPhase = Ui.Panel("ReckoningSummaryPhase", Place.Stretch(), UiSize.Fill, summaryChildren)
                 .Inactive();
@@ -549,23 +564,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     glow, wipe)
                 .AllowOverlap("the glow sits under the frame by design");
 
-            var root = Ui.Modal("ReckoningPanel", "#0A0614A6", content).Inactive();
+            // As dim as the overlay goes while the fight still shows (the
+            // ceiling ReckoningScreenTests pins), so the HUD and enemy panel
+            // at the edges recede behind the Reckoning.
+            var root = Ui.Modal("ReckoningPanel", "#0A0614BF", content).Inactive();
             screen.Dimmer = root.Children[0];
             screen.Root = root;
             return screen;
-        }
-
-        private void TakeGained(RelicChipTree gained)
-        {
-            GainedStrip = gained.Strip;
-            GainedCaption = gained.Caption;
-            GainedChips.AddRange(gained.Chips);
-            GainedChipIcons.AddRange(gained.ChipIcons);
-            GainedChipNames.AddRange(gained.ChipNames);
-            GainedTooltip = gained.Tooltip;
-            GainedTooltipName = gained.TooltipName;
-            GainedTooltipMeta = gained.TooltipMeta;
-            GainedTooltipBody = gained.TooltipBody;
         }
 
         // ---- the board's parts ----------------------------------------------------
@@ -611,10 +616,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .Inactive();
             var disc = Ui.Sprite($"ReckoningPortrait{index}LevelDisc", "proc:solid_circle",
                     Place.At(BadgeOffset, -BadgeOffset), UiSize.Fixed(BadgeSize, BadgeSize))
-                .Coloured("#2A1C46FF")
+                .Coloured(BadgeQuiet)
                 .AsDecor();
             var level = Ui.Label($"ReckoningPortrait{index}Level", UiStrings.ReckoningLevelNumeral,
-                    new UiVec(BadgeSize, BadgeSize - 8f), 20, "#F2DB9E", Place.At(BadgeOffset, -BadgeOffset))
+                    new UiVec(BadgeSize, BadgeSize - 8f), 20, Parchment, Place.At(BadgeOffset, -BadgeOffset))
                 .AsDecor()
                 .Styled(TypographyRole.TacticalData);
 
@@ -657,9 +662,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
             for (int k = 0; k < DeedsPerRow; k++)
             {
                 float x = -DeedsWidth * 0.5f + 14f + k * 70f;
-                var glyph = GlyphPart($"ReckoningDeeds{index}Glyph{k}", x);
+                var glyph = GlyphPart($"ReckoningDeeds{index}Glyph{k}", x).Coloured(ParchmentMuted);
                 var count = Ui.Label($"ReckoningDeeds{index}Count{k}", UiString.Runtime, new UiVec(40f, 28f), 20,
-                        "#EDE6FF", Place.At(x + 34f, 0f))
+                        ParchmentMuted, Place.At(x + 34f, 0f))
                     .TextAligned(UiTextAlign.Left)
                     .AsDecor()
                     .Styled(TypographyRole.TacticalData);
@@ -681,11 +686,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var children = new List<UiNode>();
             for (int i = 0; i < HaulChipCount; i++)
             {
+                // The socket, and inside it the thing's quality as a soft light.
+                var socket = Ui.Sprite($"ReckoningHaulChip{i}Socket", "proc:solid_circle", Place.Stretch(),
+                        UiSize.Fill)
+                    .Coloured("#120A18E6")
+                    .AsDecor();
                 var plinth = Ui.Sprite($"ReckoningHaulChip{i}Plinth", "proc:radial_glow", Place.Stretch(), UiSize.Fill)
                     .Coloured("#B8A8D966")
                     .AsDecor();
-                var icon = Ui.Sprite($"ReckoningHaulChip{i}Icon", null, Place.At(0f, 2f),
-                        UiSize.Fixed(HaulChipSize - 8f, HaulChipSize - 8f))
+                var icon = Ui.Sprite($"ReckoningHaulChip{i}Icon", null, Place.At(0f, 0f),
+                        UiSize.Fixed(HaulIconSize, HaulIconSize))
                     .AsDecor();
                 icon.PreserveAspect = true;
 
@@ -694,6 +704,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     .NoChrome()
                     .Quiet()
                     .Inactive();
+                chip.Children.Add(socket);
                 chip.Children.Add(plinth);
                 chip.Children.Add(icon);
 
@@ -737,8 +748,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .Inactive();
             dissolve.PreserveAspect = true;
             float countWidth = GoldStackWidth - GoldGlyphSize - 12f;
-            var count = Ui.Label("ReckoningGoldCount", UiStrings.ReckoningGoldCount, new UiVec(countWidth, 40f), 28,
-                    "#F2DB9E", Place.At(GoldStackWidth * 0.5f - countWidth * 0.5f, 0f))
+            var count = Ui.Label("ReckoningGoldCount", UiStrings.ReckoningGoldCount, new UiVec(countWidth, 46f), 36,
+                    GoldText, Place.At(GoldStackWidth * 0.5f - countWidth * 0.5f, 0f))
                 .TextAligned(UiTextAlign.Left)
                 .AsDecor()
                 .Styled(TypographyRole.TacticalData);
@@ -952,7 +963,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     new UiVec(OfferRowLayout.BandWidth(count), BandBand - 4f), Place.At(0f, BandCentre))
                 .AsDecor();
             var bandTier = Ui.Label($"ReckoningOffer{index}BandTier", UiString.Runtime,
-                    new UiVec(64f, BandBand - 4f), 16, "#D9CCF2", Place.At(-OfferRowLayout.BandLabelX(count), BandCentre))
+                    new UiVec(64f, BandBand - 4f), 16, Parchment, Place.At(-OfferRowLayout.BandLabelX(count), BandCentre))
                 .AsDecor();
             var bandPlus = Ui.Label($"ReckoningOffer{index}BandPlus", UiString.Runtime,
                     new UiVec(64f, BandBand - 4f), 16, "#8A7BA6", Place.At(OfferRowLayout.BandLabelX(count), BandCentre))
@@ -966,7 +977,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // The stat's glyph and its number take the left, the chevron the
             // right; the chevron's shape (up, down, flat) carries the sign.
             var delta = Ui.Label($"ReckoningOffer{index}Delta", UiString.Runtime,
-                    new UiVec(OfferRowLayout.DeltaLabelWidth(count), DeltaBand), 20, "#F2DB9E",
+                    new UiVec(OfferRowLayout.DeltaLabelWidth(count), DeltaBand), 20, Parchment,
                     Place.At(OfferRowLayout.DeltaLabelX(count), DeltaCentre))
                 .TextAligned(UiTextAlign.Left)
                 .AsDecor()

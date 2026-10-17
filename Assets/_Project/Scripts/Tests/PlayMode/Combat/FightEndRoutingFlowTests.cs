@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using NUnit.Framework;
-using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
@@ -96,7 +95,6 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsFalse(reckoning.IsOutcomeForm, "pays: true, so the full form");
             CollectionAssert.AreEqual(new[] { "toll_of_the_flock", "bellwethers_bell" }, reckoning.DisplayedReceipts,
                 "Gained, in grant order");
-            CollectionAssert.AreEqual(new[] { "Toll of the Flock", "Bellwether's Bell" }, ShownChipNames(reckoning));
 
             // T10, "Reckoning open, not dismissed": opening it acknowledged
             // nothing, so a reload here still has both.
@@ -219,15 +217,6 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(reckoning.gameObject.activeSelf, "a fight inside a run opens the Reckoning");
             return reckoning;
         }
-
-        private static List<string> ShownChipNames(ReckoningController reckoning) =>
-            // activeSelf: the chips belong to the summary phase, which is
-            // still hidden while an offer is being chosen.
-            reckoning.GetComponentsInChildren<Button>(includeInactive: true)
-                .Where(b => b.name.StartsWith("ReckoningGainedChip") && b.gameObject.activeSelf)
-                .OrderBy(b => b.name)
-                .Select(b => b.GetComponentsInChildren<TMP_Text>(true).First(t => t.name.EndsWith("Name")).text)
-                .ToList();
 
         private IEnumerator OpenTheFight()
         {

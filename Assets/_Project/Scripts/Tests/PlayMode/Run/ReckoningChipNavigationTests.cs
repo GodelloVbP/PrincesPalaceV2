@@ -14,7 +14,7 @@ using PrincesPalace.Domain.Rewards;
 namespace PrincesPalace.PlayModeTests
 {
     // THE BOARD'S COLUMN (docs/PLAN_REWARD_SCREENS.md C8): Continue, the
-    // haul strip (this fight's chips, then the "Gained" receipts) as one
+    // haul (this fight's chips, then the event relics' receipts) as one
     // clamped rail, the portraits above it -- every row reachable from
     // Continue and back, with and without a haul and receipts; chip focus
     // opens the tooltip, which follows Left/Right; Submit on a chip returns to
@@ -128,14 +128,13 @@ namespace PrincesPalace.PlayModeTests
                 .FirstOrDefault(r => r.name == name && r.gameObject.scene.IsValid())?.gameObject;
 
         private static string TooltipName =>
-            Node("ReckoningGainedTooltipName")?.GetComponent<TMP_Text>()?.text;
+            Node("ReckoningBoardTipTitle")?.GetComponent<TMP_Text>()?.text;
 
         // The column, top to bottom, as ReckoningBoardNav declares it.
         private static List<string> Column(bool haul, int chips)
         {
             var column = new List<string> { "ReckoningPortrait0" };
-            if (haul) column.Add("ReckoningHaulChip0");
-            else if (chips > 0) column.Add("ReckoningGainedChip0");
+            if (haul || chips > 0) column.Add("ReckoningHaulChip0");
             column.Add("ReckoningContinueButton");
             return column;
         }
@@ -182,9 +181,9 @@ namespace PrincesPalace.PlayModeTests
             yield return Up();
             AssertSelected("ReckoningHaulChip0", "back on the haul");
             yield return Right();
-            AssertSelected("ReckoningGainedChip0", "the receipts follow the haul on one rail");
+            AssertSelected("ReckoningHaulChip1", "the receipts follow the haul on one rail");
             yield return Right();
-            AssertSelected("ReckoningGainedChip0", "the rail clamps at its end");
+            AssertSelected("ReckoningHaulChip1", "the rail clamps at its end");
             yield return Left();
             yield return Left();
             AssertSelected("ReckoningHaulChip0", "and at its start");
@@ -251,27 +250,27 @@ namespace PrincesPalace.PlayModeTests
             var receipts = RelicIds(3).Skip(1).ToList();
             var names = receipts.Select(id => ContentDatabase.GetRelic(id).Data.DisplayName).ToList();
 
-            Assert.IsFalse(Node("ReckoningGainedTooltip").activeSelf, "nothing focused on a chip yet");
+            Assert.IsFalse(Node("ReckoningBoardTip").activeSelf, "nothing focused on a chip yet");
 
             yield return Up();
-            AssertSelected("ReckoningGainedChip0", "Up from Continue is the chip rail");
-            Assert.IsTrue(Node("ReckoningGainedTooltip").activeSelf, "pad focus on a chip shows its tooltip");
+            AssertSelected("ReckoningHaulChip0", "Up from Continue is the chip rail");
+            Assert.IsTrue(Node("ReckoningBoardTip").activeSelf, "pad focus on a chip shows its tooltip");
             Assert.AreEqual(names[0], TooltipName);
 
             yield return Right();
-            AssertSelected("ReckoningGainedChip1", "Right steps along the chips");
+            AssertSelected("ReckoningHaulChip1", "Right steps along the chips");
             Assert.AreEqual(names[1], TooltipName, "the tooltip follows the focus");
 
             yield return Right();
-            AssertSelected("ReckoningGainedChip1", "the rail clamps at its end");
+            AssertSelected("ReckoningHaulChip1", "the rail clamps at its end");
 
             yield return Left();
             yield return Left();
-            AssertSelected("ReckoningGainedChip0", "and clamps at its start");
+            AssertSelected("ReckoningHaulChip0", "and clamps at its start");
 
             yield return Submit();
             AssertSelected("ReckoningContinueButton", "Submit on a chip returns to the primary action");
-            Assert.IsFalse(Node("ReckoningGainedTooltip").activeSelf, "leaving the chip hides its tooltip");
+            Assert.IsFalse(Node("ReckoningBoardTip").activeSelf, "leaving the chip hides its tooltip");
         }
     }
 }

@@ -7,7 +7,7 @@ using PrincesPalace.Domain.UiKit.Screens;
 namespace PrincesPalace.Domain.Tests
 {
     // The "Gained" chip strip (docs/PLAN_BUGS_QA.md C2): its runtime
-    // layout arithmetic, and where the two surfaces put it. The audits of the
+    // layout arithmetic, and where the event page puts it. The audits of the
     // whole Reckoning and event trees (ReckoningScreenTests, EventScreenTests)
     // cover overlap and containment; this pins what they cannot see.
     public class RelicChipStripTreeTests
@@ -54,44 +54,18 @@ namespace PrincesPalace.Domain.Tests
             CollectionAssert.IsEmpty(RelicChipLayout.Lay(new List<float>(), 612f, 8f, 96f));
         }
 
-        // ---- the Reckoning --------------------------------------------------------------
+        // ---- the Reckoning ---------------------------------------------------------------
 
-        // Directly above Continue, and clear of the haul strip above it.
+        // The Reckoning shows its receipts as haul chips (one row, sockets, no
+        // caption), so it emits no strip of its own.
         [Test]
-        public void OnTheReckoning_TheStripSitsBetweenTheHaulAndContinue()
-        {
-            foreach (var frame in UiFrames.All)
-            {
-                var all = UiSolver.Solve(ReckoningScreen.Build().Root, frame).Descendants().ToList();
-                UiRect Rect(string name) => all.Single(n => n.Name == name).Rect;
-
-                var strip = Rect("ReckoningGainedStrip");
-                var continueRect = Rect("ReckoningContinueButton");
-
-                Assert.AreEqual(1f, strip.Bottom - continueRect.Top, 0.01f, "1px above Continue");
-                Assert.AreEqual(continueRect.Centre.X, strip.Centre.X, 0.01f, "centred over Continue");
-
-                Assert.Greater(Rect("ReckoningHaul").Bottom, strip.Top,
-                    $"the haul reaches into the chips at {UiFrames.Describe(frame)}");
-
-                for (int i = 0; i < RelicChipTree.ChipCount; i++)
-                {
-                    var chip = Rect("ReckoningGainedChip" + i);
-                    Assert.GreaterOrEqual(chip.Left, strip.Left - 0.01f);
-                    Assert.LessOrEqual(chip.Right, strip.Right + 0.01f, $"chip {i} leaves the strip");
-                }
-            }
-        }
-
-        [Test]
-        public void OnTheReckoning_TheChipsAndTooltipAreOnTheSummaryPhase_TooltipLast()
+        public void TheReckoning_HasNoGainedStrip_ItsReceiptsAreHaulChips()
         {
             var screen = ReckoningScreen.Build();
-            var summary = screen.SummaryPhase.Node.Children.Select(c => c.Name).ToList();
+            var names = UiSolver.Solve(screen.Root, UiFrames.Reference).Descendants().Select(n => n.Name).ToList();
 
-            Assert.Contains("ReckoningGainedStrip", summary);
-            Assert.AreEqual("ReckoningGainedTooltip", summary.Last(), "drawn over everything on the summary");
-            Assert.AreEqual(RelicChipTree.ChipCount, screen.GainedChips.Count);
+            Assert.IsFalse(names.Any(n => n.StartsWith("ReckoningGained")), "a Gained strip is still emitted");
+            Assert.AreEqual(12, screen.HaulChips.Count);
         }
 
         // ---- the event page --------------------------------------------------------------

@@ -434,9 +434,9 @@ the look of each treatment: `RevealFeel` (both Domain, pure); drawn by
 
 | Quality | Build before the flip | Landing |
 |---|---|---|
-| Common (`Flat`) | none | punch 1.08 -> 1 over 0.12 s, a light pop (glow 0.55, spill 0.12) in its colour, 9 motes, a 1.5 px kick |
-| Uncommon (`Puff`) | 0.1 s faint under-glow | punch 1.11, glow 0.75, 14 motes, a 2.5 px kick |
-| Rare (`Shimmer`) | 0.25 s: the glow builds under the card, the card lifts 8 px | punch 1.13, glow 0.95, a ring of light bursts outward (reach 0.85), 26 shimmer particles, a 0.2 s edge pulse on the halo, a 3.5 px kick of the reward panel, the ring cue |
+| Common (`Flat`) | none | punch 1.08 -> 1 over 0.12 s, a pop behind the card in its colour (glow 0.8, +35% past the card), 9 motes kicked off the bottom edge, a 1.5 px kick |
+| Uncommon (`Puff`) | 0.1 s faint under-glow | punch 1.11, pop glow 0.9 at +45%, 14 motes, a 2.5 px kick |
+| Rare (`Shimmer`) | 0.25 s: the glow builds under the card, the card lifts 8 px | punch 1.13, pop glow 1.0 at +60%, a ring of light bursts outward (reach 0.85), 26 shimmer particles, a 0.2 s edge pulse on the halo, a 3.5 px kick of the reward panel, the ring cue |
 | Top-tier live upgrade (`Burst`, **the ceremony**) | 0.6 s: the glow builds and spills past the card's edges (+40%), the card lifts and trembles with a jitter rising to 3 px, embers drift up, the riser cue | rays and a white-hot core burst behind the card, the full ring, a particle explosion, punch 1.15 -> 1.0, an 8 px kick of the panel and the fight stage for 0.25 s, the flare in its colour inside the cloth's content box (0.3 s), the impact, the bell and the rumble |
 
    One model, a per-quality intensity (`RevealFeel`): every landing punches,
@@ -604,7 +604,8 @@ No page: C8 directly.
 
 - **The party**: one portrait per member in squad order
   (`CharacterPortraits.For`, null -> plate silhouette), each with the
-  experience ring's two-tint fill (violet before, amber this fight), a
+  experience ring's two-tint fill (light neutral before, amber this fight, on a
+  near-black 60% track), a
   rising hum, 0.12 s stagger. **Three states** (M4):
   - fielded: full fill;
   - fell during the fight (`Ledger.TimesDowned > 0`): full fill, and a
@@ -618,25 +619,41 @@ No page: C8 directly.
   numeral ticks up with a bell, the ring refills with the remainder, and
   the badge takes the reward track's waiting pulse (`BeaconPulse`, A6): it
   shows something is waiting and claims nothing (collection stays manual).
+  On the first close the badge turns amber with a dark numeral at 1.3x and
+  punches on each tick; a member who did not level keeps a quiet badge (a
+  dark disc, a parchment numeral).
 - **Deeds** under each portrait, glyph + number: sword = dealt, cracked
   shield = taken, leaf = healed (when non-zero), skull count = felled. The
   portrait's focus tooltip adds the physical/other split and **shielded**
   (`CombatLedger.Shielded`), so a tank's fight is visible. No "who carried
   it" highlight: ranking by damage undervalues healers and tanks.
-- **Gold stack and haul strip**: where C2 and C6 left them. The strip is
-  this fight's haul (each taken item on a small plinth, relics, books,
-  potions, hone sparks) and today's "Gained" event-relic chips
-  (`pendingRelicReceipts`, acknowledged on leaving, unchanged). No caption.
+- **Gold stack and haul**: the gold where C2 left it, in real gold at 36pt
+  with a 46 px coin. The haul is one row: this fight's haul (taken items,
+  relics, books, potions, hone sparks) then the event relics' receipts
+  (`pendingRelicReceipts`, at most 4, acknowledged on leaving), each a 64 px
+  chip in a dark round socket. No caption; a chip's focus detail names it
+  (a receipt's adds its description). The receipts always fit: the fight's
+  own chips give way.
+- **Composition and hierarchy**: portraits (150 px rings), deeds and the
+  haul are one block, centred between the content box's top and Continue's
+  top, with the detail below the haul. A soft near-black radial under the
+  block darkens the cloth (no plate); board and card-face text carries a
+  drop shadow (`TextShadow`, a deepened underlay). Primary text (a level-up,
+  the gold) is gold and amber; secondary (deeds, quiet numerals, the offer
+  cards' tier band and stat delta) is parchment `#E8DCC0`, deeds at 85% with
+  their glyphs tinted to match; each at 4.5:1 or better on its local
+  background. The overlay's dim is 75%, the most `ReckoningScreenTests`
+  allows while the fight still shows.
 - **Held relics**: not on the board (O4 decided: the RUN pane shows
   them).
 - **Continue**: the gold forward-arrow plate, no word. The stale ember glow
   goes, and `ReckoningPhaseTests`' pin on `ReckoningContinueGlow` changes in
   the same commit.
-- **Navigation**: entry is Continue. Up goes to the haul strip (a clamped
-  rail, its chips' tooltips), Up again to the portraits (a rail, their
+- **Navigation**: entry is Continue. Up goes to the haul (a clamped
+  rail, its chips' tooltips; Submit on a chip returns to Continue), Up again to the portraits (a rail, their
   tooltips). Down returns. Cancel = Continue.
 - **Outcome form**: portraits and deeds only (from `Tally` and `Ledger`);
-  no rings (no `CombatReward`), no gold, no haul.
+  no rings (no `CombatReward`), no gold, no haul beyond any receipts.
 
 ### C9. Leaving
 

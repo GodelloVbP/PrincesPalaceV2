@@ -109,8 +109,16 @@ namespace PrincesPalace
             public Sprite Icon;
             public string PlinthHex;
             public string Title;
+            public string Body;
             public Sound Land;
         }
+
+        // At most this many receipts on one board; no authored outcome grants
+        // more than 2.
+        private const int MaxReceipts = 4;
+
+        // A levelled badge's punch on the tick, over its 1.3x rest.
+        private const float BadgePunch = 0.25f;
 
         private readonly List<Member> _members = new List<Member>();
         private readonly List<HaulEntry> _haul = new List<HaulEntry>();
@@ -143,6 +151,30 @@ namespace PrincesPalace
                 if (haulChips[i] == null) continue;
                 _tooltips.Register(haulChips[i], entered => ShowHaulTip(index, entered));
                 WireHover(haulChips[i].gameObject, index);
+
+                // Pressing a chip is "done reading": focus goes to Continue.
+                haulChips[i].onClick.AddListener(() =>
+                    UnityEngine.EventSystems.EventSystem.current?.SetSelectedGameObject(continueButton.gameObject));
+            }
+
+            // Text on the cloth carries a drop shadow instead of a plate.
+            TextShadow.Apply(goldCount);
+            TextShadow.Apply(deedCounts);
+            TextShadow.Apply(portraitLevels);
+            TextShadow.Apply(offerBandTiers);
+            TextShadow.Apply(offerBandPluses);
+            TextShadow.Apply(offerDeltas);
+        }
+
+        // The receipts this board shows: the first MaxReceipts, in grant order.
+        private void TakeReceipts(IReadOnlyList<string> ids)
+        {
+            _receiptsShown.Clear();
+            if (ids == null) return;
+            foreach (var id in ids)
+            {
+                if (_receiptsShown.Count >= MaxReceipts) break;
+                if (!string.IsNullOrEmpty(id)) _receiptsShown.Add(id);
             }
         }
 
@@ -350,7 +382,7 @@ namespace PrincesPalace
                 DrawRing(i, float.NegativeInfinity, audible: false);
             }
 
-            if (haulStrip != null) haulStrip.SetActive(!_request.IsOutcomeForm);
+            if (haulStrip != null) haulStrip.SetActive(!_request.IsOutcomeForm || _receiptsShown.Count > 0);
             for (int i = 0; haulChips != null && i < haulChips.Length; i++)
             {
                 if (haulChips[i] != null) haulChips[i].gameObject.SetActive(false);
@@ -395,6 +427,29 @@ namespace PrincesPalace
             if (pulse != null) pulse.gameObject.SetActive(false);
             var flare = At(portraitFlares, i);
             if (flare != null) SetAlpha(flare, 0f);
+            PaintBadge(i, levelled: false, punch: 0f);
+        }
+
+        // The level badge: quiet (a dark disc, a parchment numeral) until the
+        // member's first level closes, then amber at 1.3x with a dark numeral,
+        // punching larger on each close.
+        private void PaintBadge(int i, bool levelled, float punch)
+        {
+            var disc = At(portraitLevelDiscs, i);
+            var level = At(portraitLevels, i);
+            float scale = levelled ? ReckoningScreen.BadgeLevelledScale * (1f + BadgePunch * punch) : 1f;
+
+            if (disc != null)
+            {
+                disc.color = HexColour(levelled ? ReckoningScreen.BadgeLevelled : ReckoningScreen.BadgeQuiet);
+                disc.rectTransform.localScale = Vector3.one * scale;
+            }
+
+            if (level != null)
+            {
+                level.color = HexColour(levelled ? ReckoningScreen.BadgeLevelledNumeral : ReckoningScreen.Parchment);
+                level.rectTransform.localScale = Vector3.one * scale;
+            }
         }
 
         // Sword = dealt, cracked shield = taken, leaf = healed (when any),
@@ -427,7 +482,28 @@ namespace PrincesPalace
         private void CollectHaul()
         {
             _haul.Clear();
-            if (_request.IsOutcomeForm) return;
+            if (!_request.IsOutcomeForm) CollectPrizes();
+
+            // The event relics' receipts close the row, and always fit: the
+            // fight's own chips give way to them.
+            int room = Mathf.Max(0, (haulChips?.Length ?? 0) - _receiptsShown.Count);
+            if (_haul.Count > room) _haul.RemoveRange(room, _haul.Count - room);
+            foreach (var id in _receiptsShown)
+            {
+                var row = RelicRows.Row(id);
+                _haul.Add(new HaulEntry
+                {
+                    Icon = ItemIcons.Find(relicArt, row.IconId),
+                    PlinthHex = DefaultPlinthHex,
+                    Title = row.Name,
+                    Body = row.Description,
+                    Land = Sound.None,
+                });
+            }
+        }
+
+        private void CollectPrizes()
+        {
 
             foreach (var prize in _reward?.Prizes ?? new List<PaidPrize>())
             {
@@ -703,6 +779,7 @@ namespace PrincesPalace
 
             var flareImage = At(portraitFlares, i);
             if (flareImage != null) SetAlpha(flareImage, Mathf.Clamp01(flare));
+            PaintBadge(i, levelsIn > 0, LevelFlareAlpha > 0f ? Mathf.Clamp01(flare / LevelFlareAlpha) : 0f);
 
             var level = At(portraitLevels, i);
             if (level != null) level.Set(UiStrings.ReckoningLevelNumeral, row.LevelBefore + levelsIn);
@@ -772,7 +849,7 @@ namespace PrincesPalace
                 return;
             }
 
-            ShowBoardTip(haulChips[index].transform as RectTransform, _haul[index].Title, "");
+            ShowBoardTip(haulChips[index].transform as RectTransform, _haul[index].Title, _haul[index].Body ?? "");
         }
 
         private void ShowBoardTip(RectTransform over, string title, string body)
