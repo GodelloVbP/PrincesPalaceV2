@@ -131,7 +131,11 @@ namespace PrincesPalace.PlayModeTests
         public void ThePackCountsItemsRatherThanStacks()
         {
             var run = ARunThatHasDoneThings();
-            Assert.AreEqual("5", RunController.Figure(run, "pack"));
+            var stash = SaveSlotManager.CurrentSave.stockpiledItems;
+            InventoryOps.Add(stash, "health_potion", 4);
+            InventoryOps.Add(stash, "mana_potion", 3);
+
+            Assert.AreEqual("7", RunController.Figure(run, "pack"));
         }
 
         [Test]
@@ -719,11 +723,6 @@ namespace PrincesPalace.PlayModeTests
             expEarned = 210,
             bossesKilled = new List<string> { "boss_a" },
             relicIds = new List<string> { "relic_a", "relic_b" },
-            inventory = new List<InventoryEntry>
-            {
-                new InventoryEntry { itemId = "salve", count = 3 },
-                new InventoryEntry { itemId = "blade", count = 2 },
-            },
             ledger = new List<RunLedgerEntry>
             {
                 new RunLedgerEntry

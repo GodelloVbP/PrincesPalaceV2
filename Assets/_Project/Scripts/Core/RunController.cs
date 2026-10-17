@@ -248,7 +248,7 @@ namespace PrincesPalace
 
                 // Stacks counted by their contents, not by their entries: three
                 // salves in one slot are three items in the pack.
-                case "pack": value = PackCount(run); return true;
+                case "pack": value = PackCount(); return true;
 
                 default: return false;
             }
@@ -267,16 +267,12 @@ namespace PrincesPalace
             return total;
         }
 
-        private static long PackCount(RunSnapshot run)
+        // The same stacks the Supplies list paints, so the figure and the list
+        // cannot disagree.
+        private static long PackCount()
         {
-            if (run.inventory == null) return 0L;
-
             long total = 0L;
-            foreach (var entry in run.inventory)
-            {
-                if (entry != null && entry.count > 0) total += entry.count;
-            }
-
+            foreach (var stack in RunOrchestrator.BuildSatchel()) total += stack.Count;
             return total;
         }
 
