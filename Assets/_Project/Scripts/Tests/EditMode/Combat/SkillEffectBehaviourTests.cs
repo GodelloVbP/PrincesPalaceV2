@@ -767,5 +767,28 @@ namespace PrincesPalace.Domain.Tests
                 $"{enumType.Name} members nothing outside {declaringFileName} names: {string.Join(", ", unnamed)}. " +
                 "A member no consumer mentions is a rule the game does not have.");
         }
+
+        // One sweep hits for 70 a target: A's ward eats 10 of it (A lands 60), B lands
+        // 70. The beat's Amount is the largest single target's pre-shield
+        // figure, 70 -- not the largest landed plus every ward's share (80).
+        [Test]
+        public void ASweepBeatAmount_IsTheLargestTargetsOwnPreShieldFigure()
+        {
+            var hero = Hero();
+            var a = Foe("A");
+            var b = Foe("B");
+            StatusEffects.ApplyWard(a.Statuses, 10, 1, hero);
+            var session = Session(new CombatEncounter(new[] { hero }, new[] { a, b }),
+                Kit(Skill(SkillEffect.DamageAll, flatAmount: 30)));
+
+            Assert.IsTrue(session.CastSkill(0, null), "the cast was refused");
+
+            var beat = session.DrainBeats().Single(x => x.Results != null && x.Results.Count == 2);
+            Assert.AreEqual(940, a.CurrentHealth, "fixture: A took 60 after its ward ate 10");
+            Assert.AreEqual(930, b.CurrentHealth, "fixture: B took 70");
+            Assert.AreEqual(10, beat.Absorbed);
+            Assert.AreEqual(70, beat.Amount);
+        }
+
     }
 }

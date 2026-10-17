@@ -1523,7 +1523,7 @@ namespace PrincesPalace.Domain.Combat.Session
             DeclareOwnDamageType(skill, castType);
 
             // One beat shows one number, so an AOE reports its largest single
-            // hit rather than a total that matches no one enemy's HP drop --
+            // pre-shield hit rather than a total that matches no one enemy's HP drop --
             // tracked as a plain local rather than re-read off the recording
             // beat (LargestAmountSoFar), because ApplyFinalDamage below
             // OVERWRITES the beat's Amount to that one enemy's own `landed`
@@ -1532,7 +1532,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // only the most recent hit, not the sweep's running max. The
             // LEDGER takes the full amount per enemy regardless, which is
             // why it cannot be derived from the beats either way.
-            int largestLanded = 0;
+            int largestPreShield = 0;
 
             // WHO ACTUALLY TOOK A HIT, for the queue delay this sweep may
             // carry (Gale Scythe, plan 2.8 step 5). Collected rather than
@@ -1570,8 +1570,10 @@ namespace PrincesPalace.Domain.Combat.Session
                 if (skill.HasFixedDamage)
                 {
                     var packets = new StringBuilder();
+                    int absorbedBefore = BeatAbsorbed;
                     int packetTotal = ResolveDamageInstances(actor, skill, enemy, packets, out bool packetsDodged,
                         out bool packetsCrit);
+                    int packetAbsorbed = BeatAbsorbed - absorbedBefore;
 
                     if (packetsDodged)
                     {
@@ -1584,8 +1586,8 @@ namespace PrincesPalace.Domain.Combat.Session
                     RecordTargetResult(enemy, packetTotal, crit: packetsCrit, packets: TakeResolvedPackets());
                     struckAndLanded.Add(enemy);
 
-                    largestLanded = System.Math.Max(packetTotal, largestLanded);
-                    RecordBeatAmount(largestLanded);
+                    largestPreShield = System.Math.Max(packetTotal + packetAbsorbed, largestPreShield);
+                    RecordPreShieldAmount(largestPreShield);
                     summary.Append($" {enemy.Name} takes {packetTotal}{CritSuffix(packetsCrit)}! -{packets}");
 
                     ApplyMark(actor, enemy);
@@ -1615,6 +1617,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 // cast (CastSkill); this only multiplies.
                 baseAmount = PoolTierResolution.ApplyDamageMultiplier(baseAmount, poolTier);
 
+                int absorbedBeforeHit = BeatAbsorbed;
                 var outcome = DamagePipeline.AfterDefences(
                     baseAmount,
                     actor, enemy,
@@ -1628,6 +1631,7 @@ namespace PrincesPalace.Domain.Combat.Session
                     // Per enemy, like the dodge: every target of a sweep rolls
                     // its own crit (an authored crit crits them all).
                     crit: CritCallFor(actor));
+                int ownAbsorbed = BeatAbsorbed - absorbedBeforeHit;
 
                 // Swift: EACH enemy in an AOE independently rolls its own
                 // dodge -- it is a genuinely separate target reacting to the
@@ -1672,8 +1676,8 @@ namespace PrincesPalace.Domain.Combat.Session
                 RecordTargetResult(enemy, landed, crit: outcome.IsCrit);
                 struckAndLanded.Add(enemy);
 
-                largestLanded = System.Math.Max(landed, largestLanded);
-                RecordBeatAmount(largestLanded);
+                largestPreShield = System.Math.Max(landed + ownAbsorbed, largestPreShield);
+                RecordPreShieldAmount(largestPreShield);
                 summary.Append($" {enemy.Name} takes {landed}{CritSuffix(outcome.IsCrit)}{EffectivenessSuffix(outcome.Effectiveness)}");
 
                 // The Drowned Lantern: a sweep marks everyone it actually hits.

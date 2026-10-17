@@ -305,6 +305,7 @@ namespace PrincesPalace.Domain.Combat.Session
             {
                 if (!enemy.IsAlive) continue;
 
+                int absorbedBefore = BeatAbsorbed;
                 var outcome = DamagePipeline.AfterDefences(
                     raw, bearer, enemy,
                     attackType: type,
@@ -313,13 +314,14 @@ namespace PrincesPalace.Domain.Combat.Session
                     resolveWard: ResolveWard);
 
                 int landed = outcome.Damage;
+                int preShield = landed + (BeatAbsorbed - absorbedBefore);
                 DealRelicPacket(bearer, enemy, landed, type);
                 TollOfTheFlockDamageDealt += landed;
                 SetStance(enemy, enemy.IsAlive ? Stances.Hurt : Stances.Defeated);
                 RecordTargetResult(enemy, landed);
 
-                largest = Math.Max(largest, landed);
-                if (ownBeat) RecordBeatAmount(largest);
+                largest = Math.Max(largest, preShield);
+                if (ownBeat) RecordPreShieldAmount(largest);
 
                 if (!enemy.IsAlive)
                 {

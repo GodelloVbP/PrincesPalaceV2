@@ -212,7 +212,24 @@ namespace PrincesPalace.Domain.Combat.Session
             // signatureAbsorbsDamage: false. The day one ships with that flag
             // true, THIS line is the one a fixer needs to revisit, and the
             // fix is very likely two figures on the beat rather than one.
-            _recordingBeat.Amount = amount + _recordingBeat.Absorbed;
+            RecordPreShieldAmount(amount + _recordingBeat.Absorbed, isHealing);
+        }
+
+        // THE BEAT'S ABSORBED TOTAL SO FAR, read before and after one target's
+        // ward resolves to learn what that target alone had absorbed.
+        private int BeatAbsorbed => _recordingBeat?.Absorbed ?? 0;
+
+        // Amount set to a figure that is already pre-shield. A multi-target
+        // beat needs this: Absorbed is the beat-wide sum, so adding it back
+        // onto one target's figure (RecordBeatAmount) matches no victim.
+        private void RecordPreShieldAmount(int preShield, bool isHealing = false)
+        {
+            if (_recordingBeat == null || preShield <= 0)
+            {
+                return;
+            }
+
+            _recordingBeat.Amount = preShield;
             _recordingBeat.IsHealing = isHealing;
         }
 
