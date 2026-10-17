@@ -15,9 +15,8 @@ namespace PrincesPalace.Domain.Content
     //
     // Weapon is Equipment that happens to be locked to the two hand slots.
     // It stays its own kind rather than collapsing into Equipment because
-    // attackBonus drives the loot-tiering in FightController.RollWeaponDrop
-    // — "which items can drop as weapons, ranked by power" is a real
-    // distinction the drop table needs, not just a slot difference.
+    // a weapon is generated from a weaponFamilyId and armour from a setId,
+    // which is a real distinction, not just a slot difference.
     public static class ItemEntryResolver
     {
         private const int DefaultConsumableAmount = 20;

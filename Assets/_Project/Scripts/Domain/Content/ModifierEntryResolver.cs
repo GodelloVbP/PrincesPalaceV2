@@ -12,7 +12,7 @@ namespace PrincesPalace.Domain.Content
     // names, correct threshold/magnitude/damageType shape for that type, no
     // dead-weight duplicates. It does not decide how many slots an item can
     // roll or how a resolved effect's magnitude gets scaled by tier
-    // (ModifierMagnitude's job, at the ContentDatabase.Effects seam)
+    // (ModifierMagnitude's job, applied in ContentDatabase.ScaledModifierEffectsForItem)
     // -- this is purely "is this one authored entry well-formed".
     public static class ModifierEntryResolver
     {

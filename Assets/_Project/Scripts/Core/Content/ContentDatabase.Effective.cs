@@ -531,8 +531,7 @@ namespace PrincesPalace.Content
                     // Threshold/Against/AgainstMagical pass through UNSCALED
                     // -- Threshold is a health-gate percentage, not a power
                     // number, and Against/AgainstMagical are selectors, not
-                    // magnitudes. Only Magnitude itself rides the tier/rift
-                    // curve.
+                    // magnitudes. Only Magnitude itself rides the tier curve.
                     int scaledMagnitude = EffectCatalog.Of(raw.Kind).TierScaled
                         ? Rounding.AwayFromZero((float)(raw.Magnitude * scale))
                         : raw.Magnitude;

@@ -45,8 +45,11 @@ namespace PrincesPalace.Content
         // achievement naming an enemy that is not a boss, an enemy weak to
         // and resistant to the same type, and the ability-score reachability
         // ceiling. (A relic naming an achievement is RelicEntryResolver's
-        // check, made per-file against the ids ContentBuilder hands it.) Returns one message per problem found; an empty list means
-        // the catalogues agree with each other.
+        // check, made per-file against the ids ContentBuilder hands it.)
+        // ValidateContent, below AddIfRefused, returns one message per problem
+        // found; an empty list means the catalogues agree with each other.
+
+        // Adds a resolver's refusal message to the list, if there is one.
         private static void AddIfRefused(List<string> errors, string refusal)
         {
             if (refusal != null) errors.Add(refusal);
@@ -58,16 +61,13 @@ namespace PrincesPalace.Content
             var errors = new List<string>();
             // ONE SWEEP FOR ID COLLISIONS, across every catalogue at once.
             //
-            // This was eight `CheckId(x.id, "Kind")` calls threaded through
-            // eight per-type loops, and the empty-id half of it was
-            // unreachable (see the header). What survives is the half that is
-            // not: `seen` is SHARED, so this is the only place in the project
-            // that can notice a relic and an item claiming the same id -- and
-            // ids are what saves store, so that collision surfaces later as a
-            // save resolving to the wrong definition. AUDIT.md #20's blind
-            // spot was exactly this check missing for one type; stating it
-            // once over a list of catalogues is what stops the next type
-            // added from being forgotten the same way.
+            // An empty id cannot reach here (see the header). `seen` is
+            // SHARED, so this is the only place in the project that can notice
+            // a relic and an item claiming the same id -- and ids are what
+            // saves store, so that collision surfaces later as a save
+            // resolving to the wrong definition. Stating it once over a list
+            // of catalogues is what stops a newly added type from being
+            // forgotten (AUDIT.md #20).
             //
             // The comparison itself is CatalogueCrossChecks.DuplicateIds, as
             // is every other cross-catalogue id check below, so each rule is
@@ -282,8 +282,7 @@ namespace PrincesPalace.Content
             // A resolver reading upgrades.json has no way to know that; it
             // would happily accept a renamed row. The whole-catalogue view is
             // the only place the constant and the content can be put beside
-            // each other, which is the same argument the ability-score budget
-            // above is re-asserted on.
+            // each other.
             if (_upgrades.All(u => u == null || u.id != SaveData.ExtraRecruitSlotUpgradeId))
             {
                 errors.Add($"No upgrade has id '{SaveData.ExtraRecruitSlotUpgradeId}', which " +

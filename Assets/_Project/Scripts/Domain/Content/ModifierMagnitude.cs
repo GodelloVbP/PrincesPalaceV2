@@ -8,7 +8,7 @@ namespace PrincesPalace.Domain.Content
     //
     //     Magnitude = base x TierMultiplier(itemTier)
     //
-    // Applied ONCE, at ContentDatabase.Effects — the one assembly
+    // Applied ONCE, in ContentDatabase.ScaledModifierEffectsForItem — the one assembly
     // point that has both the modifier's raw Effect (from
     // ModifierDefinition.ResolvedEffects) and the ONE equipped item instance
     // it rolled onto (its tier, EquipmentSlotEntry.tier).
@@ -19,9 +19,9 @@ namespace PrincesPalace.Domain.Content
     // own budget math in one place rather than trusting every reader to
     // reapply it identically.
     //
-    // A flag-shaped kind (ManaToWardOnTurnStartPercent) carries Magnitude 0
-    // and scaling 0 is still 0, so nothing here needs a special case for
-    // it.
+    // A kind whose EffectCatalog entry is not TierScaled (a flag-shaped kind
+    // such as ManaToWardOnTurnStartPercent) skips this scaling at the
+    // assembly point.
     public static class ModifierMagnitude
     {
         // REUSES GearScaling's OWN per-tier growth rate rather than inventing

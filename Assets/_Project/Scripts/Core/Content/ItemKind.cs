@@ -9,9 +9,8 @@ namespace PrincesPalace.Content
     // Weapon and Equipment are both worn — ItemDefinition.IsEquippable is
     // the check to use, never `kind != Consumable`, so adding a third worn
     // kind later can't silently make it drinkable. They stay separate
-    // because attackBonus drives FightController.RollWeaponDrop's power
-    // tiering: "what can drop as a weapon, ranked" is a real distinction the
-    // loot table needs, not just a difference of slot.
+    // because a weapon is generated from a weaponFamilyId and armour from a
+    // setId (see ContentDatabase.Offerable), not just a difference of slot.
     public enum ItemKind
     {
         Consumable,

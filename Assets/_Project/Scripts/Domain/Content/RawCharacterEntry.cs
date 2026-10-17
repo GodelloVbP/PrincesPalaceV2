@@ -61,24 +61,21 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Base Charisma; must be 1-30 (CharacterEntryResolver.MinAbilityScore/MaxAbilityScore).")]
         public int charisma = 10;
 
-        // Optional art, both RESOURCES-relative and without an extension:
-        // portraitPath names one head-and-shoulders PNG under
-        // Resources/Portraits/, battleSpritePath a folder of full-body stance
-        // art. Both are loaded at runtime, so a character authored today has
-        // both the moment the content is rebuilt — portraitPath was baked into
-        // the scene until 2026-09-06 and a new character's plate stayed empty
-        // until somebody ran a scene build. Empty means no art yet, which
-        // degrades to the armour-stand placeholder and a plain stage plate
-        // respectively. See docs/ART_PIPELINE.md.
         // PRINCE'S FAVOR: this character's luck.
         //
-        // Not an ability score, deliberately. The six scores spend a fixed
-        // budget against each other, so adding a seventh would silently
-        // rebalance every authored character; Favor is its own axis and its
-        // own decision. 0 is the honest default -- an unfavoured character.
+        // Not an ability score, deliberately: Favor is its own axis, so it
+        // does not enter any ability-score derivation. 0 is the default -- an
+        // unfavoured character.
         [ContentDoc("This character's luck stat; a separate axis from the six ability scores, 0 is the honest default.")]
         public int princesFavor;
 
+        // Optional art, both RESOURCES-relative and without an extension:
+        // portraitPath names one head-and-shoulders PNG under
+        // Resources/Portraits/, battleSpritePath a folder of full-body stance
+        // art. Both are loaded at runtime, so a new character has both the
+        // moment the content is rebuilt. Empty means no art yet, which
+        // degrades to the armour-stand placeholder and a plain stage plate
+        // respectively. See docs/ART_PIPELINE.md.
         [ContentDoc("Resources-relative path (no extension) to a head-and-shoulders portrait loaded at runtime, e.g. 'Portraits/sheep'; empty means no art yet and the dossier keeps its armour-stand placeholder.")]
         public string portraitPath = "";
         [ContentDoc("Resources-relative folder of full-body stance art loaded at runtime; empty means no art yet.")]

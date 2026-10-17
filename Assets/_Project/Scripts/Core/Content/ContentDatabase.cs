@@ -141,9 +141,6 @@ namespace PrincesPalace.Content
         }
 
         // Every item modifier ("Rift affix") in the pool, authored order.
-        // Phase A2 only -- nothing rolls one onto an item yet (Phase A3), so
-        // this is read today only by ModifierEffects below and by content
-        // tooling (the future modifier browser).
         public static IReadOnlyList<ModifierDefinition> Modifiers
         {
             get { EnsureLoaded(); return _modifiers; }
@@ -248,8 +245,8 @@ namespace PrincesPalace.Content
         }
 
         // Everything that can go on a character, Weapons included. This is
-        // what the Equipment screen offers; Weapons stays narrower because
-        // the loot table specifically wants weapons ranked by attackBonus.
+        // what the Equipment screen offers; Weapons stays narrower: only the
+        // two-hand-slot kind.
         public static IReadOnlyList<ItemDefinition> Equippables
         {
             get { EnsureLoaded(); return _items.Where(i => i.IsEquippable).ToList(); }
@@ -264,9 +261,8 @@ namespace PrincesPalace.Content
         // weaponFamilyId are what mark the two generated families; neither is
         // parsed out of an id, which is the whole reason those fields exist.
         //
-        // That leaves out the hand-authored one-offs in items.json — potions
-        // and the starting kit — which have their own routes in and would
-        // otherwise turn up as a "reward" the player already owns six of.
+        // That leaves out the hand-authored one-offs in items.json (the
+        // potions), which have their own routes in.
         public static IReadOnlyList<ItemDefinition> Offerable
         {
             get
@@ -981,23 +977,13 @@ namespace PrincesPalace.Content
 
         // GUARDED ON A FLAG SET LAST, not on the second field assigned.
         //
-        // The guard used to read `_characters != null`, and _characters is the
-        // SECOND of twelve catalogues this method fills. A re-entrant call made
-        // anywhere in the window between that assignment and the last one would
-        // find the guard satisfied and return with _talents.._rewardTracks
-        // still null -- and RewardTracks.Build would then dereference one.
+        // A guard on any one catalogue field would be satisfied part-way
+        // through this method's assignments: a re-entrant call in that window
+        // would return with the later catalogues still null. The flag is set
+        // after every assignment, so the window cannot be observed.
         //
-        // The comment on _rewardTracks below already describes this shape
-        // exactly (a lazy load "re-entered from a future per-character read ...
-        // would find _characters already non-null at the guard on this method's
-        // first line") and answers it by loading that one field here rather
-        // than lazily. That closes the one re-entry anybody had found; a flag
-        // set after every assignment closes the window itself, for the eleven
-        // other fields and for the next reader who adds a thirteenth.
-        //
-        // Nothing re-enters today, so there is no failing test to point at --
-        // an honest "latent" rather than a fixed crash. Reset() clears the flag
-        // with the fields, or the next load would be skipped entirely.
+        // Nothing re-enters today. Reset() clears the flag with the fields,
+        // or the next load would be skipped entirely.
         private static bool _loaded;
 
         private static void EnsureLoaded()
@@ -1032,12 +1018,10 @@ namespace PrincesPalace.Content
                 .ToList();
 
             // Loaded HERE, not lazily off the RewardTracks property: a lazy
-            // load re-entered from a future per-character read (the way
-            // AvailableSkillsFor calls EnsureLoaded() at :238 above and reads
-            // a track) would find _characters already non-null at the guard
-            // on this method's first line and return before ever assigning
-            // this field. See docs/archive/PLAN_REWARD_TRACKS.md §4's touch-point
-            // table for the citation this mirrors.
+            // load re-entered from a per-character read (the way
+            // AvailableSkillsFor calls EnsureLoaded() and reads a track) would
+            // find the load already under way and read this field before it
+            // was assigned.
             _rewardTracks = LoadOrdered<RewardTrackDefinitionAsset>(RewardTrackResourcePath);
             _rewardSources = LoadOrdered<RewardSourceDefinition>(RewardSourceResourcePath);
             _realms = LoadOrdered<RealmDefinition>(RealmResourcePath)

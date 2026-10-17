@@ -91,8 +91,8 @@ namespace PrincesPalace.Domain.Content
             }
 
             // REQUIRED, both of them: they are the two fields that decide
-            // what a pool is, so they get the overload `role` uses at
-            // CharacterEntryResolver.cs:130 rather than the blank-defaulting
+            // what a pool is, so they get the overload `role` uses in
+            // CharacterEntryResolver rather than the blank-defaulting
             // one battleSpriteFacing uses.
             if (!TryParseEnum<PoolCapacityRule>(raw.capacityRule, out var capacityRule))
             {
