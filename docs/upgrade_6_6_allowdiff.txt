@@ -24,13 +24,6 @@ Assets/_Project/Art/Backgrounds/ItemChoice.png.meta
 Assets/_Project/Art/Backgrounds/Juggernaut.png.meta
 Assets/_Project/Art/Backgrounds/Main_menu.png.meta
 Assets/_Project/Art/Backgrounds/Pause.png.meta
-Assets/_Project/Art/Backgrounds/Processed/forest_map_chest.png.meta
-Assets/_Project/Art/Backgrounds/Processed/map_forest_event.png.meta
-Assets/_Project/Art/Backgrounds/Processed/map_forest_mob.png.meta
-Assets/_Project/Art/Backgrounds/Processed/map_forest_mob_boss.png.meta
-Assets/_Project/Art/Backgrounds/Processed/map_forest_mob_elite.png.meta
-Assets/_Project/Art/Backgrounds/Processed/map_forest_rest.png.meta
-Assets/_Project/Art/Backgrounds/Processed/map_forest_room.png.meta
 Assets/_Project/Art/Backgrounds/Relics.png.meta
 Assets/_Project/Art/Backgrounds/Rewards.png.meta
 Assets/_Project/Art/Backgrounds/Sentinel.png.meta
