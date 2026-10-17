@@ -105,13 +105,12 @@ namespace PrincesPalace.Domain.UiKit
         // tree's origin is the sky STAGE's centre and not the screen's.
         public const float PanelHeight = 1080f;
 
-        // Matches the Violet 9:16 container's own measured content inset
-        // (ContainerArt.Inset, left/right 0.083 of the frame's width -- was
-        // 0.08 before the 2026-09-07 repin) rather than the handoff's
-        // 28-authored pad, so a label can never sit under the painted border
-        // -- see Ui.ContainerContent, which is what actually places content
-        // at this margin now.
-        public const float PanelPad = PanelWidth * 0.083f;
+        // The 9:16 container's own measured content inset, read from
+        // ContainerArt so a re-measure of the kit moves this too; a label can
+        // then never sit under the painted border. Ui.ContainerContent is what
+        // places content at this margin.
+        public static float PanelPad =>
+            ContainerArt.Inset(ContainerKind.Container, ContainerRatio.NineBySixteen).Left * PanelWidth;
 
         public static float PanelInnerWidth => PanelWidth - PanelPad * 2f;
 
