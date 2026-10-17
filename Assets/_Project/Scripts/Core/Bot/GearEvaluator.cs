@@ -73,7 +73,8 @@ namespace PrincesPalace
                 manaRegen: stats.manaRegen);
         }
 
-        // THE SHEET'S DMG NUMBER. WeaponPower.DisplayDamage of whatever is live
+        // THE SHEET'S DMG NUMBER (CombatDamage; CombatDamageOf below computes
+        // it from a stat block). WeaponPower.DisplayDamage of whatever is live
         // in the main hand, scaled by this character's own ability scores --
         // which is how STR and INT reach offence at all (AbilityDerivation
         // derives nothing from either; the weapon's ScalingProfile reads them

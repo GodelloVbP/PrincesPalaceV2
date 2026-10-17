@@ -496,7 +496,7 @@ namespace PrincesPalace
                     var fightPolicy = policy as IFightPolicy;
                     var runPolicy = policy as IRunPolicy;
 
-                    // BELT AND BRACES, PER THE BRIEF: every won fight already
+                    // BELT AND BRACES: every won fight already
                     // claims the track and spends every stat point
                     // (CollectLevelUps, called from PlayTheFight), so this is
                     // a no-op idempotent call on every run whose last fight
@@ -650,15 +650,10 @@ namespace PrincesPalace
             GrantBooks(save, result);
 
             // DRESS BEFORE WALKING IN. A player opens the character sheet on
-            // the way out of the hub and wears the best of what they own; the
-            // bot did not, so every batch before this measured a Late profile
-            // fighting in a level-1 starting kit.
+            // the way out of the hub and wears the best of what they own.
             //
-            // AFTER the draft rather than before it AND after -- the plan asks
-            // for a pass at both points, and the draft touches relics, never
-            // gear or the bag, so the earlier of the two could only ever find
-            // exactly what this one finds. One pass, at the later point, is the
-            // same answer for half the work.
+            // AFTER the draft: the draft touches relics, never gear or the
+            // bag, so one pass here finds everything a pass before it would.
             result.Trace.EquippedAtStart.AddRange(EquipPassTraced(seed, save, runPolicy, step: -1, node: 0));
 
             // The last state seen while the run was still alive. EndRun
@@ -1191,13 +1186,9 @@ namespace PrincesPalace
             // CURRENTLY WORN gear, and nothing in this loop ever changes what
             // is worn -- EquipPass only runs on the way out of a fight, never
             // mid-shop -- so the same card and the same bag stack scored the
-            // same thing on choice 1 score the same thing on choice 12. Before
-            // this cache, a visit with a dozen choices against a bag that had
-            // grown to twenty-odd items over the run was rescoring the whole
-            // shelf AND the whole bag from scratch on every single choice --
-            // the measured cost of that was half the batch's wall clock
-            // (BotPhase.Shop, ~85ms/visit against ~5ms for everything else a
-            // visit does). A fresh dictionary per visit, not per batch: a
+            // same thing on choice 1 score the same thing on choice 12.
+            // Without it every choice would rescore the whole shelf AND the
+            // whole bag, which dominates a visit's cost (BotPhase.Shop). A fresh dictionary per visit, not per batch: a
             // purchase or a level-up between VISITS can change what is worn,
             // and a stale score carried across visits would be wrong rather
             // than merely repeated.
@@ -1249,7 +1240,7 @@ namespace PrincesPalace
                 // is thrown away, the
                 // stream it draws from is keyed by (seed, step, choiceIndex)
                 // like every other, and it only happens on a visit that
-                // reached the ceiling -- which, with the ceiling now derived
+                // reached the ceiling -- which, with the ceiling derived
                 // from the shelf, is close to never.
                 if (choiceIndex == MaxShopChoices - 1)
                 {
@@ -1481,8 +1472,9 @@ namespace PrincesPalace
 
         // itemId+tier is the whole of what GearEvaluator.ScoreOffer reads
         // besides `save` (worn gear, constant across a visit) and `weights`
-        // (the archetype, constant for the run) -- see the cache's own note
-        // at its one call site in VisitShop.
+        // (the archetype, constant for the run), so the cache is valid only
+        // while worn gear is constant -- see the cache's own note at its call
+        // site in ShopAtTheStockInFront.
         private static float ScoreCached(
             SaveData save, string itemId, int tier, GearWeights weights,
             Dictionary<(string, int), float> cache)
@@ -1810,15 +1802,13 @@ namespace PrincesPalace
 
         // ---- collecting a level-up ---------------------------------------------------
 
-        // WHAT A PLAYER DOES AFTER A WON FIGHT, which the bot did none of.
+        // WHAT A PLAYER DOES AFTER A WON FIGHT.
         //
-        // RewardApplier deliberately stopped claiming the reward track (its own
-        // header says so at length: collection is something the player does
-        // now, from the reward-track screen). So a bot that only settled the
-        // fight levelled up and then never collected the stat points, max
+        // RewardApplier does not claim the reward track (collection is the
+        // player's, from the reward-track screen). So a bot that only settled
+        // the fight would level up and never collect the stat points, max
         // health and everything else those levels owed -- for a Late profile
-        // mid-run that is dozens of unclaimed nodes, and the batch reported it
-        // as the game being hard.
+        // mid-run that is dozens of unclaimed nodes.
         //
         // ClaimTrackRewards is idempotent against its own watermark, so calling
         // it after every won fight costs nothing on the fights that crossed no
@@ -1828,7 +1818,7 @@ namespace PrincesPalace
         // max health, wool, elemental damage, the respec, the second life, a
         // book spell -- is summed live off claimedTrackLevel at its own read
         // site. So a bot that skipped this would not merely miss the points,
-        // it would field a level-60 character with a level-1 everything.
+        // it would field a high-level character with a level-1 everything.
         private static void CollectLevelUps(
             ulong seed, SaveData save, IRunPolicy runPolicy, int step)
         {
@@ -1872,14 +1862,10 @@ namespace PrincesPalace
         // collects -- a permanently empty tail on the bar, compounding
         // across a descent.
         //
-        // A PRIVATE HELPER, NOT A SHARED ONE. "Move a maximum, keep the
-        // fraction" has four callers now (EquipmentOps, TalentOps, the reward
-        // track screen, and this) and wants to be one Core helper --
-        // TalentOps.RescalingCarriedHealth is already exactly that shape. It is
-        // not extracted here because TalentOps is being changed in the same
-        // pass by another hand, and a cross-file extraction under two editors
-        // at once is how a pair ends up applied zero times instead of four. A
-        // later pass should fold all four into it.
+        // A PRIVATE HELPER: it takes the maxBefore photograph before the claim
+        // and then calls RunEncounter.ScaleCarriedHealth. EquipmentOps,
+        // TalentOps and the reward-track screen each rescale the carried
+        // fraction in their own way.
         private static bool ClaimKeepingTheCarriedFraction(Character character)
         {
             if (character == null) return false;

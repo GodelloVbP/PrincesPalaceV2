@@ -6,13 +6,11 @@ namespace PrincesPalace
 {
     // WHERE A BATCH'S WALL CLOCK ACTUALLY GOES.
     //
-    // The first attempt at making the bot faster guessed at the hot phase and
-    // guessed wrong: the obvious suspect (playing the fight) was a minority of
-    // the time, and the two real costs were the throwaway save DIRECTORY per
-    // run and JsonUtility serialising the whole save on every arrival. Neither
-    // is visible without measuring, so measuring is not an optional extra here
-    // -- it is the only thing that keeps "an optimisation" from being a
-    // superstition.
+    // The hot phase is not where it looks: playing the fight is a minority of
+    // the time, and the real costs are the throwaway save DIRECTORY per run
+    // and JsonUtility serialising the whole save on every arrival. Neither is
+    // visible without measuring, so the timers stay on -- they are what keeps
+    // "an optimisation" from being a superstition.
     //
     // ALWAYS ON rather than behind a flag. One Stopwatch.GetTimestamp pair per
     // phase entry is a handful of nanoseconds against phases measured in tens
@@ -72,9 +70,8 @@ namespace PrincesPalace
         // sampling the replay would buy.
         Replay = 13,
 
-        // THE TWO THINGS A PLAYER DOES BETWEEN FIGHTS, and the two the bot did
-        // none of before: wearing the best of what it owns, and collecting the
-        // level-ups it has earned. Given their own rows because both run a
+        // THE TWO THINGS A PLAYER DOES BETWEEN FIGHTS: wearing the best of
+        // what it owns, and collecting the level-ups it has earned. Given their own rows because both run a
         // clone-and-re-resolve per candidate (see GearEvaluator) and that is
         // the one new cost in this phase worth being able to see grow.
         //
@@ -88,12 +85,8 @@ namespace PrincesPalace
 
         // A WHOLE SHOP VISIT (up to MaxShopChoices rounds of ShopViewOf +
         // ChooseShop + Apply) and the spell-book placement that follows a
-        // shop or a fight. Added after these two ran with no timer around
-        // them at all and the batch that found the 2026-09 shop-visit
-        // regression (VisitShop rescoring every shelf card and every bag row
-        // from scratch on every one of a visit's choices) had to be read as
-        // "half of WALL is unaccounted for" before the culprit could even be
-        // named.
+        // shop or a fight. Timed on their own so a cost inside a visit shows
+        // up as a row instead of as unaccounted WALL.
         Shop = 16,
         SpellAssign = 17,
     }
