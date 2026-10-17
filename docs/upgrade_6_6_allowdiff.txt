@@ -50,17 +50,11 @@ Assets/_Project/Art/Events/petting_zoo/zoo.png.meta
 Assets/_Project/Art/Events/rat_caravan/caravan.png.meta
 Assets/_Project/Art/Events/rat_caravan/road.png.meta
 Assets/_Project/Art/Events/rat_caravan/robbed.png.meta
-Assets/_Project/Art/Generated/arrow_ember.png.meta
 Assets/_Project/Art/Generated/band_fade.png.meta
-Assets/_Project/Art/Generated/bar_bloom.png.meta
-Assets/_Project/Art/Generated/bar_fill.png.meta
-Assets/_Project/Art/Generated/bar_track.png.meta
 Assets/_Project/Art/Generated/card_ground.png.meta
 Assets/_Project/Art/Generated/cloud_wash.png.meta
-Assets/_Project/Art/Generated/collar_notch.png.meta
 Assets/_Project/Art/Generated/collar_ring.png.meta
 Assets/_Project/Art/Generated/disc_metal.png.meta
-Assets/_Project/Art/Generated/dossier_veil.png.meta
 Assets/_Project/Art/Generated/focus_arrow.png.meta
 Assets/_Project/Art/Generated/hairline_fade.png.meta
 Assets/_Project/Art/Generated/milestone_ring.png.meta
