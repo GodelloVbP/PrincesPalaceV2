@@ -673,7 +673,7 @@ namespace PrincesPalace
                 if (SystemMenuController.Refuses(menu, MenuAction.EquipGear)) return;
 
                 EndPending();
-                EquipFromPack(character, entry, EquipmentSlots.All[pending.GearSlot]);
+                if (!EquipFromPack(character, entry, EquipmentSlots.All[pending.GearSlot])) Refresh();
                 Select(Cell(slotCells, pending.GearSlot));
                 return;
             }
@@ -771,12 +771,12 @@ namespace PrincesPalace
 
         // ---- putting gear on and taking it off ------------------------------------------------
 
-        private void EquipFromPack(Character character, PackEntry entry, EquipmentSlot? preferredSlot)
+        private bool EquipFromPack(Character character, PackEntry entry, EquipmentSlot? preferredSlot)
         {
-            if (SystemMenuController.Refuses(menu, MenuAction.EquipGear)) return;
+            if (SystemMenuController.Refuses(menu, MenuAction.EquipGear)) return false;
 
             var save = SaveSlotManager.CurrentSave;
-            if (character?.equipment == null || save == null) return;
+            if (character?.equipment == null || save == null) return false;
 
             // The row's whole copy (ItemInstance), so a rolled item keeps its
             // affixes and a lot copy its provenance; EquipmentOps measures and
@@ -784,7 +784,7 @@ namespace PrincesPalace
             if (!EquipmentOps.Equip(Context, save, character, entry.Item.Instance, entry.Item.Slot,
                     entry.Item.IsEquippable, preferredSlot))
             {
-                return;
+                return false;
             }
 
             // WRITTEN IMMEDIATELY: gear that vanishes because the game closed
@@ -792,6 +792,7 @@ namespace PrincesPalace
             SaveSlotManager.SaveCurrent();
             Refresh();
             RepaintCompareForSelection();
+            return true;
         }
 
         private void UnequipSlot(int index)

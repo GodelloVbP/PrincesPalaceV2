@@ -401,6 +401,25 @@ namespace PrincesPalace.PlayModeTests
             DossierPane.AssertSelected(DossierPane.SlotName(EquipmentSlot.Weapon2), "focus goes back to the slot it filled");
         }
 
+        // An equip that the ops refuse (the pack changed under the armed cell)
+        // still ends the pending state, so it repaints like every other way out.
+        [UnityTest]
+        public IEnumerator ARefusedEquipFromAnArmedSlot_StillRepaintsThePack()
+        {
+            yield return OpenOnTheMap(Shawn);
+            Pack(ItemFor(EquipmentSlot.Legs).id);
+
+            DossierPane.Press(DossierPane.SlotName(EquipmentSlot.Legs));
+            Assert.AreEqual(1, _dossier.VisiblePack.Count, "fixture: the armed pack should show the one Legs item");
+
+            SaveSlotManager.CurrentSave.stockpiledItems.Clear();
+            DossierPane.Press("DossierPackCell0");
+
+            Assert.IsFalse(_dossier.HasPending, "the refused equip left the slot armed");
+            Assert.AreEqual(0, _dossier.VisiblePack.Count,
+                "the refused equip ended the pending state without repainting, so the pack still shows the stale entry");
+        }
+
         [UnityTest]
         public IEnumerator ArmingNarrowsThePackToTheSlot_AndCancelPutsTheFilterBack()
         {
