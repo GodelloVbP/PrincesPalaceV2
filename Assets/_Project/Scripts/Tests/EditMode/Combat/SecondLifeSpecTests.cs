@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Combat.Session;
@@ -110,6 +111,22 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsFalse(session.IsOver, "the fight ended despite a charge being available");
             Assert.AreEqual(100, party[0].CurrentHealth,
                 "the plan says 1; the code says half of max");
+        }
+
+        // A damage-over-time that was ticking when they fell is not carried
+        // into the new life: 150 poison on a 100-health body would fell it again.
+        [Test]
+        public void TheRaisedKeepNoDamageOverTime()
+        {
+            var (session, party, foe) = Party(charges: 1, 200);
+            party[0].CurrentHealth = 1;
+            session.ApplyStatusToForTest(party[0], StatusEffectType.Poison, 150, 5);
+
+            session.ExecuteAttack(foe);
+
+            Assert.AreEqual(100, party[0].CurrentHealth, "fixture: raised on half");
+            Assert.AreEqual(0, party[0].Statuses.Count(s => s.Type == StatusEffectType.Poison),
+                "the poison that was ticking when they fell is gone");
         }
 
         // The one place the "minimum 1" half of the arithmetic shows: a

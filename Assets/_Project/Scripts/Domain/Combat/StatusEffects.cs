@@ -1370,6 +1370,13 @@ namespace PrincesPalace.Domain.Combat
             return new TickReport(rows, regenHealed, expired);
         }
 
+        // Drops every damaging AtTick status (the rows DamagingTypesDue lists),
+        // for a body raised from the dead: what was ticking down its health
+        // when it fell would otherwise fell it again.
+        public static void ClearDamaging(CombatantState combatant) =>
+            combatant.Statuses.RemoveAll(s =>
+                DurationClock(s.Type) == StatusClock.AtTick && ElementOf(s.Type).HasValue);
+
         // The damaging AtTick types the holder carries, in first-carried
         // order, read ONCE before anything lands -- so a type whose last
         // instance a death or a hatch changes mid-tick is still its own row.
