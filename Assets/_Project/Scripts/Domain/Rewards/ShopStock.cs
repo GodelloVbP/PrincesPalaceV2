@@ -191,14 +191,11 @@ namespace PrincesPalace.Domain.Rewards
     {
         // ---- what the shelves hold ------------------------------------------
         //
-        // Ten cards, against gate 1's own numbers
-        // (docs/handoffs/shop_v2/GAP_AUDIT.md, "Gate exit checks -> Gate 1"):
-        // even a policy that buys every affordable, positive-scoring card on
-        // a 3/1/2 shelf left runs with 6-9x the pre-shop median gold at
-        // death, so the shelf is the binding constraint, not price. 4 gear /
-        // 3 books / 3 relics is ten offers priced against a shelf nobody can
-        // empty. Gate 3 is what tests whether three book cards against a
-        // five-entry pool reads as repetitive once real content rolls there.
+        // Ten cards. The shelf, not price, is the binding constraint: a
+        // policy that buys every affordable, positive-scoring card still
+        // ends a run with gold to spare, so 4 gear / 3 books / 3 relics is
+        // ten offers priced against a shelf nobody can empty. Three book
+        // cards against a five-entry pool may read as repetitive.
         //
         // This is also the UI design: the five-panel grid's Gear / Spell
         // Books / Relics panels each show exactly this many cards (§3f).
@@ -237,7 +234,7 @@ namespace PrincesPalace.Domain.Rewards
         // (docs/PLAN_SHOP.md 2g) -- and a hand-written bound has to track the
         // shelf: buying every card (10), rerolling every section once (3) and
         // the Leave that ends the visit (1) is already 14, so a bound tied to
-        // an older, smaller shelf would cut off a policy doing nothing
+        // a smaller shelf would cut off a policy doing nothing
         // unusual. It sits here rather than in the caller precisely so the
         // shelf and its bound cannot drift apart: change a count above and
         // this moves with it.
@@ -384,11 +381,8 @@ namespace PrincesPalace.Domain.Rewards
         // replacement (RelicPool.DraftWeighted's shape with every weight
         // equal to 1): books carry no rarity to weight by.
         //
-        // gate 3 is the first thing that draws from RngStreams.ShopBooks --
-        // every prior shop rolled this section as BookCount NO OFFER cards
-        // without touching the stream, so there is no phantom consumption
-        // to preserve and this draw's numbers are the first that stream has
-        // ever produced.
+        // This is the only draw from RngStreams.ShopBooks, so no other
+        // consumer can shift its numbers.
         public static List<ShopStockEntry> RollBooks(IReadOnlyList<BookCandidate> available, int step, Func<int, int> nextIndex)
         {
             var entries = new List<ShopStockEntry>();

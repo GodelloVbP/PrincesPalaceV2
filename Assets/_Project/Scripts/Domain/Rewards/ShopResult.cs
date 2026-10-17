@@ -2,10 +2,10 @@ namespace PrincesPalace.Domain.Rewards
 {
     // WHY A SHOP MUTATION DID NOTHING.
     //
-    // A reason enum rather than a bool, because the four callers that will
-    // exist by gate 3 -- the screen, the bot policy, the atomicity tests and
-    // the trace -- each need a different amount of it, and "false" is the
-    // answer none of them can act on.
+    // A reason enum rather than a bool, because its callers -- the screen,
+    // the bot policy, the atomicity tests and the trace -- each need a
+    // different amount of it, and "false" is the answer none of them can
+    // act on.
     public enum ShopRefusal
     {
         None,
