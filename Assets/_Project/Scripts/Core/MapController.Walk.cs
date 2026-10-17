@@ -13,9 +13,8 @@ namespace PrincesPalace
     // The click starts a walk along the trail already drawn between the two
     // rooms, and the room's content fires on ARRIVAL, not on the click.
     //
-    // The room resolution itself lives in one place, Arrive(), so Event,
-    // Shop and ItemSpawn can wire into it when they have screens, without the
-    // movement code learning anything about them.
+    // The room resolution itself lives in one place, Arrive(), so the
+    // movement code learns nothing about what a room does.
     public partial class MapController
     {
         // Which character is drawn, resolved from the squad rather than fixed.
@@ -101,10 +100,10 @@ namespace PrincesPalace
 
             // THE CAMERA HOLDS STILL WHILE HE WALKS.
             //
-            // It followed him at first, which sounds right and looks wrong: the
-            // scroll is pinned to the room, so tracking the figure pins the
-            // FIGURE to a fixed screen position and slides the entire wood
-            // past him. Everything moves except the thing that is moving.
+            // Following him sounds right and looks wrong: the scroll is pinned
+            // to the room, so tracking the figure pins the FIGURE to a fixed
+            // screen position and slides the entire wood past him. Everything
+            // moves except the thing that is moving.
             //
             // Held instead, he crosses the gap between the two rooms in full
             // view -- which is the one thing this animation exists to show --
@@ -151,11 +150,11 @@ namespace PrincesPalace
 
         // What the room does.
         //
-        // The room's own rules (move, reset the message, resolve, clear) moved
-        // to RunOrchestrator.ArriveAt so the balance bot walks into rooms
+        // The room's own rules (move, reset the message, resolve, clear) live
+        // in RunOrchestrator.ArriveAt so the balance bot walks into rooms
         // through the same code a player does -- docs/PLAN_BALANCE_BOT.md F2.
-        // What is left here is the two things a bot has no use for: which
-        // scene to load, and repainting the map.
+        // What is here is the two things a bot has no use for: which scene to
+        // load, and repainting the map.
         private void Arrive(RealmNode target)
         {
             switch (RunOrchestrator.ArriveAt(target))
@@ -172,8 +171,7 @@ namespace PrincesPalace
                     // Navigation.Go, and the room stays uncleared until the
                     // shop's own LEAVE button calls RunOrchestrator.LeaveShop
                     // (ShopController.Leave -> MapController.Refresh via
-                    // Finished). Replaces gate 1's shim, which had no screen
-                    // to open and left immediately instead.
+                    // Finished).
                     OpenShop();
                     return;
 
@@ -205,7 +203,7 @@ namespace PrincesPalace
             }
         }
 
-        // The jitter seed for every link, built once and shared.
+        // The jitter seed for every link.
         //
         // The trail and the walk MUST agree on this or the figure crosses open
         // canopy beside the path it is supposed to be on: one count feeds both

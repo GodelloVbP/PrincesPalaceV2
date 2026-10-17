@@ -62,9 +62,8 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text roomMessageLabel;
 
         // The character sheet, mounted here too. UNLOCKED: the map between two
-        // rooms is exactly where changing gear is supposed to happen, and
-        // walking back to the hub to swap a breastplate was what made having it
-        // in the fight only half an answer.
+        // rooms is exactly where changing gear is supposed to happen, without a
+        // walk back to the hub.
         [SerializeField] internal GameObject characterSheetPanel;
 
         // The in-run shop, mounted here too (F10, docs/PLAN_SHOP.md) --
@@ -106,6 +105,10 @@ namespace PrincesPalace
         // The lair under the heart (MapController.cs LayoutWood).
         [SerializeField] internal Image heartBackdrop;
 
+        // The wood is dimmed so the graph drawn on it reads: the painting's
+        // clearings, undimmed, look like places a room should stand.
+        private static readonly Color BackdropTint = new Color(0.5f, 0.5f, 0.5f, 1f);
+
         // A whole-tile colour MULTIPLY, applied to the painted tree and its icon
         // at once.
         //
@@ -116,11 +119,6 @@ namespace PrincesPalace
         // brightness is all there is to say it with. This is also why these are
         // Colors here and not hexes in MapScreen alongside the trail palette: a
         // hex string cannot express a channel above 1.
-        // The wood is dimmed so the graph drawn on it reads: the painting's
-        // clearings were laid out for the old horizontal map and, undimmed,
-        // look like places a room should stand.
-        private static readonly Color BackdropTint = new Color(0.5f, 0.5f, 0.5f, 1f);
-
         private static readonly Color CurrentTint = new Color(1.16f, 1.08f, 0.90f, 1f);
         private static readonly Color WalkedTint = new Color(0.95f, 0.85f, 0.66f, 0.95f);
         private static readonly Color OpenTint = Color.white;
@@ -224,11 +222,10 @@ namespace PrincesPalace
         // ---- the character sheet, between rooms --------------------------------
 
         // The map's own base context, mirroring HubController's -- pushed
-        // once, never popped while this scene is loaded. No Selectables yet
-        // (node-button navigation is the Graph group RefreshNavLinks below
-        // gives Map). Start and the menu hotkeys reach the system menu through
-        // it; its Cancel does nothing, and a modal that pushes its own context
-        // over it absorbs all of them.
+        // once, never popped while this scene is loaded. RefreshNavLinks
+        // declares its Selectables (the node buttons). Start and the menu
+        // hotkeys reach the system menu through it; its Cancel does nothing,
+        // and a modal that pushes its own context over it absorbs all of them.
         private NavContext _navContext;
 
         // The overarching menu this screen's Cancel opens, assigned by
@@ -262,8 +259,7 @@ namespace PrincesPalace
                 return;
             }
 
-            // Cancel/Escape is not read here at all any more -- see the
-            // context comment above.
+            // Cancel/Escape is not read here -- see the context comment above.
         }
 
         private void RegisterNavContext()
@@ -323,9 +319,9 @@ namespace PrincesPalace
         public void SetCharacterSheet(bool open, bool inventory = false) =>
             SheetPanel.Set(characterSheetPanel, open, inventory);
 
-        // Gate 2's replacement for the gate-1 shim (MapController.Walk.cs's
-        // Arrive()): a nested panel, so no Navigation.Go, and closing it is
-        // the shop's own LEAVE button rather than anything this method does.
+        // Called from MapController.Walk.cs's Arrive(): a nested panel, so no
+        // Navigation.Go, and closing it is the shop's own LEAVE button rather
+        // than anything this method does.
         public void OpenShop()
         {
             if (shop == null) return;
@@ -521,8 +517,8 @@ namespace PrincesPalace
 
             if (current == null || choices == null || choices.Count == 0)
             {
-                // Screen-level fallback (plan section 6): nothing to select,
-                // Cancel stays live through the context's own Cancel handler.
+                // Screen-level fallback (plan section 6): nothing to select;
+                // Start still opens the system menu.
                 _navContext.Reconfigure(entry: null, selectables: null);
                 return;
             }
