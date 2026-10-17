@@ -127,7 +127,13 @@ namespace PrincesPalace
         // delta. Same for the other direction. This is exactly the property
         // ItemDescription.Compare's own header claims for the sheet.
         public static StatDeltas? DeltaFor(
-            Character character, ItemInstance copy, EquipmentSlot slot)
+            Character character, ItemInstance copy, EquipmentSlot slot) =>
+            character?.equipment == null ? (StatDeltas?)null : DeltaFor(character, copy, slot, Measure(character));
+
+        // `before` is Measure(character), hoisted by callers that score many
+        // candidates against one unchanged character.
+        private static StatDeltas? DeltaFor(
+            Character character, ItemInstance copy, EquipmentSlot slot, StatDeltas before)
         {
             var item = ContentDatabase.DefinitionOf(copy);
             if (character?.equipment == null || item == null || !item.IsEquippable) return null;
@@ -137,7 +143,7 @@ namespace PrincesPalace
             if (after == null) return null;
             if (!ContentDatabase.ActiveLoadout(after).IsLive(slot)) return null;
 
-            return Difference(Measure(after), Measure(character));
+            return Difference(Measure(after), before);
         }
 
         // WHAT ONE OFFER IS WORTH TO THE SQUAD, which is what RunView.
@@ -165,9 +171,10 @@ namespace PrincesPalace
             {
                 if (character?.equipment == null) continue;
 
+                var baseline = Measure(character);
                 foreach (var slot in EquipmentSlots.All)
                 {
-                    var delta = DeltaFor(character, copy, slot);
+                    var delta = DeltaFor(character, copy, slot, baseline);
                     if (!delta.HasValue) continue;
 
                     float score = weights.Score(delta.Value);
@@ -427,6 +434,7 @@ namespace PrincesPalace
         {
             var candidates = new List<InventoryEntry>();
             var scores = new List<float>();
+            var baseline = Measure(character);
 
             foreach (var entry in save.stockpiledItems)
             {
@@ -435,7 +443,7 @@ namespace PrincesPalace
                 var item = ContentDatabase.GetItem(entry.itemId);
                 if (item == null || !item.IsEquippable) continue;
 
-                var delta = DeltaFor(character, entry.Instance, slot);
+                var delta = DeltaFor(character, entry.Instance, slot, baseline);
                 if (!delta.HasValue) continue;
 
                 candidates.Add(entry);
