@@ -104,19 +104,12 @@ namespace PrincesPalace.Domain.Tests
         // ride weapon/skill scaling instead of deriving a stat directly, and
         // that wiring is Phase 3 (D3), not yet landed. If either gains a row
         // this test is what should change.
-        [Test]
-        public void IntelligenceFeedsNoRowYet()
+        [TestCase(AbilityScore.Intelligence)]
+        [TestCase(AbilityScore.Strength)]
+        public void IntelligenceAndStrengthFeedNoRowYet(AbilityScore score)
         {
-            CollectionAssert.IsEmpty(SheetStats.Feeds(AbilityScore.Intelligence),
-                "Intelligence has gained a derived row - update the sheet's hover copy with it.");
-        }
-
-        [Test]
-        public void StrengthFeedsNoRowYet()
-        {
-            CollectionAssert.IsEmpty(SheetStats.Feeds(AbilityScore.Strength),
-                "Strength has gained a derived row - update the sheet's hover copy with it " +
-                "(expected once Phase 3 wires weapon power in).");
+            CollectionAssert.IsEmpty(SheetStats.Feeds(score),
+                $"{score} has gained a derived row - update the sheet's hover copy with it.");
         }
 
         [Test]
