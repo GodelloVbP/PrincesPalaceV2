@@ -267,6 +267,55 @@ namespace PrincesPalace.PlayModeTests
                 "reopening the target pick must land on the enemy, not on a stale intent inspection");
         }
 
+        // S05-003: a dead enemy left under the cursor must not swallow the pad's
+        // Confirm; it falls through to the first living target like no hover.
+        [UnityTest]
+        public IEnumerator ConfirmWithADeadEnemyUnderTheCursorStillHitsTheFirstLivingOne()
+        {
+            yield return StandUpAFight();
+
+            var pad = (IFightNavigationTarget)_fight;
+            pad.ConfirmFocus();
+            yield return null;
+            Assert.IsTrue(IsShown("TargetPrompt"), "fixture: the attack is waiting for a target");
+
+            var corpse = _fight.SessionForTest.Encounter.Enemies[1];
+            corpse.CurrentHealth = 0;
+            var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+            typeof(FightController).GetField("_hoveredEnemyIndex", flags).SetValue(_fight, 1);
+
+            pad.ConfirmFocus();
+            yield return null;
+
+            Assert.IsFalse(IsShown("TargetPrompt"),
+                "Confirm pressed the dead enemy under the cursor and the pick stayed open");
+        }
+
+        // The pad's intent read ends when the round resolves; the tooltip must
+        // not outlive it (sibling of S05-001, which covers StepBack).
+        [UnityTest]
+        public IEnumerator AClickWhileTheIntentTooltipIsUpSwitchesItOffWhenTheRoundResolves()
+        {
+            yield return StandUpAFight();
+
+            var pad = (IFightNavigationTarget)_fight;
+            pad.ConfirmFocus();
+            yield return null;
+            pad.MoveFocus(-1);
+            yield return null;
+            Assert.IsTrue(IsShown("IntentTooltip"), "fixture: the intent tooltip is up");
+
+            var hit = Node("EnemyHitArea0");
+            Assert.IsNotNull(hit, "the Fight scene has no EnemyHitArea0");
+            hit.GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
+            yield return null;
+            yield return null;
+
+            Assert.IsFalse(IsShown("TargetPrompt"), "fixture: the attack resolved");
+            Assert.IsFalse(Node("IntentTooltip").activeSelf,
+                "the round resolved and the intent tooltip is still switched on, ready to reappear with the HUD");
+        }
+
         // S04-001: a dead _inspectedActor reads as no pointer, so its status code
         // must not light the same row on the pad-focused actor.
         [UnityTest]

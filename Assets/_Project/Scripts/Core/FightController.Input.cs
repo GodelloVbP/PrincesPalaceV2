@@ -2828,13 +2828,14 @@ namespace PrincesPalace
                         break;
                     }
 
-                    if (_hoveredEnemyIndex >= 0)
+                    var enemies = Enemies;
+                    if (_hoveredEnemyIndex >= 0 && _hoveredEnemyIndex < enemies.Count
+                        && enemies[_hoveredEnemyIndex].IsAlive)
                     {
                         OnEnemyPressed(_hoveredEnemyIndex);
                         break;
                     }
 
-                    var enemies = Enemies;
                     for (int i = 0; i < enemies.Count; i++)
                     {
                         if (!enemies[i].IsAlive) continue;
