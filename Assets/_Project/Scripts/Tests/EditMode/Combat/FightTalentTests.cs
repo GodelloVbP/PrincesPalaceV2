@@ -1164,5 +1164,31 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsFalse(messages.Any(m => m.Contains("shatters 2 wards")));
             Assert.IsFalse(StatusEffects.IsWarded(lamb));
         }
+
+        // The blast's Amount is its own pre-shield figure. The foe's signature
+        // pool soaks part of it downstream of the damage figure, so adding
+        // Absorbed back onto that figure would inflate the beat.
+        [Test]
+        public void AShatterBeatAmount_IsTheBlastFigure_WhenTheFoesPoolSoaksPartOfIt()
+        {
+            var lamb = Hero("Lamb", speed: 10);
+            Talents(lamb, new Effect(EffectKind.ShatterDamagePercentOfAttack, 50));
+            var foe = Foe(health: 100000);
+            foe.SignaturePool = new ResourcePool("wool", "Wool", 10, 0, 0, 0, absorbPerPoint: 1, absorbsDamage: true)
+                { Current = 3 };
+
+            var (session, _) = Fight(new[] { lamb }, new[] { foe }, Kit(Skill(SkillEffect.Shatter, "Shatter")));
+            session.Begin();
+            StatusEffects.ApplyWard(lamb.Statuses, 30, 5, lamb);
+            session.DrainBeats();
+
+            Assert.IsTrue(session.CastSkill(0, null), "fixture: the shatter went off");
+
+            var beat = session.DrainBeats().Single(b => b.Absorbed > 0);
+            Assert.AreEqual(0, beat.Amount - beat.Absorbed - (100000 - foe.CurrentHealth),
+                "Amount less Absorbed is what reached health");
+            Assert.AreEqual(3, beat.Absorbed, "the pool soaked 3");
+            Assert.AreEqual(100, beat.Amount, "the blast figure");
+        }
     }
 }

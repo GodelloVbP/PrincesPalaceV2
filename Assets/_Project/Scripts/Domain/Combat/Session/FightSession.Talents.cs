@@ -746,7 +746,9 @@ namespace PrincesPalace.Domain.Combat.Session
 
                 int damage = CombatMath.Scale(caster.Attack * share / 100);
                 DealDamage(caster, enemy, damage, AttackTypeOf(caster), KillCredit.Attacker);
-                RecordBeatAmount(System.Math.Max(damage, LargestAmountSoFar));
+                // `damage` is already the blast's pre-shield figure: the foe's pool soaks
+                // downstream of it, so RecordBeatAmount's add-back would count it twice.
+                RecordPreShieldAmount(System.Math.Max(damage, LargestAmountSoFar));
                 SetStance(enemy, enemy.IsAlive ? Stances.Hurt : Stances.Defeated);
                 summary.Append($" {enemy.Name} takes {damage}.");
 
