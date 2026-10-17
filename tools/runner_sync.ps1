@@ -16,8 +16,8 @@
 #   - only a .meta that exists in BOTH trees and differs is touched;
 #   - it is overwritten with main's bytes and stamped with the current time,
 #     and so is its asset (when the asset is a file, not a folder), so Unity
-#     reimports and re-binds it. Why both stamps: see Repair-Metas' header
-#     comment in run_tests_parallel.ps1.
+#     reimports and re-binds it. Why both stamps: see
+#     "WHY THE META REPAIR EXISTS AT ALL" below.
 # Byte equality is what hash equality was standing in for.
 #
 # GUID CHECK. Same move for Assert-GuidsMatch: it ran Select-String twice per
@@ -57,12 +57,12 @@ namespace PP.RunnerSync
         }
 
         // docs/ in a runner holds only what a test reads: ContentSchemaTests
-        // reads CONTENT_SCHEMA.md and DemoDialogueFixtureTests reads
-        // fixtures/. Everything else (docs/captures alone was 7 GB per copy)
-        // is deleted from the copy, so a plain /MIR of docs/ is not used. The
+        // reads CONTENT_SCHEMA.md. Everything else (docs/captures alone was
+        // 7 GB per copy) is deleted from the copy, so a plain /MIR of docs/
+        // is not used. The
         // other top-level folders a copy has no use for are pruned here too,
         // because robocopy /MIR never removes what it was told to skip.
-        static readonly string[] DocsKept = new string[] { "CONTENT_SCHEMA.md", "fixtures" };
+        static readonly string[] DocsKept = new string[] { "CONTENT_SCHEMA.md" };
         static readonly string[] RootStray = new string[] { "reports", "output", ".claude", "scratchpad" };
 
         // A copy's docs/captures can be deleted by another process while this
@@ -245,8 +245,7 @@ namespace PP.RunnerSync
 "@
 }
 
-# WHY THE META REPAIR EXISTS AT ALL (moved here with the code; this was
-# Repair-Metas' header in run_tests_parallel.ps1):
+# WHY THE META REPAIR EXISTS AT ALL (MetaSync.Repair):
 #
 # /MIR skips a file whose size AND timestamp match the destination's, and
 # two .meta files for the same asset are the same size to the byte while
@@ -283,10 +282,13 @@ namespace PP.RunnerSync
 # one is rethrown here with the runner's path on it.
 function Invoke-PerRunner {
     param(
-        [Parameter(Mandatory = $true)][array]$Runners,
+        [Parameter(Mandatory = $true)][AllowEmptyCollection()][array]$Runners,
         [Parameter(Mandatory = $true)][scriptblock]$Script,
         [hashtable]$Shared = @{}
     )
+
+    # A slice with nothing but the primary copy has no secondaries to fan out to.
+    if ($Runners.Count -eq 0) { return @() }
 
     $pool = [runspacefactory]::CreateRunspacePool(1, [Math]::Max(1, $Runners.Count))
     $pool.Open()
@@ -315,8 +317,8 @@ function Invoke-PerRunner {
     }
 }
 
-# The per-runner body of the pre-test sync. Same four mirrors and the same
-# productName rewrite Sync-Runner always did, in the same order, now timed.
+# The per-runner body of the pre-test sync: the mirrors, the docs prune and the
+# productName rewrite, timed.
 $SyncRunnerScript = {
     param($Runner, $Shared)
     $src = $Shared.Source

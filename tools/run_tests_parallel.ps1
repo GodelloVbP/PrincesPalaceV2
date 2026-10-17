@@ -2,7 +2,6 @@ param(
     [switch]$SkipSync,
     [switch]$BuildContent,
     [switch]$BuildScenes,
-    [switch]$NoScenes,
     # PlayMode runner copies, split by fixture. 1 is the pre-sharding shape
     # exactly: one PlayMode process in -TestRunner2, no -testFilter.
     [ValidateRange(1, 6)]
@@ -38,14 +37,6 @@ param(
 # whatever scenes happen to already be on disk, which is the prior source's
 # layout, not yours. Use it again before committing such a change, for the
 # same reason.
-#
-# -NoScenes is no longer needed -- no build means nothing to opt out of -- but
-# stays accepted as a no-op so muscle memory doesn't hard-fail.
-if ($NoScenes) {
-    Write-Host "-NoScenes is a no-op now: scenes are not built by default. Pass -BuildScenes if you need them."
-}
-$BuildScenesHere = $BuildScenes
-$SyncScenesToMain = $BuildScenes
 
 # Runs EditMode and PlayMode CONCURRENTLY against two separate isolated copies
 # of the project.
@@ -156,6 +147,42 @@ if (Test-IsLinkedWorktree) {
 $Watch = [Diagnostics.Stopwatch]::StartNew()
 $LastStamp = [TimeSpan]::Zero
 
+# Copies one generated tree from the primary runner back to main. robocopy
+# exits 0-7 for every kind of success and 8+ when something failed to copy (a
+# file in main locked by an open Editor, a full disk, a long path); a failed
+# copy-back that went unnoticed leaves main without the new content or scenes
+# while the run prints "All tests passed", and the next run mirrors main over
+# the runners and reverts the build. Failures are collected here and fail the
+# run once, after the last copy.
+$script:CopyBackFailed = @()
+function Copy-BackToMain {
+    param([string]$From, [string]$To)
+    robocopy $From $To @args | Out-Null
+    if ($LASTEXITCODE -ge 8) { $script:CopyBackFailed += "$To (robocopy exit $LASTEXITCODE)" }
+}
+
+# Takes down a Unity this script launched that outlived its deadline. Wait-Process
+# returning is not the same as Unity having exited: on timeout it writes an error
+# and carries on, leaving batchmode Unity alive and holding an exclusive lock on
+# that runner copy's Library, so one hung run poisons every run after it and the
+# symptom arrives one run later looking nothing like the hang that caused it.
+#
+# THE EXACT PID WE LAUNCHED, AND ONLY WHILE IT STILL SAYS SO. Two sessions
+# share this machine and one of them may have an Editor open on the real
+# project, so a PID recycled onto somebody elses Unity must not be killed.
+# The command line still carries the -projectPath this script passed; that is
+# what is matched on, not the process name.
+function Stop-LaunchedUnity {
+    param($Proc, [string]$RunnerPath, [string]$What, [int]$Seconds)
+    $cim = Get-CimInstance Win32_Process -Filter "ProcessId = $($Proc.Id)" -ErrorAction SilentlyContinue
+    if (-not $cim -or $cim.CommandLine -notlike "*$RunnerPath*") {
+        Write-Host "$What did not finish within $Seconds s, and PID $($Proc.Id) no longer looks like the Unity this script started. Leaving it alone."
+        return
+    }
+    Write-Host "$What did not finish within $Seconds s. Killing PID $($Proc.Id) so it stops holding $RunnerPath for the next run."
+    Stop-Process -Id $Proc.Id -Force -ErrorAction SilentlyContinue
+}
+
 function Stamp {
     param($What)
     $now = $Watch.Elapsed
@@ -174,8 +201,8 @@ function Stamp {
 # in $DestAssets, and fails the whole run loudly, naming the exact asset,
 # if even one does not.
 #
-# Repair-Metas is a same-hash-fixes-itself pass; this is the check that
-# Repair-Metas actually WORKED, added because BloodlustRelic_
+# MetaSync.Repair is a same-hash-fixes-itself pass; this is the check that
+# MetaSync.Repair actually WORKED, added because BloodlustRelic_
 # GrantsAnImmediateExtraTurnAfterAKillingBlow failed 4 times in one night,
 # always on a fresh -BuildContent run, always passing on a sync-less rerun,
 # with no exception anywhere in the PlayMode log -- a silent wrong-reference
@@ -384,7 +411,7 @@ if ($Slice -and $EditClasses.Count -gt 0) {
     }
 }
 
-$Runners = New-GateRunners -PlayShards $PlayShardCount -EditTests ($EditClasses.Count -gt 0) -EditNeeded ([bool]($BuildContent -or $BuildScenesHere))
+$Runners = New-GateRunners -PlayShards $PlayShardCount -EditTests ($EditClasses.Count -gt 0) -EditNeeded ([bool]($BuildContent -or $BuildScenes))
 $PlayRunners = @($Runners | Where-Object { $_.Platform -eq "PlayMode" })
 # The merged PlayMode results live where the unsharded file always did.
 $MergedPlayResults = if ($PlayRunners.Count -gt 0) { Join-Path $PlayRunners[0].Path "test-results-PlayMode.xml" } else { $null }
@@ -509,12 +536,12 @@ if (-not $SkipSync) {
 # imported it, so a scene built in the same run dies inside
 # TMP_FontAsset.CreateFontAsset with a bare NullReferenceException. Its own
 # header records that; do not fold it in.
-if ($BuildContent -or $BuildScenesHere) {
+if ($BuildContent -or $BuildScenes) {
     $primaryRunner = $Runners[0]
 
     $steps = @()
     if ($BuildContent)    { $steps += "content" }
-    if ($BuildScenesHere) { $steps += "scenes" }
+    if ($BuildScenes) { $steps += "scenes" }
 
     # Each phase is a name, the method to run, the extra args it needs, and the
     # sentinels its log must contain. Gating on the SENTINEL rather than the
@@ -525,7 +552,7 @@ if ($BuildContent -or $BuildScenesHere) {
     # ABSENCE is the honest signal that the method did not finish.
     $expected = @("ProceduralSpriteBaker", "PipelineBuilder")
     if ($BuildContent)    { $expected += "ContentBuilder" }
-    if ($BuildScenesHere) { $expected += "SceneBuilder" }
+    if ($BuildScenes) { $expected += "SceneBuilder" }
     $expected += "GenerationRun"
 
     # TmpBootstrap is checked here rather than run as its own Unity boot.
@@ -552,52 +579,51 @@ if ($BuildContent -or $BuildScenesHere) {
         exit 1
     }
 
-    $phases = @(
-        @{ Name = "GenerationRun"; Method = "GenerationRun.RunAll"; Extra = @("-ppSteps", ($steps -join ",")); Sentinels = $expected }
-    )
+    $method = "GenerationRun.RunAll"
+    Write-Host "Running $method in $($primaryRunner.Path)..."
+    $log = Join-Path $primaryRunner.Path "gen.log"
+    if (Test-Path $log) { Remove-Item $log -Force }
 
-    foreach ($phase in $phases) {
-        Write-Host "Running $($phase.Method) in $($primaryRunner.Path)..."
-        $log = Join-Path $primaryRunner.Path "gen.log"
-        if (Test-Path $log) { Remove-Item $log -Force }
+    # NOT $args -- that is an automatic variable, and assigning to it at
+    # script scope quietly clobbers the script's own argument array.
+    $unityArgs = @(
+        "-batchmode", "-nographics", "-silent-crashes",
+        "-projectPath", "`"$($primaryRunner.Path)`"",
+        "-executeMethod", $method,
+        "-logFile", "`"$log`""
+    ) + @("-ppSteps", ($steps -join ",")) + @("-quit")
 
-        # NOT $args -- that is an automatic variable, and assigning to it at
-        # script scope quietly clobbers the script's own argument array.
-        $unityArgs = @(
-            "-batchmode", "-nographics", "-silent-crashes",
-            "-projectPath", "`"$($primaryRunner.Path)`"",
-            "-executeMethod", $phase.Method,
-            "-logFile", "`"$log`""
-        ) + $phase.Extra + @("-quit")
+    $GenerationTimeoutSeconds = 900
+    $proc = Start-UnityQuiet -FilePath $UnityExe -ArgumentList $unityArgs
+    $proc | Wait-Process -Timeout $GenerationTimeoutSeconds -ErrorAction SilentlyContinue
+    if (-not $proc.HasExited) {
+        Stop-LaunchedUnity -Proc $proc -RunnerPath $primaryRunner.Path -What $method -Seconds $GenerationTimeoutSeconds
+    }
+    Stamp "unity boot: $method"
 
-        $proc = Start-UnityQuiet -FilePath $UnityExe -ArgumentList $unityArgs
-        $proc | Wait-Process -Timeout 900
-        Stamp "unity boot: $($phase.Method)"
-
-        # Every sentinel, not just the last one. Sharing a process means a
-        # generator that threw halfway leaves the EARLIER generators' sentinels
-        # in the log, so checking only for the final one would call a partial
-        # run complete -- the same blind spot that once left stale scenes on
-        # disk and a green suite testing them.
-        $body = if (Test-Path $log) { Get-Content $log } else { @() }
-        foreach ($sentinel in $phase.Sentinels) {
-            if (-not ($body | Select-String -Pattern "BUILD-COMPLETE: $sentinel" -Quiet)) {
-                Write-Host "$($phase.Method) did not reach BUILD-COMPLETE: $sentinel. Tail of its log:"
-                $body | Select-Object -Last 25 | ForEach-Object { Write-Host "  $_" }
-                exit 1
-            }
-        }
-
-        # Widened to catch a thrown generator as well as a compile error.
-        # "[SceneBuilder] FAILED" is what an audit refusal actually prints, and
-        # it was sailing straight through.
-        $pattern = "error CS|\[ContentBuilder\]|\[SceneBuilder\] FAILED|threw exception"
-        $errors = $body | Select-String -Pattern $pattern | Select-Object -Unique -First 10
-        if ($errors) {
-            Write-Host "$($phase.Method) FAILED in $($primaryRunner.Path):"
-            $errors | ForEach-Object { Write-Host "  $_" }
+    # Every sentinel, not just the last one. Sharing a process means a
+    # generator that threw halfway leaves the EARLIER generators' sentinels
+    # in the log, so checking only for the final one would call a partial
+    # run complete -- the same blind spot that once left stale scenes on
+    # disk and a green suite testing them.
+    $body = if (Test-Path $log) { Get-Content $log } else { @() }
+    foreach ($sentinel in $expected) {
+        if (-not ($body | Select-String -Pattern "BUILD-COMPLETE: $sentinel" -Quiet)) {
+            Write-Host "$method did not reach BUILD-COMPLETE: $sentinel. Tail of its log:"
+            $body | Select-Object -Last 25 | ForEach-Object { Write-Host "  $_" }
             exit 1
         }
+    }
+
+    # Widened to catch a thrown generator as well as a compile error.
+    # "[SceneBuilder] FAILED" is what an audit refusal actually prints, and
+    # it was sailing straight through.
+    $pattern = "error CS|\[ContentBuilder\]|\[SceneBuilder\] FAILED|threw exception"
+    $errors = $body | Select-String -Pattern $pattern | Select-Object -Unique -First 10
+    if ($errors) {
+        Write-Host "$method FAILED in $($primaryRunner.Path):"
+        $errors | ForEach-Object { Write-Host "  $_" }
+        exit 1
     }
 
     # SYNC GENERATED ASSETS BACK TO MAIN, IMMEDIATELY.
@@ -620,8 +646,8 @@ if ($BuildContent -or $BuildScenesHere) {
     # finished one. Copied after every asset, its presence-with-a-matching-hash
     # means the whole sync completed. ContentBuilder writes it last inside the
     # runner for the same reason, one layer down.
-    robocopy "$primary\Assets\_Project\Resources\Content" "$SourceProject\Assets\_Project\Resources\Content" /MIR /NFL /NDL /NJH /NJS /NP /XF content_stamp.json content_stamp.json.meta | Out-Null
-    robocopy "$primary\Assets\_Project\Resources\Content" "$SourceProject\Assets\_Project\Resources\Content" content_stamp.json content_stamp.json.meta /NFL /NDL /NJH /NJS /NP | Out-Null
+    Copy-BackToMain "$primary\Assets\_Project\Resources\Content" "$SourceProject\Assets\_Project\Resources\Content" /MIR /NFL /NDL /NJH /NJS /NP /XF content_stamp.json content_stamp.json.meta
+    Copy-BackToMain "$primary\Assets\_Project\Resources\Content" "$SourceProject\Assets\_Project\Resources\Content" content_stamp.json content_stamp.json.meta /NFL /NDL /NJH /NJS /NP
 
     # THE ONE COPY THAT IS GATED, and everything either side of it is not.
     #
@@ -631,8 +657,8 @@ if ($BuildContent -or $BuildScenesHere) {
     # single line is the whole of why a suite run would otherwise dirty the
     # tree. It runs when the intent is to commit the scenes, which is what
     # -BuildScenes has always meant.
-    if ($SyncScenesToMain) {
-        robocopy "$primary\Assets\_Project\Scenes" "$SourceProject\Assets\_Project\Scenes" /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
+    if ($BuildScenes) {
+        Copy-BackToMain "$primary\Assets\_Project\Scenes" "$SourceProject\Assets\_Project\Scenes" /MIR /NFL /NDL /NJH /NJS /NP
     }
 
     # Rendering/ and Resources/Materials/ are GENERATED by PipelineBuilder and
@@ -647,12 +673,12 @@ if ($BuildContent -or $BuildScenesHere) {
     # sprite and is therefore the identity. It worked in both runners and was
     # invisible in main, which is exactly the shape of bug this list exists to
     # prevent.
-    robocopy "$primary\Assets\_Project\Rendering" "$SourceProject\Assets\_Project\Rendering" /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
-    robocopy "$primary\Assets\_Project\Resources\Materials" "$SourceProject\Assets\_Project\Resources\Materials" /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
+    Copy-BackToMain "$primary\Assets\_Project\Rendering" "$SourceProject\Assets\_Project\Rendering" /MIR /NFL /NDL /NJH /NJS /NP
+    Copy-BackToMain "$primary\Assets\_Project\Resources\Materials" "$SourceProject\Assets\_Project\Resources\Materials" /MIR /NFL /NDL /NJH /NJS /NP
 
     # EditorBuildSettings names every scene the game can load. A scene built in
     # the runner and synced back is unreachable without it.
-    robocopy "$primary\ProjectSettings" "$SourceProject\ProjectSettings" EditorBuildSettings.asset /NFL /NDL /NJH /NJS /NP | Out-Null
+    Copy-BackToMain "$primary\ProjectSettings" "$SourceProject\ProjectSettings" EditorBuildSettings.asset /NFL /NDL /NJH /NJS /NP
     # Art too: LoadSprite silently flips a texture's importer settings and
     # writes a fresh .meta for anything newly referenced (gotcha #3).
     #
@@ -673,17 +699,17 @@ if ($BuildContent -or $BuildScenesHere) {
     #
     # /E copies new and updated files and deletes nothing, which is the whole
     # of what this line was ever for.
-    robocopy "$primary\Assets\_Project\Art" "$SourceProject\Assets\_Project\Art" /E /NFL /NDL /NJH /NJS /NP | Out-Null
+    Copy-BackToMain "$primary\Assets\_Project\Art" "$SourceProject\Assets\_Project\Art" /E /NFL /NDL /NJH /NJS /NP
     # New scripts' .meta files, so a GUID cannot regenerate later and orphan
     # every asset referencing it (gotcha #2). Only files main does not have.
-    robocopy "$primary\Assets\_Project\Scripts" "$SourceProject\Assets\_Project\Scripts" *.meta /S /XC /XN /XO /NFL /NDL /NJH /NJS /NP | Out-Null
-    robocopy "$primary\Assets\_Project\ContentData" "$SourceProject\Assets\_Project\ContentData" *.meta /S /XC /XN /XO /NFL /NDL /NJH /NJS /NP | Out-Null
+    Copy-BackToMain "$primary\Assets\_Project\Scripts" "$SourceProject\Assets\_Project\Scripts" *.meta /S /XC /XN /XO /NFL /NDL /NJH /NJS /NP
+    Copy-BackToMain "$primary\Assets\_Project\ContentData" "$SourceProject\Assets\_Project\ContentData" *.meta /S /XC /XN /XO /NFL /NDL /NJH /NJS /NP
     # ...and Resources', for the same reason. Scripts and ContentData were the
     # only two folders listed here, which quietly excluded every hand-authored
     # file under Resources -- audio_levels.json, music_layers.json, and any
     # future runtime-loaded table. Resources\Content is already fully mirrored
     # above; this covers everything beside it.
-    robocopy "$primary\Assets\_Project\Resources" "$SourceProject\Assets\_Project\Resources" *.meta /S /XC /XN /XO /NFL /NDL /NJH /NJS /NP | Out-Null
+    Copy-BackToMain "$primary\Assets\_Project\Resources" "$SourceProject\Assets\_Project\Resources" *.meta /S /XC /XN /XO /NFL /NDL /NJH /NJS /NP
 
     # Re-mirror the WHOLE Assets tree into every secondary copy, not just the
     # generated folders.
@@ -700,7 +726,7 @@ if ($BuildContent -or $BuildScenesHere) {
     # three copies agree on identity. CLAUDE.md gotcha #2, reached by a route
     # it does not mention. Followed by the same hash-based repair pass
     # the pre-test sync uses -- this robocopy hits the exact same same-size/
-    # different-GUID blind spot Repair-Metas exists for, just for freshly
+    # different-GUID blind spot MetaSync.Repair exists for, just for freshly
     # GENERATED content assets instead of freshly imported scripts.
     #
     # EVERY PLAYMODE SHARD COPY, CONCURRENTLY. Sharding made "the secondary"
@@ -714,9 +740,14 @@ if ($BuildContent -or $BuildScenesHere) {
     # unconditional. Skipping it would hand PlayMode the last COMMITTED
     # scenes while EditMode audited freshly built ones -- the platforms
     # testing different builds, silently.
+    if ($script:CopyBackFailed.Count -gt 0) {
+        Write-Host "SYNC BACK TO MAIN FAILED -- main would be left without what was just built:"
+        $script:CopyBackFailed | ForEach-Object { Write-Host "  $_" }
+        exit 1
+    }
     Stamp "sync generated assets back to main"
     $fanOut = Invoke-PerRunner -Runners @($Runners | Select-Object -Skip 1) -Script $FanOutRunnerScript -Shared @{
-        Source = $SourceProject; Primary = $primary; CopyScenes = [bool]$BuildScenesHere
+        Source = $SourceProject; Primary = $primary; CopyScenes = [bool]$BuildScenes
     }
     foreach ($res in $fanOut) {
         Write-Host ("    re-mirror -> {0,-11} {1,5:N1}s  ({2} .meta repaired)" -f $res.Label, $res.Seconds, @($res.Repaired).Count)
@@ -726,13 +757,13 @@ if ($BuildContent -or $BuildScenesHere) {
         }
         Assert-GuidsMatch -Result $res
     }
-    Stamp "re-mirror + Repair-Metas + Assert-GuidsMatch -> $(@($fanOut).Count) copies"
+    Stamp "re-mirror + MetaSync.Repair + Assert-GuidsMatch -> $(@($fanOut).Count) copies"
 
     # The scenes each copy will test are the ones just built, byte for byte:
     # proved, not inferred from robocopy's exit code. Checked against the
     # primary (where they were built) and, since -BuildScenes also synced them
     # back, against main.
-    if ($BuildScenesHere) {
+    if ($BuildScenes) {
         $builtScenes = Join-Path $primary "Assets\_Project\Scenes"
         $sceneDiffs = @()
         foreach ($other in @(@{ Label = "main"; Path = $SourceProject }) + @($Runners | Select-Object -Skip 1)) {
@@ -806,16 +837,11 @@ foreach ($runner in $TestRunners) {
 $TestTimeoutSeconds = 1800
 $timedOut = $false
 
-# WAIT-PROCESS RETURNING IS NOT THE SAME AS UNITY HAVING EXITED. On timeout it
-# writes an error and carries on, leaving batchmode Unity alive and holding an
-# exclusive lock on that runner copy's Library. The next run of this script then
-# cannot use the copy either, so one hung run poisons every run after it, and the
-# symptom arrives one run later looking nothing like the hang that caused it.
-#
-# POLLED rather than Wait-Process, so each runner's own wall time and the
-# machine's RAM under N concurrent Unitys are measured on the way: the summed
-# working set of the processes this script launched (their import workers
-# are not counted), sampled every 2s, and each one's OS-tracked peak.
+# POLLED rather than Wait-Process (see Stop-LaunchedUnity), so each runner's
+# own wall time and the machine's RAM under N concurrent Unitys are measured on
+# the way: the summed working set of the processes this script launched (their
+# import workers are not counted), sampled every 2s, and each one's OS-tracked
+# peak.
 $exitedAt = @{}
 $peakWs = @{}
 $peakSum = 0L
@@ -848,20 +874,7 @@ foreach ($runner in $Runners) {
     $p.Refresh()
     if ($p.HasExited) { continue }
 
-    # THE EXACT PID WE LAUNCHED, AND ONLY WHILE IT STILL SAYS SO. Two sessions
-    # share this machine and one of them may have an Editor open on the real
-    # project, so a PID recycled onto somebody elses Unity must not be killed.
-    # The command line still carries the -projectPath this script passed; that is
-    # what is matched on, not the process name.
-    $cim = Get-CimInstance Win32_Process -Filter "ProcessId = $($p.Id)" -ErrorAction SilentlyContinue
-    if (-not $cim -or $cim.CommandLine -notlike "*$($runner.Path)*") {
-        Write-Host "$($runner.Label) did not finish within $TestTimeoutSeconds s, and PID $($p.Id) no longer looks like the Unity this script started. Leaving it alone."
-        $timedOut = $true
-        continue
-    }
-
-    Write-Host "$($runner.Label) did not finish within $TestTimeoutSeconds s. Killing PID $($p.Id) so it stops holding $($runner.Path) for the next run."
-    Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+    Stop-LaunchedUnity -Proc $p -RunnerPath $runner.Path -What $runner.Label -Seconds $TestTimeoutSeconds
     $timedOut = $true
 }
 Stamp "tests finished"
