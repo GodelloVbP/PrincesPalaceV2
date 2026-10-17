@@ -98,7 +98,5 @@ namespace PrincesPalace.Domain.UiKit
                 return rows;
             }
         }
-
-        public static int RowCount => AllRows.Count;
     }
 }
