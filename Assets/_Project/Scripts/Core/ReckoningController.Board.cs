@@ -517,7 +517,6 @@ namespace PrincesPalace
 
         private void CollectPrizes()
         {
-
             foreach (var prize in _reward?.Prizes ?? new List<PaidPrize>())
             {
                 if (prize.Paid == PrizeKind.Consumable)

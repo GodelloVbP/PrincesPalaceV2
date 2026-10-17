@@ -610,7 +610,7 @@ namespace PrincesPalace
                 // The under-glow: builds, flashes on landing, settles to rest.
                 float rest = i < _underRest.Length ? _underRest[i].a : 0f;
                 RevealFeel.Glow(row.Style, build, afterLand, rest, out float glowAlpha, out float glowScale);
-                var under = Part(offerUnderGlows, i);
+                var under = At(offerUnderGlows, i);
                 if (under != null)
                 {
                     under.color = WithAlpha(colour, glowAlpha);
@@ -630,7 +630,7 @@ namespace PrincesPalace
                 // The landing's light.
                 float reach = RevealFeel.RingReach(row.Style);
                 float ringSeconds = RevealFeel.RingSeconds(row.Style);
-                var ring = Part(offerRings, i);
+                var ring = At(offerRings, i);
                 if (reach > 0f && afterLand >= 0f && afterLand < ringSeconds)
                     UiBurst.Ring(ring, afterLand / ringSeconds, colour, reach);
                 else ClearAlpha(ring);
@@ -638,19 +638,19 @@ namespace PrincesPalace
                 bool rays = row.Style == LandStyle.Burst && afterLand >= 0f && afterLand < RevealFeel.RaysSeconds;
                 if (rays)
                 {
-                    UiBurst.Rays(Part(offerRays, i), afterLand / RevealFeel.RaysSeconds, colour);
-                    UiBurst.Core(Part(offerFlashes, i), afterLand / RevealFeel.RaysSeconds, colour);
+                    UiBurst.Rays(At(offerRays, i), afterLand / RevealFeel.RaysSeconds, colour);
+                    UiBurst.Core(At(offerFlashes, i), afterLand / RevealFeel.RaysSeconds, colour);
                 }
                 else
                 {
-                    ClearAlpha(Part(offerRays, i));
-                    ClearAlpha(Part(offerFlashes, i));
+                    ClearAlpha(At(offerRays, i));
+                    ClearAlpha(At(offerFlashes, i));
                 }
 
                 // A Rare's edge pulse: its halo flares and falls back to rest.
                 if (row.Style == LandStyle.Shimmer && afterLand >= 0f && !_pulseRested[r])
                 {
-                    var halo = Part(offerHalos, i);
+                    var halo = At(offerHalos, i);
                     float u = afterLand / RevealFeel.EdgePulseSeconds;
                     if (u >= 1f)
                     {
@@ -722,9 +722,9 @@ namespace PrincesPalace
             for (int i = 0; i < offerButtons.Length; i++)
             {
                 PoseCard(i, Vector2.zero, Vector3.one);
-                ClearAlpha(Part(offerRays, i));
-                ClearAlpha(Part(offerFlashes, i));
-                ClearAlpha(Part(offerRings, i));
+                ClearAlpha(At(offerRays, i));
+                ClearAlpha(At(offerFlashes, i));
+                ClearAlpha(At(offerRings, i));
                 RestUnderGlow(i);
             }
 
@@ -742,14 +742,14 @@ namespace PrincesPalace
         // rim: offset from home, and scaled.
         private void PoseCard(int i, Vector2 offset, Vector3 scale)
         {
-            var shadow = Part(offerShadows, i);
+            var shadow = At(offerShadows, i);
             if (shadow != null)
             {
                 shadow.rectTransform.anchoredPosition = offset + new Vector2(0f, -ReckoningScreen.CardShadowDrop);
                 shadow.rectTransform.localScale = scale;
             }
 
-            var rim = Part(offerRims, i);
+            var rim = At(offerRims, i);
             if (rim != null)
             {
                 rim.rectTransform.anchoredPosition = offset;
@@ -763,7 +763,7 @@ namespace PrincesPalace
                 face.localScale = scale;
             }
 
-            var back = Part(offerBacks, i);
+            var back = At(offerBacks, i);
             if (back != null)
             {
                 back.rectTransform.anchoredPosition = offset;
@@ -785,10 +785,10 @@ namespace PrincesPalace
 
             // The face's wash and rim carry the quality colour; the face is
             // hidden while the back shows, so neither can leak ahead of a flip.
-            if (Part(offerFaceTints, i) != null)
-                Part(offerFaceTints, i).color = WithAlpha(colour, open ? FaceWash : spent ? 0f : FaceWash * 0.5f);
-            if (Part(offerFaceRims, i) != null)
-                Part(offerFaceRims, i).color = WithAlpha(colour, open ? FaceRimAlpha : spent ? 0.25f : FaceRimAlpha * 0.5f);
+            if (At(offerFaceTints, i) != null)
+                At(offerFaceTints, i).color = WithAlpha(colour, open ? FaceWash : spent ? 0f : FaceWash * 0.5f);
+            if (At(offerFaceRims, i) != null)
+                At(offerFaceRims, i).color = WithAlpha(colour, open ? FaceRimAlpha : spent ? 0.25f : FaceRimAlpha * 0.5f);
 
             float rest = RevealFeel.RestGlow(tier);
             _underRest[i] = WithAlpha(colour, open ? rest : spent ? 0f : rest * 0.5f);
@@ -807,13 +807,13 @@ namespace PrincesPalace
             float boxW = card.rect.width;
             float w = Mathf.Min(boxW, card.rect.height * RewardArt.CardBackAspect);
             var size = new Vector2(w, w / RewardArt.CardBackAspect);
-            Size(Part(offerRims, i), size);
-            Size(Part(offerShadows, i), size * ReckoningScreen.CardShadowSpread);
-            Size(Part(offerUnderGlows, i), new Vector2(boxW * ReckoningScreen.UnderGlowWidth,
+            Size(At(offerRims, i), size);
+            Size(At(offerShadows, i), size * ReckoningScreen.CardShadowSpread);
+            Size(At(offerUnderGlows, i), new Vector2(boxW * ReckoningScreen.UnderGlowWidth,
                 card.rect.height * ReckoningScreen.UnderGlowHeight));
-            Size(Part(offerRays, i), Vector2.one * boxW * ReckoningScreen.RaysSpan);
-            Size(Part(offerFlashes, i), Vector2.one * boxW * ReckoningScreen.FlashSpan);
-            Size(Part(offerRings, i), Vector2.one * boxW * ReckoningScreen.RingSpan);
+            Size(At(offerRays, i), Vector2.one * boxW * ReckoningScreen.RaysSpan);
+            Size(At(offerFlashes, i), Vector2.one * boxW * ReckoningScreen.FlashSpan);
+            Size(At(offerRings, i), Vector2.one * boxW * ReckoningScreen.RingSpan);
         }
 
         private static void Size(Image image, Vector2 size)
@@ -823,7 +823,7 @@ namespace PrincesPalace
 
         private void RestUnderGlow(int i)
         {
-            var under = Part(offerUnderGlows, i);
+            var under = At(offerUnderGlows, i);
             if (under == null) return;
             under.color = i < _underRest.Length ? _underRest[i] : Color.clear;
             under.rectTransform.localScale = Vector3.one;
@@ -834,9 +834,6 @@ namespace PrincesPalace
             var face = i < _faces.Length ? _faces[i] : null;
             return HexColour(face?.Hex ?? "#FFFFFF");
         }
-
-        private static Image Part(Image[] items, int i) =>
-            items != null && i >= 0 && i < items.Length ? items[i] : null;
 
         private static Color WithAlpha(Color colour, float alpha)
         {
