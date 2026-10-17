@@ -70,11 +70,11 @@ namespace PrincesPalace
     {
         private static readonly IReadOnlyList<string> NoModifiers = new List<string>();
 
-        // The highest tier any copy reaches (docs/PLAN_ITEMS.md 1.6): step
-        // 192, where enemy growth is about to freeze. Above a base's art
-        // ladder (content maxTier) the curve keeps climbing and the icon
-        // stays on the top frame.
-        public const int TierCap = 12;
+        // The highest tier any copy reaches: the last frame of the art ladder
+        // (content maxTier, 10 for every authored base), so no copy exists
+        // that has no art or validated numbers behind it. Roll, honing, a
+        // loaded save and ClampTier all stop here.
+        public const int TierCap = 10;
 
         public readonly string ItemId;
 

@@ -347,7 +347,7 @@ namespace PrincesPalace.Domain.Content
         // is 1 — so a set's authored numbers still mean exactly what they say
         // and raising maxTier still stretches the curve rather than inflating
         // the tiers that already exist. A tier past maxTier extrapolates on
-        // the same curve (GearCurve, ItemInstance.TierCap).
+        // the same curve (GearCurve), though no copy reaches one.
         //
         // FLOORED, and via Math.Floor rather than integer division. C#
         // integer division truncates toward zero, which would round a

@@ -13,10 +13,10 @@ namespace PrincesPalace.Domain.Content
     // Two authored ends, as before: `*AtZero` is tier 0 and `*AtMax` is
     // `maxTier`, the tier the art ladder tops out at. Between them the curve
     // is ItemSetEntryResolver.ValueAt's geometric shape; past `maxTier` it
-    // keeps growing on the same shape (the cap is ItemInstance.TierCap, not
-    // the art), while the icon stays on the top frame and the scaling grades
-    // stay at their authored top -- a grade is a letter ladder with S at the
-    // end, not a curve.
+    // keeps growing on the same shape (no copy reaches there: ItemInstance.
+    // TierCap is the art ladder's top), while the scaling grades stay at
+    // their authored top -- a grade is a letter ladder with S at the end,
+    // not a curve.
     //
     // Serializable and mutable because it rides on ItemDefinition
     // (.claude/rules/content.md). Written once by the resolver.

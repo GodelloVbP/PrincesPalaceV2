@@ -114,18 +114,6 @@ namespace PrincesPalace
                 .Select(c => c.id)
                 .ToList();
 
-        // Meta-progression: the "extra_recruit_slot" Principality upgrade
-        // raises the squad ceiling. Matches the id ContentBuilder authors it
-        // under -- the plain-string content-id convention used elsewhere
-        // (e.g. "health_potion"), not a dedicated registry for what is a
-        // single lookup.
-        //
-        // PUBLIC because the squad's ceiling has to be assertable against the
-        // stage's slot count, and a test that wrote "extra_recruit_slot" as a
-        // literal would be the drift it is meant to catch.
-        public const string ExtraRecruitSlotUpgradeId = "extra_recruit_slot";
-        private const int ExtraRecruitSlotBonus = 1;
-
         public int version = CurrentVersion;
 
         // THE persistent purse: Gold and Relics. One place all earning and
@@ -303,19 +291,13 @@ namespace PrincesPalace
         // stage, built once at scene-build time; FieldableParty does not
         // clamp past it on its own (see FightAfterTheEliteTests'
         // TheBiggestSquadTheSaveAllowsStillFitsTheStage, which exists for
-        // exactly this reason). Solo base + extra_recruit_slot tops out at 2,
-        // safely under 3; squad-of-three base + the same upgrade would
-        // reach 4 without this Min, which is exactly the "extra hero fights
-        // from off screen" case that test refuses to ship. Capping here
-        // rather than widening the stage keeps the upgrade's own promise
-        // ("one more seat") honest without a stage that already fits the
-        // whole roster having anything left to grow into.
+        // exactly this reason). A hero with no slot would fight from off
+        // screen.
         public int EffectiveMaxSquadSize()
         {
             bool squadOfThree = TestSquadOfThreeEnabled ?? SquadOfThreeReady;
             int baseSize = squadOfThree ? TestSquadOfThreeSize : BaseMaxSquadSize;
-            int withUpgrade = baseSize + (purchasedUpgradeIds.Contains(ExtraRecruitSlotUpgradeId) ? ExtraRecruitSlotBonus : 0);
-            return Math.Min(withUpgrade, FightHudSpec.StageSlotsPerSide);
+            return Math.Min(baseSize, FightHudSpec.StageSlotsPerSide);
         }
 
         // Embers are held PER CHARACTER, not in the wallet -- wallet.embers is
@@ -733,6 +715,15 @@ namespace PrincesPalace
 
             stockpiledItems.RemoveAll(entry => entry == null || ContentDatabase.GetItem(entry.itemId) == null);
 
+            // A save from before the tier cap may hold copies above the art
+            // ladder. They are re-added through InventoryOps so a clamped copy
+            // merges into the stack it now equals.
+            foreach (var over in stockpiledItems.Where(e => e.tier > ItemInstance.TierCap).ToList())
+            {
+                stockpiledItems.Remove(over);
+                InventoryOps.Add(stockpiledItems, over.Instance, over.count);
+            }
+
             // A worn-out fake is gone (plan 3.3). The settlement removes one
             // the moment its countdown reaches zero, so a zero on disk is a
             // write that was interrupted -- and the answer is the same
@@ -854,6 +845,10 @@ namespace PrincesPalace
 
                 // Absent in any save written before the paperdoll existed.
                 character.equipment ??= new EquipmentLoadout();
+                character.equipment.slots?.ForEach(e =>
+                {
+                    if (e != null) e.tier = ItemInstance.ClampTier(e.tier);
+                });
 
                 // Drop worn ids that no longer resolve, or that resolve to
                 // something no longer wearable (an item demoted from Weapon
@@ -1182,6 +1177,7 @@ namespace PrincesPalace
             {
                 foreach (var entry in stock.entries)
                 {
+                    entry.tier = ItemInstance.ClampTier(entry.tier);
                     if (entry.noOffer || entry.sold || Resolves(entry)) continue;
                     entry.noOffer = true;
                 }
@@ -1251,6 +1247,7 @@ namespace PrincesPalace
 
             foreach (var entry in run.shopStock)
             {
+                entry.tier = ItemInstance.ClampTier(entry.tier);
                 if (entry.noOffer || entry.sold || Resolves(entry)) continue;
 
                 entry.noOffer = true;

@@ -408,7 +408,6 @@ namespace PrincesPalace.PlayModeTests
         public void TheBiggestSquadTheSaveAllowsStillFitsTheStage()
         {
             var full = SaveData.CreateNew();
-            full.purchasedUpgradeIds.Add(SaveData.ExtraRecruitSlotUpgradeId);
 
             int max = full.EffectiveMaxSquadSize();
 

@@ -18,4 +18,4 @@ MonoBehaviour:
     Description: Begin each run with extra gold.
     Cost: 30
     StartingGoldBonus: 50
-    SortOrder: 1
+    SortOrder: 0

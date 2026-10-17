@@ -274,22 +274,8 @@ namespace PrincesPalace.Content
             // upgrades.json now and UpgradeEntryResolver refuses a negative
             // cost at BUILD time, where the bad row never becomes an asset at
             // all. This check ran against the generated asset, which is one
-            // step too late to be the one that stops it.
-            //
-            // WHAT REPLACES IT IS THE CHECK A RESOLVER CANNOT MAKE. Exactly one
-            // upgrade id is named in code -- SaveData.ExtraRecruitSlotUpgradeId
-            // -- and it is what makes the squad's fourth slot reachable at all.
-            // A resolver reading upgrades.json has no way to know that; it
-            // would happily accept a renamed row. The whole-catalogue view is
-            // the only place the constant and the content can be put beside
-            // each other.
-            if (_upgrades.All(u => u == null || u.id != SaveData.ExtraRecruitSlotUpgradeId))
-            {
-                errors.Add($"No upgrade has id '{SaveData.ExtraRecruitSlotUpgradeId}', which " +
-                           "SaveData.ExtraRecruitSlotUpgradeId names and SaveData.SquadSize reads to grant the " +
-                           "fourth squad slot. Renaming that row in upgrades.json does not break the build " +
-                           "anywhere else -- it just makes an upgrade nobody can ever benefit from.");
-            }
+            // step too late to be the one that stops it. No upgrade id is named
+            // in code, so there is no whole-catalogue check to make here.
 
             foreach (var relic in _relics)
             {

@@ -42,10 +42,10 @@ namespace PrincesPalace.Domain.Content
         public string[] tierAdjectives = Array.Empty<string>();
 
         // The tier the art ladder and the authored numbers' top end sit at.
-        // Copies go past it to ItemInstance.TierCap on the same curve shape.
+        // ItemInstance.TierCap is the same tier: no copy outranks the art ladder.
         // RAISING it later is safe: a piece's numbers are anchored at both
         // ends rather than accumulated per step.
-        [ContentDoc("The tier the art ladder tops out at, and where the AtMax numbers sit; copies climb past it on the same curve.")]
+        [ContentDoc("The tier the art ladder tops out at, and where the AtMax numbers sit; no copy is rolled, honed or loaded above it (ItemInstance.TierCap).")]
         public int maxTier = -1;
 
         [ContentDoc("Gold cost of the piece.")]

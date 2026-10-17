@@ -57,7 +57,7 @@ namespace PrincesPalace.Domain.Rewards
 
         // Centre FloorTier(depthStep) + tierOffset; the ladder only climbs,
         // up to LootLadder.MaxRungs, and every roll caps at
-        // ItemInstance.TierCap (1.6). No class floor: a boss's edge is its
+        // ItemInstance.TierCap. No class floor: a boss's edge is its
         // +1 centre and its wider step, not a guaranteed tier.
         public static int RollTier(int depthStep, int tierOffset, float tierStep, int favor, Func<int, int> nextIndex)
         {

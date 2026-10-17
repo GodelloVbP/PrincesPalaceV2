@@ -26,6 +26,59 @@ namespace PrincesPalace.PlayModeTests
         private static string StripToOldShape(string json) =>
             Regex.Replace(json.Replace(",\"tier\":0", ""), "\"slotHoning\":\\[\\],?", "");
 
+        // Saves from before the cap sit at tier 11-12 in the bag, on the body
+        // and on the shelf. Loading brings every one down to the art ladder's
+        // top, merging into the tier-10 stack if there is one.
+        // The Extra Recruit Slot upgrade was removed (AUDIT #277). A save that
+        // bought it keeps loading: Reconcile prunes the purchase like any id
+        // that no longer resolves, and the squad ceiling is unchanged.
+        [Test]
+        public void ASaveThatBoughtTheRemovedRecruitSlot_LoadsWithoutIt()
+        {
+            var save = SaveData.CreateNew();
+            int before = save.EffectiveMaxSquadSize();
+            save.purchasedUpgradeIds.Add("extra_recruit_slot");
+            save.purchasedUpgradeIds.Add("starting_gold_boost");
+
+            var loaded = JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(save));
+            Assert.DoesNotThrow(() => loaded.Reconcile());
+
+            CollectionAssert.AreEqual(new[] { "starting_gold_boost" }, loaded.purchasedUpgradeIds);
+            Assert.AreEqual(before, loaded.EffectiveMaxSquadSize());
+            Assert.IsNull(ContentDatabase.GetUpgrade("extra_recruit_slot"));
+        }
+
+        [Test]
+        public void ASaveHoldingTierElevenAndTwelveCopies_LoadsAtTheCap()
+        {
+            var save = SaveData.CreateNew();
+            var wearer = save.roster.First();
+            save.stockpiledItems.Clear();
+            save.stockpiledItems.Add(new InventoryEntry("brigandine_boots", 1, null, 11));
+            save.stockpiledItems.Add(new InventoryEntry("brigandine_boots", 2, null, 12));
+            save.stockpiledItems.Add(new InventoryEntry("brigandine_boots", 1, null, 10));
+            wearer.equipment.Clear();
+            wearer.equipment.slots.Add(new EquipmentSlotEntry(EquipmentSlot.Weapon1, "sword", null, 12));
+            save.activeRun.currentNodeId = 3;
+            save.activeRun.shopNodeId = 3;
+            save.activeRun.shopStock.Add(new ShopStockEntry
+            {
+                kind = ShopEntryKind.Gear, contentId = "sword", tier = 12, price = 60,
+            });
+
+            var loaded = JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(save));
+            loaded.Reconcile();
+
+            var bag = loaded.stockpiledItems.Where(e => e.itemId == "brigandine_boots").ToList();
+            Assert.AreEqual(1, bag.Count, "all three stacks are one tier-10 stack");
+            Assert.AreEqual(10, bag[0].tier);
+            Assert.AreEqual(4, bag[0].count);
+            var worn = loaded.roster.First(c => c.definitionId == wearer.definitionId)
+                .equipment.EquippedEntries().Single(e => e.slot == EquipmentSlot.Weapon1);
+            Assert.AreEqual(10, worn.tier);
+            Assert.AreEqual(10, loaded.activeRun.shopStock.Single().tier);
+        }
+
         [Test]
         public void APreCopyModelSave_Loads_AndKeepsOnlyCopiesThatResolve()
         {

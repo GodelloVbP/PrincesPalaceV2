@@ -191,8 +191,8 @@ namespace PrincesPalace.Domain.Content
 
         // Where a tier sits between the two authored ends, 0 at tier 0 and 1
         // at maxTier. Past maxTier it keeps climbing on the same shape (above
-        // 1): maxTier is where the art ladder tops out, and a copy's tier runs
-        // on to ItemInstance.TierCap.
+        // 1): maxTier is where the art ladder tops out, which is also
+        // ItemInstance.TierCap, so only a direct curve read goes past it.
         //
         // Expressed as a FRACTION of the span rather than as a multiplier on
         // the value, which is what lets it work for a stat that starts at zero

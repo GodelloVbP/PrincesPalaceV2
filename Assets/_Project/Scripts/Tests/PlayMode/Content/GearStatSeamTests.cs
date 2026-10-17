@@ -117,18 +117,16 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(ScalingGrade.A, staff10.SpellScaling.intelligence);
         }
 
-        // Literals read off the brigandine boots at tiers 0 and 10 and floored on the
-        // 1.25 curve by hand (CLAUDE.md gotcha 5).
+        // No copy outruns the art ladder: a request past tier 10 is the tier-10 copy.
         [Test]
-        public void ARealBase_PastTheArtLadder_KeepsClimbing()
+        public void ARealBase_PastTheArtLadder_IsTheTopCopy()
         {
             var boots = ContentDatabase.Effective(ItemInstance.Of("brigandine_boots", 12)).Value;
 
-            Assert.AreEqual(98, boots.StatBonus.maxHealth);
-            Assert.AreEqual(36, boots.StatBonus.physicalDefense);
-            Assert.AreEqual(3, boots.StatBonus.speed);
-            Assert.AreEqual(21, boots.Requirements.dexterity);
-            Assert.AreEqual("Absolute Brigandine Boots", boots.DisplayName, "tier 12 has its own adjective");
+            Assert.AreEqual(10, boots.Tier);
+            Assert.AreEqual(63, boots.StatBonus.maxHealth);
+            Assert.AreEqual(23, boots.StatBonus.physicalDefense);
+            Assert.AreEqual("Ghoststep Brigandine Boots", boots.DisplayName);
         }
 
         // The sword's tier 0 is 10 Attack and tier 10 is 202, on the 1.35 weapon curve.
@@ -137,9 +135,9 @@ namespace PrincesPalace.PlayModeTests
         {
             var sword = ContentDatabase.Effective(ItemInstance.Of("sword", 12), 4).Value;
 
-            Assert.AreEqual(368, sword.AttackBonus);
-            Assert.AreEqual(589, sword.WeaponPower, "368 x 1.6 = 588.8");
-            Assert.AreEqual("Godforged Sword", sword.DisplayName);
+            Assert.AreEqual(202, sword.AttackBonus);
+            Assert.AreEqual(323, sword.WeaponPower, "202 x 1.6 = 323.2");
+            Assert.AreEqual("Sovereign Sword", sword.DisplayName);
         }
 
         [Test]

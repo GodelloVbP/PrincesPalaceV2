@@ -10,7 +10,7 @@ namespace PrincesPalace.Domain.Tests
 {
     // The tier roll (docs/PLAN_ITEMS.md 1.2 step 5): centre FloorTier(step) +
     // tierOffset, LootLadder climb at the source's tierStep plus 0.006 a
-    // Favor point (cap 0.45), up to five rungs, capped at tier 12. Dials are
+    // Favor point (cap 0.45), up to five rungs, capped at tier 10. Dials are
     // the shipped rewards.json values, typed here as literals.
     public class RarityTableTests
     {
@@ -105,15 +105,15 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void EveryRollCapsAtTierTwelve()
+        public void EveryRollCapsAtTierTen()
         {
             var rng = new SeededRandom(Seed);
             for (int i = 0; i < 2000; i++)
             {
-                Assert.AreEqual(12, RarityTable.RollTier(Boss, 500, 0, n => rng.NextInt(0, n)));
+                Assert.AreEqual(10, RarityTable.RollTier(Boss, 500, 0, n => rng.NextInt(0, n)));
             }
 
-            Assert.AreEqual(11, RarityTable.RollTier(Normal, 176, 0, _ => 999), "step 176 centres on 11 and a failed climb stays");
+            Assert.AreEqual(10, RarityTable.RollTier(Normal, 176, 0, _ => 999), "step 176 centres past the art ladder and clamps to its top");
         }
 
         [Test]

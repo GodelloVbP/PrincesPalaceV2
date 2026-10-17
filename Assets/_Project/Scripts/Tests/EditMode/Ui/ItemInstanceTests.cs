@@ -205,12 +205,14 @@ namespace PrincesPalace.Domain.Tests
 
         [TestCase(-2, 0)]
         [TestCase(7, 7)]
-        [TestCase(12, 12)]
-        [TestCase(15, 12)]
+        [TestCase(10, 10)]
+        [TestCase(11, 10)]
+        [TestCase(12, 10)]
+        [TestCase(15, 10)]
         public void Of_ClampsTierToTheCap(int asked, int stored)
         {
             Assert.AreEqual(stored, ItemInstance.Of("brigandine_boots", asked).Tier);
-            Assert.AreEqual(12, ItemInstance.TierCap);
+            Assert.AreEqual(10, ItemInstance.TierCap);
         }
 
         [Test]
