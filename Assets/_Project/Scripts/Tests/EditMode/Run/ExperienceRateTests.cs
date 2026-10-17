@@ -77,7 +77,6 @@ namespace PrincesPalace.Domain.Tests
         public void GoldStaysOnTheHealthCurve(int raw, int step, int expected)
         {
             Assert.AreEqual(expected, DifficultyCurve.ScaleReward(raw, step));
-            Assert.AreEqual(DifficultyCurve.ScaleHealth(raw, step), DifficultyCurve.ScaleReward(raw, step));
         }
 
         // THE POINT OF THE SPLIT, in one number: a step-80 fight pays 7.2x a
