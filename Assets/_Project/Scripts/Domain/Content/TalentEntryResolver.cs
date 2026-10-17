@@ -192,7 +192,6 @@ namespace PrincesPalace.Domain.Content
                                    || raw.skillManaCostReduction != 0
                                    || raw.signatureCapacityBonus != 0
                                    || raw.signaturePerTurnBonus != 0
-                                   || !string.IsNullOrWhiteSpace(raw.grantsStartingItemId)
                                    || effects.Count > 0
                                    || !string.IsNullOrEmpty(grantsSkillId);
             if (!grantsSomething)
@@ -209,7 +208,7 @@ namespace PrincesPalace.Domain.Content
                 raw.prerequisites ?? Array.Empty<string>(),
                 raw.statBonus, raw.abilityScoreBonus, raw.maxManaBonus, raw.skillManaCostReduction,
                 raw.signatureCapacityBonus, raw.signaturePerTurnBonus,
-                (raw.grantsStartingItemId ?? "").Trim(), sortOrder, raw.iconPath ?? "", raw.minSpent,
+                sortOrder, raw.iconPath ?? "", raw.minSpent,
                 effects, grantsSkillId, appliesToSkillId);
             error = null;
             return true;

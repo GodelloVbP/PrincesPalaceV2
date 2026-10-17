@@ -19,7 +19,6 @@ namespace PrincesPalace.Domain.Tests
     {
         private static readonly HashSet<string> Characters = new HashSet<string> { "shawn", "odette" };
         private static readonly HashSet<string> Enemies = new HashSet<string> { "giant_rat" };
-        private static readonly HashSet<string> Items = new HashSet<string> { "iron_sword" };
 
         private static readonly Dictionary<string, string> SkillOwners = new Dictionary<string, string>
         {
@@ -134,23 +133,6 @@ namespace PrincesPalace.Domain.Tests
             string error = CatalogueCrossChecks.TalentGrantedSkill("common_ground", "", true, "nothing", SkillOwners);
 
             Assert.AreEqual("Talent 'common_ground' grants unknown skill id 'nothing'.", error);
-        }
-
-        // ---- 4. a talent's starting item exists ----
-
-        [Test]
-        public void ATalentGrantingARealItemPasses()
-        {
-            Assert.IsNull(CatalogueCrossChecks.TalentStartingItem("armoury", "iron_sword", Items));
-            Assert.IsNull(CatalogueCrossChecks.TalentStartingItem("hardy", "", Items));
-        }
-
-        [Test]
-        public void ATalentGrantingAnUnknownItemIsRefused()
-        {
-            string error = CatalogueCrossChecks.TalentStartingItem("armoury", "iron_swrd", Items);
-
-            Assert.AreEqual("Talent 'armoury' grants unknown item id 'iron_swrd'.", error);
         }
 
         // ---- 5. a talent's character exists ----

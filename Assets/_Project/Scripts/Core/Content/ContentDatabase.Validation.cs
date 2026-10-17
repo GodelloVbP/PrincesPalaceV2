@@ -122,7 +122,6 @@ namespace PrincesPalace.Content
                      }));
 
             var skillIds = new HashSet<string>(_skills.Select(x => x.id));
-            var itemIds = new HashSet<string>(_items.Select(x => x.id));
             var characterIds = new HashSet<string>(_characters.Select(x => x.id));
             var enemyIds = new HashSet<string>(_enemies.Select(x => x.id));
             // First definition wins on a repeated id, the same one GetSkill's
@@ -205,8 +204,7 @@ namespace PrincesPalace.Content
 
                 // A talent-granted ability that points at nothing puts a
                 // button on the combat strip that cannot be pressed —
-                // exactly the same failure mode as grantsStartingItemId
-                // below, and worth the same named check rather than a null
+                // a dead end, worth a named check rather than a null
                 // silently reaching FightController's skill strip.
                 //
                 // Caught for real: the Fragile Lamb's ward ability was
@@ -238,12 +236,10 @@ namespace PrincesPalace.Content
                     }
                 }
 
-                AddIfRefused(errors, CatalogueCrossChecks.TalentStartingItem(talent.id, talent.Data.GrantsStartingItemId, itemIds));
-
                 // A talent owned by a character who does not exist can never
                 // be taken by anyone, so it is dead content that still shows
                 // up in the global Talents list. Mirrors the same check on
-                // skills and on grantsStartingItemId.
+                // skills.
                 AddIfRefused(errors, CatalogueCrossChecks.TalentCharacter(talent.id, talent.Data.CharacterId,
                     talent.IsSharedByEveryCharacter, characterIds));
 
@@ -508,7 +504,7 @@ namespace PrincesPalace.Content
                         (folder, name) => StanceAnimationLibrary.Resolve(folder, name) != null));
                 }
 
-                // Mirrors the grantsStartingItemId check: a skill owned by a
+                // Mirrors the talent owner check: a skill owned by a
                 // character who does not exist can never be pressed, and the
                 // typo is invisible until someone wonders where the button
                 // went.

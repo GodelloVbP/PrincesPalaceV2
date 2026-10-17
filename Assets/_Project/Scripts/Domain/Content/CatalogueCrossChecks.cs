@@ -109,16 +109,6 @@ namespace PrincesPalace.Domain.Content
             return null;
         }
 
-        public static string TalentStartingItem(string talentId, string grantsStartingItemId, ICollection<string> itemIds)
-        {
-            if (string.IsNullOrEmpty(grantsStartingItemId) || itemIds.Contains(grantsStartingItemId))
-            {
-                return null;
-            }
-
-            return $"Talent '{talentId}' grants unknown item id '{grantsStartingItemId}'.";
-        }
-
         // A talent owned by a character who does not exist can never be taken.
         // A shared talent has no owner to check.
         public static string TalentCharacter(string talentId, string characterId, bool sharedByEveryCharacter,

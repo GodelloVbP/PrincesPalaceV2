@@ -37,7 +37,6 @@ namespace PrincesPalace.Domain.Content
         public int SkillManaCostReduction;
         public int SignatureCapacityBonus;
         public int SignaturePerTurnBonus;
-        public string GrantsStartingItemId = "";
         public int SortOrder;
         public string IconPath = "";
 
@@ -78,7 +77,7 @@ namespace PrincesPalace.Domain.Content
         public ResolvedTalent(string id, string displayName, string description, string characterId,
             int column, int row, IReadOnlyList<string> prerequisites, StatBlock statBonus,
             AbilityScoreBlock abilityScoreBonus, int maxManaBonus, int skillManaCostReduction,
-            int signatureCapacityBonus, int signaturePerTurnBonus, string grantsStartingItemId, int sortOrder,
+            int signatureCapacityBonus, int signaturePerTurnBonus, int sortOrder,
             string iconPath = "", int minSpent = 0, IReadOnlyList<Effect> effects = null,
             string grantsSkillId = "", string appliesToSkillId = "")
         {
@@ -98,7 +97,6 @@ namespace PrincesPalace.Domain.Content
             SkillManaCostReduction = skillManaCostReduction;
             SignatureCapacityBonus = signatureCapacityBonus;
             SignaturePerTurnBonus = signaturePerTurnBonus;
-            GrantsStartingItemId = grantsStartingItemId ?? "";
             SortOrder = sortOrder;
             IconPath = iconPath ?? "";
             MinSpent = minSpent;

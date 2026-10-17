@@ -83,9 +83,6 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Signature resource gained per turn, granted while this talent is unlocked.")]
         public int signaturePerTurnBonus;
 
-        [ContentDoc("An items.json id granted once into the owner's stash when this talent is taken.")]
-        public string grantsStartingItemId = "";
-
         // Rules this talent grants that are not a number added to a stat —
         // the whole payload vocabulary of the reworked Shawn tree. `type` is
         // a Domain.Combat.EffectKind member name, matched
