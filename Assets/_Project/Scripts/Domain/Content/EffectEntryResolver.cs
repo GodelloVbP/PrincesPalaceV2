@@ -22,7 +22,7 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
-            if (!Enum.TryParse<EffectKind>(raw.type.Trim(), ignoreCase: true, out var kind)
+            if (!ContentEnum.TryParseName<EffectKind>(raw.type, out var kind)
                 || kind == EffectKind.None || !EffectCatalog.Has(kind) || !EffectCatalog.Of(kind).Allows(holder))
             {
                 string valid = string.Join(", ", EffectCatalog.All.Where(i => i.Allows(holder)).Select(i => i.Kind.ToString()));
@@ -82,7 +82,7 @@ namespace PrincesPalace.Domain.Content
                 {
                     againstWearer = true;
                 }
-                else if (Enum.TryParse<DamageType>(named, ignoreCase: true, out var parsed))
+                else if (ContentEnum.TryParseName<DamageType>(named, out var parsed))
                 {
                     against = parsed;
                 }

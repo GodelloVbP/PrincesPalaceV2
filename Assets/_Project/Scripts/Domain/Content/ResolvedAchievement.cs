@@ -141,7 +141,7 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
-            if (!Enum.TryParse<AchievementCondition>(raw.condition, ignoreCase: true, out var condition)
+            if (!ContentEnum.TryParseName<AchievementCondition>(raw.condition, out var condition)
                 || condition == AchievementCondition.Never)
             {
                 error = $"{label}: condition '{raw.condition}' is not a known AchievementCondition " +

@@ -85,7 +85,7 @@ namespace PrincesPalace.Domain.Content
             // An omitted rarity is Common -- the band a relic belongs to unless
             // somebody says otherwise, and the one the starting pool is made of.
             string rawRarity = string.IsNullOrWhiteSpace(raw.rarity) ? nameof(RelicRarity.Common) : raw.rarity;
-            if (!System.Enum.TryParse<RelicRarity>(rawRarity, ignoreCase: true, out var rarity))
+            if (!ContentEnum.TryParseName<RelicRarity>(rawRarity, out var rarity))
             {
                 error = $"{label}: rarity '{raw.rarity}' is not a known RelicRarity " +
                         $"(common, uncommon, rare, ultrarare, mythic, godlike).";

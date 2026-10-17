@@ -260,5 +260,50 @@ namespace PrincesPalace.Domain.Tests
             // mentions pools is not refused for a fact it did not state.
             Assert.IsTrue(new RewardTrackCharacterContext().PrimaryPoolTakesManaBonuses);
         }
+
+        // ---- Enum strings: names only, never ordinals or flag lists ---------
+
+        private static bool ResolveRelic(string effectType, string damageType, string rarity, out List<string> errors)
+        {
+            var relic = new RawRelicEntry
+            {
+                id = "r", displayName = "R", rarity = rarity,
+                effects = new[] { new RawEffect { type = effectType, magnitude = 10, damageType = damageType } },
+            };
+            return RelicEntryResolver.TryResolveAll(new List<RawRelicEntry> { relic },
+                new string[0], new string[0], out _, out errors);
+        }
+
+        [TestCase("1")]
+        [TestCase("Fire, Ice")]
+        public void ARelicEffectDamageTypeThatIsNotAMemberNameIsRefused(string damageType)
+        {
+            Assert.IsFalse(ResolveRelic("ResistanceFlat", damageType, "Common", out var errors));
+            StringAssert.Contains($"names damageType '{damageType}'", string.Join("; ", errors));
+        }
+
+        [TestCase("1")]
+        [TestCase("Common, Rare")]
+        public void ARelicRarityThatIsNotAMemberNameIsRefused(string rarity)
+        {
+            Assert.IsFalse(ResolveRelic("ResistanceFlat", "Fire", rarity, out var errors));
+            StringAssert.Contains("is not a known RelicRarity", string.Join("; ", errors));
+        }
+
+        [Test]
+        public void ARelicWithMemberNamesInAnyCaseResolves()
+        {
+            Assert.IsTrue(ResolveRelic("resistanceflat", " fire ", "ULTRARARE", out var errors),
+                string.Join("; ", errors ?? new List<string>()));
+        }
+
+        [TestCase("1")]
+        [TestCase("ClearRooms, ReachDepth")]
+        public void AnAchievementConditionThatIsNotAMemberNameIsRefused(string condition)
+        {
+            var entry = new RawAchievementEntry { id = "a", displayName = "A", condition = condition, threshold = 5 };
+            Assert.IsFalse(AchievementEntryResolver.TryResolveAll(new[] { entry }, out _, out var errors));
+            StringAssert.Contains("is not a known AchievementCondition", string.Join("; ", errors));
+        }
     }
 }

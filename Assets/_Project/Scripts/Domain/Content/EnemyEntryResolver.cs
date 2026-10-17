@@ -530,7 +530,7 @@ namespace PrincesPalace.Domain.Content
                 // rejected: nothing about it is ambiguous.
                 if (name.Length == 0) continue;
 
-                if (!Enum.TryParse(name, ignoreCase: true, out DamageType parsed))
+                if (!ContentEnum.TryParseName(name, out DamageType parsed))
                 {
                     string validOptions = string.Join(", ", Enum.GetNames(typeof(DamageType)));
                     error = $"{label}: {fieldName} '{name}' isn't a valid damage type. " +
@@ -563,7 +563,7 @@ namespace PrincesPalace.Domain.Content
                 return true;
             }
 
-            return Enum.TryParse(raw, ignoreCase: true, out value) && Enum.IsDefined(typeof(T), value);
+            return ContentEnum.TryParseName(raw, out value);
         }
 
         private static readonly DamageType[] AllDamageTypes =

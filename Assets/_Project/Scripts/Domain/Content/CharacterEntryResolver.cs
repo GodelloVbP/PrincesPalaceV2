@@ -399,7 +399,7 @@ namespace PrincesPalace.Domain.Content
 
         private static bool TryParseEnum<T>(string raw, out T value) where T : struct, Enum
         {
-            return Enum.TryParse(raw, ignoreCase: true, out value) && Enum.IsDefined(typeof(T), value);
+            return ContentEnum.TryParseName(raw, out value);
         }
 
         // Empty means "leave it at the sensible default" rather than "invalid"
