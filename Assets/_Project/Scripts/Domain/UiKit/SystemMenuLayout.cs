@@ -230,14 +230,14 @@ namespace PrincesPalace.Domain.UiKit
         public const float LintelWidth = PanelWidth;
         public const float LintelHeight = 52f;
 
-        // Screen y 34..86 against a 1080 stage, converted once here rather than
-        // at each call site.
         // The reference stage the lintel and the panel are both placed on --
         // read from UiFrames rather than restated, so "the frame everything is
         // authored against" has one value.
         public static float StageWidth => UiFrames.Reference.X;
         public static float StageHeight => UiFrames.Reference.Y;
         public static float StageHalfHeight => StageHeight * 0.5f;
+        // Screen y 34..86 against a 1080 stage, converted once here rather than
+        // at each call site.
         public const float LintelTopScreenY = 34f;
         public static float LintelCentreY => StageHalfHeight - LintelTopScreenY - LintelHeight * 0.5f;
 
