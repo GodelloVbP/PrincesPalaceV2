@@ -34,9 +34,12 @@ PACKAGE_GLOB = os.path.join(
     PROJECT_ROOT, "Library", "PackageCache", "com.unity.ugui@*",
     "Package Resources", "TMP Essential Resources.unitypackage")
 
-# The marker that says the extraction already happened. Cheap idempotence: the
-# build calls this every time and it does nothing on the runs that matter.
+# Cheap idempotence: the build calls this every time and it does nothing on the
+# runs that matter. SENTINEL is a payload file, written mid-extraction, so it
+# alone cannot say the extraction finished; MARKER is written after the last
+# file and lives in Library/ (a build artefact, never committed).
 SENTINEL = os.path.join(PROJECT_ROOT, "Assets", "TextMesh Pro", "Shaders", "TMP_SDF.shader")
+MARKER = os.path.join(PROJECT_ROOT, "Library", "tmp_essentials_extracted")
 
 
 def find_package():
@@ -50,7 +53,7 @@ def find_package():
 
 
 def extract(package_path, force=False):
-    if os.path.exists(SENTINEL) and not force:
+    if os.path.exists(MARKER) and os.path.exists(SENTINEL) and not force:
         print(f"  already extracted ({os.path.relpath(SENTINEL, PROJECT_ROOT)}) - nothing to do")
         return 0
 
@@ -94,6 +97,10 @@ def extract(package_path, force=False):
             if "asset.meta" in files:
                 with open(dest + ".meta", "wb") as f:
                     f.write(tar.extractfile(files["asset.meta"]).read())
+
+    os.makedirs(os.path.dirname(MARKER), exist_ok=True)
+    with open(MARKER, "w") as f:
+        f.write(os.path.basename(package_path))
 
     print(f"  extracted {written} asset(s) from {os.path.basename(package_path)}")
     return written
