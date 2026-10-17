@@ -731,7 +731,6 @@ def render_html(summary, previous, batch_dir, previous_dir):
     parts = []
     parts.append("<title>Balance bot report -- {}</title>".format(esc(batch.get("timestamp", ""))))
     parts.append("<style>{}</style>".format(CSS))
-    parts.append(render_boss_by_anchors(summary))
     parts.append("<h1>Balance bot report</h1>")
     parts.append(
         '<div class="subtitle">{} &middot; commit {} &middot; {} runs/cell &middot; seeds from {} '
@@ -755,6 +754,7 @@ def render_html(summary, previous, batch_dir, previous_dir):
         parts.append('<p class="empty">No previous batch found -- deltas blank.</p>')
 
     parts.append(render_shop_vs_no_shop(summary))
+    parts.append(render_boss_by_anchors(summary))
 
     parts.append("<h2>archetype gap (median depth)</h2>")
     parts.append(render_archetype_gap_svg(summary))

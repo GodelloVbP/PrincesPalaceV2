@@ -84,6 +84,12 @@ class HtmlRenderTests(unittest.TestCase):
         self.assertIn("delta-better", out)  # depth median improved 10->12 and 14->19
         self.assertIn("Compared against", out)
 
+    def test_boss_anchor_table_follows_the_title(self):
+        out = bot_report.render_html(self.summary_b, self.summary_a, BATCH_B, BATCH_A)
+        self.assertIn("boss fights by heart anchors", out)
+        self.assertLess(out.index("<h1>Balance bot report</h1>"), out.index("boss fights by heart anchors"),
+                        "the boss table is emitted above the report title")
+
     def test_render_without_previous_has_no_delta_but_still_valid(self):
         out = bot_report.render_html(self.summary_a, None, BATCH_A, None)
         self.assertIn("No previous batch found", out)
