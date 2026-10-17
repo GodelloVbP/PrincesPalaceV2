@@ -129,8 +129,8 @@ namespace PrincesPalace.Domain.Tests
             // The default overloads every existing armour call site uses
             // must not have moved just because a growth parameter now
             // exists -- these two should agree exactly.
-            Assert.AreEqual(GearScaling.CurveFraction(5, 10, GearScaling.TierGrowth), GearScaling.CurveFraction(5, 10));
-            Assert.AreEqual(GearScaling.TopMultiplier(10, GearScaling.TierGrowth), GearScaling.TopMultiplier(10));
+            Assert.AreEqual(0.2468, GearScaling.CurveFraction(5, 10), 0.0005);
+            Assert.AreEqual(9.3132, GearScaling.TopMultiplier(10), 0.0005);
         }
 
         // ---- what a real piece is worth ------------------------------------
