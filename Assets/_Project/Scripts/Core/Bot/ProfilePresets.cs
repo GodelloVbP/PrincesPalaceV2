@@ -196,7 +196,7 @@ namespace PrincesPalace
             while (character.unspentStatPoints > 0 && guard++ < 100000)
             {
                 var options = GearEvaluator.StatOptionsFor(character);
-                int index = policy?.ChooseStat(options, PresetView(character), rng) ?? -1;
+                int index = policy?.ChooseStat(options, PresetView(), rng) ?? -1;
 
                 // A policy that declines, or names something off the end of the
                 // list, still has to leave a terminating loop -- so an
@@ -277,7 +277,7 @@ namespace PrincesPalace
 
                 if (options.Count == 0) break;
 
-                int index = policy.ChooseTalent(options, PresetView(character), rng);
+                int index = policy.ChooseTalent(options, PresetView(), rng);
                 if (index < 0 || index >= options.Count) break;
 
                 var (chosenPath, chosenSlot) = coords[index];
@@ -289,7 +289,7 @@ namespace PrincesPalace
         // genuinely unknown -- there is no descent yet -- so this says "full
         // health, step zero, floor one, nothing held" rather than reaching for
         // RunManager, which at preset-build time has no run at all.
-        private static RunView PresetView(Character character) =>
+        private static RunView PresetView() =>
             new RunView(1f, 0, 1, 0, null);
     }
 }
