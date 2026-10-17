@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using PrincesPalace.Domain.Equipment;
 
 namespace PrincesPalace.Domain.UiKit
 {
@@ -37,8 +38,16 @@ namespace PrincesPalace.Domain.UiKit
         public static void RememberSection(MenuContext context, CharacterSection section) =>
             LastSection[context] = section;
 
+        // The order every bag list is shown in (the LOADOUT pack and the shop's
+        // PACK): one choice, so the two never disagree. A preference rather
+        // than a place, so unlike the pack's filter it outlives a reopening.
+        // Session only, like the rest of this class: it is not worth a save
+        // field, and Tier is the pack's long-standing default.
+        public static BagSortKey PackSort { get; set; } = BagSortKey.Tier;
+
         public static void Clear()
         {
+            PackSort = BagSortKey.Tier;
             Last.Clear();
             LastSection.Clear();
         }

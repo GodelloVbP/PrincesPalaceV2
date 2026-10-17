@@ -664,7 +664,7 @@ namespace PrincesPalace
                 var selected = EventSystem.current != null ? EventSystem.current.currentSelectedGameObject : null;
                 if (selected == null) return false;
 
-                return Owns(packCells, selected) || Owns(filterChips, selected);
+                return Owns(packCells, selected) || Owns(filterChips, selected) || Owns(sortChips, selected);
             }
         }
 
@@ -689,7 +689,7 @@ namespace PrincesPalace
             // the row names the tab and character shortcuts instead.
             if (Owns(sectionRows, focused.gameObject)) return MenuPrompts.ReadOnly(tab, paged: _chips.Count > 1);
 
-            if (Owns(filterChips, focused.gameObject)) return Row(new MenuPrompt(PromptButton.Confirm, UiStrings.PromptSelect));
+            if (Owns(filterChips, focused.gameObject) || Owns(sortChips, focused.gameObject)) return Row(new MenuPrompt(PromptButton.Confirm, UiStrings.PromptSelect));
 
             int slot = IndexIn(slotCells, focused.gameObject);
             if (slot >= 0) return Row(GearSlotPrompt(slot));

@@ -103,15 +103,26 @@ namespace PrincesPalace.Domain.UiKit
             }
         }
 
-        // Gear and salves in BagView's order (wearable things first, best
-        // first within a kind), then the books by name. Copies of one book
+        public static UiString SortLabel(BagSortKey key)
+        {
+            switch (key)
+            {
+                case BagSortKey.Tier: return UiStrings.PackSortTier;
+                case BagSortKey.Name: return UiStrings.PackSortName;
+                default: throw new System.ArgumentOutOfRangeException(nameof(key), key, null);
+            }
+        }
+
+        // Gear and salves in the chosen BagSort order (Tier: wearable things
+        // first, best first within a kind), then the books by name. Copies of one book
         // are one cell with a count: two copies are interchangeable, and the
         // run takes the first match off its list whichever cell is pressed.
-        public static IReadOnlyList<PackEntry> Build(IEnumerable<BagItem> items, IEnumerable<PackBook> books)
+        public static IReadOnlyList<PackEntry> Build(IEnumerable<BagItem> items, IEnumerable<PackBook> books,
+            BagSortKey sort = BagSortKey.Tier)
         {
             var entries = new List<PackEntry>();
 
-            foreach (var item in BagView.Sorted(items ?? Enumerable.Empty<BagItem>()))
+            foreach (var item in BagSort.By(items ?? Enumerable.Empty<BagItem>(), sort))
             {
                 if (item.Count > 0) entries.Add(PackEntry.OfItem(item));
             }

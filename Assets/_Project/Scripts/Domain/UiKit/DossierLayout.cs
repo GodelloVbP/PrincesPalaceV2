@@ -309,8 +309,19 @@ namespace PrincesPalace.Domain.UiKit
 
         public const float CarriedTop = 560f;
         public const float CarriedHeight = 26f;
-        public static UiVec CarriedCentre =>
-            new UiVec(DX(PackLeft + PackGridWidth * 0.5f), DY(CarriedTop + CarriedHeight * 0.5f));
+        // The sort chips share the Carried line, right-aligned to the grid.
+        public const float SortWidth = 78f;
+        public const float SortHeight = 40f;
+        public const float SortGap = 4f;
+        public const float CarriedWidth = 190f;
+
+        public static float SortCentreX(int index, int count) =>
+            DX(PackLeft + PackGridWidth - SortWidth * 0.5f - (count - 1 - index) * (SortWidth + SortGap));
+
+        public static float SortCentreY => DY(CarriedTop + CarriedHeight * 0.5f);
+
+        public static UiVec CarriedLabelCentre =>
+            new UiVec(DX(PackLeft + CarriedWidth * 0.5f), DY(CarriedTop + CarriedHeight * 0.5f));
 
         public const float PackEmptyWidth = 320f;
         public const float PackEmptyHeight = 80f;

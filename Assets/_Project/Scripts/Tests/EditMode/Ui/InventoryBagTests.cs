@@ -104,6 +104,38 @@ namespace PrincesPalace.Domain.Tests
             CollectionAssert.AreEqual(new[] { "a", "b", "c" }, Ids(sorted));
         }
 
+        // Pinned literals for each key over one fixture: a weapon, six armour
+        // pieces (two at tier 4, two named Axe), a salve.
+        [Test]
+        public void TierOrderIsPinned()
+        {
+            var sorted = BagSort.By(PinnedFixture(), BagSortKey.Tier);
+
+            CollectionAssert.AreEqual(new[] { "dagger", "axe_high", "boots", "cuirass", "helm", "axe_low", "potion" }, Ids(sorted));
+        }
+
+        [Test]
+        public void NameOrderIsPinned()
+        {
+            var sorted = BagSort.By(PinnedFixture(), BagSortKey.Name);
+
+            // Axe twice: the higher tier first. Then Boots, Cuirass, Dagger,
+            // Helm, Potion.
+            CollectionAssert.AreEqual(new[] { "axe_high", "axe_low", "boots", "cuirass", "dagger", "helm", "potion" },
+                Ids(sorted));
+        }
+
+        private static BagItem[] PinnedFixture() => new[]
+        {
+            Item("potion", Consumable, equippable: false, name: "Potion"),
+            Item("helm", tier: 1, name: "Helm"),
+            Item("cuirass", tier: 4, name: "Cuirass"),
+            Item("axe_low", Equipment, tier: 0, name: "Axe"),
+            Item("dagger", Weapon, tier: 2, name: "Dagger"),
+            Item("boots", tier: 4, name: "Boots"),
+            Item("axe_high", Equipment, tier: 5, name: "Axe"),
+        };
+
         // Tier defers to BagView.Sorted rather than restating that ordering, so
         // the pack's long-standing default stays exactly one implementation.
         [Test]

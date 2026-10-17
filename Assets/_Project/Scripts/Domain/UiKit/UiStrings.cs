@@ -994,6 +994,9 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("character.pack.empty", "Nothing carried. Gear from fights and shops lands here.");
         public static readonly UiString PackFilterEmpty =
             UiString.Define("character.pack.filter_empty", "Nothing of this kind carried.");
+        // The pack's sort chips (BagSort.All).
+        public static readonly UiString PackSortTier = UiString.Define("dossier.sort_tier", "Best");
+        public static readonly UiString PackSortName = UiString.Define("dossier.sort_name", "Name");
         public static readonly UiString PackStackCount =
             UiString.Define("character.pack.count", "{0}", "99");
 

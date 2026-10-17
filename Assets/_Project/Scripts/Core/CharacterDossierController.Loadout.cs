@@ -45,6 +45,8 @@ namespace PrincesPalace
         // ---- the pack ------------------------------------------------------------------
         [SerializeField] internal Button[] filterChips;
         [SerializeField] internal GameObject[] filterMarkers;
+        [SerializeField] internal Button[] sortChips;
+        [SerializeField] internal GameObject[] sortMarkers;
         [SerializeField] internal Button[] packCells;
         [SerializeField] internal Image[] packIcons;
         [SerializeField] internal Image[] packRarityTicks;
@@ -135,6 +137,12 @@ namespace PrincesPalace
             {
                 int index = i;
                 filterChips[i].onClick.AddListener(() => PressFilter(index));
+            }
+
+            for (int i = 0; sortChips != null && i < sortChips.Length; i++)
+            {
+                int index = i;
+                sortChips[i].onClick.AddListener(() => PressSort(index));
             }
 
             // A grab on the track seeks to that point of the pack.
@@ -288,7 +296,7 @@ namespace PrincesPalace
             var books = (run?.unassignedSpellBooks ?? new List<string>())
                 .Select(id => new PackBook(id, ContentDatabase.GetSkill(id)?.Data.DisplayName ?? id));
 
-            _pack = LoadoutPack.Build(items, books);
+            _pack = LoadoutPack.Build(items, books, MenuMemory.PackSort);
             ApplyView();
         }
 
@@ -315,6 +323,7 @@ namespace PrincesPalace
             _scrollRow = Mathf.Clamp(_scrollRow, 0, MaxScrollRow());
             BindPackWindow();
             PaintFilterMarkers();
+            PaintSortMarkers();
 
             if (packCarried != null) packCarried.Set(UiStrings.PackCarried, _pack.Count);
         }
@@ -405,6 +414,15 @@ namespace PrincesPalace
             }
         }
 
+        private void PaintSortMarkers()
+        {
+            int live = BagSort.IndexOf(MenuMemory.PackSort);
+            for (int i = 0; sortMarkers != null && i < sortMarkers.Length; i++)
+            {
+                sortMarkers[i].SetShown(i == live);
+            }
+        }
+
         // The thumb's length says how much of the pack is showing and its
         // position says where. Nothing to scroll: no bar at all.
         private void PaintScrollThumb()
@@ -478,7 +496,7 @@ namespace PrincesPalace
             return cells;
         }
 
-        private static BagItem ToBagItem(InventoryEntry entry)
+        internal static BagItem ToBagItem(InventoryEntry entry)
         {
             var item = ContentDatabase.GetItem(entry.itemId);
             if (item == null)
@@ -509,6 +527,18 @@ namespace PrincesPalace
             _filter = LoadoutPack.Filters[index];
             _scrollRow = 0;
             ApplyView();
+        }
+
+        // The order is the session's one bag order (MenuMemory.PackSort), which
+        // the shop's PACK reads too. The window goes back to the top: the cell
+        // under it is a different thing now.
+        private void PressSort(int index)
+        {
+            if (index < 0 || index >= BagSort.All.Length) return;
+
+            MenuMemory.PackSort = BagSort.All[index];
+            _scrollRow = 0;
+            RebuildPack();
         }
 
         // A worn slot unequips; an empty one arms (plan C16).
@@ -1077,6 +1107,7 @@ namespace PrincesPalace
             var rail = SectionRow(CharacterSection.Loadout);
             var cells = BoundPackCells();
             var filters = filterChips?.Where(f => f != null).Cast<Selectable>().ToList() ?? new List<Selectable>();
+            var sorts = sortChips?.Where(f => f != null).Cast<Selectable>().ToList() ?? new List<Selectable>();
 
             // The slots' right edge: the last member of every row, which is
             // what Left from the pack reaches.
@@ -1109,6 +1140,18 @@ namespace PrincesPalace
                 links.Add(RuntimeNavWiring.Link(chip, UiNavDirection.Down, Nearest(cells, chip, horizontal: false)));
             }
 
+            // The sort chips: a rail under the grid, reached by Down off the
+            // last row and leaving by Up.
+            groups.Add(RuntimeNavWiring.Group("dossierSorts", UiNavGroupKind.Rail, sorts, wrap: UiNavWrap.Clamp));
+            int lastRowStart = cells.Count == 0 ? 0 : (cells.Count - 1) / DossierLayout.PackColumns * DossierLayout.PackColumns;
+            var lastRow = cells.Skip(lastRowStart).ToList();
+            foreach (var chip in sorts)
+            {
+                var above = lastRow.Count > 0 ? Nearest(lastRow, chip, horizontal: false)
+                    : filters.Count > 0 ? Nearest(filters, chip, horizontal: false) : null;
+                if (above != null) links.Add(RuntimeNavWiring.Link(chip, UiNavDirection.Up, above));
+            }
+
             if (filters.Count > 0) links.Add(RuntimeNavWiring.Link(filters[0], UiNavDirection.Left, Nearest(rightEdge, filters[0], horizontal: true)));
 
             // The grid, cell by cell: the bound cells are always a prefix of
@@ -1132,6 +1175,7 @@ namespace PrincesPalace
                 // Down: the cell below, or the last cell of a short last row.
                 if (k + columns < cells.Count) links.Add(RuntimeNavWiring.Link(cell, UiNavDirection.Down, cells[k + columns]));
                 else if ((row + 1) * columns < cells.Count) links.Add(RuntimeNavWiring.Link(cell, UiNavDirection.Down, cells[cells.Count - 1]));
+                else if (sorts.Count > 0 && _scrollRow >= MaxScrollRow()) links.Add(RuntimeNavWiring.Link(cell, UiNavDirection.Down, Nearest(sorts, cell, horizontal: false)));
             }
         }
 

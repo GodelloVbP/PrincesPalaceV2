@@ -453,9 +453,13 @@ namespace PrincesPalace
             if (save?.stockpiledItems == null) return;
 
             int absolute = _packPage * ShopScreen.PackRowCount + rowIndex;
-            if (absolute < 0 || absolute >= save.stockpiledItems.Count) return;
+            var order = PackOrder();
+            if (absolute < 0 || absolute >= order.Count) return;
 
-            var entry = save.stockpiledItems[absolute];
+            // The row's place on the page is not its place in the save: the
+            // sell goes to the save index the row was built from.
+            int saveIndex = order[absolute];
+            var entry = save.stockpiledItems[saveIndex];
             if (entry == null) return;
 
             int quantity = all ? entry.count : 1;
@@ -464,7 +468,7 @@ namespace PrincesPalace
             // -- SellPriceOf answers 0 for an item the catalogue no longer has
             // and the row stays pressable in the SELL ALL column -- so that
             // refusal has to reach PaintRefusal rather than being discarded.
-            var result = RunOrchestrator.Sell(absolute, quantity);
+            var result = RunOrchestrator.Sell(saveIndex, quantity);
             PaintRefusal(result);
 
             // Selling can drop the page below its own content (the last
@@ -475,10 +479,25 @@ namespace PrincesPalace
             Paint();
         }
 
+        // The pack's rows as save indices, in the order the player chose
+        // (MenuMemory.PackSort, the same choice the LOADOUT pack reads).
+        private static IReadOnlyList<int> PackOrder()
+        {
+            var bag = SaveSlotManager.CurrentSave?.stockpiledItems;
+            if (bag == null) return new List<int>();
+
+            var rows = new List<(int Index, BagItem Item)>();
+            for (int i = 0; i < bag.Count; i++)
+            {
+                if (bag[i] != null) rows.Add((i, CharacterDossierController.ToBagItem(bag[i])));
+            }
+
+            return BagSort.By(rows, row => row.Item, MenuMemory.PackSort).Select(row => row.Index).ToList();
+        }
+
         private int PackPageCount()
         {
-            var save = SaveSlotManager.CurrentSave;
-            int items = save?.stockpiledItems?.Count ?? 0;
+            int items = PackOrder().Count;
             return Mathf.Max(1, (items + ShopScreen.PackRowCount - 1) / ShopScreen.PackRowCount);
         }
 
@@ -861,6 +880,7 @@ namespace PrincesPalace
         {
             var save = SaveSlotManager.CurrentSave;
             var bag = save?.stockpiledItems ?? new List<InventoryEntry>();
+            var order = PackOrder();
 
             if (packEmptyHint != null) packEmptyHint.SetActive(bag.Count == 0);
 
@@ -889,12 +909,12 @@ namespace PrincesPalace
             for (int i = 0; i < packRows.Length; i++)
             {
                 int absolute = _packPage * ShopScreen.PackRowCount + i;
-                bool present = absolute < bag.Count;
+                bool present = absolute < order.Count;
 
                 if (packRows[i] != null) packRows[i].SetActive(present);
                 if (!present) continue;
 
-                var entry = bag[absolute];
+                var entry = bag[order[absolute]];
                 var item = ContentDatabase.GetItem(entry.itemId);
 
                 if (packNames != null && i < packNames.Length)

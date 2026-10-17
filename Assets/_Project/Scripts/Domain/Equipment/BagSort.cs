@@ -44,17 +44,23 @@ namespace PrincesPalace.Domain.Equipment
         // unordered would swap places between refreshes -- a list that
         // reshuffles under the cursor as you equip things. Every branch below
         // therefore ends on Id.
-        public static IReadOnlyList<BagItem> By(IEnumerable<BagItem> items, BagSortKey key)
+        public static IReadOnlyList<BagItem> By(IEnumerable<BagItem> items, BagSortKey key) =>
+            By(items, i => i, key);
+
+        // The same orders over any row that carries a BagItem: the shop's pack
+        // keeps each row's save index beside it, so a sell still hits the entry
+        // the row shows.
+        public static IReadOnlyList<T> By<T>(IEnumerable<T> rows, System.Func<T, BagItem> item, BagSortKey key)
         {
-            if (items == null) return new List<BagItem>();
+            if (rows == null) return new List<T>();
 
             switch (key)
             {
                 case BagSortKey.Name:
-                    return items
-                        .OrderBy(i => i.Name, System.StringComparer.Ordinal)
-                        .ThenByDescending(i => i.Tier)
-                        .ThenBy(i => i.Id, System.StringComparer.Ordinal)
+                    return rows
+                        .OrderBy(r => item(r).Name, System.StringComparer.Ordinal)
+                        .ThenByDescending(r => item(r).Tier)
+                        .ThenBy(r => item(r).Id, System.StringComparer.Ordinal)
                         .ToList();
 
                 // Tier is BagView.Sorted itself rather than a fourth ordering
@@ -62,7 +68,7 @@ namespace PrincesPalace.Domain.Equipment
                 // default and the one every other screen's expectations were
                 // built against.
                 default:
-                    return BagView.Sorted(items);
+                    return BagView.Sorted(rows, item);
             }
         }
     }

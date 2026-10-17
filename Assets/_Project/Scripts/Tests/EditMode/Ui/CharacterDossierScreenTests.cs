@@ -191,6 +191,7 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.AreEqual(12, screen.PackCells.Count);
             Assert.AreEqual(5, screen.FilterChips.Count);
+            Assert.AreEqual(2, screen.SortChips.Count);
 
             Assert.AreEqual(-122f, DossierLayout.PackCellCentre(0).X, 0.001f);
             Assert.AreEqual(216f, DossierLayout.PackCellCentre(0).Y, 0.001f);

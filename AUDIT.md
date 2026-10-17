@@ -29,7 +29,7 @@ debt), and a struck finding gets its number removed.
 - Fight screen / HUD: #45, #81, #84, #89, #143, #177, #186, #206, #221, #222, #224, #228, #229, #230, #232, #237, #238, #239, #240, #245, #246, #247, #249, #252
 - Combat domain: #97, #105, #120, #124, #194, #210, #235, #264, #265, #266
 - Map: none open
-- Shop: #122, #191, #196, #197, #212, #244, #285
+- Shop: #122, #191, #196, #197, #212, #244
 - Events: #274
 - Dossier / Party / Talents / Reward track / Reckoning: #44, #104, #141, #150, #178, #199, #214
 - Menus / Options / Navigation & gamepad: #91, #142, #166, #167, #179, #223, #225, #227, #231, #234, #236, #242, #250, #251, #253, #257, #258, #259, #260, #261
@@ -2608,9 +2608,5 @@ are stale. Retint, or re-bless the thresholds? `:58-67` [S80-004]. (b)
 `process_map_icons.py` and its 7 `map_forest_*`/`forest_map_chest` Processed PNGs have no
 reader since the run-map rebuild. Delete script, PNGs and the ART_PIPELINE row, or keep?
 `:1` [S81-008].
-
-### 285. Bag sort: delete BagSort or wire sort buttons (after the item redesign)
-`BagSort`/`BagSortKey` have no caller. Decide once `docs/PLAN_ITEMS.md` lands whether
-the bag gets sort buttons or the code goes. `Domain/Equipment/BagSort.cs:21` [D4-004].
 
 ### ~~286. Two comment-vs-code drifts that need a one-line call~~ — fixed in `99565bc4`: the ContentBuilder bracket comment now states that RealmsPath is made with its first asset (the code was right), and `AudioLevels.cs` no longer cites a nonexistent `MusicLibrary`

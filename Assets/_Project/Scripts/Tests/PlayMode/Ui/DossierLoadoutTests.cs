@@ -667,6 +667,33 @@ namespace PrincesPalace.PlayModeTests
             }
         }
 
+        // The sort chips reorder the pack that is shown, and the choice is the
+        // session's one bag order (the shop's PACK reads the same value).
+        [UnityTest]
+        public IEnumerator PressingASortChipReordersTheShownPack()
+        {
+            yield return OpenOnTheMap(Shawn);
+            Pack(ItemFor(EquipmentSlot.Head).id, ItemFor(EquipmentSlot.Weapon1).id, ItemFor(EquipmentSlot.Torso).id);
+
+            var byTier = _dossier.VisiblePack.Select(e => e.Item.Id).ToList();
+
+            DossierPane.Press("DossierSort1");
+            Assert.AreEqual(BagSortKey.Name, MenuMemory.PackSort, "the Name chip did not set the session order");
+            Assert.IsTrue(DossierPane.Control("DossierSort1").transform.Find("DossierSort1Marker").gameObject.activeSelf,
+                "the Name chip's marker is not lit");
+
+            var names = _dossier.VisiblePack.Select(e => e.DisplayName).ToList();
+            CollectionAssert.AreEqual(names.OrderBy(n => n, System.StringComparer.Ordinal).ToList(), names,
+                "the shown pack is not alphabetical after Name");
+
+            DossierPane.Press("DossierSort0");
+            Assert.AreEqual(BagSortKey.Tier, MenuMemory.PackSort);
+            Assert.IsFalse(DossierPane.Control("DossierSort1").transform.Find("DossierSort1Marker").gameObject.activeSelf,
+                "the Name marker stayed lit after Best");
+            CollectionAssert.AreEqual(byTier, _dossier.VisiblePack.Select(e => e.Item.Id).ToList(),
+                "Best did not restore the tier order");
+        }
+
         [UnityTest]
         public IEnumerator AnEmptyPackSaysSo_AndAnEmptyFilterSaysItsOwnSentence()
         {

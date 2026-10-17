@@ -94,6 +94,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // ---- LOADOUT: the pack ---------------------------------------------------------
         public List<NodeRef> FilterChips = new List<NodeRef>();
         public List<NodeRef> FilterMarkers = new List<NodeRef>();
+        public List<NodeRef> SortChips = new List<NodeRef>();
+        public List<NodeRef> SortMarkers = new List<NodeRef>();
         public List<NodeRef> PackCells = new List<NodeRef>();
         public List<NodeRef> PackIcons = new List<NodeRef>();
         public List<NodeRef> PackRarityTicks = new List<NodeRef>();
@@ -633,11 +635,40 @@ namespace PrincesPalace.Domain.UiKit.Screens
             children.Add(thumb);
 
             var carried = Words("DossierPackCarried", UiStrings.PackCarried,
-                new UiVec(DossierLayout.PackGridWidth, DossierLayout.CarriedHeight), 20, TextMuted,
-                Place.At(DossierLayout.CarriedCentre.X, DossierLayout.CarriedCentre.Y),
+                new UiVec(DossierLayout.CarriedWidth, DossierLayout.CarriedHeight), 20, TextMuted,
+                Place.At(DossierLayout.CarriedLabelCentre.X, DossierLayout.CarriedLabelCentre.Y),
                 TypographyRole.Body, UiTextAlign.Left);
             PackCarried = carried;
             children.Add(carried);
+
+            // The pack's order, one chip per BagSort key. Built like the
+            // filter chips; the live key carries the same underline marker.
+            for (int i = 0; i < BagSort.All.Length; i++)
+            {
+                var size = new UiVec(DossierLayout.SortWidth, DossierLayout.SortHeight);
+
+                var caption = Words($"DossierSort{i}Caption", LoadoutPack.SortLabel(BagSort.All[i]),
+                    new UiVec(size.X, 30f), 20, Text, Place.At(0f, 2f),
+                    TypographyRole.Body, UiTextAlign.Centre);
+
+                var marker = Ui.Solid($"DossierSort{i}Marker", Gold, new UiVec(size.X - 16f, 3f),
+                        Place.At(0f, -size.Y * 0.5f + 3f))
+                    .AsDecor()
+                    .Inactive();
+
+                var chip = Ui.Button($"DossierSort{i}", UiString.Runtime, size, 20,
+                        Place.At(DossierLayout.SortCentreX(i, BagSort.All.Length), DossierLayout.SortCentreY))
+                    .NoChrome()
+                    .Quiet()
+                    .Styled(TypographyRole.Body);
+                foreach (var edge in Ui.Rim($"DossierSort{i}", size, SocketRim)) chip.Children.Add(edge);
+                chip.Children.Add(caption);
+                chip.Children.Add(marker);
+
+                SortChips.Add(chip);
+                SortMarkers.Add(marker);
+                children.Add(chip);
+            }
 
             var empty = Words("DossierPackEmptyHint", UiStrings.PackEmpty,
                     new UiVec(DossierLayout.PackEmptyWidth, DossierLayout.PackEmptyHeight), 20, TextSecondary,

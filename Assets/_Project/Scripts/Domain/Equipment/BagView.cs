@@ -69,16 +69,21 @@ namespace PrincesPalace.Domain.Equipment
         // means dozens of one-count stacks that differ only by plus, and any
         // pair left unordered would swap places between refreshes -- a grid
         // that reshuffles under the cursor as you equip things.
-        public static IReadOnlyList<BagItem> Sorted(IEnumerable<BagItem> items)
-        {
-            if (items == null) return new List<BagItem>();
+        public static IReadOnlyList<BagItem> Sorted(IEnumerable<BagItem> items) =>
+            Sorted(items, i => i);
 
-            return items
-                .OrderByDescending(i => i.IsEquippable)   // wearable things first
-                .ThenBy(i => i.Kind)                      // then grouped by kind
-                .ThenByDescending(i => i.Tier)            // best first within a kind
-                .ThenBy(i => i.Name, System.StringComparer.Ordinal)
-                .ThenBy(i => i.Id, System.StringComparer.Ordinal)
+        // The same order over any row that carries a BagItem, so a screen that
+        // must keep a row's save index beside it sorts by this one rule.
+        public static IReadOnlyList<T> Sorted<T>(IEnumerable<T> rows, System.Func<T, BagItem> item)
+        {
+            if (rows == null) return new List<T>();
+
+            return rows
+                .OrderByDescending(r => item(r).IsEquippable)   // wearable things first
+                .ThenBy(r => item(r).Kind)                      // then grouped by kind
+                .ThenByDescending(r => item(r).Tier)            // best first within a kind
+                .ThenBy(r => item(r).Name, System.StringComparer.Ordinal)
+                .ThenBy(r => item(r).Id, System.StringComparer.Ordinal)
                 .ToList();
         }
 
