@@ -339,6 +339,11 @@ namespace PrincesPalace.Domain.Tests
         {
             Assert.AreEqual(ConstellationLayout.PlotCountFor("sheep"), ConstellationLayout.PlotCount);
 
+            Assert.AreEqual(-149f, ConstellationLayout.StarX("sheep", 0, 1));
+            Assert.AreEqual(118f, ConstellationLayout.StarY("sheep", 0, 1));
+            Assert.AreEqual(134f, ConstellationLayout.StarX("sheep", 1, 3));
+            Assert.AreEqual(120f, ConstellationLayout.StarY("sheep", 1, 3));
+
             for (int path = -1; path <= ConstellationLayout.PlotCount; path++)
             {
                 for (int slot = 0; slot < Talents.TalentSkeleton.SlotCount; slot++)
