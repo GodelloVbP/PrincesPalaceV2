@@ -82,27 +82,17 @@ Shader "PrincesPalace/UIBurnGlow"
                 return o;
             }
 
-            // Mean alpha of two rings of eight neighbours, at _RimWidth and twice it.
-            float NeighbourAlpha(float2 uv)
-            {
-                float2 step = float2(_RimWidth * _MainTex_TexelSize.w * _MainTex_TexelSize.x, _RimWidth);
-                float sum = 0.0;
-                for (int ring = 1; ring <= 2; ring++)
-                {
-                    for (int k = 0; k < 8; k++)
-                    {
-                        float a = k * 0.785398;
-                        float2 d = float2(cos(a), sin(a)) * step * ring;
-                        sum += tex2D(_MainTex, uv + d).a;
-                    }
-                }
-                return sum / 16.0;
-            }
+            #include "UIRimNeighbour.cginc"
 
             fixed4 frag(v2f i) : SV_Target
             {
-                float opaque = tex2D(_MainTex, i.texcoord).a;
-                float edge = saturate((1.0 - NeighbourAlpha(i.texcoord)) * 2.0);
+                float2 dx = ddx(i.texcoord);
+                float2 dy = ddy(i.texcoord);
+                float opaque = tex2Dgrad(_MainTex, i.texcoord, dx, dy).a;
+                // A transparent pixel ends up with alpha 0 whatever the rim
+                // says, so skip the sixteen neighbour samples for it.
+                if (opaque <= 0.0) return fixed4(i.color.rgb, 0);
+                float edge = saturate((1.0 - NeighbourAlpha(i.texcoord, dx, dy)) * 2.0);
                 float feet = 1.0 - smoothstep(0.0, _FeetReach, i.texcoord.y);
                 // Embers wandering along the outline.
                 float shimmer = 0.8 + 0.2 * sin(_Time.y * 5.0 + i.texcoord.x * 31.0 + i.texcoord.y * 17.0);

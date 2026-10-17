@@ -75,26 +75,17 @@ Shader "PrincesPalace/UIRimFlash"
                 return o;
             }
 
-            float NeighbourAlpha(float2 uv)
-            {
-                float2 step = float2(_RimWidth * _MainTex_TexelSize.w * _MainTex_TexelSize.x, _RimWidth);
-                float sum = 0.0;
-                for (int ring = 1; ring <= 2; ring++)
-                {
-                    for (int k = 0; k < 8; k++)
-                    {
-                        float a = k * 0.785398;
-                        float2 d = float2(cos(a), sin(a)) * step * ring;
-                        sum += tex2D(_MainTex, uv + d).a;
-                    }
-                }
-                return sum / 16.0;
-            }
+            #include "UIRimNeighbour.cginc"
 
             fixed4 frag(v2f i) : SV_Target
             {
-                float opaque = tex2D(_MainTex, i.texcoord).a;
-                float edge = saturate((1.0 - NeighbourAlpha(i.texcoord)) * 2.0);
+                float2 dx = ddx(i.texcoord);
+                float2 dy = ddy(i.texcoord);
+                float opaque = tex2Dgrad(_MainTex, i.texcoord, dx, dy).a;
+                // A transparent pixel ends up with alpha 0 whatever the rim
+                // says, so skip the sixteen neighbour samples for it.
+                if (opaque <= 0.0) return fixed4(i.color.rgb, 0);
+                float edge = saturate((1.0 - NeighbourAlpha(i.texcoord, dx, dy)) * 2.0);
                 fixed alpha = opaque * (_Interior + (1.0 - _Interior) * edge) * i.color.a;
                 return fixed4(i.color.rgb, alpha);
             }
