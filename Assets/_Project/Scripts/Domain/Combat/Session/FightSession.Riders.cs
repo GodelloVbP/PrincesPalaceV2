@@ -819,6 +819,10 @@ namespace PrincesPalace.Domain.Combat.Session
             // paid.
             if (PayDelayedDamage(actor, preTick)) preTick = null;
 
+            // A body the rows above felled stays down: Regen would mend it past
+            // SettleDeath, and the later rows would tick a corpse.
+            if (!actor.IsAlive) return;
+
             // REGEN, THROUGH THE HEAL FUNNEL (plan 4b), trigger-free
             // (HealWithoutTriggers: the crown never heard a Regen tick and
             // still does not). The funnel books the ledger row this block used

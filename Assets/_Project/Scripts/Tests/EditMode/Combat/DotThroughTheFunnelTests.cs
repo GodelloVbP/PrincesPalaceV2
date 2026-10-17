@@ -197,6 +197,29 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0, session.Ledger.For("hero").TotalDealt);
         }
 
+        // A body the DoT felled this tick stays down: the Regen status that
+        // would mend it ticks in the same pass. 15 health, 20 poison, Regen 8.
+        [Test]
+        public void ADotKill_IsNotRaisedByRegenInTheSameTick()
+        {
+            var hero = Hero();
+            var rat = new CombatantState("Rat", false, 15, 0, 1, 1);
+            var tank = new CombatantState("Tank", false, 999999, 0, 1, 1);
+            var session = new FightSession(new CombatEncounter(new[] { hero }, new[] { rat, tank }),
+                new List<PlayerKit> { new PlayerKit("hero", CharacterRole.Tank, null, null, null) },
+                null, new SeededRandom(5)) { DamageVarianceRange = 0f };
+            TestRelics.Hold(session);
+            session.Begin();
+            session.ApplyStatusToForTest(rat, StatusEffectType.Poison, 20, 3, source: hero);
+            session.ApplyStatusToForTest(rat, StatusEffectType.Regen, 8, 3);
+
+            session.TickStatusesForTest(rat);
+
+            Assert.AreEqual(0, rat.CurrentHealth, "the felled body is not mended");
+            Assert.IsFalse(rat.IsAlive, "regen must not raise a DoT kill");
+            Assert.AreEqual(1, session.Ledger.For("Rat").TimesDowned, "one body, one down");
+        }
+
         // Last Stand T2 caps a 20-point tick to 5 while under half health. The
         // ledger books the 5 that left health, not the 20 that was sent.
         [Test]
