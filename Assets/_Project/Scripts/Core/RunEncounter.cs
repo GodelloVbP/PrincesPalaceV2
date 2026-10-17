@@ -16,12 +16,8 @@ namespace PrincesPalace
     // save, and the rule it calls is pure Domain so an EditMode test can reach
     // it. Nothing here decides anything -- every choice lives in EncounterRoll.
     //
-    // This replaces FightBootstrap's placeholder selection, which fielded the
-    // first character with art against the first three enemies with art at a
-    // fixed seed. That was correct for what it was (the screen had to be
-    // openable before a descent existed) and became wrong the moment one did:
-    // every battle in every run was the same hero against the same three
-    // monsters, with only the difficulty curve varying by depth.
+    // Every battle fields the run's own party against enemies rolled from the
+    // run's seed and depth, so the same room is the same fight.
     public static class RunEncounter
     {
         public sealed class Roster
@@ -271,13 +267,6 @@ namespace PrincesPalace
             }
         }
 
-        // Applies the carried-in health to a freshly built party.
-        //
-        // After the adapter rather than inside it: the adapter builds a
-        // combatant from a definition and knows nothing about a run, and
-        // threading run state through it would put the descent inside the one
-        // seam that is currently reusable by tests and the screenshot path
-        // alike.
         // Every squad member back to their effective maximum.
         //
         // The WHOLE squad, including anyone knocked out earlier -- that is what

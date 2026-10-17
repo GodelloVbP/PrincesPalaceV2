@@ -72,7 +72,7 @@ namespace PrincesPalace
             if (run.deepestStep > save.lifetimeDeepestStep) save.lifetimeDeepestStep = run.deepestStep;
 
             // THE LAST RUN, not the deepest ever -- overwritten unconditionally,
-            // unlike lifetimeDeepestStep two lines up. That field is a
+            // unlike lifetimeDeepestStep above. That field is a
             // high-water mark and rightly never goes down; this one feeds the
             // hub's "about N fights to go" estimate, which should get cheaper
             // again for a character who fell back to shallow retries after a

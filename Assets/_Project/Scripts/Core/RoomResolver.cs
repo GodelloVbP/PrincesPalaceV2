@@ -12,10 +12,6 @@ namespace PrincesPalace
     // split is the usual one -- crediting gold and healing a squad need the
     // save and ContentDatabase, and a rule that lives in Core is a rule no
     // EditMode test can reach.
-    //
-    // Before this, MapController's Arrive cleared every non-fight room and
-    // redrew. Treasure paid nothing, Rest healed nobody, and the player was
-    // told none of it.
     public static class RoomResolver
     {
         // What the last resolved room did, for the map to say out loud.

@@ -990,9 +990,8 @@ namespace PrincesPalace
         // ---- gamepad navigation (docs/GAMEPAD_NAVIGATION_PLAN.md) ----------------
         //
         // A MODAL, not a whole-scene base context (Hub/Map/Talent/MainMenu's
-        // shape) -- pushed on Open(), popped on the real Leave() and, as an
-        // OnDisable/OnDestroy safety net, on ANY deactivation this class did
-        // not initiate itself.
+        // shape) -- pushed on Open(), popped in OnDisable, which Leave() and any
+        // other deactivation both reach.
         //
         // ONE CONTEXT, reconfigured between the shelf and the pack modal --
         // NavContext.Reconfigure's own documented case (Map's runtime rewrite,
@@ -1175,12 +1174,9 @@ namespace PrincesPalace
         // THE PAGED ROW: PackPrevButton/PackNextButton, a two-member Rail
         // (wrap -- trivial at two members, but stated rather than special-
         // cased away). Sell buttons (disable-on-ineligible, PaintPack's own
-        // `packSellOneButtons[i].interactable = sellPrice > 0`, line 553's
-        // original position) reach the pager and PackCloseButton via
-        // explicit links -- Explicit still passes Move through a
-        // non-interactable cell, Button.OnSubmit no-ops there, no
-        // skip-on-Move, the exact rule this file's own header already
-        // states for this line.
+        // `packSellOneButtons[i].interactable = sellPrice > 0`) reach the pager
+        // and PackCloseButton via explicit links -- Explicit still passes Move
+        // through a non-interactable cell, and Button.OnSubmit no-ops there.
         private void RefreshPackNavigation()
         {
             var rows = new List<Button>();

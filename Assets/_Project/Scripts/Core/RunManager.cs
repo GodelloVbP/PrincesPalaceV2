@@ -57,50 +57,27 @@ namespace PrincesPalace
         // there a snapshot to read" asks HasRun.
         public static bool DescentIsUnderWay => Run?.DescentIsUnderWay ?? false;
 
-        // A RUN DOES NOT SURVIVE THE PROCESS.
-        //
-        // "Leaving a descent, or anything that does not continue the run, kills
-        // the run -- no exceptions." Every deliberate exit calls EndRun on its
-        // way out: the map's abandon button, defeat, the hub's title button and
-        // the main menu's quit. A crash, an alt-F4 and a power cut call
-        // nothing, and those are the exceptions the rule says do not exist.
-        //
-        // So a run found in the save at startup belonged to a session that is
-        // over, and it is SETTLED rather than discarded -- EndRun is what pays
-        // out what the run earned, and a player whose game crashed should keep
-        // the embers their bosses paid for even though the descent is gone.
-        //
-        // Deliberately not a resume. Resuming is the other reading of the same
-        // rule and it is not the one the author asked for. The run-scoped
-        // prunes in SaveData.Reconcile are kept for a future resume and are
-        // unreachable today, because a run is settled before Reconcile's
-        // output can be read.
-        //
-        // THERE IS NO BOOT CHECK: a [RuntimeInitializeOnLoadMethod
-        // (BeforeSceneLoad)] would run before any scene, with
-        // SaveSlotManager.CurrentSlot still at its default 0, so it could
-        // only ever see and settle slot 0 -- never whichever slot is
-        // actually being opened. SettleOnOpening below is what actually
-        // enforces the rule, for every slot including 0, from
-        // SaveSlotManager.EnterSlot. This takes a mechanism away rather
-        // than adding one; nothing is lost, since the half that worked is
-        // still here.
-
         // Settles a run found in a slot the player has just opened.
         //
-        // THE ONE PLACE A LEFTOVER RUN IS SETTLED. A run in a save being
-        // opened for the first time this session belonged to a session that is
-        // over, so it is SETTLED rather than discarded and the embers its
-        // bosses paid for are kept.
+        // A RUN DOES NOT SURVIVE THE PROCESS. Leaving a descent, or anything
+        // that does not continue the run, kills the run: every deliberate exit
+        // calls EndRun (the map's abandon button, defeat, the hub's title
+        // button, the main menu's quit). A crash, an alt-F4 and a power cut call
+        // nothing, so a run found in a save being opened belonged to a session
+        // that is over. It is SETTLED rather than discarded -- EndRun pays out
+        // what the run earned, so a player whose game crashed keeps the embers
+        // their bosses paid for. Deliberately not a resume: the run-scoped
+        // prunes in SaveData.Reconcile are unreachable, because a run is
+        // settled before Reconcile's output can be read.
         //
-        // Called by SaveSlotManager.EnterSlot, which is the one place a slot
-        // is chosen -- by the slot list and by the main menu's Continue alike,
-        // and AFTER CurrentSlot is set, which is what lets this reach every
-        // slot rather than only slot 0. Deliberately NOT hung off
-        // SaveSlotManager.CurrentSlot's setter: that is a plain accessor used
-        // freely by tests and by the label refresh, and a setter that silently
-        // ends runs and writes the disk is exactly the kind of surprise its
-        // own header warns about.
+        // Called by SaveSlotManager.EnterSlot, the one place a slot is chosen
+        // (the slot list and the main menu's Continue alike), AFTER
+        // CurrentSlot is set, which is what reaches every slot rather than only
+        // slot 0. There is no boot check: a BeforeSceneLoad hook would run with
+        // CurrentSlot still at its default 0 and could only ever see slot 0.
+        // Not hung off SaveSlotManager.CurrentSlot's setter either: a plain
+        // accessor used freely by tests and the label refresh must not
+        // silently end runs and write the disk.
         public static void SettleOnOpening()
         {
             if (HasRun) EndRun();
@@ -354,21 +331,15 @@ namespace PrincesPalace
             // AND THE WATERMARK MOVES WITH IT, here, because this is the one
             // place a step advances.
             //
-            // deepestStep's own header says it is "the furthest step reached ...
-            // kept separately so the summary can say how deep they got rather
-            // than where they happened to die". It could not say that: the only
-            // writer was RunLedger.RecordRoom, whose only caller is a settled
-            // FIGHT. Every non-fight arrival -- treasure, shop, rest, event --
-            // goes ArriveAt -> RoomResolver.Resolve -> ClearCurrentRoom and
-            // never touched it. So clearing the leg-1 boss at step 8 and then
-            // walking a treasure, a shop and an event left the map header
-            // reading 11 (UiStrings.MapDepth off run.step) while Run statistics
-            // read 8, and abandoning there folded 8 into lifetimeDeepestStep.
+            // deepestStep is "the furthest step reached ... kept separately so
+            // the summary can say how deep they got rather than where they
+            // happened to die", so every arrival that advances a step writes
+            // it here -- treasure, shop, rest and event rooms never reach
+            // RunLedger.RecordRoom, whose only caller is a settled fight.
             //
-            // RecordRoom's raise is deliberately left in place as the belt to
-            // this brace: it costs one comparison, and a fight that somehow
-            // settles at a step this method did not write is exactly the case
-            // worth keeping covered.
+            // RecordRoom's raise stays as the belt to this brace: it costs one
+            // comparison and covers a fight that settles at a step this method
+            // did not write.
             if (run.step > run.deepestStep) run.deepestStep = run.step;
 
             Persist();
@@ -422,23 +393,11 @@ namespace PrincesPalace
 
             // THE PARTY CATCHES ITS BREATH BETWEEN LEGS.
             //
-            // Reported as "floor 1 after the first elite it already becomes so
-            // difficult", and the numbers say it is attrition rather than
-            // scaling. Health carries from room to room and NOTHING restored
-            // it: rest rooms are weight 6 of 90, so a seven-room leg expects
-            // 0.47 of one and 62% of legs contain none at all. Levelling does
-            // not heal, advancing a leg did not heal, and the shop that would
-            // sell a potion is not built. So the party crossed into leg 2 on
-            // whatever the elite left them, against enemies at 1.95x health and
-            // 1.58x attack, and it never recovered.
-            //
-            // The elite itself is not the spike this heal targets: an elite
-            // room fields two enemies where a normal room fields one or two,
-            // and FightEncounterAdapter.ToCombatant wires
-            // StatBlock.ScaledForElite in for elite encounters, so an
-            // elite's own stats are the deliberate spike they are meant to
-            // be. What comes after the elite is the separate, unrelated
-            // problem this heal fixes.
+            // Health carries from room to room and nothing else restores it:
+            // rest rooms are weight 6 of 90, so a seven-room leg expects 0.47 of
+            // one and 62% of legs contain none. Without this the party crosses
+            // into the next leg on whatever the elite left them, against enemies
+            // at 1.95x health and 1.58x attack.
             //
             // A realm is the natural place: it always ends on a boss, so this
             // reads as the beat after a set piece rather than as a free heal in

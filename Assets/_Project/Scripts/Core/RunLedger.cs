@@ -111,8 +111,8 @@ namespace PrincesPalace
         //
         // LONG, because a profile that plays for a while passes two billion and
         // an int would wrap negative -- silently un-earning any achievement
-        // counting it. Written twice (Achievements and RunSettlement) before
-        // landing here, which is where the ledger already lives.
+        // counting it. Achievements and RunSettlement both read it from here,
+        // where the ledger lives.
         public static long TotalDamage(RunSnapshot run)
         {
             if (run?.ledger == null) return 0;
