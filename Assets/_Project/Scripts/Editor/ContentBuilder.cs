@@ -149,13 +149,10 @@ public static class ContentBuilder
         // once. Same assets, same order, same GUID churn -- only the number of
         // import cycles changes.
         //
-        // The folder creation above stays OUTSIDE the bracket deliberately:
-        // AssetDatabase.IsValidFolder/CreateFolder are the database's own view
-        // of the tree, and asking it to create a folder while it is not
-        // importing is asking for a folder that is not there yet when
-        // CreateAsset needs it. The one exception is RealmsPath, which
-        // BuildRealms creates inside the bracket (its store step calls
-        // EnsureFolder).
+        // Folders are created above, before the bracket, so every CreateAsset
+        // below finds its folder. The one exception is RealmsPath: BuildRealms
+        // creates it inside the bracket with its first asset (its store step
+        // calls EnsureFolder), so an empty realms list leaves no folder.
         //
         // try/finally, not a bare pair: a resolver that throws inside here
         // would otherwise leave the AssetDatabase paused for the rest of the
@@ -255,8 +252,7 @@ public static class ContentBuilder
 
         // REWARD TRACKS AFTER CHARACTERS AND SKILLS, same reason: a
         // track's rules 4/5 and its UnlockSkill/signature captions are
-        // validated against what those two already resolved -- see
-        // docs/archive/PLAN_REWARD_TRACKS.md §4's touch-point table. Pools too,
+        // validated against what those two already resolved. Pools too,
         // now: rule 6 (FuryStartOfFight) needs the owner's primary pool
         // StartRule, the same fact PoolOwnership.ZeroStartOwners above
         // already reads off `pools`.

@@ -5,9 +5,7 @@ using PrincesPalace.Domain.Stats;
 namespace PrincesPalace.Domain.Content
 {
     // One LEVEL's reward, resolved: the reward's kind and magnitude plus the
-    // selectors and the two captions RewardTrackEntryResolver bakes on --
-    // see docs/archive/PLAN_REWARD_TRACKS.md §4, "the two display names the captions
-    // need".
+    // selectors and the two captions RewardTrackEntryResolver bakes on.
     //
     // ONE RECORD FOR EVERY LEVEL. There used to be two -- a milestone
     // (which carried a level) and a filler row (which carried a count and
@@ -94,8 +92,7 @@ namespace PrincesPalace.Domain.Content
         public ResolvedTrackLevel[] Levels = Array.Empty<ResolvedTrackLevel>();
 
         // Listed by the character's own roster order -- see
-        // RewardTrackDefinitionAsset.SortOrder and
-        // docs/archive/PLAN_REWARD_TRACKS.md §4's touch-point table.
+        // RewardTrackDefinitionAsset.SortOrder.
         public int SortOrder;
 
         // For the serializer only.

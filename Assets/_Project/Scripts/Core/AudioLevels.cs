@@ -30,8 +30,8 @@ namespace PrincesPalace
     public static class AudioLevels
     {
         // Resources-relative, extensionless -- the same shape every caller
-        // already holds (SoundLibrary.PathOf, MusicLibrary.PathOf, and
-        // skills.json's sfxPath all address audio this way).
+        // already holds (SoundLibrary.PathOf and skills.json's sfxPath
+        // both address audio this way).
         private const string TablePath = "Audio/audio_levels";
 
         private static Dictionary<string, float> _gains;
