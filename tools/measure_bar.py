@@ -5,11 +5,10 @@ The bar is drawn by TWO things that multiply: ProceduralSpriteBaker's baked
 number means anything alone, and no EditMode test can see their product -- the
 audit knows a node's box, not what colour it ends up.
 
-It has now been wrong in both directions. Shipped, the two darknesses compounded
-to 0.20x the luminance of the panel the bar sits on, which reads as a hole
-punched through. The first fix raised both halves and landed at 0.85x, where the
-channel disappears into the panel instead. This measures the product against the
-painted panel itself and fails outside the band between those two mistakes.
+Too dark and the compounded track reads as a hole punched through the panel;
+too light and the channel disappears into it. This measures the product, with
+the tint's alpha blended over the painted panel, and fails outside the band
+between those two.
 
     python tools/measure_bar.py
 """
@@ -31,18 +30,15 @@ RECKONING = ROOT / "Assets/_Project/Scripts/Domain/UiKit/Screens/ReckoningScreen
 
 
 def tint(name):
-    """Read a tint out of ReckoningScreen rather than keeping a copy of it.
-
-    The first version of this file hardcoded all three, which lasted exactly
-    until the fill changed from #FFE9A8 to an amber -- at which point the tool
-    would have gone on cheerfully measuring a colour the game no longer used.
-    """
+    """Read a tint (RGB or RGBA) out of ReckoningScreen, so the tool cannot
+    measure a colour the game no longer uses."""
     source = RECKONING.read_text(encoding="utf-8", errors="replace")
-    match = re.search(name + r'\s*=\s*"#([0-9A-Fa-f]{6})', source)
+    match = re.search(name + r'\s*=\s*"#([0-9A-Fa-f]{6})([0-9A-Fa-f]{2})?"', source)
     if not match:
         sys.exit(f"could not read {name} from ReckoningScreen - has it been renamed?")
     hexa = match.group(1)
-    return tuple(int(hexa[i:i + 2], 16) for i in (0, 2, 4))
+    alpha = int(match.group(2), 16) if match.group(2) else 255
+    return tuple(int(hexa[i:i + 2], 16) for i in (0, 2, 4)) + (alpha,)
 
 
 TINT = tint("BarTrackTint")
@@ -109,15 +105,18 @@ def panel_behind_the_bar():
     return tuple(sum(p[i] for p in opaque) // len(opaque) for i in range(3))
 
 
-def composite(value, tint=TINT):
-    return tuple(int(round(value * channel)) for channel in tint)
+def composite(value, tint=TINT, behind=None):
+    """The baked value, tinted, then blended by the tint's alpha over what is behind it."""
+    a = tint[3] / 255.0
+    base = behind if behind is not None else (0, 0, 0)
+    return tuple(int(round(value * tint[i] * a + base[i] * (1 - a))) for i in range(3))
 
 
 def main():
     profile = baked_profile(TRACK)
-    body = composite(profile[len(profile) // 2])
-    lip = composite(max(profile))
     panel = panel_behind_the_bar()
+    body = composite(profile[len(profile) // 2], behind=panel)
+    lip = composite(max(profile), behind=panel)
 
     panel_lum = luminance(panel)
     body_ratio = luminance(body) / panel_lum
