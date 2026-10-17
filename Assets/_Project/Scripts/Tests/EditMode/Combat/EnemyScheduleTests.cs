@@ -99,6 +99,18 @@ namespace PrincesPalace.Domain.Tests
                 Play(session, bell, 7));
         }
 
+        // The kit dropped the knell: the sequence ends at the missing step, so
+        // the entry on turn 5 starts again instead of being locked out.
+        [Test]
+        public void AStepTheKitDropped_EndsItsSequence_AndTheNextEntryStillStarts()
+        {
+            var (session, _, bell) = Fight(Kit(true, Hit("scratch", Scratch), Hit("chains", Chains)));
+
+            CollectionAssert.AreEqual(
+                new[] { Chains, Scratch, Scratch, Scratch, Chains },
+                Play(session, bell, 5));
+        }
+
         [Test]
         public void WithoutAScheduleEveryTurnIsTheDraw()
         {

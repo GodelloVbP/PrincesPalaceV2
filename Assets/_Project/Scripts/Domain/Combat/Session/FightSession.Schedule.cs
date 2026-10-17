@@ -174,7 +174,17 @@ namespace PrincesPalace.Domain.Combat.Session
             var state = ScheduleStateOf(enemy);
             state.ActingTurns++;
 
-            if (!due.HasValue || due.Value.PoolIndex != poolIndex) return;
+            // A sequence under way whose next step can no longer be resolved ends
+            // there; left armed, it would block every later entry's start.
+            if (!due.HasValue)
+            {
+                state.ActiveEntry = -1;
+                state.Cursor = 0;
+                state.LastTarget = null;
+                return;
+            }
+
+            if (due.Value.PoolIndex != poolIndex) return;
 
             state.LastTarget = target;
             var skills = SourceFor(enemy).Source.Schedule[due.Value.Entry].Skills;
