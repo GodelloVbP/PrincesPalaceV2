@@ -83,11 +83,15 @@ namespace PrincesPalace
         }
 
         // Called by the dispatcher once per frame with the settled focus, or
-        // with null for "nothing is focused, or the mouse is driving".
+        // with null for "nothing is focused, or the mouse is driving". A new
+        // target is placed at once; the same target is left to LateUpdate,
+        // which places it after the frame's layout, so one frame does not pay
+        // for the obstacle walk and its raycasts twice.
         public void PointAt(RectTransform target)
         {
+            bool changed = target != _target;
             _target = target;
-            Reposition();
+            if (changed) Reposition();
         }
 
         public void Hide() => PointAt(null);

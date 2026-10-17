@@ -236,7 +236,6 @@ namespace PrincesPalace
             if (benchLink != null) benchLink.onClick.AddListener(SendToBench);
 
             WireDragSources();
-            WireNavigation();
 
             if (dragGhost != null)
             {
@@ -402,15 +401,8 @@ namespace PrincesPalace
         // something carried they resolve it (place, swap, move, or cancel on
         // a re-click). One path for the mouse and the pad, not two that have
         // to be kept agreeing.
-        // NOTHING LEFT TO WIRE: Core/FocusMarker.cs draws the one arrow for
-        // every screen, so no seat or card needs its own SelectIndex halo.
-        //
-        // KEPT AS AN EMPTY, CALLED METHOD rather than deleted, because it is
-        // the named place this screen's navigation wiring goes and the next
-        // thing that needs one should land here rather than in Start().
-        private void WireNavigation()
-        {
-        }
+        // Core/FocusMarker.cs draws the one arrow for every screen, so no seat
+        // or card needs its own SelectIndex halo.
 
         // RefreshNavigation (below NavEntry) builds the LINKS ROW: cancelLink/benchLink sit in the header, above both
         // rails, and PaintHeader

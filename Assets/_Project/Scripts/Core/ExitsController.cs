@@ -316,6 +316,5 @@ namespace PrincesPalace
             if (exitHovers == null || index < 0 || index >= exitHovers.Length) return;
             exitHovers[index].SetShown(entered);
         }
-
-            }
+    }
 }

@@ -223,8 +223,16 @@ namespace PrincesPalace
         // already knows it (a reward card names its slot); null is the pack
         // click's ResolveTargetSlot.
         public static ItemComparison Compare(Character character, ItemInstance candidate,
-            EquipmentSlot? preferredSlot = null)
+            EquipmentSlot? preferredSlot = null) =>
+            Compare(character, candidate, preferredSlot, out _);
+
+        // `simulated` is the swapped clone the comparison read, null when
+        // there is no comparison, so a caller that wants the same clone does
+        // not build a second one.
+        public static ItemComparison Compare(Character character, ItemInstance candidate,
+            EquipmentSlot? preferredSlot, out Character simulated)
         {
+            simulated = null;
             if (character?.equipment == null || candidate == null)
             {
                 return ItemComparison.None;
@@ -237,6 +245,7 @@ namespace PrincesPalace
             var targetSlot = preferredSlot ?? character.equipment.ResolveTargetSlot(ContentDatabase.DefinitionOf(candidate).equipSlot);
             var clone = SimulateEquip(character, candidate, preferredSlot);
             if (clone == null) return ItemComparison.None;
+            simulated = clone;
 
             var afterStats = ContentDatabase.EffectiveStats(clone);
             var afterScores = ContentDatabase.EffectiveAbilityScores(clone);

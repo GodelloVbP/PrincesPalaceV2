@@ -50,7 +50,7 @@ namespace PrincesPalace
         public static Result Build(Character character, ItemInstance copy, AbilityScoreBlock scores,
             PoolCapacityRule poolRule, bool hasSignature, EquipmentSlot? slot = null)
         {
-            var comparison = ItemDescription.Compare(character, copy, slot);
+            var comparison = ItemDescription.Compare(character, copy, slot, out var simulated);
             var previewScores = scores + comparison.ScoreDelta;
             var stats = ContentDatabase.EffectiveStats(character);
 
@@ -58,7 +58,7 @@ namespace PrincesPalace
             // as StatDelta.attack (gear grants no flat Attack), so the Attack row
             // reads the combat damage before and after the swap.
             int damageNow = GearEvaluator.CombatDamage(character);
-            int damageNext = GearEvaluator.CombatDamage(ItemDescription.SimulateEquip(character, copy, slot) ?? character);
+            int damageNext = GearEvaluator.CombatDamage(simulated ?? character);
 
             var rows = new List<Row>();
             foreach (var stat in SheetStats.Derived)

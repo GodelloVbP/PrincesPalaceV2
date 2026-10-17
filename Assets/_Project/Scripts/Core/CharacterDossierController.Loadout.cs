@@ -791,7 +791,6 @@ namespace PrincesPalace
             // between an equip and a save is the least forgivable thing here.
             SaveSlotManager.SaveCurrent();
             Refresh();
-            RepaintCompareForSelection();
             return true;
         }
 
@@ -807,7 +806,6 @@ namespace PrincesPalace
 
             SaveSlotManager.SaveCurrent();
             Refresh();
-            RepaintCompareForSelection();
         }
 
         // ---- the compare column --------------------------------------------------------------

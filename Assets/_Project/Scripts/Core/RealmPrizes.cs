@@ -170,7 +170,11 @@ namespace PrincesPalace
 
         // The spell-drop pool (bookTier > 0) less books already waiting
         // unassigned and books every squad member has learned.
-        private static List<string> BookPool(RunSnapshot run)
+        private static List<string> BookPool(RunSnapshot run) => BookPoolQuery(run).ToList();
+
+        private static bool BookPoolHasAny(RunSnapshot run) => BookPoolQuery(run).Any();
+
+        private static IEnumerable<string> BookPoolQuery(RunSnapshot run)
         {
             var squad = SaveSlotManager.CurrentSave?.ActiveSquad()?
                 .Where(c => c != null).Select(c => c.definitionId).ToList() ?? new List<string>();
@@ -181,10 +185,7 @@ namespace PrincesPalace
                 .Where(s => s != null && s.Data.BookTier > 0 && !waiting.Contains(s.id))
                 .Where(s => squad.Count == 0
                             || squad.Any(id => !learned.Any(e => e.characterId == id && e.skillId == s.id)))
-                .Select(s => s.id)
-                .ToList();
+                .Select(s => s.id);
         }
-
-        private static bool BookPoolHasAny(RunSnapshot run) => BookPool(run).Count > 0;
     }
 }

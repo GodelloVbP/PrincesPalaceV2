@@ -17,8 +17,8 @@ namespace PrincesPalace
     // free and the inventory redraws every one of its rows on each Refresh.
     public static class RarityColors
     {
-        private static readonly Color[] QualityCache = new Color[4];
-        private static readonly Color[] RelicCache = new Color[6];
+        private static readonly Color[] QualityCache = new Color[System.Enum.GetValues(typeof(Quality)).Length];
+        private static readonly Color[] RelicCache = new Color[System.Enum.GetValues(typeof(RelicRarity)).Length];
         private static bool _parsed;
 
         public static Color For(Quality quality)
