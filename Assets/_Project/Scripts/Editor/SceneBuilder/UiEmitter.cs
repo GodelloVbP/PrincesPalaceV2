@@ -294,12 +294,12 @@ public static class UiEmitter
 
     // THE single resolution point for a label's typographic dressing: font
     // asset, material, upper-casing of the already-baked text, tracking,
-    // line spacing, and the autosize range. EmitLabel calls this for every
-    // Label node -- a themed button's own <name>Label included, since
-    // Ui.ApplyTheme gives it Role.ButtonLabel and it is emitted through the
-    // ordinary Label case in EmitNode's switch, before WireThemedButton ever
-    // runs. There is no second call site for that label's font to diverge
-    // from this one at.
+    // line spacing, and the autosize range. Three callers share it so a label's
+    // font cannot diverge between them: EmitLabel for every Label node -- a
+    // themed button's own <name>Label included, since Ui.ApplyTheme gives it
+    // Role.ButtonLabel and it is emitted through the ordinary Label case in
+    // EmitNode's switch, before WireThemedButton ever runs -- plus EmitButton
+    // for an unthemed button's label and MeasureLabelWidth.
     //
     // Role == null is the untouched path: SceneBuilder.UiFont at node.
     // FontSize, node.Tracking exactly as written, no autosize. Every
@@ -477,7 +477,7 @@ public static class UiEmitter
         text.text = BakedText(node.Text);
 
         // Same plain-defaults path ApplyTypography's Role == null branch
-        // takes for any other unstyled label -- an untethemed button's own
+        // takes for any other unstyled label -- an unthemed button's own
         // node never carries a Role (Themed() is the only place that sets
         // one, on the label CHILD it builds, not on the button itself, and
         // that branch returns above before this code ever runs), so this is

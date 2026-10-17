@@ -26,12 +26,10 @@ using UnityEditor;
 // brush edges that make it read as painted; Kaiser is sharper through the
 // chain, which is the whole point of turning them on.
 //
-// THE OLD SETTING WAS NOT A DECISION. EnemySpriteImportPostprocessor and
-// IntentIconImportPostprocessor both write `mipmapEnabled = false`, and neither
-// says why -- unlike the pivot line beside it in the first, which explains
-// itself. It is Unity's sprite default written out by hand. Those two are left
-// alone deliberately: a stage actor is drawn at one size, and an intent icon is
-// 28px and never scales, so neither has the spread that earns the memory.
+// EnemySpriteImportPostprocessor writes `mipmapEnabled = false` without a
+// reason (its pivot line explains itself; the mip line does not), so that is
+// Unity's sprite default written out by hand. It is left alone deliberately: a
+// stage actor is drawn at one size, so it has no spread that earns the memory.
 public sealed class ItemSpriteImportPostprocessor : AssetPostprocessor
 {
     private const string ItemArtFolder = "Assets/_Project/Art/Items/";

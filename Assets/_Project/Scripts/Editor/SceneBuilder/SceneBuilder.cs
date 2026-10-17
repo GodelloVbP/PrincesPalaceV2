@@ -369,7 +369,7 @@ public static partial class SceneBuilder
         // before anything could be smoothed.
         //
         // Trilinear because so much of this UI scales while it is looked at --
-        // a hovered node, a growing ring, a card swapping in. Bilinear switches
+        // a growing ring, a card swapping in. Bilinear switches
         // mip level in one frame and the switch is visible as a pop.
         //
         // COMPRESSION IS LEFT ALONE HERE, unlike in the procedural baker, and

@@ -1392,19 +1392,18 @@ public static class ProceduralSpriteBaker
         // shape here is baked at 128 or 1024 and drawn at 15 to 60. A reward
         // mark is 128px of texture in 15px of screen, so bilinear samples four
         // texels out of every seventy-two and the other sixty-eight are simply
-        // not in the result -- which is what "grainy" is. It moves as the disc
-        // scales on hover, because a different four texels win.
+        // not in the result -- which is what "grainy" is. It moves as the shape
+        // scales, because a different four texels win.
         //
-        // Trilinear rather than bilinear for the same reason: the discs scale
-        // 1.16x on hover and the pulse rings scale to 2.1x, so they cross mip
-        // levels while moving, and a hard switch between two mips is a visible
+        // Trilinear rather than bilinear for the same reason: the pulse rings
+        // scale to 2.1x and other shapes scale in their animations, so they
+        // cross mip levels while moving, and a hard switch between two mips is a visible
         // pop mid-animation.
         importer.mipmapEnabled = mip;
         importer.filterMode = FilterMode.Trilinear;
 
-        // UNCOMPRESSED, and affordable precisely because these are small: the
-        // whole generated set is 27 files, none bigger than 1024 and most 128
-        // square. Every one of them is a smooth gradient or a soft-edged
+        // UNCOMPRESSED, and affordable precisely because these are small: none
+        // is bigger than 1024 and most are 128 square. Every one of them is a smooth gradient or a soft-edged
         // stroke, which is the worst case for block compression -- DXT quantises
         // each 4x4 block to two endpoints, so a gold ramp comes back as bands
         // and a 1px hairline comes back chewed.
