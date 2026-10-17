@@ -297,7 +297,7 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `requires` | string[] | `[]` | '<ability score> <amount>' lines gating whether this skill can be cast at all. |  |
 | `scalingAxis` | string | `""` | Which axis this skill's damage rides: Auto (derive from the caster's own attackType), Weapon, Spell, or None. | Auto, Weapon, Spell, None |
 | `queuePushSlots` | int | `0` | How many places later in the turn queue this skill knocks its target; 0 means it does not touch the queue. |  |
-| `transform` | TransformGrant | (zero -- see TransformGrant) | What the caster transforms into, for a Transform effect; rejected if authored on any other effect. |  |
+| `transform` | TransformGrant (below) | (zero -- see TransformGrant) | What the caster transforms into, for a Transform effect; rejected if authored on any other effect. |  |
 | `stance` | string | `""` | Which of the caster's own stance folders plays while this skill resolves; empty means the default cast pose. |  |
 | `approachStance` | string | `""` | The pose worn while the caster travels to its target (Close's walk-in, Lunge/Charge's crossing); empty means the strike pose is worn throughout. Ignored on a Hold approach, which has no travel. |  |
 | `windupStance` | string | `""` | The pose held through the wind-up, between arrival and impact; empty means the strike pose is worn throughout. On a Hold or Close approach this buys the beat a wind-up wait it would not otherwise have. |  |
@@ -812,6 +812,35 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `swings` | float | `0` | How many full periods the pendulum swings; fractions count (0.75 ends at the far extreme of the second swing). 0 means until the layer ends. After them the pendulum rests at the vertical. |  |
 | `pivotX` | float | `0.5` | Pivot, as a fraction of the frame from its left edge; 0.5 is the middle. May lie outside the frame (up to 6 frame sizes either way). |  |
 | `pivotY` | float | `0.5` | Pivot, as a fraction of the frame from its bottom edge; 1 is the top, where a hanging thing is hooked. Above 1 the pivot is outside the frame, on a longer chain than the art draws: the layer then travels along a wide arc and tilts only as much as that arc needs (angle = asin(sweep / length)). |  |
+
+### `TransformGrant`
+
+| Field | Type | Default | Description | Values |
+|---|---|---|---|---|
+| `displayName` | string | `""` | What the combat log and the plate call the form while it runs. |  |
+| `turns` | int | `0` | Base duration in the holder's own turns, before extensions; a transform needs turns above 0 or a primaryDrainPerTurn. |  |
+| `attackPercent` | int | `0` | Percent of Attack added on entry and taken back exactly on exit. |  |
+| `speedPercent` | int | `0` | Percent of Speed added on entry and taken back exactly on exit. |  |
+| `temporaryHealthPercent` | int | `0` | Temporary health as a percent of max health, expiring with the transform. |  |
+| `splashPercent` | int | `0` | Percent of a landed hit that spills onto the enemies either side of the target while the transform runs; 0 means no splash. |  |
+| `spritePath` | string | `""` | Resources-relative stance folder the holder is drawn from while the form runs (for example 'Characters/sheep_black_ram'); empty keeps the holder's own art. |  |
+| `headX` | float | `-1` | The form's head centre across its idle drawing, as a fraction of its opaque width from the left; -1 is unauthored. Required with spritePath. |  |
+| `headY` | float | `-1` | The form's head centre up its idle drawing, as a fraction of its opaque height from the bottom; -1 is unauthored. Required with spritePath. |  |
+| `headSize` | float | `-1` | The form's head diameter as a fraction of its opaque height; -1 is unauthored. Required with spritePath. |  |
+| `bodyX` | float | `-1` | The form's body centre across its idle drawing, as a fraction of its opaque width from the left; -1 is unauthored. Required with spritePath. |  |
+| `bodyY` | float | `-1` | The form's body centre up its idle drawing, as a fraction of its opaque height from the bottom; -1 is unauthored. Required with spritePath. |  |
+| `hit` | TransformHitCue (below) | (zero -- see TransformHitCue) | How the holder's blows land while the form runs: an extra contact effect plus floors under the stage kick and hit-stop. |  |
+| `defenseToAttackPercent` | int | `0` | Percent of both broad defenses that moves into Attack on entry, given back on exit. |  |
+| `primaryDrainPerTurn` | int | `0` | Primary pool (Fury) drained at the start of each of the holder's turns; a form that drains has no turn timer and ends when the pool cannot pay. |  |
+| `forbidsEffects` | string[] | `[]` | SkillEffect names the holder cannot cast while the form runs, for example 'Provoke', 'Ward'. |  |
+
+### `TransformHitCue`
+
+| Field | Type | Default | Description | Values |
+|---|---|---|---|---|
+| `vfx` | SpellPresentation (below) | (zero -- see SpellPresentation) | A layered contact effect in the same vocabulary as a skill's own vfx, played alongside the skill's presentation. |  |
+| `shake` | float | `0` | A floor on the stage kick for each blow, 0-1. |  |
+| `hitStopSeconds` | float | `0` | A floor on the hit-stop for each blow, in seconds; clamped to the hit-stop ceiling. |  |
 
 ## Description markup
 

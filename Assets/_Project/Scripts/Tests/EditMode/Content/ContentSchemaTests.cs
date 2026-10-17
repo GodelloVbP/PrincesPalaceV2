@@ -38,7 +38,8 @@ namespace PrincesPalace.Domain.Tests
             typeof(RawSkillEntry).Assembly.GetTypes()
                 .Where(t => t.IsClass && t.Namespace == "PrincesPalace.Domain.Content"
                             && t.Name.StartsWith("Raw", StringComparison.Ordinal)
-                            && t.Name.EndsWith("Entry", StringComparison.Ordinal));
+                            && t.Name.EndsWith("Entry", StringComparison.Ordinal))
+                .Concat(new[] { typeof(Combat.TransformGrant), typeof(Combat.TransformHitCue) });
 
         [Test]
         public void EveryRawEntryFieldCarriesContentDoc()

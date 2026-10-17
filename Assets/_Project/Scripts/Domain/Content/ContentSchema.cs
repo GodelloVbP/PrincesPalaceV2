@@ -121,6 +121,15 @@ namespace PrincesPalace.Domain.Content
 
         private static readonly StringComparer NameOrder = StringComparer.Ordinal;
 
+        // Types outside the Content namespace whose fields are authored in a
+        // content file and carry [ContentDoc], so the walk expands them. Any
+        // other foreign type stays a one-line reference.
+        private static readonly HashSet<Type> ForeignDocumentedTypes = new HashSet<Type>
+        {
+            typeof(Combat.TransformGrant),
+            typeof(Combat.TransformHitCue),
+        };
+
         public static string Generate()
         {
             var nested = DiscoverNestedTypes();
@@ -175,9 +184,10 @@ namespace PrincesPalace.Domain.Content
         // RawEffect, RawSetPiece
         // all get found this way, with nothing here naming them by hand. A
         // shared, general-purpose type from another namespace (StatBlock,
-        // AbilityScoreBlock, Combat.TransformGrant) is deliberately NOT
-        // expanded -- it is documented elsewhere, and expanding it here would
-        // make this generator responsible for a struct it does not own.
+        // AbilityScoreBlock) is deliberately NOT expanded -- it is documented
+        // elsewhere, and expanding it here would make this generator
+        // responsible for a struct it does not own. ForeignDocumentedTypes
+        // names the exceptions.
         private static SortedSet<Type> DiscoverNestedTypes()
         {
             var result = new SortedSet<Type>(Comparer<Type>.Create((a, b) => NameOrder.Compare(a.Name, b.Name)));
@@ -190,7 +200,8 @@ namespace PrincesPalace.Domain.Content
                 foreach (FieldInfo f in InstanceFields(t))
                 {
                     Type elem = ElementType(f.FieldType);
-                    if (!elem.IsClass || elem.Namespace != "PrincesPalace.Domain.Content") continue;
+                    if (!elem.IsClass) continue;
+                    if (elem.Namespace != "PrincesPalace.Domain.Content" && !ForeignDocumentedTypes.Contains(elem)) continue;
                     if (!visited.Add(elem)) continue;
 
                     result.Add(elem);
@@ -278,9 +289,9 @@ namespace PrincesPalace.Domain.Content
                     return arr.Length == 0 ? "`[]`" : "(authored default)";
                 default:
                     // A struct block (StatBlock, AbilityScoreBlock) or a
-                    // Domain class from another namespace (TransformGrant):
-                    // zero-valued by construction, and its own fields are
-                    // documented where that type is defined, not here.
+                    // Domain class from another namespace: zero-valued by
+                    // construction, and its own fields are documented where
+                    // that type is defined, not here.
                     return "(zero -- see " + value.GetType().Name + ")";
             }
         }

@@ -38,12 +38,14 @@ namespace PrincesPalace.Domain.Combat
         // PLAYED ALONGSIDE the skill's own presentation, never instead of it:
         // a headbutt that draws something draws both. See CombatBeat.FormVfx
         // for why that is a second slot on the beat rather than a merge.
+        [ContentDoc("A layered contact effect in the same vocabulary as a skill's own vfx, played alongside the skill's presentation.")]
         public SpellPresentation vfx = new SpellPresentation();
 
         // A FLOOR on the stage kick, 0..1, exactly like a skill's own `shake`
         // -- FightBeatPlayer.ShakeStrength already takes the larger of the
         // blow's weight and whatever floor the beat authored, so this needs no
         // new rule, only a second place a floor can come from.
+        [ContentDoc("A floor on the stage kick for each blow, 0-1.")]
         public float shake;
 
         // A FLOOR on the hit-stop, in SECONDS, because that is the unit
@@ -51,6 +53,7 @@ namespace PrincesPalace.Domain.Combat
         // against its own MinSeconds/MaxSeconds. Clamped to HitStop.MaxSeconds
         // at record time: past that the freeze reads as a hitch rather than as
         // weight, and that ceiling is a decision the house already made once.
+        [ContentDoc("A floor on the hit-stop for each blow, in seconds; clamped to the hit-stop ceiling.")]
         public float hitStopSeconds;
 
         // Authored at all. A form that states none of the three punctuates
@@ -72,20 +75,25 @@ namespace PrincesPalace.Domain.Combat
     public class TransformGrant
     {
         // What the combat log and the plate call it while it is running.
+        [ContentDoc("What the combat log and the plate call the form while it runs.")]
         public string displayName = "";
 
         // Base duration in the holder's own turns, before Wrath's extensions.
+        [ContentDoc("Base duration in the holder's own turns, before extensions; a transform needs turns above 0 or a primaryDrainPerTurn.")]
         public int turns;
 
         // Percent bonuses applied on entry and taken back exactly on exit —
         // see Transformation.Enter/Exit for why the deltas are stored rather
         // than recomputed.
+        [ContentDoc("Percent of Attack added on entry and taken back exactly on exit.")]
         public int attackPercent;
+        [ContentDoc("Percent of Speed added on entry and taken back exactly on exit.")]
         public int speedPercent;
 
         // Temporary health as a percent of max, expiring with the transform.
         // Temporary ON PURPOSE: permanent max health would fight the Ram's
         // own low-health generator.
+        [ContentDoc("Temporary health as a percent of max health, expiring with the transform.")]
         public int temporaryHealthPercent;
 
         // What fraction of a landed hit spills onto the enemies either side
@@ -99,6 +107,7 @@ namespace PrincesPalace.Domain.Combat
         // it in the talent vocabulary would have meant a rule that is only
         // ever true while an unrelated system is active, which is exactly
         // the kind of hidden coupling the closed enum is meant to avoid.
+        [ContentDoc("Percent of a landed hit that spills onto the enemies either side of the target while the transform runs; 0 means no splash.")]
         public int splashPercent;
 
         // WHOSE ART THE HOLDER WEARS WHILE THIS IS RUNNING — a
@@ -115,6 +124,7 @@ namespace PrincesPalace.Domain.Combat
         //
         // Missing on disk degrades to the holder's own art (see
         // FightController.WearForm), the house posture everywhere else.
+        [ContentDoc("Resources-relative stance folder the holder is drawn from while the form runs (for example 'Characters/sheep_black_ram'); empty keeps the holder's own art.")]
         public string spritePath = "";
 
         // WHERE THE FORM'S HEAD AND BODY ARE on its own idle drawing, the same
@@ -123,10 +133,15 @@ namespace PrincesPalace.Domain.Combat
         // spritePath is set: the form is a different drawing with a different
         // opaque box, so the base's values would land a spell on the wrong
         // spot. Ignored with no spritePath, where the holder keeps their art.
+        [ContentDoc("The form's head centre across its idle drawing, as a fraction of its opaque width from the left; -1 is unauthored. Required with spritePath.")]
         public float headX = -1f;
+        [ContentDoc("The form's head centre up its idle drawing, as a fraction of its opaque height from the bottom; -1 is unauthored. Required with spritePath.")]
         public float headY = -1f;
+        [ContentDoc("The form's head diameter as a fraction of its opaque height; -1 is unauthored. Required with spritePath.")]
         public float headSize = -1f;
+        [ContentDoc("The form's body centre across its idle drawing, as a fraction of its opaque width from the left; -1 is unauthored. Required with spritePath.")]
         public float bodyX = -1f;
+        [ContentDoc("The form's body centre up its idle drawing, as a fraction of its opaque height from the bottom; -1 is unauthored. Required with spritePath.")]
         public float bodyY = -1f;
 
         public ActorMarks Marks => new ActorMarks(headX, headY, headSize, bodyX, bodyY);
@@ -134,6 +149,7 @@ namespace PrincesPalace.Domain.Combat
         // HOW THE HOLDER'S BLOWS LAND WHILE THIS RUNS -- see TransformHitCue.
         // Never null, so a grant that authors nothing still answers
         // IsAuthored rather than needing a guard at every read.
+        [ContentDoc("How the holder's blows land while the form runs: an extra contact effect plus floors under the stage kick and hit-stop.")]
         public TransformHitCue hit = new TransformHitCue();
 
         // BERSERK'S THREE MEANINGS, each a plain property of a form rather than
@@ -142,16 +158,19 @@ namespace PrincesPalace.Domain.Combat
         // Percent of BOTH broad defenses that moves into Attack on entry: the
         // defenses drop by that share and the Attack rises by the same points,
         // and Exit gives every point back.
+        [ContentDoc("Percent of both broad defenses that moves into Attack on entry, given back on exit.")]
         public int defenseToAttackPercent;
 
         // Fury (the holder's primary pool) drained at the start of each of the
         // holder's turns while the form runs. A form that drains has no turn
         // timer: it ends when the pool cannot pay, and while it runs the
         // pool's idle decay is off (the drain is the whole upkeep).
+        [ContentDoc("Primary pool (Fury) drained at the start of each of the holder's turns; a form that drains has no turn timer and ends when the pool cannot pay.")]
         public int primaryDrainPerTurn;
 
         // SkillEffect names the holder cannot cast while the form runs
         // ("Provoke", "Ward" for Berserk: no Bellow, no shields).
+        [ContentDoc("SkillEffect names the holder cannot cast while the form runs, for example 'Provoke', 'Ward'.")]
         public string[] forbidsEffects = Array.Empty<string>();
 
         public bool IsAuthored => turns > 0 || primaryDrainPerTurn > 0;
