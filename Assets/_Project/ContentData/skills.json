@@ -68,7 +68,7 @@
         "kick": { "strength": 0.012, "rise": 0.04, "fall": 0.16 },
         "layers": [
           {
-            "_comment": "The gather: the sheet's first eight frames (a dark vortex of mud closing in Shawn's hand), tinted matte brown. The old gold glints read as fire; tint is the one field that moves it to mud.",
+            "_comment": "The gather: the sheet's first eight frames (a dark vortex of mud closing in Shawn's hand), tinted matte brown. Untinted, the sheet's gold glints read as fire; tint is the one field that moves it to mud.",
             "id": "gather",
             "render": "sprite",
             "place": "caster-centre",
@@ -697,7 +697,7 @@
       "bookTier": 3
     },
     {
-      "_comment": "MILESTONE A of docs/PLAN_SPELL_EXPANSION.md, section 2.1. Every number here is marked prototype in that document and is tuning, not specification.",
+      "_comment": "Plan section 2.1 (docs/PLAN_SPELL_EXPANSION.md). Every number here is a prototype tuning value, not specification.",
       "id": "gilded_aegis",
       "iconPath": "Assets/_Project/Art/Items/SpellBooks/Gilded Aegis/Gilded Aegis - Spell Book - 48x48.png",
       "bookOnly": true,
@@ -852,7 +852,7 @@
       }
     },
     {
-      "_comment": "MILESTONE A, section 2.2. Frost resolves to DamageType.Ice -- Frost is a skills.json-only alias (SkillEntryResolver). appliesStatus Chilled is the FIRST content row in the game to author it, and it only slows anyone because ApplySkillStatus now goes through FightSession.ApplyStatusTo (plan D6). statusDuration 2 means two of the target's turns fully affected, the turn-end clock plan D1 put every standing modifier on.",
+      "_comment": "Plan section 2.2. Frost resolves to DamageType.Ice -- Frost is a skills.json-only alias (SkillEntryResolver). appliesStatus Chilled slows because ApplySkillStatus goes through FightSession.ApplyStatusTo. statusDuration 2 means two of the target's turns fully affected, on the turn-end clock every standing modifier uses.",
       "id": "winters_rebuke",
       "iconPath": "Assets/_Project/Art/Items/SpellBooks/Winter's Rebuke/Winter's Rebuke - Spell Book - 48x48.png",
       "bookOnly": true,
@@ -881,7 +881,7 @@
         "hitCueSeconds": 0.34,
         "layers": [
           {
-            "_comment": "Owner 2026-10-02 budget: the hang is 0.2 s, and large and bright enough to read as frost forming. f0 swirl then f1 crystal cluster in the air between caster and target.",
+            "_comment": "The hang is 0.2 s, and large and bright enough to read as frost forming. f0 swirl then f1 crystal cluster in the air between caster and target.",
             "id": "amass",
             "render": "sprite",
             "place": "sky",
@@ -938,7 +938,7 @@
             "fade": 0.08
           },
           {
-            "_comment": "The collapse (2026-09-25, SPELL_VFX_ARC_AUDIT): opens as the impact still clears and plays f8 (settling frost cloud) -> f9 (thinning mist column) -> f10 (thin ground ring), three frames fitted into 0.27 s, then a 0.13 s fade -- gone 0.56 s after the hit. Stood on the ground line (place target) with the ring's measured ellipse centre as its impact point: in the sliced f10 the ring spans x 37-274, y 194-293 of 314, centre (155.5, 243.5) -> impactX 0.5, impactY 0.22 from the bottom, so the ring circles the feet instead of hovering at the waist.",
+            "_comment": "The collapse: opens as the impact still clears and plays f8 (settling frost cloud) -> f9 (thinning mist column) -> f10 (thin ground ring), three frames fitted into 0.27 s, then a 0.13 s fade -- gone 0.56 s after the hit. Stood on the ground line (place target) with the ring's measured ellipse centre as its impact point: in the sliced f10 the ring spans x 37-274, y 194-293 of 314, centre (155.5, 243.5) -> impactX 0.5, impactY 0.22 from the bottom, so the ring circles the feet instead of hovering at the waist.",
             "id": "tear",
             "render": "sprite",
             "place": "target",
@@ -989,7 +989,7 @@
       }
     },
     {
-      "_comment": "MILESTONE A, section 2.3. The Poison-typed packet detonates whatever Poison the target already carries -- ALL of it, in one consumption, since Poison stacks (StatusCombos.SpendPoisonIfMatched) -- and the fresh Poison below lands afterwards, on a live target only, so the cast can never re-detonate what it just applied. The description is the tooltip and is worded exactly as the plan specifies.",
+      "_comment": "Plan section 2.3. The Poison-typed packet detonates whatever Poison the target already carries -- ALL of it, in one consumption, since Poison stacks (StatusCombos.SpendPoisonIfMatched) -- and the fresh Poison below lands afterwards, on a live target only, so the cast can never re-detonate what it just applied. The description is the tooltip and is worded exactly as the plan specifies.",
       "id": "vipers_bite",
       "iconPath": "Assets/_Project/Art/Items/SpellBooks/Viper's Bite/Viper's Bite - Spell Book - 48x48.png",
       "bookOnly": true,
@@ -1307,7 +1307,7 @@
       }
     },
     {
-      "_comment": "MILESTONE B of docs/PLAN_SPELL_EXPANSION.md, section 2.4. Every number here is marked prototype in that document and is tuning, not specification. consumesStatus/damageInstancesIfConsumed read and spend the GENERAL Marked status (Marks.cs), never the Drowned Lantern's own private mark set.",
+      "_comment": "Plan section 2.4 (docs/PLAN_SPELL_EXPANSION.md). Every number here is a prototype tuning value, not specification. consumesStatus/damageInstancesIfConsumed read and spend the GENERAL Marked status (Marks.cs), never the Drowned Lantern's own private mark set.",
       "id": "crownfall",
       "iconPath": "Assets/_Project/Art/Items/SpellBooks/Crownfall/Crownfall - Spell Book - 48x48.png",
       "bookOnly": true,
@@ -1431,7 +1431,7 @@
       }
     },
     {
-      "_comment": "MILESTONE B of docs/PLAN_SPELL_EXPANSION.md, section 2.5. Every number here is marked prototype in that document and is tuning, not specification. requiresStatus/detonationPercent/detonationSplit build the Reclaim effect's whole damage from a consumed Poison pile; see StatusCombos.SpendPoisonIfMatched and ConsumedTotalSplit. No damageInstances of its own -- the packets are computed at resolution.",
+      "_comment": "Plan section 2.5 (docs/PLAN_SPELL_EXPANSION.md). Every number here is a prototype tuning value, not specification. requiresStatus/detonationPercent/detonationSplit build the Reclaim effect's whole damage from a consumed Poison pile; see StatusCombos.SpendPoisonIfMatched and ConsumedTotalSplit. No damageInstances of its own -- the packets are computed at resolution.",
       "id": "ashen_reckoning",
       "iconPath": "Assets/_Project/Art/Items/SpellBooks/Ashen Reckoning/Ashen Reckoning - Spell Book - 48x48.png",
       "bookOnly": true,
@@ -1941,7 +1941,7 @@
       }
     },
     {
-      "_comment": "MILESTONE B of docs/PLAN_SPELL_EXPANSION.md, section 2.6. Every number here is marked prototype in that document and is tuning, not specification. healthCostPercent is validated together with manaCost and paid directly (HealthCost), never through the damage funnel. ignoresDefense depends on the milestone B repair to ResolveDamageInstances (plan 1.3) -- without it this packet's bypass is inert.",
+      "_comment": "Plan section 2.6 (docs/PLAN_SPELL_EXPANSION.md). Every number here is a prototype tuning value, not specification. healthCostPercent is validated together with manaCost and paid directly (HealthCost), never through the damage funnel. ignoresDefense depends on ResolveDamageInstances honouring the flag (plan 1.3); without that this packet's bypass is inert.",
       "id": "blackglass_spear",
       "iconPath": "Assets/_Project/Art/Items/SpellBooks/Blackglass Spear/Blackglass Spear - Spell Book - 48x48.png",
       "bookOnly": true,
@@ -2108,7 +2108,7 @@
             "fade": 0.1
           },
           {
-            "_comment": "The tear seals (2026-09-25, SPELL_VFX_ARC_AUDIT): opens as the impact still clears on the struck body's centre and plays f9 (shards in void haze) dissolving into f10 (the void contracted to one spark), two frames fitted into 0.5 s, then a 0.45 s fade -- a lingering seal, gone 0.66 s after it opens.",
+            "_comment": "The tear seals: opens as the impact still clears on the struck body's centre and plays f9 (shards in void haze) dissolving into f10 (the void contracted to one spark), two frames fitted into 0.5 s, then a 0.45 s fade -- a lingering seal, gone 0.66 s after it opens.",
             "id": "tear",
             "render": "sprite",
             "place": "target-centre",
@@ -2157,7 +2157,7 @@
       }
     },
     {
-      "_comment": "MILESTONE C of docs/PLAN_SPELL_EXPANSION.md, section 2.7. Every number here is marked prototype in that document and is tuning, not specification. advanceSlots is measured in PLACES, not in charge -- one slot moves past one charge LEVEL, so two combatants tied at a level are jumped together and a slot with nobody above it clips (plan 1.9). No damage, no status, nothing left on the board: the whole cast is a position. It is refused outright, before payment, when the chosen ally is already next in the order.",
+      "_comment": "Plan section 2.7 (docs/PLAN_SPELL_EXPANSION.md). Every number here is a prototype tuning value, not specification. advanceSlots is measured in PLACES, not in charge -- one slot moves past one charge LEVEL, so two combatants tied at a level are jumped together and a slot with nobody above it clips (plan 1.9). No damage, no status, nothing left on the board: the whole cast is a position. It is refused outright, before payment, when the chosen ally is already next in the order.",
       "id": "borrowed_moment",
       "iconPath": "Assets/_Project/Art/Items/SpellBooks/Borrowed Moment/Borrowed Moment - Spell Book - 48x48.png",
       "bookOnly": true,
@@ -2254,7 +2254,7 @@
       }
     },
     {
-      "_comment": "MILESTONE C, section 2.8. queuePushSlots on a DamageAll row is NEW: the AOE branch applied status but never the push until this milestone, so the resolver refused the field on anything but DamageSingle and now accepts it on either damage effect. The delay is batched AFTER every enemy has resolved and every death has settled, over landed-hit survivors only -- a dodger keeps its place (plan 1.9 rule 6). Wind 5 per enemy, each checked against that enemy's own affinity.",
+      "_comment": "Plan section 2.8. queuePushSlots is accepted on either damage effect, DamageSingle or DamageAll. The delay is batched AFTER every enemy has resolved and every death has settled, over landed-hit survivors only -- a dodger keeps its place (plan 1.9 rule 6). Wind 5 per enemy, each checked against that enemy's own affinity.",
       "id": "gale_scythe",
       "iconPath": "Assets/_Project/Art/Items/SpellBooks/Gale Scythe/Gale Scythe - Spell Book - 48x48.png",
       "bookOnly": true,
@@ -2342,7 +2342,7 @@
             "dy": 45
           },
           {
-            "_comment": "The payoff on every body at once: the same blade drawn across each enemy on the cue, so every number lands under the same frame. It replaces the old sheet's three tornado whorls; a shorter blade than the sweep so three of them are not a wall over the numbers.",
+            "_comment": "The payoff on every body at once: the same blade drawn across each enemy on the cue, so every number lands under the same frame. A shorter blade than the sweep so three of them are not a wall over the numbers.",
             "id": "cut",
             "render": "still",
             "place": "target-centre",
@@ -2423,7 +2423,7 @@
       }
     },
     {
-      "_comment": "MILESTONE C, section 2.9. TWO PICKS, and the count is NOT authored: SkillEffects.PicksRequired reads it off the effect, because one more content number would let a row ask for three picks no resolution can use (plan 2.9). freeAction true is the caster's one free action a turn, the same lock Tuck In already uses. Either ally being Rooted refuses the cast before payment, the identical rule CanMove/Move read off both sides.",
+      "_comment": "Plan section 2.9. TWO PICKS, and the count is NOT authored: SkillEffects.PicksRequired reads it off the effect, because one more content number would let a row ask for three picks no resolution can use (plan 2.9). freeAction true is the caster's one free action a turn, the same lock Tuck In already uses. Either ally being Rooted refuses the cast before payment, the identical rule CanMove/Move read off both sides.",
       "id": "palace_passage",
       "iconPath": "Assets/_Project/Art/Items/SpellBooks/Palace Passage/Palace Passage - Spell Book - 48x48.png",
       "bookOnly": true,
@@ -2445,7 +2445,7 @@
         "layers": [
           {
             "id": "ritual",
-            "_comment": "seconds 0.72 -> 0.66: the recipe dropped from 12 to 11 frames (v2 cell 12 omitted, near-empty). fps 0 fits the folder into seconds, so 11 x 0.06 = 0.66 keeps hitCueSeconds 0.3 landing on the same cell 6 it hit at 12 frames instead of drifting to 0.327.",
+            "_comment": "seconds 0.66: the recipe is 11 frames (v2 cell 12 omitted, near-empty). fps 0 fits the folder into seconds, so 11 x 0.06 = 0.66 lands hitCueSeconds 0.3 on cell 6.",
             "render": "sprite",
             "place": "target-centre",
             "at": "release",
@@ -2514,7 +2514,7 @@
       }
     },
     {
-      "_comment": "MILESTONE D, section 2.10. SkillEffect.Afflict: one enemy, this row's authored status, no damage -- so there is no damage instance, AfterDefences is never entered and the root cannot be dodged. statusDuration 2 is two EFFECTIVE turns under the milestone-A duration model (Rooted is AtTurnEnd, so the second turn's action is still restricted). The root now forbids every action classified physicalMove, on both sides, plus the formation Move it always forbade (plan 1.10). No scaling of any kind: a two-turn root is two turns from anyone, which is what keeps this a control spell rather than a damage spell in disguise.",
+      "_comment": "Plan section 2.10. SkillEffect.Afflict: one enemy, this row's authored status, no damage -- so there is no damage instance, AfterDefences is never entered and the root cannot be dodged. statusDuration 2 is two EFFECTIVE turns under the turn-end duration model (Rooted is AtTurnEnd, so the second turn's action is still restricted). The root forbids every action classified physicalMove, on both sides, plus the formation Move it always forbade (plan 1.10). No scaling of any kind: a two-turn root is two turns from anyone, which is what keeps this a control spell rather than a damage spell in disguise.",
       "id": "velvet_shackles",
       "iconPath": "Assets/_Project/Art/Items/SpellBooks/Velvet Shackles/Velvet Shackles - Spell Book - 48x48.png",
       "bookOnly": true,
@@ -3373,7 +3373,7 @@
       }
     },
     {
-      "_comment": "MILESTONE F of docs/PLAN_SPELL_EXPANSION.md, section 2.13. Ordinary enemies take Fear; authored bosses use queuePushSlots as their fallback. appliesStatus is the caster's explicit price.",
+      "_comment": "Plan section 2.13 (docs/PLAN_SPELL_EXPANSION.md). Ordinary enemies take Fear; authored bosses use queuePushSlots as their fallback. appliesStatus is the caster's explicit price.",
       "id": "court_of_whispers",
       "iconPath": "Assets/_Project/Art/Items/SpellBooks/Court of Whispers/Court of Whispers - Spell Book - 48x48.png",
       "bookOnly": true,
@@ -3410,7 +3410,7 @@
         },
         "layers": [
           {
-            "_comment": "ORBIT, far arc, 0.00-0.40 s: a courtier fades in small and dim and drifts across the body left to right; hands off to orbit_front at the right extreme. In the effects band, so it passes OVER the body: the ground band (behind every figure) holds 2 renderers and a rack of three needs 3, so the third enemy drew no far arc (NOTES, round 1). Moving it behind is the E5 depth-band change.",
+            "_comment": "ORBIT, far arc, 0.00-0.40 s: a courtier fades in small and dim and drifts across the body left to right; hands off to orbit_front at the right extreme. In the effects band, so it passes OVER the body: the ground band (behind every figure) holds 2 renderers and a rack of three needs 3, so the third enemy would draw no far arc there.",
             "id": "orbit_back",
             "render": "sprite",
             "place": "target-head",
@@ -3723,7 +3723,7 @@
       "cooldownTurns": 5
     },
     {
-      "_comment": "A SHIELD, not a percentage, since 2026-09-16 (AUDIT #152). flatAmount is the pool in shield points; sheep_lamb_ward_1's WardReductionPercent 40 scales it to 70 and Thicker Fleece's 60 to 80. It authored NO number at all before, because the talent used to BE the ward.",
+      "_comment": "A SHIELD, not a percentage (AUDIT #152). flatAmount is the pool in shield points; sheep_lamb_ward_1's WardReductionPercent 40 scales it to 70 and Thicker Fleece's 60 to 80.",
       "id": "fleece_ward",
       "displayName": "Ward",
       "description": "Put a 50-point shield on you or an ally for 1 turn. Costs 2 wool. {cooldown} 2.",
@@ -3798,7 +3798,7 @@
       "characterId": "sheep",
       "physicalMove": false,
       "placeholder": true,
-      "placeholderNote": "Reward track V4 (level 30) needs an owner-designed ability -- docs/handoffs/progression_v2/PLAN_PROGRESSION_V2.md phase 0 sign-off. PLACED ON SHAWN's TRACK at level 30 by phase 4, so the node exists on the rail and the shape of the track is real; what it grants is not designed yet, and playerSelectable false means collecting it puts nothing on his command strip. Replace this entry with the real ability rather than adding a second one beside it, or the track will grant the stand-in forever.",
+      "placeholderNote": "Reward track V4 (level 30) needs an owner-designed ability (docs/handoffs/progression_v2/PLAN_PROGRESSION_V2.md). It sits on Shawn's track at level 30, so the node exists on the rail and the shape of the track is real; what it grants is not designed yet, and playerSelectable false means collecting it puts nothing on his command strip. Replace this entry with the real ability rather than adding a second one beside it, or the track will grant the stand-in forever.",
       "playerSelectable": false
     },
     {
@@ -4182,7 +4182,7 @@
       "playerSelectable": false
     },
     {
-      "_comment": "THE BELLWETHER'S KIT, M5 (docs/PLAN_BELLWETHER_KIT.md 1.3). Every turn that is not the Chains/Knell pair: a physical rake that leaves Bleed (the monster-level rider cannot carry it -- it would bleed on the knell too, plan 2.8). The most-seen effect in the kit: a six-drawing rake (lilac tips, white flash, blood) opened oversized at the hit, the flash held a beat on top with bloom, and blood drops thrown down along the swipe. The sheet arrived 3x2 with no separate flash or particle row, so the flash is a still of its frame 2 and the drops are cut by rect (recipes bellwether_scratch, bellwether_scratch_drops). M7: flatAmount 0 and Bleed 5 x 3 (was 8); the Bellwether's attack (40) carries Scratch's weight because it rides the depth rate and a flat Bleed does not.",
+      "_comment": "THE BELLWETHER'S KIT (docs/PLAN_BELLWETHER_KIT.md 1.3). Every turn that is not the Chains/Knell pair: a physical rake that leaves Bleed (the monster-level rider cannot carry it -- it would bleed on the knell too, plan 2.8). The most-seen effect in the kit: a six-drawing rake (lilac tips, white flash, blood) opened oversized at the hit, the flash held a beat on top with bloom, and blood drops thrown down along the swipe. The sheet is 3x2 with no separate flash or particle row, so the flash is a still of its frame 2 and the drops are cut by rect (recipes bellwether_scratch, bellwether_scratch_drops). flatAmount 0 and Bleed 5 x 3; the Bellwether's attack (40) carries Scratch's weight because it rides the depth rate and a flat Bleed does not.",
       "id": "bellwether_scratch",
       "displayName": "Scratch",
       "description": "Deal damage to one target and inflict **Bleed** for 5 per turn for 3 turns.",
@@ -4285,7 +4285,7 @@
       "playerSelectable": false
     },
     {
-      "_comment": "THE BELLWETHER'S KIT, M5 (plan 1.4). Its 1st and 5th acting turns: void chains pull Shawn to the FRONT seat (Reposition toSeat 1, trading with any occupant; a Rooted target holds). No damage (plan section 7 gap-fill). The rift opens at the Bellwether, one run of chain flies at the target, and the bind wraps him on arrival -- hitCueSeconds is that arrival (0.2 + 0.32). The bind is facing none: its tails are painted trailing right, back toward the Bellwether, and mirroring would point them away from it. It plays 0.3s, the hold FightBeatPlayer.PullHoldSeconds gives a pull before the stage drags him (the layer's own `follow` is authored-only, read by nothing, so a bind cannot ride him across the stage). Worn in its 'extra' stance.",
+      "_comment": "THE BELLWETHER'S KIT (plan 1.4). Its 1st and 5th acting turns: void chains pull Shawn to the FRONT seat (Reposition toSeat 1, trading with any occupant; a Rooted target holds). No damage (plan section 7 gap-fill). The rift opens at the Bellwether, one run of chain flies at the target, and the bind wraps him on arrival -- hitCueSeconds is that arrival (0.2 + 0.32). The bind is facing none: its tails are painted trailing right, back toward the Bellwether, and mirroring would point them away from it. It plays 0.3s, the hold FightBeatPlayer.PullHoldSeconds gives a pull before the stage drags him (the layer's own `follow` is authored-only, read by nothing, so a bind cannot ride him across the stage). Worn in its 'extra' stance.",
       "id": "dark_chains",
       "displayName": "Dark Chains",
       "description": "Pull the target to the front of the line.",
@@ -4308,7 +4308,7 @@
             "place": "caster-centre",
             "at": "release",
             "path": "Spells/dark_chains_origin",
-            "_comment": "Opens in FRONT of the Bellwether, on the side facing its target: caster-centre is its castPoint (the chest front, by the bell), and the rift is painted a fifth of the way across its frame with the chains running on, so dx 130 puts the rift just past it, by the raised forward hand, and the chains out toward the target. At dy 180 off the slot's middle it sat on the far side of the body and its chains ran back through the torso (kit-m5 capture).",
+            "_comment": "Opens in FRONT of the Bellwether, on the side facing its target: caster-centre is its castPoint (the chest front, by the bell), and the rift is painted a fifth of the way across its frame with the chains running on, so dx 130 puts the rift just past it, by the raised forward hand, and the chains out toward the target. At dy 180 off the slot's middle the rift sits on the far side of the body and its chains run back through the torso.",
             "seconds": 0.42,
             "until": "once",
             "size": 300,
@@ -4381,7 +4381,7 @@
       "playerSelectable": false
     },
     {
-      "_comment": "THE BELLWETHER'S KIT, M5 (plan 1.5). The acting turn after Dark Chains resolved: a Void hit sized by the SEAT the chained target stands in when it lands -- 130% of his max health at the front, 20% in the middle, nothing at the rear (damageBySeatMaxHpPercent, M2). ignoresDefense true by the orchestrator's call, so a defence build cannot soak a front knell; Void affinity, Protect/Vulnerable, ward and dodge still apply. A bell swings in the air over him and cracks on the hit; a void wave rolls across the floor under him from the Bellwether's side. The wave is a `target` layer rather than the plan's `formation`: a formation box spans only the STRUCK bodies, so under one lone Shawn it came out a hand's width wide and unreadable (M5 capture). M7: front 130 (not 110) so a +25 magical resistance (x0.8) alone cannot save a full-HP Shawn; middle 20 (not 35) so the second knell after Scratch wear is heavy, not a coin flip. No variance roll (FightSession.Skills: a seat-sized hit is exact).",
+      "_comment": "THE BELLWETHER'S KIT (plan 1.5). The acting turn after Dark Chains resolved: a Void hit sized by the SEAT the chained target stands in when it lands -- 130% of his max health at the front, 20% in the middle, nothing at the rear (damageBySeatMaxHpPercent). ignoresDefense true, so a defence build cannot soak a front knell; Void affinity, Protect/Vulnerable, ward and dodge still apply. A bell swings in the air over him and cracks on the hit; a void wave rolls across the floor under him from the Bellwether's side. The wave is a `target` layer rather than the plan's `formation`: a formation box spans only the STRUCK bodies, so under one lone Shawn it would be a hand's width wide and unreadable. Front 130 so a +25 magical resistance (x0.8) alone cannot save a full-HP Shawn; middle 20 so the second knell after Scratch wear is heavy, not a coin flip. No variance roll (FightSession.Skills: a seat-sized hit is exact).",
       "id": "death_knell",
       "displayName": "Death Knell",
       "description": "Deal {void} damage, ignoring defense: 130% of the target's max HP at the front, 20% in the middle, none at the rear.",
@@ -5253,7 +5253,7 @@
       "scalingAxis": "Spell"
     },
     {
-      "_comment": "scalingAxis Spell, SYMMETRICALLY with Mend beside it. The asymmetry that used to be here went with the ward model (AUDIT #152, 2026-09-16): a ward is a pool of shield POINTS now, so a spell attack that passes 80 late in a career buys a bigger shield rather than an immunity -- which is the same reason Mend was always allowed to scale. Authored as section 5's '20 plus spell attack'.",
+      "_comment": "scalingAxis Spell, SYMMETRICALLY with Mend beside it. A ward is a pool of shield POINTS now, so a spell attack that passes 80 late in a career buys a bigger shield rather than an immunity -- which is the same reason Mend was always allowed to scale. Authored as section 5's '20 plus spell attack'.",
       "id": "prism_ward",
       "displayName": "Prism Ward",
       "description": "Give one ally a **ward** of 20 points plus your spell attack for 1 turn. Costs 8 {mana}.",

@@ -3,7 +3,7 @@ using PrincesPalace.Domain.Combat.Session;
 
 namespace PrincesPalace.Domain.Tests
 {
-    // Pins the four Rift-affix tuning
+    // Pins the four item-modifier tuning
     // constants in FightTuning that every OTHER test in the suite only ever
     // reads back through the FightTuning.X symbol itself (Assert.AreEqual(
     // FightTuning.X, actual) is a real regression guard against the WIRING
@@ -18,8 +18,8 @@ namespace PrincesPalace.Domain.Tests
     // retunes one of these, this is the file that turns red and says which
     // number moved.
     //
-    // The OTHER Rift constants (ModifierMagnitude's TierMultiplier/
-    // RiftMultiplier curve, RunicWardConversionRate, ChilledOnHitSpeedPercent)
+    // The OTHER item-modifier constants (ModifierMagnitude's TierMultiplier
+    // curve, RunicWardConversionRate, ChilledOnHitSpeedPercent)
     // already carry a literal pin elsewhere -- ModifierMagnitudeTests,
     // ItemModifierRunicHookTests, ChilledStatusTests respectively -- so are
     // deliberately not duplicated here.

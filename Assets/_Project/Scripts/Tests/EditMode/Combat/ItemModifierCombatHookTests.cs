@@ -14,7 +14,7 @@ namespace PrincesPalace.Domain.Tests
     // FightSessionTests' own header for why that is still "a real fight" in
     // this codebase's own vocabulary) with a hand-built CombatantState
     // carrying the exact Effect a real modifiers.json entry would
-    // resolve to after ContentDatabase.Effects' tier/rift scaling.
+    // resolve to after ContentDatabase.Effects' tier scaling.
     // The scaling seam itself (base -> final Magnitude) is pinned separately
     // in ModifierMagnitudeTests; these tests start from an already-scaled
     // Magnitude, the same number a combat hook actually reads.

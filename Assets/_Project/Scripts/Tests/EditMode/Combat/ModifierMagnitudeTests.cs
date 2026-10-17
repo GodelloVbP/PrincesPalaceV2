@@ -4,7 +4,7 @@ using PrincesPalace.Domain.Content;
 namespace PrincesPalace.Domain.Tests
 {
     // Pins the item-modifier plan's Magnitude formula:
-    //     base x TierMultiplier(itemTier) x RiftMultiplier(riftTier)
+    //     base x TierMultiplier(itemTier)
     // Every value here is a literal, never recomputed from GearScaling.TierGrowth
     // itself (CLAUDE.md gotcha 5) -- these are the exact numbers a designer will
     // see and retune, so a change to either curve should have to touch this file.

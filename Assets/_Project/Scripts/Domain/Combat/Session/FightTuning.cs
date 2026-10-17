@@ -107,7 +107,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // replaced.
         public const int RelicWardDurationTurns = 99;
 
-        // ---- item modifiers (Rift affixes, Phase C) ---------------------------
+        // ---- item modifiers ---------------------------------------------------
 
         // How many turn-order slots Hardened's on-hit push knocks a target
         // back -- the same unit TurnOrder.PushBack itself takes. One,

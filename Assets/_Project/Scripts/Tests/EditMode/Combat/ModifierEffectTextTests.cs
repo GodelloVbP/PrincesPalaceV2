@@ -12,7 +12,7 @@ namespace PrincesPalace.Domain.Tests
     //
     // Every Effect here carries a LITERAL magnitude that already
     // stands in for "already scaled" -- ModifierEffectText.Describe holds no
-    // tier/rift arithmetic of its own to pin (that formula is
+    // tier arithmetic of its own to pin (that formula is
     // ModifierMagnitudeTests' job), so these tests exist purely to catch a
     // wrong word, a missing number, or a member this formatter has not
     // caught up with. One test per EffectKind member the item-
