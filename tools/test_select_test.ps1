@@ -84,5 +84,19 @@ try {
     Remove-Item -LiteralPath $tmpRepo -Recurse -Force -ErrorAction SilentlyContinue
 }
 
+Write-Host "a .meta is ignored only beside code or docs"
+$p = "Assets/_Project"
+$classMap = Get-TestClasses
+foreach ($m in @("$p/Scripts/Core/Foo.cs.meta", "$p/Scripts/Core.meta", "docs/PLAN.md.meta", "$p/Art.meta")) {
+    $r = Resolve-ChangedPaths -Paths @($m) -Classes $classMap
+    Assert-That "$m is ignored" (@($r.Ignored).Count -eq 1)
+}
+$r = Resolve-ChangedPaths -Paths @("$p/Art/Processed/x.png.meta") -Classes $classMap
+Assert-That "a sprite meta routes to the art area" (@($r.Ignored).Count -eq 0 -and $r.Areas -contains "art")
+$r = Resolve-ChangedPaths -Paths @("$p/Fonts/F.ttf.meta") -Classes $classMap
+Assert-That "a font meta routes to the ui area" (@($r.Ignored).Count -eq 0 -and $r.Areas -contains "ui")
+$r = Resolve-ChangedPaths -Paths @("$p/Scripts/Core/PrincesPalace.Core.asmdef.meta") -Classes $classMap
+Assert-That "an asmdef meta forces the full suite" (@($r.FullSuite).Count -eq 1)
+
 if ($failures.Count -gt 0) { Write-Host "`n$($failures.Count) FAILED"; exit 1 }
 Write-Host "`nall ok"

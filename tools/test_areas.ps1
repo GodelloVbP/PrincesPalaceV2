@@ -656,7 +656,7 @@ function Get-TestHosts {
 # where the remaining judgment in this file lives.
 #
 # Three tiers, checked in this order per file:
-#   1. $ChangedIgnore    -- cannot affect test behaviour (docs, .meta, ...).
+#   1. $ChangedIgnore    -- cannot affect test behaviour (docs, code/folder .meta, ...).
 #   2. $ChangedFullSuite  -- affects the test INFRASTRUCTURE itself (the
 #      tools/ scripts, asmdefs, scenes, package manifests). A change here
 #      must never be validated through its own filtering, so it forces the
@@ -684,7 +684,12 @@ function Get-TestHosts {
 # generated art) matched nothing and made every -Changed run refuse as
 # UNMAPPED while they sat untracked, which taught people to skip -Changed.
 $RootBuildFiles = 'Directory\.Build\.[^/]+|Directory\.Packages\.props|global\.json|(?i:nuget\.config)|\.editorconfig'
-$ChangedIgnore = '^(docs/|\.claude/|\.gitignore$|\.gitattributes$|tools/githooks/|.*\.md$|.*\.meta$|tools/timings\.json$|(?!(Assets|Packages|ProjectSettings|tools)/)(?!(' + $RootBuildFiles + ')$).)'
+# A .meta is ignorable only when its asset is something the suite cannot read
+# through the importer: code, docs, scripts, or a folder. A sprite, texture,
+# font or asmdef meta carries importer settings the art, ui and compile tiers
+# do depend on, so it falls through to the same rows as its asset.
+$MetaBesideText = '(?:.*\.(?:cs|md|txt|ps1|py|sh)\.meta|(?:.*/)?[^/.]+\.meta)'
+$ChangedIgnore = '^(docs/|\.claude/|\.gitignore$|\.gitattributes$|tools/githooks/|.*\.md$|' + $MetaBesideText + '|tools/timings\.json$|(?!(Assets|Packages|ProjectSettings|tools)/)(?!(' + $RootBuildFiles + ')$).)'
 
 # The full-suite tier, one alternative per reason:
 #
@@ -718,7 +723,7 @@ $ChangedIgnore = '^(docs/|\.claude/|\.gitignore$|\.gitattributes$|tools/githooks
 #   $RootBuildFiles  -- Directory.Build.*, global.json, NuGet.config,
 #     .editorconfig at the root: they change how tools/domain-tests compiles
 #     every EditMode file it hosts.
-$ChangedFullSuite = '^(tools/|Packages/|ProjectSettings/|Assets/_Project/Scenes/|Assets/_Project/Scripts/.*\.asmdef$|Assets/_Project/Scripts/Tests/(EditMode|PlayMode)/Shared/|Assets/_Project/Scripts/Domain/CollectionOps\.cs$|Assets/_Project/Scripts/Editor/(GenerationRun|PipelineBuilder|StanceSpriteImporter|PreviewRequestWatcher|ContentBuilder)|(' + $RootBuildFiles + ')$)'
+$ChangedFullSuite = '^(tools/|Packages/|ProjectSettings/|Assets/_Project/Scenes/|Assets/_Project/Scripts/.*\.asmdef(?:\.meta)?$|Assets/_Project/Scripts/Tests/(EditMode|PlayMode)/Shared/|Assets/_Project/Scripts/Domain/CollectionOps\.cs$|Assets/_Project/Scripts/Editor/(GenerationRun|PipelineBuilder|StanceSpriteImporter|PreviewRequestWatcher|ContentBuilder)|(' + $RootBuildFiles + ')$)'
 
 # An ORDERED array, not a hashtable -- @{} enumerates in arbitrary order in
 # PS 5.1, and even [ordered] would bury the first-match-wins contract this

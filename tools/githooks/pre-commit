@@ -1,13 +1,13 @@
 #!/bin/sh
 #
-# Pre-commit gate. Four checks, all of which turn a rule that CLAUDE.md could
+# Pre-commit gate. Five checks, all of which turn a rule that CLAUDE.md could
 # only ask for into one the repo enforces.
 #
 # Runtime is a few milliseconds for the first two: one `git ls-files` and one
 # awk pass for the pairing check, plus one grep per staged .ps1. The third
 # only fires when Domain/, tools/domain-tests or the EditMode tests are staged,
 # and costs ~2s warm (a `dotnet build`, not a test run). The fourth only fires when a .cs file is
-# staged and is one diff plus a small Python pass. None of this runs tests -
+# staged and is one diff plus a small Python pass. None of this runs the Unity suite (the fifth runs one ~3s Python tool test) -
 # the test gate stays `tools/run_tests_parallel.ps1`, deliberately, because a
 # 4-minute pre-commit hook is a hook people learn to bypass.
 #
@@ -203,6 +203,30 @@ then
         fi
     else
         printf 'pre-commit: python3 not found, skipping comment-history check\n' >&2
+    fi
+fi
+
+# ---------------------------------------------------------------------------
+# 5. spell_feel_test.py still passes when the spell-feel tool or the content
+# it measures against changes.
+#
+# The first Python tool test the gate runs: nothing else invokes a *_test.py.
+# It reads ContentData/skills.json for the authored cue values, so an edit to
+# either side can break it without touching the other. ~3s. Skipped, with a
+# warning, when python3 is not on PATH, like check 4.
+# ---------------------------------------------------------------------------
+
+if git diff --cached --name-only --diff-filter=ACMR -- 'Assets/_Project/ContentData/skills.json' 'tools/spell_feel.py' 'tools/spell_feel.ps1' 'tools/spell_feel_test.py' | grep -q .
+then
+    if command -v python3 > /dev/null 2>&1; then
+        FEEL_LOG="$TMPDIR_HOOK/spell-feel-test.log"
+        if ! python3 tools/spell_feel_test.py > "$FEEL_LOG" 2>&1; then
+            fail "pre-commit: tools/spell_feel_test.py fails."
+            fail ""
+            tail -30 "$FEEL_LOG" | sed 's/^/  /' >&2
+        fi
+    else
+        printf 'pre-commit: python3 not found, skipping spell_feel_test\n' >&2
     fi
 fi
 

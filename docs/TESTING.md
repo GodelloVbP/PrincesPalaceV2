@@ -23,6 +23,7 @@ result is void once a file relevant to it changes.
 | Several touched files | `test.ps1 -Changed`: maps uncommitted changes to areas; an unmappable file refuses (exit 2) |
 | Doubt a dotnet result | `test.ps1 <slice> -Unity` forces Unity (NUnit 3.5 there, 3.14 in `tools/domain-tests`) |
 | `Domain/` or `Tests/EditMode/` still compiles on the fast host | `dotnet build tools/domain-tests` (pre-commit runs it when either is staged) |
+| `tools/spell_feel.py`/`.ps1` or `ContentData/skills.json` | `python3 tools/spell_feel_test.py` (pre-commit runs it when either is staged) |
 | Changed `tools/test_areas.ps1` discovery | `test.ps1 -List -SelfCheck` → `SELF-CHECK: ok` |
 
 ## The commit gate
