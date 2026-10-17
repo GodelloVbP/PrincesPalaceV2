@@ -109,6 +109,23 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreSame(hero, hatch[0].Target, "said on the tick's own beat");
         }
 
+        // 100-point blow, 50% deferred into the Ignore Pain pool: 50 would land
+        // now, which is lethal at 40 health, so the egg hatches. The attacker's
+        // Dealt row books the whole blow, as every ordinary hit does.
+        [Test]
+        public void AHatchingBlow_BooksTheWholeBlowIncludingWhatWasDeferred()
+        {
+            var hero = Hero();
+            var (session, foe) = Fight(hero, "sheep", null, Relic(EffectKind.PhoenixEgg));
+            hero.CurrentHealth = 40;
+            hero.DelayedDamage = new DelayedDamagePool(50, 3);
+
+            session.DealDamageForTest(foe, hero, 100, DamageType.Physical);
+
+            Assert.IsTrue(hero.IsPhoenixEgg, "fixture: the blow hatched the egg");
+            Assert.AreEqual(100, session.Ledger.For("Foe").TotalDealt);
+        }
+
         [Test]
         public void ADotTickOnAHatchedShellEatsTheShell()
         {

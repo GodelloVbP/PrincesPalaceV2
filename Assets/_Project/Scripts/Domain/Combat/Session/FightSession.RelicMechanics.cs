@@ -526,15 +526,18 @@ namespace PrincesPalace.Domain.Combat.Session
         // to 1 (never 0) for the WHOLE egg duration, which is what keeps
         // IsAlive true and the fight running while the shell absorbs
         // everything that follows through PhoenixEggAbsorb below.
+        //
+        // `dealt` is what the attacker's Dealt row books: the whole blow, the
+        // part deferred or tranced included, as LandPacket books an ordinary hit.
         private CombatMath.DamageResult PhoenixEggHatch(
-            CombatantState actor, CombatantState target, int amount, DamageType type)
+            CombatantState actor, CombatantState target, int amount, DamageType type, int dealt)
         {
             target.CurrentHealth = 1;
             target.IsPhoenixEgg = true;
             target.EggHealth = target.MaxHealth;
             target.EggTurnsRemaining = target.Effects.Magnitude(EffectKind.PhoenixEgg);
 
-            Ledger.Dealt(LedgerIdOf(actor), type, amount);
+            Ledger.Dealt(LedgerIdOf(actor), type, dealt);
             Ledger.Took(LedgerIdOf(target), 0, 0);
 
             AppendMessage($"{target.Name} would have fallen - instead they curl into an egg, " +

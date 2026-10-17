@@ -214,7 +214,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 && target.Effects.Has(EffectKind.PhoenixEgg)
                 && _locks.OncePerCombat(target, FightTuning.PhoenixEggLockKey))
             {
-                return new LandedPacket(PhoenixEggHatch(actor, target, amount, type));
+                return new LandedPacket(PhoenixEggHatch(actor, target, amount, type, amount + deferred));
             }
 
             // Cursed Idol's own bonus -- see FightSession.BalanceRelics.
