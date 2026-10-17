@@ -9,7 +9,7 @@ using PrincesPalace.Domain.Rng;
 namespace PrincesPalace.Domain.Bot
 {
     // GREEDY AGGRESSIVE, PLUS ONE RULE: a front-rank character below 40%
-    // health steps behind a healthier ally instead of swinging.
+    // health trades places with a healthier ally one seat behind instead of swinging.
     //
     // WHY IT EXISTS. Enemy melee now concentrates on rank 0 the way the
     // player's always has, which makes Move a real tank swap and makes its
@@ -71,28 +71,14 @@ namespace PrincesPalace.Domain.Bot
             float mine = HealthFraction(actor);
             if (mine >= RetreatBelowHealthFraction) return false;
 
-            // "BEHIND" IS BY SEAT, and only the living count. A step back is
-            // only a retreat when it TRADES: stepping into an empty seat
+            // THE RETREAT IS A TRADE WITH THE NEXT SEAT BACK, so that is the
+            // occupant who must be healthier. Stepping into an empty seat
             // leaves the actor rank 0 among the living and still the one
-            // melee lands on (PLAN_BELLWETHER_KIT 1.1). With a trade on offer,
-            // anyone at all behind who is in better shape is enough -- the
-            // trade is with the next seat back, so which one is healthiest
-            // does not change what the command would do. In a full party the
-            // next seat back is always occupied, so this reads as it always
-            // did.
-            var encounter = session.Encounter;
-            int seat = encounter.SeatOf(actor);
-            if (encounter.OccupantOf(seat + 1) == null) return false;
-
-            foreach (var member in encounter.PlayerParty)
-            {
-                if (ReferenceEquals(member, actor)) continue;
-                if (encounter.SeatOf(member) <= seat) continue;
-
-                if (HealthFraction(member) > mine) return true;
-            }
-
-            return false;
+            // melee lands on (PLAN_BELLWETHER_KIT 1.1). A healthier ally
+            // further back does not help: Back swaps with seat + 1, which
+            // would put the weaker body in front.
+            var behind = session.Encounter.OccupantOf(session.Encounter.SeatOf(actor) + 1);
+            return behind != null && HealthFraction(behind) > mine;
         }
 
         private static float HealthFraction(CombatantState combatant) =>

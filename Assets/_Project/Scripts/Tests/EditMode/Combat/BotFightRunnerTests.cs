@@ -122,6 +122,101 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
+        public void ProtectTheFront_FrontAt30PercentSeatOneAt10PercentSeatTwoFull_DoesNotRetreatIntoTheWeakerBody()
+        {
+            var session = Squad();
+            var party = session.Encounter.PlayerParty;
+            party[0].CurrentHealth = 90;   // 30% of 300
+            party[1].CurrentHealth = 30;   // 10%
+            party[2].CurrentHealth = 300;  // 100%
+            var actor = party[0];
+            var legal = FightAction.LegalActions(session, actor, System.Array.Empty<SatchelStack>());
+
+            var chosen = new ProtectTheFrontPolicy().Choose(session, actor, legal, new SeededRandom(1));
+
+            Assert.IsFalse(chosen.Kind == FightActionKind.Move && chosen.MoveDirection == MoveDirection.Back,
+                "a Back step trades with seat 1 (10%), which would put a weaker body in front of a 30% one");
+        }
+
+        [Test]
+        public void ProtectTheFront_FrontAt30PercentSeatOneAt100Percent_RetreatsBack()
+        {
+            var session = Squad();
+            var party = session.Encounter.PlayerParty;
+            party[0].CurrentHealth = 90;
+            party[1].CurrentHealth = 300;
+            party[2].CurrentHealth = 30;
+            var actor = party[0];
+            var legal = FightAction.LegalActions(session, actor, System.Array.Empty<SatchelStack>());
+
+            var chosen = new ProtectTheFrontPolicy().Choose(session, actor, legal, new SeededRandom(1));
+
+            Assert.AreEqual(FightActionKind.Move, chosen.Kind, "the seat behind is healthier, so the front steps back");
+            Assert.AreEqual(MoveDirection.Back, chosen.MoveDirection);
+        }
+
+        [Test]
+        public void Hash_DivergingOnlyInFieldsTheHashOnceSkipped_ChangesTheHash()
+        {
+            RunTrace Base() => new RunTrace { Seed = 1, Archetype = "A", Profile = "Fresh" };
+            var baseline = Base().Hash();
+
+            var withFight = Base(); withFight.Fights.Add(new FightTrace());
+            var fightBase = withFight.Hash();
+
+
+            var cases = new List<(string name, string hash)>();
+            void Fight(string name, System.Action<FightTrace> edit)
+            {
+                var t = Base(); var f = new FightTrace(); edit(f); t.Fights.Add(f); cases.Add((name, t.Hash()));
+            }
+            void Room(string name, System.Action<RoomTrace> edit)
+            {
+                var t = Base(); var r = new RoomTrace(); edit(r); t.Rooms.Add(r); cases.Add((name, t.Hash()));
+            }
+            var emptyRoom = Base(); emptyRoom.Rooms.Add(new RoomTrace());
+            var roomBase = emptyRoom.Hash();
+
+            Fight("Knells", f => f.Knells.Add(new KnellTrace { EnemyId = "e", Damage = 5 }));
+            Fight("EventId", f => f.EventId = "x");
+            Fight("EndReason", f => f.EndReason = "x");
+            Fight("Rounds", f => f.Rounds = 3);
+            Fight("ShawnHpPercentIn", f => f.ShawnHpPercentIn = 50);
+            Fight("ShawnHpPercentOut", f => f.ShawnHpPercentOut = 50);
+            Fight("ShawnSpeed", f => f.ShawnSpeed = 4);
+            Fight("ShawnTransformed", f => f.ShawnTransformed = true);
+            Fight("ShawnDamageDealt", f => f.ShawnDamageDealt = 7);
+            Fight("FlockDamage", f => f.FlockDamage = 7);
+            Fight("TransformedActors", f => f.TransformedActors.Add("a"));
+            Fight("HeartAnchors", f => f.HeartAnchors = 2);
+            foreach (var c in cases)
+                Assert.AreNotEqual(fightBase, c.hash, $"FightTrace.{c.name} must reach the hash");
+
+            cases.Clear();
+            Room("Hones", r => r.Hones.Add("h"));
+            Room("SpellAssignments", r => r.SpellAssignments.Add(new SpellAssignmentTrace { SkillId = "s" }));
+            Room("LearnedSpellCountAfterRoom", r => r.LearnedSpellCountAfterRoom = 2);
+            Room("UnassignedSpellBookCountAfterRoom", r => r.UnassignedSpellBookCountAfterRoom = 2);
+            Room("EventId", r => r.EventId = "x");
+            Room("EventForced", r => r.EventForced = true);
+            Room("ChoiceOptions", r => r.ChoiceOptions = 3);
+            Room("ChoiceHpPercent", r => r.ChoiceHpPercent = 3);
+            Room("ChoiceStrength", r => r.ChoiceStrength = 3);
+            Room("ChoicePocketOffered", r => r.ChoicePocketOffered = true);
+            Room("ChoicePocketTaken", r => r.ChoicePocketTaken = true);
+            Room("ChoiceStrength3Offered", r => r.ChoiceStrength3Offered = true);
+            Room("ChoiceStrength3Taken", r => r.ChoiceStrength3Taken = true);
+            Room("ShopOffers", r => r.ShopOffers.Add(new ShopOfferTrace { ContentId = "c", Price = 9 }));
+            Room("PurchasesBySection", r => r.PurchasesBySection = new[] { 1 });
+            Room("RerollsBySection", r => r.RerollsBySection = new[] { 1 });
+            Room("GoldOnLeave", r => r.GoldOnLeave = 5);
+            Room("PageCards", r => r.Pages.Add(new PageTrace { Cards = { new CardTrace { Quality = "q", Live = true, WornTier = 2 } } }));
+            Room("PageKind", r => r.Pages.Add(new PageTrace { Kind = "k" }));
+            foreach (var c in cases)
+                Assert.AreNotEqual(roomBase, c.hash, $"RoomTrace.{c.name} must reach the hash");
+        }
+
+        [Test]
         public void Check_APartyMemberMissingFromTheCurrentOrder_TripsPartyOrderIntact()
         {
             // FORCED, because SwapPartySlots cannot produce it -- which is the

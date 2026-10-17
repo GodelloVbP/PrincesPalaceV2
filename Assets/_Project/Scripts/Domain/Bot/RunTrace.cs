@@ -428,7 +428,23 @@ namespace PrincesPalace.Domain.Bot
                 sb.Append(',').Append(fight.Turns).Append(',').Append(fight.PartyHpIn).Append(',')
                   .Append(fight.PartyHpOut).Append(',').Append(fight.DamageDealt).Append(',')
                   .Append(fight.DamageTaken).Append(',').Append(fight.Won).Append(',')
-                  .Append(fight.PayoutGold).Append(',').Append(fight.PayoutExp).Append(';');
+                  .Append(fight.PayoutGold).Append(',').Append(fight.PayoutExp).Append(',')
+                  .Append(fight.HeartAnchors).Append(',').Append(fight.EventId).Append(',')
+                  .Append(fight.EndReason).Append(',').Append(fight.Rounds).Append(',')
+                  .Append(fight.ShawnHpPercentIn).Append(',').Append(fight.ShawnHpPercentOut).Append(',')
+                  .Append(fight.ShawnSpeed).Append(',').Append(fight.ShawnTransformed).Append(',')
+                  .Append(fight.ShawnDamageDealt).Append(',').Append(fight.FlockDamage).Append(',');
+                foreach (var id in fight.TransformedActors) sb.Append(id).Append('+');
+                sb.Append(',');
+                foreach (var knell in fight.Knells)
+                {
+                    sb.Append(knell.EnemyId).Append('/').Append(knell.ActingTurn).Append('/')
+                      .Append(knell.Round).Append('/').Append(knell.TargetId).Append('/')
+                      .Append(knell.Seat).Append('/').Append(knell.Damage).Append('/')
+                      .Append(knell.HpBefore).Append('/').Append(knell.AnsweredBy).Append('/')
+                      .Append(knell.Survived).Append('|');
+                }
+                sb.Append(';');
 
                 foreach (var turn in fight.TurnTraces)
                 {
@@ -453,9 +469,15 @@ namespace PrincesPalace.Domain.Bot
                 sb.Append(',');
                 foreach (var page in room.Pages)
                 {
-                    sb.Append(page.SourceId).Append('/').Append(page.Choices).Append('/')
+                    sb.Append(page.SourceId).Append('/').Append(page.Kind).Append('/').Append(page.Choices).Append('/')
                       .Append(string.Join("+", page.Taken)).Append('/').Append(page.UnusedHones).Append('/')
-                      .Append(page.UnusedGold).Append('|');
+                      .Append(page.UnusedGold).Append('/');
+                    foreach (var card in page.Cards)
+                    {
+                        sb.Append(card.Quality).Append(':').Append(card.Live).Append(':')
+                          .Append(card.WornTier).Append('+');
+                    }
+                    sb.Append('|');
                 }
                 sb.Append(',');
                 foreach (var worn in room.Equipped)
@@ -469,13 +491,39 @@ namespace PrincesPalace.Domain.Bot
                 // would sign off on a shop that rolled a different shelf or
                 // took a different decision on the same seed -- the exact
                 // defect the check exists to catch, in the newest code.
-                sb.Append(room.GoldOnArrival).Append('/').Append(room.GoldSpent).Append(',');
+                sb.Append(room.GoldOnArrival).Append('/').Append(room.GoldSpent).Append('/')
+                  .Append(room.GoldOnLeave).Append(',');
+                foreach (var n in room.PurchasesBySection) sb.Append(n).Append('+');
+                sb.Append('/');
+                foreach (var n in room.RerollsBySection) sb.Append(n).Append('+');
+                sb.Append(',');
+                foreach (var offer in room.ShopOffers)
+                {
+                    sb.Append(offer.Kind).Append('/').Append(offer.ContentId).Append('/')
+                      .Append(offer.Price).Append('/').Append(offer.Sold).Append('|');
+                }
+                sb.Append(',');
                 foreach (var choice in room.ShopChoices)
                 {
                     sb.Append(choice.Kind).Append('/').Append(choice.Section).Append('/')
                       .Append(choice.Index).Append('/').Append(choice.GoldDelta).Append('/')
-                      .Append(choice.Outcome).Append('|');
+                      .Append(choice.Outcome).Append('/').Append(choice.Refusal).Append('|');
                 }
+                sb.Append(',');
+                foreach (var hone in room.Hones) sb.Append(hone).Append('+');
+                sb.Append(',');
+                foreach (var a in room.SpellAssignments)
+                {
+                    sb.Append(a.SkillId).Append('/').Append(a.Assigned).Append('/').Append(a.CharacterId)
+                      .Append('/').Append(a.Slot).Append('/').Append(a.Outcome).Append('|');
+                }
+                sb.Append(',').Append(room.LearnedSpellCountAfterRoom).Append('/')
+                  .Append(room.UnassignedSpellBookCountAfterRoom).Append(',')
+                  .Append(room.EventId).Append('/').Append(room.EventForced).Append(',')
+                  .Append(room.ChoiceOptions).Append('/').Append(room.ChoiceHpPercent).Append('/')
+                  .Append(room.ChoiceStrength).Append('/').Append(room.ChoicePocketOffered).Append('/')
+                  .Append(room.ChoicePocketTaken).Append('/').Append(room.ChoiceStrength3Offered).Append('/')
+                  .Append(room.ChoiceStrength3Taken);
                 sb.Append(';');
             }
 
