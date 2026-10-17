@@ -193,7 +193,7 @@ public static partial class SceneBuilder
         //
         // The cost, stated: the UI now passes through tonemapping and grading
         // too. In a text-dense game that can hurt legibility, which is why the
-        // bloom threshold sits at 0.90 and the grade is deliberately gentle. If
+        // bloom threshold sits at 1.05 and the grade is deliberately gentle. If
         // it ever is not enough, the fallback is a second Overlay canvas for
         // text-critical HUD, accepting that it sits outside the effects.
         canvas.renderMode = RenderMode.ScreenSpaceCamera;
@@ -293,14 +293,14 @@ public static partial class SceneBuilder
         return _buttonSprite;
     }
 
-    // SpriteKey is a path relative to Art/. Returns null with a warning when the
-    // file is not there yet, matching the project's graceful-degradation posture
-    // - a blank slot is a visible, fixable problem; a build that refuses to run
-    // over one missing PNG is not.
     // Per-build, cleared by BuildAllScenes. Static because LoadSpriteByKey is,
     // and the build is a single synchronous pass.
     private static readonly Dictionary<string, Sprite> _spriteCache = new Dictionary<string, Sprite>();
 
+    // SpriteKey is a path relative to Art/. Returns null with a warning when the
+    // file is not there yet, matching the project's graceful-degradation posture
+    // - a blank slot is a visible, fixable problem; a build that refuses to run
+    // over one missing PNG is not.
     public static Sprite LoadSpriteByKey(string key)
     {
         if (string.IsNullOrEmpty(key)) return null;

@@ -1088,17 +1088,6 @@ public static class ScreenRegistry
         hub.systemMenu = WireSystemMenu(result, screen.Root, screen.SystemMenu, MenuContext.Camp);
     }
 
-    // The overarching menu's wiring, shared by every scene that carries one.
-    //
-    // `escapeConsumers` is gone: the menu does not poll Escape itself at
-    // all, so there is nothing left for a per-scene consumer list to guard.
-    // Every scene that carries one opens it through one path
-    // (SystemMenuController.OpenFromRoot) from its own context's
-    // `systemMenu` handler -- the hub's HandleEscape, the map's
-    // HandleSystemMenu and the fight's OpenSystemMenu -- which Start and
-    // Escape reach and Cancel does not; Cancel is a no-op at all three
-    // roots. Each caller needs the controller in hand, which is why this
-    // returns it.
     // What every tab label draws at, full and short, for the bar the three
     // scenes are built around. Measured off the emitter's own label path, so
     // a change of font, size or tracking moves the boxes with it.
@@ -1116,6 +1105,17 @@ public static class ScreenRegistry
         return new SystemMenuLabelWidths(full, brief);
     }
 
+    // The overarching menu's wiring, shared by every scene that carries one.
+    //
+    // `escapeConsumers` is gone: the menu does not poll Escape itself at
+    // all, so there is nothing left for a per-scene consumer list to guard.
+    // Every scene that carries one opens it through one path
+    // (SystemMenuController.OpenFromRoot) from its own context's
+    // `systemMenu` handler -- the hub's HandleEscape, the map's
+    // HandleSystemMenu and the fight's OpenSystemMenu -- which Start and
+    // Escape reach and Cancel does not; Cancel is a no-op at all three
+    // roots. Each caller needs the controller in hand, which is why this
+    // returns it.
     private static SystemMenuController WireSystemMenu(
         UiEmitResult result, NodeRef host, SystemMenuScreen menu, MenuContext context)
     {
