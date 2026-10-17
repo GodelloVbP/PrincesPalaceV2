@@ -36,7 +36,7 @@ namespace PrincesPalace
         // What the mask is made of right now, in content coordinates.
         public IReadOnlyList<EasingDisc> EasedDiscs => _easedDiscs;
 
-        private void PaintEasing(RealmMap map, MapGraph graph, RunSnapshot run, HashSet<int> cleared, RealmNode current)
+        private void PaintEasing(MapGraph graph, RunSnapshot run, HashSet<int> cleared, RealmNode current)
         {
             if (easedWood == null) return;
 

@@ -457,8 +457,8 @@ namespace PrincesPalace
             }
 
             PaintTrails(map, graph);
-            PaintHeart(map, graph, run, cleared);
-            PaintEasing(map, graph, run, cleared, current);
+            PaintHeart(map, graph, run);
+            PaintEasing(graph, run, cleared, current);
 
             // Not while a walk is in flight: the walk owns both the figure and
             // the camera until it arrives, and a refresh from anything else
@@ -815,18 +815,26 @@ namespace PrincesPalace
 
         public bool IsOpening => _opening != null;
 
-        private IEnumerator Opening()
+        // The shot's span, false when there is nothing to sweep (a realm no
+        // taller than the window). Decided before the coroutine starts: a
+        // coroutine that ends on its first step finishes inside StartCoroutine,
+        // before its handle is stored, so it cannot clear IsOpening itself.
+        private bool TryOpeningSpan(out float from, out float to)
         {
+            from = to = 0f;
             var map = RunManager.Map;
             var current = RunManager.CurrentNode;
-            if (map == null || current == null) yield break;
+            if (map == null || current == null) return false;
 
             var graph = Graph(map);
             float height = viewport.rect.height;
-            float from = MapLayout.ScrollToBottom(content.sizeDelta.y, height);
-            float to = MapLayout.Scroll(graph.PositionOf(current.Id).Y, content.sizeDelta.y, height);
-            if (Mathf.Approximately(from, to)) yield break;
+            from = MapLayout.ScrollToBottom(content.sizeDelta.y, height);
+            to = MapLayout.Scroll(graph.PositionOf(current.Id).Y, content.sizeDelta.y, height);
+            return !Mathf.Approximately(from, to);
+        }
 
+        private IEnumerator Opening(float from, float to)
+        {
             for (float elapsed = 0f; elapsed < OpeningSeconds; elapsed += Time.deltaTime)
             {
                 if (Input.anyKeyDown) break;
@@ -849,7 +857,7 @@ namespace PrincesPalace
             if (current.Role != RealmNodeRole.Entry || IsWalking || _overview) return;
             if (run.clearedNodeIds.Contains(current.Id)) return;
 
-            _opening = StartCoroutine(Opening());
+            if (TryOpeningSpan(out float from, out float to)) _opening = StartCoroutine(Opening(from, to));
         }
 
         // Ends the shot where it stands; the caller puts the camera where it
@@ -1258,17 +1266,28 @@ namespace PrincesPalace
         // true, which would show a pad button to a keyboard player.
         private PromptDevice? _hintDevice;
 
-        private static PromptDevice CurrentDevice() =>
+        private PromptDevice CurrentDevice() =>
             PromptGlyphs.DeviceFor(NavigationInputModule.LastInputWasPad && PadConnected());
 
-        private static bool PadConnected()
+        // GetJoystickNames allocates an array per call and Update asks every
+        // frame while the last input was a pad, so the answer is held for a
+        // second.
+        private const float PadPollSeconds = 1f;
+        private float _padPolledAt = float.NegativeInfinity;
+        private bool _padConnected;
+
+        private bool PadConnected()
         {
+            if (Time.unscaledTime - _padPolledAt < PadPollSeconds) return _padConnected;
+
+            _padPolledAt = Time.unscaledTime;
+            _padConnected = false;
             foreach (var name in Input.GetJoystickNames())
             {
-                if (!string.IsNullOrEmpty(name)) return true;
+                if (!string.IsNullOrEmpty(name)) { _padConnected = true; break; }
             }
 
-            return false;
+            return _padConnected;
         }
 
         private void RefreshOverviewLabel()

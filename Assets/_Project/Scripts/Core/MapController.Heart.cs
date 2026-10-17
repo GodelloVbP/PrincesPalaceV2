@@ -33,7 +33,7 @@ namespace PrincesPalace
         private static readonly Color RootWithered = Hex(MapScreen.RootWitheredHex);
         private static readonly Color RootCoreWithered = Hex(MapScreen.RootCoreWitheredHex);
 
-        private void PaintHeart(RealmMap map, MapGraph graph, RunSnapshot run, HashSet<int> cleared)
+        private void PaintHeart(RealmMap map, MapGraph graph, RunSnapshot run)
         {
             if (map.Boss == null || !graph.Contains(map.Boss.Id))
             {
