@@ -258,6 +258,28 @@ namespace PrincesPalace.PlayModeTests
                 "opening the pack should move the entry onto the first row's sell button");
         }
 
+        // The pack row names its affixes the way the shelf card does; a bare
+        // count read as "TIER 3 · 2".
+        [UnityTest]
+        public IEnumerator APackRowNamesItsAffixesRatherThanCountingThem()
+        {
+            yield return OpenTheShop();
+
+            var modifier = ContentDatabase.Modifiers.First(m => m != null && !string.IsNullOrEmpty(m.Data.DisplayName));
+            var held = new InventoryEntry(ContentDatabase.Items.First(i => i != null).id, 1) { tier = 3 };
+            held.modifierIds.Add(modifier.id);
+            SaveSlotManager.CurrentSave.stockpiledItems.Add(held);
+
+            EventSystem.current.SetSelectedGameObject(Node("ShopPackButton"));
+            yield return null;
+            _input.SubmitDown = true;
+            yield return DriveFrame();
+            yield return null;
+
+            Assert.AreEqual("TIER 3 · " + modifier.Data.DisplayName,
+                Node("ShopPackRow0Meta").GetComponent<TMPro.TMP_Text>().text);
+        }
+
         [UnityTest]
         public IEnumerator CancelInsideThePack_ClosesItAndRestoresTheShelf()
         {

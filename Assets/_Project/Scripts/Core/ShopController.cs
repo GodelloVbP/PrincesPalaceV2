@@ -517,12 +517,12 @@ namespace PrincesPalace
         // shelf and must not carry one's layout into the other.
         private void PaintMerchantLayout(bool merchant)
         {
-            SetShown(relicPanel, !merchant);
-            SetShown(gearReroll, !merchant);
-            SetShown(bookReroll, !merchant);
-            SetShown(relicReroll, !merchant);
-            SetShown(packButton, !merchant);
-            SetShown(honeButton, !merchant);
+            relicPanel.SetShown(!merchant);
+            gearReroll.SetShown(!merchant);
+            bookReroll.SetShown(!merchant);
+            relicReroll.SetShown(!merchant);
+            packButton.SetShown(!merchant);
+            honeButton.SetShown(!merchant);
             PlaceBuyButton(packShown: !merchant);
             if (bookHeader != null)
                 bookHeader.Set(merchant ? UiStrings.ShopSectionConsumables : UiStrings.ShopSectionBooks);
@@ -530,7 +530,7 @@ namespace PrincesPalace
                 keeperHeader.Set(merchant ? UiStrings.ShopSectionBuyer : UiStrings.ShopSectionKeeper);
 
             var front = merchant ? RunOrchestrator.ShelfInFront : null;
-            SetShown(merchantPanel, front != null);
+            merchantPanel.SetShown(front != null);
             PaintTitle(front);
             if (front != null) PaintMerchant(front);
         }
@@ -562,7 +562,7 @@ namespace PrincesPalace
 
             if (merchantNote != null)
             {
-                SetShown(merchantNote, front.HasFakes);
+                merchantNote.SetShown(front.HasFakes);
                 merchantNote.Set(front.Revealed ? UiStrings.ShopFakesMarked : UiStrings.ShopFakesHidden);
             }
 
@@ -575,7 +575,7 @@ namespace PrincesPalace
             {
                 merchantBust.sprite = sprite;
                 merchantBust.preserveAspect = true;
-                SetShown(merchantBust, sprite != null);
+                merchantBust.SetShown(sprite != null);
 
                 // Sized to the art so its cut edge stays on the panel's
                 // bottom edge (ShopScreen.MerchantBustBottomY); a square box
@@ -587,17 +587,7 @@ namespace PrincesPalace
                 }
             }
 
-            SetShown(merchantBustPending, sprite == null);
-        }
-
-        private static void SetShown(Component component, bool shown)
-        {
-            if (component != null) SetShown(component.gameObject, shown);
-        }
-
-        private static void SetShown(GameObject target, bool shown)
-        {
-            if (target != null && target.activeSelf != shown) target.SetActive(shown);
+            merchantBustPending.SetShown(sprite == null);
         }
 
         // ---- the character picker ------------------------------------------------
@@ -609,10 +599,8 @@ namespace PrincesPalace
             // threshold and its own reasoning: a control that answers a
             // click by not moving is worse than one that is not there.
             bool canPage = squad.Count > 1;
-            if (prevCharacterButton != null && prevCharacterButton.gameObject.activeSelf != canPage)
-                prevCharacterButton.gameObject.SetActive(canPage);
-            if (nextCharacterButton != null && nextCharacterButton.gameObject.activeSelf != canPage)
-                nextCharacterButton.gameObject.SetActive(canPage);
+            prevCharacterButton.SetShown(canPage);
+            nextCharacterButton.SetShown(canPage);
 
             if (characterName == null) return;
 
@@ -654,7 +642,7 @@ namespace PrincesPalace
                 // (two consumables in a three-card panel): a card with no
                 // entry behind it is not part of this shelf and is not shown.
                 // The room shop always fills every card, NO OFFER included.
-                if (cards[i] != null) SetShown(cards[i], !merchant || entry != null);
+                if (cards[i] != null) cards[i].SetShown(!merchant || entry != null);
 
                 if (entry == null || entry.noOffer)
                 {
@@ -714,6 +702,15 @@ namespace PrincesPalace
                 : modifier.Data.DisplayName;
         }
 
+        // The gear meta line on the shelf card and the pack row alike.
+        private static string GearMeta(int tier, IReadOnlyList<string> modifierIds)
+        {
+            string affixNames = modifierIds != null && modifierIds.Count > 0
+                ? string.Join(", ", modifierIds.Select(AffixDisplayName))
+                : UiStrings.ShopGearMetaNoAffix.Format();
+            return UiStrings.ShopGearMeta.Format(tier, affixNames);
+        }
+
         // A card as the shelf shows it: DescribeEntry, with a revealed
         // merchant shelf's fake mark leading the meta line ("Browse with
         // Odette", plan 1.5). The mark is the shelf's, never the item's: it
@@ -751,11 +748,7 @@ namespace PrincesPalace
                     // that is ModifierAffixLines.LinePairs' text, and it
                     // lives in the selected card's comparison panel
                     // (PaintDetail) instead of being crammed in here.
-                    string affixNames = entry.modifiers != null && entry.modifiers.Count > 0
-                        ? string.Join(", ", entry.modifiers.Select(AffixDisplayName))
-                        : UiStrings.ShopGearMetaNoAffix.Format();
-                    string meta = UiStrings.ShopGearMeta.Format(entry.tier, affixNames);
-                    return (name, meta);
+                    return (name, GearMeta(entry.tier, entry.modifiers));
                 }
                 case ShopEntryKind.Relic:
                 {
@@ -908,8 +901,7 @@ namespace PrincesPalace
                     packNames[i].SetContent(ContentDatabase.NameOf(entry.Instance));
 
                 if (packMetas != null && i < packMetas.Length)
-                    packMetas[i].Set(UiStrings.ShopGearMeta, entry.tier,
-                        entry.modifierIds?.Count ?? 0);
+                    packMetas[i].SetContent(GearMeta(entry.tier, entry.modifierIds));
 
                 int sellPrice = RunOrchestrator.SellPriceOf(entry);
                 if (packPrices != null && i < packPrices.Length)
