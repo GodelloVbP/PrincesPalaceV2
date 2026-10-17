@@ -210,27 +210,26 @@ def luminance(pixel):
     return (r * 299 + g * 587 + b * 114) // 1000
 
 
+def luminance_array(rgb):
+    """luminance() over an (h, w, >=3) integer array."""
+    rgb = rgb.astype(np.int32)
+    return (rgb[..., 0] * 299 + rgb[..., 1] * 587 + rgb[..., 2] * 114) // 1000
+
+
 def erase_drawn_lines(image):
-    """Blank any row or column that is almost entirely light pixels."""
+    """Blank any row or column that is almost entirely light pixels. `image` is
+    RGB and is changed in place; the column pass sees the rows already blanked."""
     width, height = image.size
-    pixels = image.load()
-    removed = 0
+    arr = np.array(image)
 
-    for y in range(height):
-        light = sum(1 for x in range(0, width, 4) if luminance(pixels[x, y]) >= LIGHT_THRESHOLD)
-        if light >= (width // 4) * LINE_COVERAGE:
-            for x in range(width):
-                pixels[x, y] = (0, 0, 0)
-            removed += 1
+    rows = (luminance_array(arr)[:, ::4] >= LIGHT_THRESHOLD).sum(axis=1) >= (width // 4) * LINE_COVERAGE
+    arr[rows, :, :] = 0
 
-    for x in range(width):
-        light = sum(1 for y in range(0, height, 4) if luminance(pixels[x, y]) >= LIGHT_THRESHOLD)
-        if light >= (height // 4) * LINE_COVERAGE:
-            for y in range(height):
-                pixels[x, y] = (0, 0, 0)
-            removed += 1
+    cols = (luminance_array(arr)[::4, :] >= LIGHT_THRESHOLD).sum(axis=0) >= (height // 4) * LINE_COVERAGE
+    arr[:, cols, :] = 0
 
-    return removed
+    image.paste(Image.fromarray(arr, "RGB"))
+    return int(rows.sum() + cols.sum())
 
 
 # A row/column of a FINISHED frame this covered counts as a drawn border
@@ -252,33 +251,26 @@ def erase_frame_borders(frame):
     sheet-wide coverage threshold and survive the cut intact — which is
     exactly how Frost Flare ended up playing a rectangle around its target.
     """
-    pixels = frame.load()
     width, height = frame.size
+    inked = np.asarray(frame.getchannel("A")) > 0
 
-    rows = [sum(1 for x in range(width) if pixels[x, y][3] > 0) / width for y in range(height)]
-    cols = [sum(1 for y in range(height) if pixels[x, y][3] > 0) / height for x in range(width)]
+    rows = (inked.sum(axis=1) / width).tolist()
+    cols = (inked.sum(axis=0) / height).tolist()
 
     def isolated(profile, i):
         before = profile[i - 2] if i >= 2 else 0.0
         after = profile[i + 2] if i + 2 < len(profile) else 0.0
         return before < FRAME_BORDER_ISOLATION and after < FRAME_BORDER_ISOLATION
 
-    removed = 0
-    for y, coverage in enumerate(rows):
-        if coverage >= FRAME_BORDER_COVERAGE and isolated(rows, y):
-            for x in range(width):
-                r, g, b, _ = pixels[x, y]
-                pixels[x, y] = (r, g, b, 0)
-            removed += 1
+    alpha = np.array(frame.getchannel("A"))
+    bad_rows = [y for y, c in enumerate(rows) if c >= FRAME_BORDER_COVERAGE and isolated(rows, y)]
+    bad_cols = [x for x, c in enumerate(cols) if c >= FRAME_BORDER_COVERAGE and isolated(cols, x)]
+    alpha[bad_rows, :] = 0
+    alpha[:, bad_cols] = 0
+    if bad_rows or bad_cols:
+        frame.putalpha(Image.fromarray(alpha, "L"))
 
-    for x, coverage in enumerate(cols):
-        if coverage >= FRAME_BORDER_COVERAGE and isolated(cols, x):
-            for y in range(height):
-                r, g, b, _ = pixels[x, y]
-                pixels[x, y] = (r, g, b, 0)
-            removed += 1
-
-    return removed
+    return len(bad_rows) + len(bad_cols)
 
 
 def despill_to_min(image):
@@ -295,17 +287,10 @@ def despill_to_min(image):
 
 def key_to_alpha(image):
     """RGB on black -> RGBA, with alpha taken from luminance."""
-    rgba = image.convert("RGBA")
-    pixels = rgba.load()
-    width, height = rgba.size
-
-    for y in range(height):
-        for x in range(width):
-            r, g, b, _ = pixels[x, y]
-            lum = luminance((r, g, b))
-            pixels[x, y] = (r, g, b, 0 if lum <= BLACK_FLOOR else min(255, lum))
-
-    return rgba
+    arr = np.array(image.convert("RGBA"))
+    lum = luminance_array(arr)
+    arr[..., 3] = np.where(lum <= BLACK_FLOOR, 0, np.minimum(255, lum))
+    return Image.fromarray(arr, "RGBA")
 
 
 def compose_sequence(cells, steps):
@@ -461,28 +446,27 @@ def feather_ring(frame, width=12.0):
     is nothing opaque in that last `width` px to fade in the first place.
     """
     w, h = frame.size
-    px = frame.load()
-    for y in range(h):
-        dy = min(y, h - 1 - y)
-        for x in range(w):
-            dx = min(x, w - 1 - x)
-            d = min(dx, dy)
-            if d >= width:
-                continue
+    ys, xs = np.arange(h), np.arange(w)
+    d = np.minimum(np.minimum(ys, h - 1 - ys)[:, None], np.minimum(xs, w - 1 - xs)[None, :])
+    inside = d < width
+    if not inside.any():
+        return frame
 
-            # RGB fades toward black WITH alpha, not just alpha alone --
-            # premultiplied, in effect. A live capture showed a light fringe
-            # along exactly this feathered band even though its ALPHA read as
-            # correctly near-zero on disk: LANCZOS resampling of a hard-edged
-            # non-premultiplied RGBA source leaves "ghost" colour in pixels
-            # that are meant to be invisible, and GPU bilinear filtering (or a
-            # mip level) blends that ghost colour in regardless of how low
-            # alpha is, because filtering does not know a pixel is "supposed"
-            # to be irrelevant. Converging colour to (0,0,0) at the same rate
-            # as alpha removes the ghost rather than merely hiding it.
-            t = d / width
-            r, g, b, a = px[x, y]
-            px[x, y] = (int(r * t), int(g * t), int(b * t), int(a * t))
+    # RGB fades toward black WITH alpha, not just alpha alone --
+    # premultiplied, in effect. A live capture showed a light fringe
+    # along exactly this feathered band even though its ALPHA read as
+    # correctly near-zero on disk: LANCZOS resampling of a hard-edged
+    # non-premultiplied RGBA source leaves "ghost" colour in pixels
+    # that are meant to be invisible, and GPU bilinear filtering (or a
+    # mip level) blends that ghost colour in regardless of how low
+    # alpha is, because filtering does not know a pixel is "supposed"
+    # to be irrelevant. Converging colour to (0,0,0) at the same rate
+    # as alpha removes the ghost rather than merely hiding it.
+    t = np.minimum(d / width, 1.0)[..., None]
+    arr = np.array(frame)
+    faded = (arr * t).astype(np.uint8)
+    arr[inside] = faded[inside]
+    frame.paste(Image.fromarray(arr, "RGBA"))
     return frame
 
 
@@ -1229,7 +1213,7 @@ def peak_frame(frames):
     """
     best, at = -1, 1
     for i, frame in enumerate(frames):
-        ink = sum(1 for a in frame.getchannel("A").getdata() if a > 8)
+        ink = int((np.asarray(frame.getchannel("A")) > 8).sum())
         if ink > best:
             best, at = ink, i + 1
 
