@@ -805,6 +805,9 @@ namespace PrincesPalace.Domain.Combat.Session
             // rather than needing a second check here.
             if (outcome.IsMiss)
             {
+                // Closes the action RelicsBeforeSwing opened; the miss returns
+                // before RelicsAfterSwing, which is where a landed swing ends it.
+                EndPotency();
                 RecordMiss();
                 AppendMessage($"{target.Name} dodges {actor.Name}'s attack!");
                 return 0;
