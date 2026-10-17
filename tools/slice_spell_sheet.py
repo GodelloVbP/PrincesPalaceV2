@@ -88,16 +88,10 @@ except ImportError:
 SOURCE_DIR = "Assets/_Project/Art/Sheets"
 OUTPUT_ROOT = "Assets/_Project/Resources/Spells"
 
-# WHICH SHEET EACH SHIPPED VFX CAME FROM, AND HOW IT WAS CUT -- one file per
-# id under Assets/_Project/Art/Sheets/recipes/, loaded here into the same dict
-# shape the rest of this file has always read.
-#
-# Before any of this the answer lived only in shell history: every parameter,
-# including the frame names, came from argv. It then lived in a dict in this
-# file, which was the same fix the hand-assembled register needed and got --
-# a record only the tool can read is invisible to the C# suite, which runs
-# against a headless copy mirroring Assets and nothing else. These are under
-# Assets for exactly that reason, and SpellVfxRecipeDriftTests reads them.
+# WHICH SHEET EACH SHIPPED VFX CAME FROM, AND HOW IT IS CUT -- one file per id
+# under Assets/_Project/Art/Sheets/recipes/, loaded here into a dict keyed by
+# id. They live under Assets because the C# suite runs against a headless copy
+# mirroring Assets and nothing else; SpellVfxRecipeDriftTests reads them.
 #
 # THE RECIPE DESCRIBES HOW FRAMES ARE PRODUCED. THE SKILL'S vfx BLOCK
 # DESCRIBES HOW THEY PLAY. A recipe says which sheet, which grid, which cells
@@ -109,9 +103,9 @@ OUTPUT_ROOT = "Assets/_Project/Resources/Spells"
 # them deliberately. The only thing that must agree is arithmetic: a skill
 # cannot land its impact on a frame the folder does not have.
 #
-# Every entry here is VERIFIED unless its own _notes say otherwise: re-running
-# it regenerates the committed PNGs byte-identical, which is the proof the
-# recipe is the real one rather than a plausible-looking guess.
+# A recipe is VERIFIED unless its own _notes say otherwise: re-running it
+# regenerates the committed PNGs byte-identical, which is the proof the recipe
+# is the real one rather than a plausible-looking guess.
 RECIPE_DIR = os.path.join(SOURCE_DIR, "recipes")
 
 
@@ -166,30 +160,21 @@ def write_recipe(vfx_id, spec):
 
 VFX = _load_recipes()
 
-# VFX that exist on disk but that this tool did NOT produce and cannot
-# reproduce. Recorded rather than omitted: "we don't know" is worth
-# committing, and a silent gap in the manifest reads as "nothing to see".
-#
-# golem_boulder is a hand-assembled sequence, and the evidence is in the
-# frames themselves: f2 and f3 are byte-identical (a held peak), f4 and f5
-# are different content at max alpha 178 then 76 (a two-step fade-out), and
-# f0 is fully transparent (a wind-up beat before the rocks burst, which
-# lines up with the golem's vfxImpactFrame: 3 -- 1-based, so impact lands on
-# the f2 peak). No keyer produces a held duplicate or a stepped alpha ramp.
-#
-# Its apparent source, Art/Enemies/golem_sheet_attack_rock.png, is a
-# WHITE-backed painted sheet whose 2x3 cells are 724x362 -- the shipped
-# frames are 598x433, so they were not cut from it on that grid either.
-# Reconstructing the real recipe needs the author, not more measurement.
-# SEQUENCES THIS TOOL MUST NEVER WRITE OVER, read from the register rather
-# than declared here.
-#
-# It was a dict in this file, which meant the only thing that knew golem_boulder
-# was irreplaceable was the tool most likely to overwrite it -- and the C# suite,
-# which runs against a headless copy that mirrors Assets and nothing else, could
-# not see it at all. One file under Assets, read by both: this refuses to write
-# into any of them, and HandAssembledArtTests pins their bytes so a clobber from
+# SEQUENCES THIS TOOL MUST NEVER WRITE OVER: VFX on disk that it did not
+# produce and cannot reproduce, read from the register below. One file under
+# Assets, read by both this tool and the C# suite: this refuses to write into
+# any of them, and HandAssembledArtTests pins their bytes so a clobber from
 # any other direction fails the suite too.
+#
+# golem_boulder, the one entry, is hand-assembled and the evidence is in the
+# frames: f2 and f3 are byte-identical (a held peak), f4 and f5 are different
+# content at max alpha 178 then 76 (a two-step fade-out), and f0 is fully
+# transparent (a wind-up beat before the rocks burst, lining up with the
+# golem's impact frame 3, 1-based, the f2 peak). No keyer produces a held
+# duplicate or a stepped alpha ramp. Its apparent source,
+# Art/Enemies/golem_sheet_attack_rock.png, is a WHITE-backed painted sheet
+# whose 2x3 cells are 724x362 while the shipped frames are 598x433, so they
+# were not cut from it on that grid either.
 HAND_ASSEMBLED_REGISTER = os.path.join(SOURCE_DIR, "hand_assembled.json")
 
 
@@ -806,19 +791,11 @@ def cut_cells(sheet_path, rows, cols, names, keyed=True, rects=None):
 
         frame = cut.crop(box)
 
-        # RUN FOR AN AUTHORED-ALPHA SHEET TOO, which it used to skip.
-        #
-        # The reasoning for skipping it was that a frame whose alpha the artist
-        # wrote is a frame whose every opaque pixel was meant -- so a pass that
-        # hunts for keying artefacts has nothing to find and can only do harm.
-        # That is right about erase_drawn_lines, which reads LUMINANCE and would
-        # cheerfully blank a bright horizon out of a keyed-then-authored sheet.
-        # It is wrong about this one, and mud_blast is the counterexample: it
-        # arrived with a box drawn around every cell AND with the alpha to make
-        # that box solid, so "the artist authored it" was true of the artefact
-        # as well as of the art. Skipping the pass shipped a rectangle around
-        # every mud burst -- the same complaint Frost Flare produced, arriving
-        # by the one route the fix for Frost Flare did not cover.
+        # RUNS FOR AN AUTHORED-ALPHA SHEET TOO: a cell can arrive with a box
+        # drawn around it AND the alpha to make that box solid (mud_blast
+        # shipped a rectangle around every cell that way). erase_drawn_lines
+        # does not run for those, because it reads LUMINANCE and would blank a
+        # bright horizon out of authored art.
         #
         # Safe to run unconditionally because it does not ask what a pixel LOOKS
         # like, only what its row does: edge to edge, with nothing beside it.
@@ -957,12 +934,6 @@ def slice_sheet(sheet_path, out_dir, rows, cols, names, keyed=True, sequence=Non
     else:
         frames = [cells[name] for name in names]
 
-    # AFTER the sequence, not before: cropping a CELL would leave every scale
-    # step's pivot (stated in the uncropped cell's own coordinates) pointing
-    # at the wrong spot. Cropping the finished FRAMES instead changes nothing
-    # about how they were composed, only how much dead canvas ships around
-    # them -- see crop_to_shared_content's own header for why a sheet would
-    # ask for this at all.
     # BEFORE the crop: a feathered edge is transparent, so the crop trims to
     # the ink that is left and the shipped frame has no cut edge in it.
     if feather:
@@ -974,6 +945,12 @@ def slice_sheet(sheet_path, out_dir, rows, cols, names, keyed=True, sequence=Non
     if cap_blue:
         frames = [cap_blue_to_green(f, cap_blue) for f in frames]
 
+    # AFTER the sequence, not before: cropping a CELL would leave every scale
+    # step's pivot (stated in the uncropped cell's own coordinates) pointing
+    # at the wrong spot. Cropping the finished FRAMES instead changes nothing
+    # about how they were composed, only how much dead canvas ships around
+    # them -- see crop_to_shared_content's own header for why a sheet would
+    # ask for this at all.
     if content_crop:
         frames = crop_to_shared_content(frames)
 
@@ -1000,12 +977,11 @@ def slice_sheet(sheet_path, out_dir, rows, cols, names, keyed=True, sequence=Non
 
     names = written
 
-    # A recipe that now emits FEWER frames than last run leaves the old tail
+    # A recipe that emits FEWER frames than the last run leaves the old tail
     # sitting in out_dir -- nothing above ever looks past len(frames), so
     # f11.png survives a 12-to-11 shrink untouched. That is not cosmetic: a
     # pre-layer vfx block with fps 0 fits the whole FOLDER into `seconds`, so
-    # a stale frame silently retimes the spell (palace_passage, 12->11
-    # frames, 2026-09-25 -- f11.png had to be deleted by hand). Match
+    # a stale frame silently retimes the spell. Match
     # f<digits>.png exactly so this only ever removes names this function
     # itself writes, never an unrelated file someone left in the folder. This
     # can only run past the HAND_ASSEMBLED refusal in main(), which exits
@@ -1038,7 +1014,7 @@ def slice_sheet(sheet_path, out_dir, rows, cols, names, keyed=True, sequence=Non
     print(f"wrote {len(names)} frames to {out_dir}")
 
     if preview:
-        write_preview(vfx_id or os.path.basename(out_dir.rstrip("/\\")), frames, out_dir)
+        write_preview(vfx_id or os.path.basename(out_dir.rstrip("/\\")), frames)
 
     return frames
 
@@ -1073,10 +1049,9 @@ PREVIEW_FPS = 50
 PREVIEW_SIZE = 320
 PREVIEW_BACKDROP = (14, 11, 20)
 
-# Must equal SpellVfxPlayer.DissolveFraction. Two copies of one number, in two
-# languages, with no build step that can compare them -- so it is asserted from
-# the C# side rather than trusted: SpellVfxTests reads the constant, and this
-# comment is where a reader of the tool is told the other half exists.
+# Must equal SpellFrameCursor.DissolveFraction (Domain/Combat/Presentation).
+# Two copies of one number, in two languages, and nothing compares them: a
+# change to either has to be made to both by hand.
 PREVIEW_DISSOLVE = 0.45
 
 DEFAULT_VFX_SECONDS = 0.6
@@ -1098,10 +1073,30 @@ CONTENT_FILES = [
 ]
 
 
-def declared_seconds(vfx_id):
+def _vfx_blocks(node, owner="?"):
+    """Every (owner id, vfx block) under `node`: a skill's own `vfx`, or one on
+    an enemy's ability, owned by the nearest enclosing entry with an id."""
+    if isinstance(node, dict):
+        owner = node.get("id", owner)
+        vfx = node.get("vfx")
+        if isinstance(vfx, dict):
+            yield owner, vfx
+        for value in node.values():
+            yield from _vfx_blocks(value, owner)
+    elif isinstance(node, list):
+        for item in node:
+            yield from _vfx_blocks(item, owner)
+
+
+def declared_seconds(vfx_id, frame_count=None):
     """How long the CONTENT says this effect runs, or the resolver's default.
 
-    Read out of skills.json rather than taken as a flag, because the preview's
+    Returns (seconds, impact frame, owner id); seconds is None when nothing
+    casts the effect. A legacy `vfx` block carries path/seconds/impactFrame; a
+    layered one names the sheet on a layer, which declares `seconds` or `fps`,
+    and its impact is the block's hitCueSeconds, so the impact frame is None.
+
+    Read out of the content rather than taken as a flag, because the preview's
     whole claim is that it shows what will ship. A --seconds switch would show
     what the person running it typed, which is the same class of tool as no
     tool: something that agrees with you.
@@ -1115,17 +1110,22 @@ def declared_seconds(vfx_id):
         with open(source, encoding="utf-8") as handle:
             raw = json.load(handle)
 
-        for entries in raw.values() if isinstance(raw, dict) else [raw]:
-            if not isinstance(entries, list):
-                continue
-
-            for entry in entries:
-                if not isinstance(entry, dict) or entry.get("vfxPath") != path:
-                    continue
-
-                seconds = entry.get("vfxSeconds", -1)
+        for owner, vfx in _vfx_blocks(raw):
+            if vfx.get("path") == path:
+                seconds = vfx.get("seconds", -1)
                 return (seconds if seconds >= 0 else DEFAULT_VFX_SECONDS,
-                        entry.get("vfxImpactFrame", -1), entry.get("id", "?"))
+                        vfx.get("impactFrame", -1), owner)
+
+            for layer in vfx.get("layers") or []:
+                if layer.get("path") != path:
+                    continue
+                if layer.get("seconds") is not None:
+                    seconds = layer["seconds"]
+                elif layer.get("fps") and frame_count:
+                    seconds = frame_count / layer["fps"]
+                else:
+                    seconds = DEFAULT_VFX_SECONDS
+                return seconds, None, owner
 
     return None, -1, None
 
@@ -1149,20 +1149,21 @@ def composite(frames, index, blend):
     return base
 
 
-def write_preview(vfx_id, frames, out_dir):
+def write_preview(vfx_id, frames):
     out_dir = PREVIEW_DIR
     os.makedirs(out_dir, exist_ok=True)
 
-    seconds, impact, skill_id = declared_seconds(vfx_id)
+    seconds, impact, skill_id = declared_seconds(vfx_id, len(frames))
     if seconds is None:
         seconds = DEFAULT_VFX_SECONDS
         print(f"  preview: nothing in content casts 'Spells/{vfx_id}', "
               f"pacing at the resolver's default {seconds}s")
     else:
-        where = f"frame {impact}" if impact >= 1 else "unset (defaults to 3)"
+        where = ("hitCueSeconds" if impact is None
+                 else f"frame {impact}" if impact >= 1 else "unset (defaults to 3)")
         print(f"  preview: '{skill_id}' runs it in {seconds}s, impact at {where}")
 
-    if impact > len(frames):
+    if impact is not None and impact > len(frames):
         print(f"  preview: WARNING vfxImpactFrame {impact} is past the end of a "
               f"{len(frames)}-frame sequence -- the blow will land on the last frame instead")
 
@@ -1204,16 +1205,15 @@ def write_preview(vfx_id, frames, out_dir):
 # ---- scaffolding a sheet nobody has cut yet ---------------------------------
 #
 # WHAT --new IS FOR. Adding a spell is four steps and three of them are
-# clerical: cut the sheet, write a manifest entry, write a skills.json entry,
+# clerical: cut the sheet, write a recipe, write a skills.json entry,
 # then look at it and set the timing. The one that needs judgement is the last.
 #
 # This does the three and makes a first guess at the fourth, so the loop starts
 # at "watch it and change the numbers" instead of at a blank file.
 #
-# IT PRINTS THE TWO BLOCKS RATHER THAN WRITING THEM. Editing this file from
-# inside itself is a trick that works until it does not, and skills.json is
-# content a person owns -- a tool that reaches into it turns a review of five
-# lines into a review of a diff nobody asked for.
+# IT WRITES THE RECIPE AND PRINTS THE skills.json BLOCK RATHER THAN WRITING
+# IT. skills.json is content a person owns -- a tool that reaches into it turns
+# a review of five lines into a review of a diff nobody asked for.
 
 
 def peak_frame(frames):
@@ -1309,7 +1309,7 @@ def main():
                              "luminance. Leave it off for a sheet that already carries authored alpha.")
     parser.add_argument("--new", metavar="ID",
                         help="Scaffold a sheet nobody has cut yet: cut it, preview it, and print the "
-                             "manifest and skills.json blocks to paste. Needs --sheet.")
+                             "recipe and the skills.json block to paste. Needs --sheet.")
     parser.add_argument("--preview", action="store_true",
                         help="Also write tools/screenshots/vfx/<id>.gif -- the sequence at the "
                              "speed content gives it, with the dissolve -- and <id>_frames.png")
@@ -1351,6 +1351,12 @@ def main():
     if args.sheet:
         if not args.out or not args.names:
             parser.error("--sheet also needs --out and --names")
+        # The one-off path writes f<N>.png into any folder and deletes the
+        # rest, so a hand-assembled sequence is refused here as well.
+        target = os.path.basename(os.path.normpath(args.out))
+        if target in HAND_ASSEMBLED:
+            sys.exit(f"'{args.out}' is the hand-assembled '{target}' and must not be regenerated: "
+                     f"{HAND_ASSEMBLED[target]}")
         slice_sheet(args.sheet, args.out, args.rows, args.cols, args.names, preview=args.preview)
         print("NOTE: one-off mode wrote nothing to the VFX manifest. If this output is going to "
               "ship, add an entry so the recipe survives.")
