@@ -78,3 +78,6 @@ output/
 # slice_actor_sheet.py's head-point proof (and the .meta Unity adds under Art/).
 Assets/_Project/Art/Enemies/**/head_check.png
 Assets/_Project/Art/Enemies/**/head_check.png.meta
+
+# Stale agent leftovers at the repo root.
+/scratchpad/
