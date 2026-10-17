@@ -33,19 +33,40 @@ namespace PrincesPalace.PlayModeTests
         private readonly List<(Sound sound, float time)> _sounds = new List<(Sound, float)>();
         private System.Action<bool> _onEnded;
 
+        // One entry per VictorySting play: who was alive and how it got here, so
+        // a second sting names its caller instead of only a count.
+        private readonly List<string> _stingTraces = new List<string>();
+
         [SetUp]
         public void PaceOne()
         {
             FightBeatPlayer.BeatSpeedMultiplier = 1f;
             _sceneLoads = 0;
             _sounds.Clear();
+            _stingTraces.Clear();
 
             // FightBootstrap settles a won fight into whatever run is live; a
             // run another fixture left behind would be settled into here.
             RunManager.ResetForTests();
             Navigation.LoadOverride = _ => _sceneLoads++;
-            SoundController.Observer = sound => _sounds.Add((sound, Time.time));
+            SoundController.Observer = sound =>
+            {
+                _sounds.Add((sound, Time.time));
+                if (sound == Sound.VictorySting) _stingTraces.Add(DescribeSting());
+            };
         }
+
+        private string DescribeSting()
+        {
+            var live = Object.FindObjectsByType<FightController>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            string ids = string.Join(",", live.Select(f => f.GetEntityId() + (f == _fight ? "(test)" : "")));
+            return $"frame {Time.frameCount}, test fight {(_fight != null ? _fight.GetEntityId() : 0)}, "
+                + $"live FightControllers [{ids}]" + System.Environment.NewLine + System.Environment.StackTrace;
+        }
+
+        private string StingReport() =>
+            _stingTraces.Count == 0 ? "" : System.Environment.NewLine + "--- VictorySting plays ---" + System.Environment.NewLine
+                + string.Join(System.Environment.NewLine + "---" + System.Environment.NewLine, _stingTraces);
 
         [TearDown]
         public void Restore()
@@ -199,7 +220,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.That(waited, Is.InRange(0.8f, 1.1f));
 
             var stings = _sounds.Where(s => s.sound == Sound.VictorySting).ToList();
-            Assert.AreEqual(1, stings.Count, "the sting plays once");
+            Assert.AreEqual(1, stings.Count, "the sting plays once" + StingReport());
             Assert.That(stings[0].time - finished, Is.InRange(0.25f, 0.5f),
                 "the sting lands when the fade's hold ends, not at the end of the playback");
 
@@ -275,7 +296,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsFalse(_fight.GetComponentsInChildren<StageDeathFade>(true).Any(f => f.Fading),
                 "the fades completed");
             Assert.AreEqual(1, _sounds.Count(s => s.sound == Sound.VictorySting),
-                "the sting is never skipped, and plays once");
+                "the sting is never skipped, and plays once" + StingReport());
         }
 
         [UnityTest]
