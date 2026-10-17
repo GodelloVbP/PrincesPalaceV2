@@ -9,10 +9,8 @@ namespace PrincesPalace
     //
     // THE CURVE ITSELF LIVES IN DOMAIN (FlickerCurve). This is only the part
     // that needs Unity: reading the clock, tinting an Image, scaling a rect.
-    // While the curve was a static on this MonoBehaviour it was pure and
-    // seam-shaped and completely untestable -- the EditMode suite is Domain-only
-    // and could not see it. Moving the arithmetic across the boundary is what
-    // makes it both pinnable and tunable.
+    // The EditMode suite is Domain-only, so keeping the arithmetic across the
+    // boundary is what makes it both pinnable and tunable.
     //
     // Time.time-driven, carrying none of the project's determinism requirements
     // -- the same reasoning StarTwinkle and BeaconPulse both state.

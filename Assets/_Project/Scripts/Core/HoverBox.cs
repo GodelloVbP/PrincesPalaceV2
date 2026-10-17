@@ -18,8 +18,8 @@ namespace PrincesPalace
     // not as a transition, so this snaps.
     //
     // Shown on EITHER a real pointer hover OR gamepad/keyboard SELECTION
-    // (ISelectHandler) -- SubtleHoverScale never answered to gamepad focus at
-    // all, which is half of why it had to go, not just the pop.
+    // (ISelectHandler), so a gamepad-focused button reads the same as a
+    // hovered one.
     public class HoverBox : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, ISelectHandler, IDeselectHandler
     {
         // The HoverRim child UiEmitter wires (WireHoverBox) once Ui.
@@ -50,14 +50,11 @@ namespace PrincesPalace
 
         private void OnDisable()
         {
-            // Mirrors SubtleHoverScale's own OnDisable reasoning: a button
-            // hidden mid-hover (a row swapping out under the cursor, a
+            // A button hidden mid-hover (a row swapping out under the cursor, a
             // submenu closing under a held gamepad selection) must not come
             // back still showing a rim for a pointer or a focus that is no
-            // longer there. SetActive(false) already skips Update for a
-            // scale-driven component; for this one there is no Update to
-            // skip, only a flag pair to clear before the rim is asked to
-            // hide itself.
+            // longer there, so the flag pair is cleared before the rim is
+            // asked to hide itself.
             _isHovering = false;
             _isSelected = false;
             Refresh();

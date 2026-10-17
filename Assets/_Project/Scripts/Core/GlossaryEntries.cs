@@ -23,10 +23,9 @@ namespace PrincesPalace
         // ONCE.
         //
         // The controller needs every category regardless -- the rail shows an
-        // "unlocked of total" count per category -- and building them one at a
-        // time meant Relics and Deeds each re-derived the same AchievementFacts
-        // by sweeping the roster and the whole run ledger. One call per category, two full
-        // fact gathers, repeated on every category click.
+        // "unlocked of total" count per category -- and Relics and Deeds
+        // share the same AchievementFacts, which sweep the roster and the
+        // whole run ledger, so they are gathered once here.
         public static List<List<GlossaryEntry>> All(SaveData save)
         {
             var facts = Achievements.FactsFor(save);

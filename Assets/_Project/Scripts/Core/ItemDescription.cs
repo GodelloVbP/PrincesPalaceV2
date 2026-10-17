@@ -25,10 +25,9 @@ namespace PrincesPalace
         // `viewer`, when given, is who this card is being shown TO -- not
         // necessarily who has the item equipped. For a weapon it is what
         // turns WeaponPower (a property of the item alone) into DMG (what it
-        // would actually deal in this character's hands), per D7.2. Optional
-        // and defaulted to null so every existing caller with no viewer in
-        // scope keeps compiling and simply loses the DMG line, same as
-        // before this phase.
+        // would actually deal in this character's hands). Optional and
+        // defaulted to null: a caller with no viewer in scope gets no DMG
+        // line.
         // `honing` is the honing the numbers are shown at: the slot's own for
         // a worn copy, and for one that is not worn the honing of the slot it
         // would take (ContentDatabase.HoningFor). The rolled affixes are the
@@ -102,8 +101,7 @@ namespace PrincesPalace
 
         // The display name for every id currently worn in the slot a
         // candidate would occupy -- resolved off ContentDatabase.GetModifier
-        // (the ScriptableObject seam), same graceful-degradation posture the
-        // pre-move code took: an id with no matching ModifierDefinition (or
+        // (the ScriptableObject seam), same graceful-degradation posture: an id with no matching ModifierDefinition (or
         // no displayName) prints the raw id rather than dropping the line.
         private static IReadOnlyList<ModifierAffixLines.EquippedModifier> ResolvedEquippedModifiers(
             IReadOnlyList<string> equippedModifierIds)
@@ -261,8 +259,8 @@ namespace PrincesPalace
 
         // THE SWAP ITSELF, as a character you can ask questions of.
         //
-        // Lifted out of Compare unchanged so a SECOND caller can read numbers
-        // Compare does not return. ItemComparison carries a StatBlock delta,
+        // Compare and a SECOND caller both go through it; the second reads
+        // numbers Compare does not return. ItemComparison carries a StatBlock delta,
         // and a StatBlock has no field for the one number a weapon actually
         // changes: gear no longer grants flat Attack (ContentDatabase.
         // EffectiveStats zeroes `bonus.attack`), so a sword's whole
@@ -275,7 +273,7 @@ namespace PrincesPalace
         // what lets this be called in a loop over a whole bag.
         // `preferredSlot` names WHICH hand, for the one item class that has two
         // -- the same parameter EquipMove.TryEquip takes and for the same
-        // reason. Null keeps Compare's original behaviour exactly:
+        // reason. Null means
         // ResolveTargetSlot, which is what a player clicking a pack cell with
         // no slot in mind gets. A preferred slot the item does not fit is
         // refused here the way EquipMove refuses it, rather than silently
@@ -298,12 +296,12 @@ namespace PrincesPalace
 
         // A COMPLETE copy, by round-trip rather than by hand.
         //
-        // v1 listed the four fields it thought mattered. That is a standing
-        // invitation for the simulation to drift from reality: add a field that
-        // feeds EffectiveStats -- v2 has already added investedAbilityScores
-        // and unspentStatPoints since -- and the comparison silently starts
-        // answering for a character that does not exist. A serialised
-        // round-trip copies whatever the type has, so it cannot fall behind.
+        // A hand-listed copy would be a standing invitation for the simulation
+        // to drift from reality: add a field that feeds EffectiveStats (as
+        // investedAbilityScores and unspentStatPoints do) and the comparison
+        // silently starts answering for a character that does not exist. A
+        // serialised round-trip copies whatever the type has, so it cannot
+        // fall behind.
         //
         // The loadout is then replaced with its own Clone() regardless.
         // JsonUtility does copy it, but the equipment is the one field this
@@ -346,8 +344,7 @@ namespace PrincesPalace
                 // Through RequirementCurve, so the line names what the CURRENT
                 // difficulty knob demands rather than the raw authored number
                 // -- the same value the resolver gates on. Its own block
-                // overload, not six calls to the int one: this had grown a
-                // hand-written copy of a method that already existed.
+                // overload, not six calls to the int one.
                 RequirementCurve.ApplyGear(gear.Requirements),
                 ContentDatabase.EffectiveAbilityScores(character),
                 comparison,

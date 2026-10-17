@@ -7,16 +7,12 @@ namespace PrincesPalace
     // Reports hover on one indexed thing: an enemy's intent icon, an offer
     // card on the Reckoning, anything with a row of siblings and a tooltip.
     //
-    // ONE component rather than one per screen. It was called IntentHover and
-    // was about to be copied verbatim for the reward screen, which is the
-    // duplication this project keeps writing rules against -- the name was the
-    // only thing tying twenty generic lines to the fight.
+    // ONE component rather than one per screen: the fight's intent icons and
+    // the reward screen's offer cards share it.
     //
     // Added at RUNTIME by the controller rather than baked by the emitter,
     // because it carries a delegate and an index -- neither of which a scene can
-    // serialise usefully, and both of which the controller already holds. The
-    // scale-on-hover half is separate and IS baked (UiNode.Hovers), so the icon
-    // still responds even if this never gets attached.
+    // serialise usefully, and both of which the controller already holds.
     public class HoverIndex : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
     {
         public int Index;

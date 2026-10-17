@@ -32,8 +32,8 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text startRunCaption;
         [SerializeField] internal Button[] unbuiltButtons;
 
-        // The overarching menu Cancel now opens (docs/GAMEPAD_NAVIGATION_PLAN.md):
-        // one context, one Cancel handler, HandleEscape below.
+        // The overarching menu Start opens (docs/GAMEPAD_NAVIGATION_PLAN.md):
+        // one context, whose systemMenu handler is HandleEscape below.
         [SerializeField] internal SystemMenuController systemMenu;
 
         // THE TEST SEAM FOR THE DESCENT TRANSITION'S OWN CLOCK, the same
@@ -152,9 +152,9 @@ namespace PrincesPalace
             // had nothing to show. The node keeps its name: it is the art
             // anchor's key.)
             relicsButton.onClick.AddListener(OpenGlossary);
-            // The two that go somewhere. The other four are screens that do not
-            // exist yet, and a button that logs is more honest than one that
-            // loads an empty scene.
+            // Start goes to a run. Principality is the one building whose screen
+            // does not exist yet, and a button that logs is more honest than
+            // one that loads an empty scene.
             startRunButton.onClick.AddListener(StartOrResumeRun);
             // The corner button opens the menu on its Exit tab instead of
             // leaving. Going to the title ends the run (EndRun banks the
@@ -295,10 +295,9 @@ namespace PrincesPalace
         // -- fixed at Start() because none of these six ever appears or
         // disappears afterward (unlike SystemMenu's tabs or Map's rooms):
         // principalityButton stays permanently disabled rather than hidden,
-        // and the other five are always on screen. The debug menu, relic
-        // draft and character overlay covering the hub without pushing
-        // their own context yet (HandleEscape's own header) is pre-existing,
-        // named debt, not something this pass changes.
+        // and the other five are always on screen. The debug menu and the
+        // relic draft cover the hub with their own NavContext (see
+        // HandleEscape's header).
         private Dictionary<string, object> Selectables()
         {
             var result = new Dictionary<string, object>();
@@ -361,16 +360,17 @@ namespace PrincesPalace
                 return;
             }
 
-            // Escape/Cancel no longer read here at all -- it belongs to the
-            // ONE dispatch point now (NavigationInputModule), which calls
-            // this context's Cancel handler (HandleEscape, registered in
-            // RegisterNavContext) once per frame instead of racing
-            // SystemMenuController's own separate poll for the same key.
+            // Escape is not read here: it belongs to the ONE dispatch point
+            // (NavigationInputModule), which calls this context's systemMenu
+            // handler (HandleEscape, registered in RegisterNavContext) once per
+            // frame instead of racing SystemMenuController's own poll for the
+            // same key.
         }
 
-        // This IS the hub's NavContext.Cancel handler (registered in
-        // RegisterNavContext), called once a frame by the ONE dispatch point
-        // rather than raced against a second poll.
+        // This IS the hub's NavContext.systemMenu handler (registered in
+        // RegisterNavContext; the context's Cancel is null), called once a
+        // frame by the ONE dispatch point rather than raced against a second
+        // poll.
         //
         // The debug menu and the relic draft each push their own NavContext
         // (RelicDraftController/DebugMenuController), so while either is open
@@ -403,9 +403,6 @@ namespace PrincesPalace
             systemMenu.Open(SystemMenuTab.Exit);
         }
 
-        // C and I without the key: the same Press the dispatcher calls
-        // (SheetPanel), so the Character Sheet building, the tests and the
-        // keys share one path.
         // Read-only, so callers outside Core can ask without being able to
         // reach past the two methods that are allowed to answer. Null-tolerant
         // for the same reason those are: a scene may mount this controller
@@ -414,7 +411,9 @@ namespace PrincesPalace
             characterOverlayPanel != null && characterOverlayPanel.activeSelf;
 
         // What C (or I, with `inventory`) does: open, switch to the Character
-        // tab, or close (MenuHotkeyRule).
+        // tab, or close (MenuHotkeyRule). C and I without the key: the same
+        // Press the dispatcher calls (SheetPanel), so the Character Sheet
+        // building, the tests and the keys share one path.
         public void ToggleCharacterOverlay(bool inventory = false) =>
             SheetPanel.Toggle(characterOverlayPanel, inventory);
 

@@ -5,9 +5,8 @@ namespace PrincesPalace
     // WHERE A MOVE INTO A PANE LANDS, answered by the pane itself.
     //
     // SystemMenuController links the selected tab's Down to its pane's own
-    // entry, and until now that entry was "the first active Selectable in
-    // hierarchy order" -- found generically on purpose, so a pane nobody had
-    // wired yet still got something. That answer is the tree's order, not the
+    // entry; the generic answer is "the first active Selectable in
+    // hierarchy order", so a pane nobody has wired still gets something. That answer is the tree's order, not the
     // screen's subject: the dossier's first Selectable is the roster pager
     // beside the character's name, while the pane is about the loadout, so a
     // Move down off the Character tab landed on a paging arrow.

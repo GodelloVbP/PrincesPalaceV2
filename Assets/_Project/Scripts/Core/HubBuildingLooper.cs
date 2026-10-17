@@ -6,9 +6,8 @@ namespace PrincesPalace
 {
     // Loops a hub building's frame sequence.
     //
-    // The talents tree ships three frames -- its orbs light and dim -- and only
-    // f0 has ever been drawn. Two authored frames of animation have been dead
-    // weight in the project since the art landed.
+    // The talents tree ships three frames -- its orbs light and dim -- and
+    // this plays all of them.
     //
     // f0 stays the BAKED resting frame: SceneBuilder writes it into the scene,
     // so an Edit-Mode screenshot and a scene that never ticks both show a

@@ -21,11 +21,9 @@ namespace PrincesPalace
     // ONE COMPONENT WITH TWO CALLBACKS rather than two components, because the
     // caller decides which it is by which delegate it sets: attached to the
     // viewport only Scrolled is wired, attached to the track only Seeked is.
-    // A third copy of the same twenty lines was the alternative, and
-    // docs/CODE_STANDARDS.md "Reuse" makes a second copy the moment to promote --
-    // this is that promotion, made now because the two existing
-    // ones are horizontal and neither could have taken a vertical caller
-    // without growing an axis flag.
+    // The existing horizontal scrollers (RailScroll among them) could not take
+    // a vertical caller without growing an axis flag, and
+    // docs/CODE_STANDARDS.md "Reuse" makes a second copy the moment to share.
     //
     // No UnityEngine.UI.ScrollRect, for the reason RailScroll's header gives at
     // length: it owns the content's anchoredPosition, and the controller here
