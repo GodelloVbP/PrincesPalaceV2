@@ -48,5 +48,40 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(first, last, "a second CreateAsset call bypasses the preflight mute");
             Assert.Greater(first, source.IndexOf("if (preflight)", System.StringComparison.Ordinal));
         }
+
+        [Test]
+        public void ACollisionIsDetectedAgainstCollectedIdsNotFilesOnDisk()
+        {
+            // The preflight runs before the old tree is deleted, so a File.Exists
+            // probe reads every committed set piece and weapon as a collision.
+            foreach (string builder in new[] { "BuildWeapons", "BuildItemSets" })
+            {
+                string body = Body(Source(), "IReadOnlyCollection<string> " + builder + "(");
+                StringAssert.DoesNotContain("File.Exists(assetPath)", body, builder + " probes the old tree for collisions");
+                StringAssert.Contains("taken.Add(", body, builder + " does not check the ids collected this run");
+            }
+        }
+
+        [Test]
+        public void ARealIdCollisionFailsTheBuild()
+        {
+            foreach (string builder in new[] { "BuildWeapons", "BuildItemSets" })
+            {
+                string body = Body(Source(), "IReadOnlyCollection<string> " + builder + "(");
+                int collides = body.IndexOf("collides with an item", System.StringComparison.Ordinal);
+                int record = body.IndexOf("RecordFailure(\"" + builder + "\");", collides, System.StringComparison.Ordinal);
+                int next = body.IndexOf("CreateInstance<ItemDefinition>", collides, System.StringComparison.Ordinal);
+                Assert.Greater(collides, 0, builder);
+                Assert.That(record > collides && record < next, builder + " logs the collision without RecordFailure");
+            }
+        }
+
+        private static string Body(string source, string signature)
+        {
+            int start = source.IndexOf(signature, System.StringComparison.Ordinal);
+            Assert.GreaterOrEqual(start, 0, signature);
+            int end = source.IndexOf("\n    }", start, System.StringComparison.Ordinal);
+            return source.Substring(start, end - start);
+        }
     }
 }

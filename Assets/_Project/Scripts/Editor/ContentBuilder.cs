@@ -500,7 +500,8 @@ public static class ContentBuilder
             (asset, evt) => asset.SetData(evt),
             evt => evt.Id);
 
-        WarnOnMissingDialogueBusts(events, characters);
+        // Once per build: the preflight pass would print every warning twice.
+        if (!preflight) WarnOnMissingDialogueBusts(events, characters);
     }
 
     // WarnOnMissingDialogueBusts (below ResourcesRoot), PLAN_DIALOGUE_STAGE
@@ -807,8 +808,14 @@ public static class ContentBuilder
             itemIds.Add(item.Id);
         }
 
-        itemIds.AddRange(BuildItemSets());
-        itemIds.AddRange(BuildWeapons());
+        // Collisions are detected against the ids this run has collected, not
+        // against files on disk: the preflight pass runs before the tree is
+        // deleted, so every piece already on disk would read as a collision.
+        var taken = new HashSet<string>(itemIds);
+        var setIds = BuildItemSets(taken);
+        itemIds.AddRange(setIds);
+        taken.UnionWith(setIds);
+        itemIds.AddRange(BuildWeapons(taken));
         return itemIds;
     }
 
@@ -818,7 +825,7 @@ public static class ContentBuilder
     // produces IS items, in the same folder, of the same asset type, read back
     // through the same ContentDatabase.Items. Keeping all three generators
     // adjacent is what makes the collision check below meaningful.
-    private static IReadOnlyCollection<string> BuildWeapons()
+    private static IReadOnlyCollection<string> BuildWeapons(HashSet<string> taken)
     {
         var weaponIds = new List<string>();
 
@@ -846,10 +853,11 @@ public static class ContentBuilder
         foreach (var weapon in resolved)
         {
             string assetPath = $"{ItemsPath}/{weapon.Id}.asset";
-            if (File.Exists(assetPath))
+            if (!taken.Add(weapon.Id))
             {
                 Debug.LogError($"BuildWeapons: '{weapon.Id}' collides with an item already generated from items.json or itemsets.json. " +
                                 "Rename the family or the modifier — an item id is written into save files, so two things cannot share one.");
+                RecordFailure("BuildWeapons");
                 continue;
             }
 
@@ -898,7 +906,7 @@ public static class ContentBuilder
     // Sort order is offset past the hand-authored items so a set never
     // interleaves with them; within the sets it is set, then piece, then
     // tier, which is the order a player would expect to browse.
-    private static IReadOnlyCollection<string> BuildItemSets()
+    private static IReadOnlyCollection<string> BuildItemSets(HashSet<string> taken)
     {
         var setPieceIds = new List<string>();
 
@@ -924,10 +932,11 @@ public static class ContentBuilder
         foreach (var piece in resolved)
         {
             string assetPath = $"{ItemsPath}/{piece.Id}.asset";
-            if (File.Exists(assetPath))
+            if (!taken.Add(piece.Id))
             {
                 Debug.LogError($"BuildItemSets: '{piece.Id}' collides with an item already generated from items.json. " +
                                 "Rename the set or the piece — an item id is written into save files, so two things cannot share one.");
+                RecordFailure("BuildItemSets");
                 continue;
             }
 
