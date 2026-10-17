@@ -1,6 +1,8 @@
 # Plan: the gear reward and the Reckoning
 
-Status: rev 5, 2026-10-16; owner calls O1-O4 decided 2026-10-16. Plan only; nothing here is built. Rev 5 folds in
+Status: built. RU and R0-R7 landed 2026-10-16/17 (2b50b5a5..9a6c0496), O1 Favor row 35857547. Open: the
+Common/Uncommon landing pop reads faintly; the Favor row has no tooltip surface on the RUN pane.
+Rev 5 (2026-10-16) folds in
 the senior adversarial review of rev 4
 (`docs/PLAN_REWARD_SCREENS_SENIOR_REVIEW.md`, 3055bed1). Earlier: two review
 rounds, each with one reviewer reading the code and one reading only the
