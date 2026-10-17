@@ -52,7 +52,6 @@ namespace PrincesPalace.Domain.Tests
         public void TheSameBlowWeighsTheSameWhateverIsLeftOnTheBar()
         {
             Assert.AreEqual(0.5f, Weight(50, 400), 0.001f);
-            Assert.AreEqual(Weight(50, 400), Weight(50, 400), 0.001f);
         }
 
         // A heal is not a small impact, it is a different event. Shaking the
