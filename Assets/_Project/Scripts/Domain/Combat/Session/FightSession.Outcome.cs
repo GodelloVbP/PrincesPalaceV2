@@ -185,6 +185,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 int half = member.MaxHealth * SecondLifeNumerator / SecondLifeDenominator;
                 member.CurrentHealth = half < 1 ? 1 : half;
                 StatusEffects.ClearDamaging(member);
+                member.DelayedDamage?.Clear();
                 raised = true;
             }
 

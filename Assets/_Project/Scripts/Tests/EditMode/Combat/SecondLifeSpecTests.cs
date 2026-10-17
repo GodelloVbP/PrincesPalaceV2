@@ -129,6 +129,26 @@ namespace PrincesPalace.Domain.Tests
                 "the poison that was ticking when they fell is gone");
         }
 
+        // Ignore Pain's pending installments are damage still owed by the body
+        // that fell: 150 owed against 100 health would fell the raised one at
+        // its next turn start.
+        [Test]
+        public void TheRaisedKeepNoPendingDelayedDamage()
+        {
+            var (session, party, foe) = Party(charges: 1, 200);
+            party[0].CurrentHealth = 1;
+            var pool = new DelayedDamagePool(100, 3);
+            pool.Defer(150, DamageType.Physical);
+            pool.Percent = 0; // the killing swing must land, not be deferred
+            party[0].DelayedDamage = pool;
+            Assert.AreEqual(150, pool.Pending, "fixture: 150 is owed");
+
+            session.ExecuteAttack(foe);
+
+            Assert.AreEqual(0, pool.Pending, "the raised member still owes the fallen one's damage");
+            Assert.AreEqual(100, party[0].CurrentHealth, "raised on half and left there");
+        }
+
         // The one place the "minimum 1" half of the arithmetic shows: a
         // character whose max health is 1 halves to 0, which would revive them
         // into death and spend the charge for nothing.
