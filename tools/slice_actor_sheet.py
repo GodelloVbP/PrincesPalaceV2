@@ -114,7 +114,8 @@ list already refuses for spell frames -- this is the same rule for actor
 stances.
 
 The union canvas, its one ground line, and every downstream assertion
-(`_assert_one_ground_line`, `ActorArtAssertions.AssertOneCanvasSize`) do not
+(`_assert_one_ground_line`; the canvas-size check is `EnemyArtCompletenessTests`,
+enemies only) do not
 know or care how many sheets a stance came from: every named cell from every
 sheet is gathered into one flat list of pieces before the canvas is ever
 sized, so a two-sheet actor is composited exactly like a one-sheet actor with

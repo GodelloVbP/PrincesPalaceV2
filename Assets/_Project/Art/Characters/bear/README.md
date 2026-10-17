@@ -198,8 +198,8 @@ matching `battleSpriteFacing: "Right"` and the first sheet's own convention.
 
 `slice_actor_sheet.py`'s one-shared-canvas invariant is per ACTOR, not per
 sheet: every stance an actor ships has to sit on one canvas at one scale with
-one ground line (`ActorArtAssertions.AssertOneCanvasSize`,
-`StanceManifestValidationTests`). The slicer used to size and anchor its
+one ground line (`EnemyArtCompletenessTests` checks the canvas for enemies
+only; no test covers the party roster; `StanceManifestValidationTests`). The slicer used to size and anchor its
 canvas from a single sheet's cells only, so slicing the new sheet as a
 separate run would have produced a SECOND canvas and a second scale for the
 same actor — exactly the failure mode this file's own §4a in

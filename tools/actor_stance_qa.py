@@ -20,8 +20,8 @@ genuinely floating, not a display artifact), that stance's own alpha
 centroid (cyan tick), and a sqrt(opaque-area)/actor-median caption. Area,
 not bbox height, is the pose-invariant proxy for "how big is this creature
 drawn" -- a crouching pose has a shorter bbox than a rearing one even at
-the same draw scale (see docs/ART_PIPELINE.md and
-ActorArtAssertions.AssertOneDrawScale). The caption is colour-coded so an
+the same draw scale (see docs/ART_PIPELINE.md; no test
+asserts draw-scale tolerance). The caption is colour-coded so an
 outlier reads as red without doing the division yourself.
 
 A creature folder that still holds old <stance>/f0..fN frame folders (the
