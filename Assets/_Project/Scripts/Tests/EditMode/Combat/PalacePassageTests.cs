@@ -85,7 +85,7 @@ namespace PrincesPalace.Domain.Tests
             // Row 1: Sub, the Passage row selected -> Target, side Allies,
             // picks 0/2.
             menu.OpenBranch(MenuBranch.Skill);
-            menu.Select(0, PassageMana);
+            menu.Select(0);
             menu.EnterTargeting(TargetSide.Allies, SkillEffects.PicksRequired(SkillEffect.SwapAllies));
 
             Assert.IsTrue(menu.IsPickingAlly);
@@ -138,7 +138,7 @@ namespace PrincesPalace.Domain.Tests
             var (_, caster, _, _) = Fight();
             var menu = new FightMenuState();
             menu.OpenBranch(MenuBranch.Skill);
-            menu.Select(0, 0);
+            menu.Select(0);
             menu.EnterTargeting(TargetSide.Allies);
 
             Assert.AreEqual(1, menu.RequiredPicks);
@@ -157,7 +157,7 @@ namespace PrincesPalace.Domain.Tests
 
             var menu = new FightMenuState();
             menu.OpenBranch(MenuBranch.Skill);
-            menu.Select(0, PassageMana);
+            menu.Select(0);
             menu.EnterTargeting(TargetSide.Allies, 2);
             menu.RecordPick(mid, out _);
 
@@ -220,7 +220,7 @@ namespace PrincesPalace.Domain.Tests
 
             var menu = new FightMenuState();
             menu.OpenBranch(MenuBranch.Skill);
-            menu.Select(0, PassageMana);
+            menu.Select(0);
             menu.EnterTargeting(TargetSide.Allies, 2);
             menu.RecordPick(caster, out _);
 

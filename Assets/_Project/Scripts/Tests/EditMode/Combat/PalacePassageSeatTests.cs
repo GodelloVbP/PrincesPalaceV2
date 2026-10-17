@@ -197,7 +197,7 @@ namespace PrincesPalace.Domain.Tests
             var shawn = Member("Shawn", 30);
             var menu = new FightMenuState();
             menu.OpenBranch(MenuBranch.Skill);
-            menu.Select(0, PassageMana);
+            menu.Select(0);
             menu.EnterTargeting(TargetSide.Allies, SkillEffects.PicksRequired(SkillEffect.SwapAllies),
                 SkillEffects.LastPickIsSeat(SkillEffect.SwapAllies));
 

@@ -590,17 +590,14 @@ namespace PrincesPalace
         private void SelectFirstCurrentRow()
         {
             var rows = CurrentRows();
-            if (rows.Count > 0) _menu.Select(0, rows[0].ManaCost);
+            if (rows.Count > 0) _menu.Select(0);
         }
 
         private void OnRowHovered(int index)
         {
-            var rows = CurrentRows();
-            int cost = index >= 0 && index < rows.Count ? rows[index].ManaCost : 0;
-
             // Only repaints when something actually changed -- hovering across
             // one row fires this repeatedly.
-            if (_menu.Select(index, cost)) RefreshUi();
+            if (_menu.Select(index)) RefreshUi();
         }
 
         private void OnRowPressed(int index)
@@ -610,7 +607,7 @@ namespace PrincesPalace
             var rows = CurrentRows();
             if (index < 0 || index >= rows.Count || !rows[index].Affordable) return;
 
-            _menu.Select(index, rows[index].ManaCost);
+            _menu.Select(index);
 
             // AN ELEMENT ROW COMMITS THE ELEMENT. The element is read off the
             // skill rather than parsed back out of the row's own text:

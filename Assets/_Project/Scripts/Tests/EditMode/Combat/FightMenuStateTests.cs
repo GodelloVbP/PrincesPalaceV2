@@ -133,7 +133,7 @@ namespace PrincesPalace.Domain.Tests
         {
             var menu = Menu();
             menu.OpenBranch(MenuBranch.Skill);
-            menu.Select(0, 0);
+            menu.Select(0);
             menu.EnterTargeting(TargetSide.Allies);
 
             Assert.AreEqual(MenuDepth.Target, menu.Depth, "the same depth, not a fifth one");
@@ -152,7 +152,7 @@ namespace PrincesPalace.Domain.Tests
             // asking anything.
             var menu = Menu();
             menu.OpenBranch(MenuBranch.Skill);
-            menu.Select(2, 0);
+            menu.Select(2);
             menu.EnterTargeting(TargetSide.Allies);
 
             Assert.IsTrue(menu.Back());
@@ -238,7 +238,7 @@ namespace PrincesPalace.Domain.Tests
             var menu = Menu();
             menu.OpenBranch(MenuBranch.Skill);
 
-            Assert.IsTrue(menu.Select(2, manaCost: 7));
+            Assert.IsTrue(menu.Select(2));
 
             Assert.AreEqual(2, menu.Selection);
         }
@@ -250,9 +250,9 @@ namespace PrincesPalace.Domain.Tests
             // is what the return value exists to avoid.
             var menu = Menu();
             menu.OpenBranch(MenuBranch.Skill);
-            menu.Select(2, 7);
+            menu.Select(2);
 
-            Assert.IsFalse(menu.Select(2, 7));
+            Assert.IsFalse(menu.Select(2));
         }
 
         [Test]
@@ -261,7 +261,7 @@ namespace PrincesPalace.Domain.Tests
             var menu = Menu();
             menu.OpenAttack();
 
-            Assert.IsFalse(menu.Select(0, 5), "ATTACK has no rows to hover");
+            Assert.IsFalse(menu.Select(0), "ATTACK has no rows to hover");
             Assert.AreEqual(-1, menu.Selection);
         }
 
@@ -272,7 +272,7 @@ namespace PrincesPalace.Domain.Tests
             // PREVIOUS branch, which is the wrong answer that looks right.
             var menu = Menu();
             menu.OpenBranch(MenuBranch.Skill);
-            menu.Select(3, 9);
+            menu.Select(3);
 
             menu.OpenBranch(MenuBranch.Item);
 
@@ -286,7 +286,7 @@ namespace PrincesPalace.Domain.Tests
             // trustworthy as the sole authority for "is the column up".
             var menu = Menu();
             menu.OpenBranch(MenuBranch.Skill);
-            menu.Select(1, 4);
+            menu.Select(1);
             menu.EnterTargeting();
 
             menu.Reset();
@@ -345,7 +345,7 @@ namespace PrincesPalace.Domain.Tests
         {
             var menu = Menu();
             menu.OpenBranch(MenuBranch.Skill);
-            menu.Select(2, 0);
+            menu.Select(2);
             menu.EnterElementChoice();
 
             Assert.AreEqual(MenuDepth.Element, menu.Depth);
@@ -368,15 +368,15 @@ namespace PrincesPalace.Domain.Tests
         {
             var menu = Menu();
             menu.OpenBranch(MenuBranch.Skill);
-            menu.Select(3, 0);
+            menu.Select(3);
             menu.EnterElementChoice();
 
-            Assert.IsTrue(menu.Select(1, 0));
+            Assert.IsTrue(menu.Select(1));
             Assert.AreEqual(3, menu.Selection);
             Assert.AreEqual(1, menu.ElementSelection);
             Assert.AreEqual(1, menu.RowSelection, "the row pool is painting the element list");
 
-            Assert.IsFalse(menu.Select(1, 0), "hovering the row already hovered changes nothing");
+            Assert.IsFalse(menu.Select(1), "hovering the row already hovered changes nothing");
         }
 
         [Test]
@@ -384,7 +384,7 @@ namespace PrincesPalace.Domain.Tests
         {
             var menu = Menu();
             menu.OpenBranch(MenuBranch.Skill);
-            menu.Select(0, 0);
+            menu.Select(0);
             menu.EnterElementChoice();
             menu.ChooseElement(DamageType.Water);
 
@@ -401,9 +401,9 @@ namespace PrincesPalace.Domain.Tests
         {
             var menu = Menu();
             menu.OpenBranch(MenuBranch.Skill);
-            menu.Select(2, 0);
+            menu.Select(2);
             menu.EnterElementChoice();
-            menu.Select(1, 0);
+            menu.Select(1);
 
             Assert.IsTrue(menu.Back());
 
@@ -422,7 +422,7 @@ namespace PrincesPalace.Domain.Tests
         {
             var menu = Menu();
             menu.OpenBranch(MenuBranch.Skill);
-            menu.Select(0, 0);
+            menu.Select(0);
             menu.EnterTargeting();
 
             Assert.IsTrue(menu.Back());

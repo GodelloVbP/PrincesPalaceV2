@@ -270,7 +270,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // Hovering or arrowing onto a row. Returns false when nothing changed,
         // so a caller can skip a redraw rather than repaint on every mouse move
         // across one row.
-        public bool Select(int index, int manaCost)
+        public bool Select(int index)
         {
             if (Depth == MenuDepth.Element)
             {
