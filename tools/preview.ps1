@@ -33,8 +33,8 @@
 # stays run_tests_parallel.ps1 and is a separate decision from "show me the
 # thing I just authored" -- coupling them is what made the fast loop slow.
 param(
-    # Regenerate the content assets and stop. The other modes (-Enemy, and in
-    # Step 2 -Spell/-Character) build first and then show something.
+    # Regenerate the content assets and stop. The other modes (-Enemy, -Spell
+    # and -Character) build first and then show something.
     [switch]$Build,
 
     # The mob to look at, by its enemies.json id.
@@ -173,7 +173,15 @@ function Invoke-EditorRequest {
     # Our request may still be sitting there unread -- an Editor that never
     # answered is an Editor that will act on it whenever it wakes up, which is
     # not what the author who gave up wants.
-    if (Test-Path $target) { Remove-Item $target -Force -ErrorAction SilentlyContinue }
+    # Only if it is still ours: another session may have moved its own request
+    # onto the target after the Editor consumed ours.
+    if (Test-Path $target) {
+        $pending = $null
+        try { $pending = Get-Content $target -Raw | ConvertFrom-Json } catch { }
+        if ($pending -and $pending.requestId -eq $requestId) {
+            Remove-Item $target -Force -ErrorAction SilentlyContinue
+        }
+    }
 
     return [PSCustomObject]@{ State = "timeout"; Message = "no answer within ${Timeout}s (last state: $lastState)" }
 }
@@ -298,39 +306,8 @@ function Invoke-EnemyPreview {
         return (Invoke-EnemyCapture -Id $resolved)
     }
 
-    $lock = Get-UnityLockState -ProjectRoot $Project
-    [void](Clear-StaleUnityLock -State $lock)
-
-    $timeout = $TimeoutSeconds
-
-    if ($lock.Held) {
-        Write-Host "route: the Editor is open on this project."
-    }
-    else {
-        # THE EDITOR IS STARTED FIRST AND THE REQUEST IS WRITTEN AFTERWARDS,
-        # and that order cost a 20-minute Editor boot to learn: UNITY WIPES
-        # Temp/ WHEN IT STARTS. A request file written into Temp/ before the
-        # boot is deleted by the boot, so the watcher arms itself, finds
-        # nothing, and the caller waits out its whole timeout against an Editor
-        # that is sitting there perfectly healthy.
-        #
-        # Waiting for the lockfile is what makes "afterwards" well defined:
-        # Unity writes it early, right after it has claimed (and cleared) Temp/,
-        # and long before it finishes importing. The request then survives the
-        # rest of the boot and the watcher picks it up on its first ticks.
-        Write-Host "route: no Editor on this project, so one is started and asked once it has claimed the project."
-        Write-Host "(a cold Editor boot is minutes, not seconds -- leaving it open is the fast route)"
-
-        Start-Editor
-        if (-not (Wait-ForLockfile -Seconds 300)) {
-            Write-Host "the Editor never claimed the project (no Temp\UnityLockfile within 300s)."
-            return 1
-        }
-
-        # A cold boot imports before it ticks, so the bounded wait has to cover
-        # the Editor's whole startup, not just a request's round trip.
-        $timeout = [Math]::Max($TimeoutSeconds, 900)
-    }
+    $timeout = Start-EditorIfNeeded
+    if ($timeout -lt 0) { return 1 }
 
     $payload = @{ action = "preview"; enemyId = $resolved; formation = $Formation; launch = $true }
     $answer = Invoke-EditorRequest -Payload $payload -Timeout $timeout
@@ -365,6 +342,7 @@ function Invoke-EnemyCapture {
 # builds, and then either asks the Editor to play it or asks the capture
 # fixture to photograph it -- and prints whatever the answer was, refusal
 # included, without paraphrasing it.
+
 # THE SAME VALIDATION Resolve-ContentId DOES, one level down: an element is
 # offered by ONE skill rather than by the file, so the list to print is that
 # skill's elements[] and not a global vocabulary. Case-insensitive, and the
@@ -462,18 +440,14 @@ function Invoke-SpellPreview {
     return 0
 }
 
-# The half of Invoke-EnemyPreview that is about the EDITOR rather than about
-# mobs, lifted out so -Spell does not grow its own copy of the "Unity wipes
-# Temp/ on boot, so start it and wait for the lockfile before writing the
-# request" sequence. Returns the timeout to wait with, or -1 on failure.
 # --- character mode ---------------------------------------------------------
 #
 # Three pictures rather than one, because a character is three different
 # drawings in three different places and each has its own way of being wrong:
 # the map figure (walk stance, sized off its own aspect), the dossier portrait
 # (a different image entirely from the battle art), and the fight stance sheet.
-# The Step 0 baseline lost about two minutes to guessing which capture class
-# fields a real squad; this asks for the character, not for a fixture.
+# This asks for the character, not for a capture fixture that happens to field
+# a real squad.
 function Invoke-CharacterPreview {
     param([string]$Id)
 
@@ -501,6 +475,10 @@ function Invoke-CharacterPreview {
     return 0
 }
 
+# Starts the Editor when none holds the project, so no mode keeps its own copy
+# of the "Unity wipes Temp/ on boot, so start it and wait for the lockfile
+# before writing the request" sequence. Returns the timeout to wait with, or -1
+# on failure.
 function Start-EditorIfNeeded {
     $lock = Get-UnityLockState -ProjectRoot $Project
     [void](Clear-StaleUnityLock -State $lock)
@@ -513,12 +491,20 @@ function Start-EditorIfNeeded {
     Write-Host "route: no Editor on this project, so one is started and asked once it has claimed the project."
     Write-Host "(a cold Editor boot is minutes, not seconds -- leaving it open is the fast route)"
 
+    # THE EDITOR IS STARTED FIRST AND THE REQUEST IS WRITTEN AFTERWARDS: UNITY
+    # WIPES Temp/ WHEN IT STARTS, so a request written before the boot is
+    # deleted by it and the caller waits out its whole timeout against a
+    # healthy Editor. Unity writes the lockfile right after it has claimed
+    # (and cleared) Temp/, long before it finishes importing, so once it
+    # exists the request survives the rest of the boot.
     Start-Editor
     if (-not (Wait-ForLockfile -Seconds 300)) {
         Write-Host "the Editor never claimed the project (no Temp\UnityLockfile within 300s)."
         return -1
     }
 
+    # A cold boot imports before it ticks, so the bounded wait has to cover
+    # the Editor's whole startup, not just a request's round trip.
     return ([Math]::Max($TimeoutSeconds, 900))
 }
 
