@@ -4,7 +4,7 @@ namespace PrincesPalace.Domain.Content
 {
     // One requirement row, exactly as typed into an event's `requires` array
     // (event-level, choice-level or outcome-level -- the same shape serves
-    // all three, per plan contract 5). Kind is matched case-insensitively
+    // all three). Kind is matched case-insensitively
     // against EventRequirementKind by EventEntryResolver.
     [Serializable]
     public class RawEventRequirement
@@ -70,8 +70,8 @@ namespace PrincesPalace.Domain.Content
     }
 
     // One choice, exactly as typed into a page's `choices` array. Up to 4 per
-    // page (plan contract 10); the content build refuses a page with no
-    // unconditional choice, so the player can never be trapped (contract 7).
+    // page; the content build refuses a page with no unconditional choice, so
+    // the player can never be trapped.
     [Serializable]
     public class RawEventChoice
     {
@@ -105,7 +105,7 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Up to 4 choices offered on this page.")]
         public RawEventChoice[] choices = Array.Empty<RawEventChoice>();
 
-        // ---- Dialogue stage (docs/PLAN_DIALOGUE_STAGE.md, phase D1) ----
+        // ---- Dialogue stage (docs/PLAN_DIALOGUE_STAGE.md) ----
         // A page with no lines behaves exactly as before (contract 14).
 
         [ContentDoc("Optional full-bleed backdrop for this page, Assets-relative with its extension, baked at scene build like artPath. Empty inherits the event's backdrop. Must be filed under Assets/_Project/Art/Backgrounds/ or this event's own Assets/_Project/Art/Events/<event_id>/.")]
@@ -116,7 +116,7 @@ namespace PrincesPalace.Domain.Content
         public RawEventLine[] lines = Array.Empty<RawEventLine>();
     }
 
-    // ---- Dialogue stage (docs/PLAN_DIALOGUE_STAGE.md, phase D1) ----
+    // ---- Dialogue stage (docs/PLAN_DIALOGUE_STAGE.md) ----
 
     // One row of a page's `cast` array: pins a speaker to a side.
     [Serializable]
@@ -153,7 +153,7 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("The event's page graph; the first page is where the event opens.")]
         public RawEventPage[] pages = Array.Empty<RawEventPage>();
 
-        // ---- Dialogue stage (docs/PLAN_DIALOGUE_STAGE.md, phase D1) ----
+        // ---- Dialogue stage (docs/PLAN_DIALOGUE_STAGE.md) ----
 
         [ContentDoc("The dialogue stage's full-bleed backdrop, Assets-relative with its extension, baked at scene build like a page's artPath; a page's own backdrop overrides it. Empty means EventEntryResolver.DefaultBackdrop (Assets/_Project/Art/Backgrounds/Dungeon.png). Must be filed under Assets/_Project/Art/Backgrounds/ or this event's own Assets/_Project/Art/Events/<event_id>/.")]
         public string backdrop = "";
@@ -260,12 +260,10 @@ namespace PrincesPalace.Domain.Content
 
         // WHERE IT STANDS. The overlay scales about one point of its own
         // image (pivot) held at one point of the fight frame (anchor). Both
-        // default to the centre, which is the frame-filling, centre-scaled
-        // layer every overlay was before these existed. The Bell's flock
-        // pins its feet (pivot) to the backdrop's fog line (anchor), so it
-        // grows up out of the fog behind the fighters instead of out of the
-        // middle of the arena, where a centre-scaled 1920x1080 frame put
-        // eight sheep between Shawn and the Bellwether at toll 1.
+        // default to the centre, a frame-filling, centre-scaled layer. The
+        // Bell's flock pins its feet (pivot) to the backdrop's fog line
+        // (anchor), so it grows up out of the fog behind the fighters instead
+        // of out of the middle of the arena.
         //
         // The anchor is in the FRAME's fractions because the backdrop fills
         // the frame (stretched, at every aspect), so a line on the painting

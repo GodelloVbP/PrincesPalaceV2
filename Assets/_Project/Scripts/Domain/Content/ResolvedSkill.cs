@@ -9,14 +9,10 @@ namespace PrincesPalace.Domain.Content
     // STORES rather than restates.
     //
     // WHY THIS IS A [Serializable] CLASS WITH PUBLIC FIELDS rather than a
-    // readonly struct. It used to be a struct, and SkillDefinition carried a
-    // second copy of all 34 fields beside it, ContentBuilder copied them
-    // across one by one, and FightEncounterAdapter copied them back. Adding
-    // one field to skills.json therefore touched six files before a single
-    // line of behaviour — and a hand-written copy of 34 lines is exactly the
-    // kind where a missing line is invisible: `transform` was dropped on the
-    // way out (Black Ram Mode granted nothing) and `bookOnly`/`bookTier` were
-    // dropped after it. The same measurement SpellPresentation records, one
+    // readonly struct. SkillDefinition stores it directly, so a field added to
+    // skills.json is one edit instead of a hand-written copy across the
+    // definition, ContentBuilder and FightEncounterAdapter, where a missing
+    // line is invisible. The same measurement SpellPresentation records, one
     // level up.
     //
     // A ScriptableObject can hold this directly, so SkillDefinition is now
@@ -88,10 +84,9 @@ namespace PrincesPalace.Domain.Content
         // deals fixed typed packets instead.
         public DamageInstance[] DamageInstances = Array.Empty<DamageInstance>();
 
-        // HOW IT LOOKS, as one value. Six parallel fields lived here --
-        // path, seconds, impact frame, from-caster, depart frame, sfx -- and
-        // every one of them had to be threaded by hand through ten files that
-        // do not care what a spell looks like. See SpellPresentation.
+        // HOW IT LOOKS, as one value, so the files that do not care what a
+        // spell looks like do not thread its fields by hand. See
+        // SpellPresentation.
         public SpellPresentation Vfx = new SpellPresentation();
 
         public int SortOrder;
@@ -278,14 +273,13 @@ namespace PrincesPalace.Domain.Content
         // reachSlots for the two authored spellings, and Reach for why the
         // KIND matters and not only the mask.
         //
-        // REPLACED the old `bool MeleeReach` outright rather than sitting
-        // beside it: two fields answering one question is exactly how a
-        // caller ends up reading the one that has not been kept current.
+        // ONE FIELD ANSWERS THE QUESTION: two fields answering it is exactly
+        // how a caller ends up reading the one that has not been kept current.
         // Every reader (the click gate, plate dimming, the bot's legal menu,
         // the enemy pool) now asks FightSession.CanReachEnemy with this.
         //
-        // Reach.Any is also default(Reach), so a skill deserialised from an
-        // older asset reads as unrestricted rather than as nothing.
+        // Reach.Any is also default(Reach), so a skill deserialised without the
+        // field reads as unrestricted rather than as nothing.
         public Reach Reach = Reach.Any;
 
         // WHETHER THIS ACTION IS A PHYSICAL MOVE, and so whether Rooted
@@ -383,25 +377,7 @@ namespace PrincesPalace.Domain.Content
             return false;
         }
 
-        // THIS SKILL WITH THE CHOICE MADE: every authored packet retyped to
-        // `element`, and that element's own presentation in place of the
-        // skill's if it authored one. Id, cost, cooldown, reach, requirements
-        // and everything else are the skill's own, so a cast copy still spends
-        // what the skill costs and comes back when the skill does.
-        //
-        // MemberwiseClone RATHER THAN A HAND-WRITTEN FIELD COPY. A 40-field
-        // copy is the shape AUDIT #60 records twice over: the missing line is
-        // invisible, and the next field authored on skills.json would have to
-        // be remembered here as well. The clone carries every field this type
-        // will ever have; the three lines below are the only ones a choice
-        // changes.
-        //
-        // THE COPY OFFERS NO FURTHER CHOICE -- Elements is emptied. The choice
-        // has been made, so `HasElementChoice` on the result is false, which is
-        // what lets the cast go back through the ordinary CastSkill path
-        // without a second element gate, and what makes the detail card's
-        // damage-type row read "FIRE" rather than re-listing all four.
-        // PHASE 3: THIS SKILL WITH THE REWARD TRACK'S COST/FLAT ADJUSTMENTS
+        // THIS SKILL WITH THE REWARD TRACK'S COST/FLAT ADJUSTMENTS
         // APPLIED -- ContentDatabase.ApplyRewardTrackSkillDeltas' only
         // caller. MemberwiseClone, the same shape AsElement already uses and
         // for the same reason: the catalogue's own ResolvedSkill (definition.
@@ -415,7 +391,7 @@ namespace PrincesPalace.Domain.Content
         // free rather than being floored up to 1 by a discount it was never
         // charged in the first place.
         //
-        // `powerDelta` (phase 4) is the one that ADDS rather than discounts,
+        // `powerDelta` is the one that ADDS rather than discounts,
         // alongside flatAmountDelta: Shawn's level 26 raises Tuck In's ward
         // from 2 per Wool to 3 by moving `power`, the per-point lever, not
         // the flat one. No floor on either -- a track only ever pays a
@@ -448,6 +424,24 @@ namespace PrincesPalace.Domain.Content
             return copy;
         }
 
+        // THIS SKILL WITH THE CHOICE MADE: every authored packet retyped to
+        // `element`, and that element's own presentation in place of the
+        // skill's if it authored one. Id, cost, cooldown, reach, requirements
+        // and everything else are the skill's own, so a cast copy still spends
+        // what the skill costs and comes back when the skill does.
+        //
+        // MemberwiseClone RATHER THAN A HAND-WRITTEN FIELD COPY. A 40-field
+        // copy is the shape AUDIT #60 records twice over: the missing line is
+        // invisible, and the next field authored on skills.json would have to
+        // be remembered here as well. The clone carries every field this type
+        // will ever have; the three lines below are the only ones a choice
+        // changes.
+        //
+        // THE COPY OFFERS NO FURTHER CHOICE -- Elements is emptied. The choice
+        // has been made, so `HasElementChoice` on the result is false, which is
+        // what lets the cast go back through the ordinary CastSkill path
+        // without a second element gate, and what makes the detail card's
+        // damage-type row read "FIRE" rather than re-listing all four.
         public ResolvedSkill AsElement(DamageType element)
         {
             var copy = (ResolvedSkill)MemberwiseClone();

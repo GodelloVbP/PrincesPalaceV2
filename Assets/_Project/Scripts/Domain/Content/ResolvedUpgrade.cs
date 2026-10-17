@@ -6,15 +6,6 @@ namespace PrincesPalace.Domain.Content
 {
     // One permanent Divine Principality upgrade, exactly as typed into
     // upgrades.json.
-    //
-    // THE LAST CONTENT TYPE STILL WRITTEN AS C# OBJECT INITIALISERS. Two
-    // upgrades lived in ContentBuilder as CreateUpgrade(...) calls with their
-    // costs as positional arguments, which meant the shop's economy could not
-    // be touched without a recompile, nothing validated any of it, and the
-    // reasoning behind "50" and "30" lived nowhere at all. Characters were the
-    // second-to-last and moved for the same reasons; this is the file that
-    // makes the sentence in ContentBuilder's header ("Upgrades is the only one
-    // left") stop being true.
     [Serializable]
     public class RawUpgradeEntry
     {

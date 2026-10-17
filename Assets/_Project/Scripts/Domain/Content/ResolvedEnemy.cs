@@ -58,11 +58,9 @@ namespace PrincesPalace.Domain.Content
     //
     // WHY THIS IS A [Serializable] CLASS WITH PUBLIC FIELDS rather than a
     // readonly struct: the same measurement ResolvedSkill records one file
-    // over. EnemyDefinition carried a second copy of 29 of these fields,
-    // ContentBuilder copied them across one by one and FightEncounterAdapter
-    // copied all 34 arguments back -- three field lists for one set of facts,
-    // and a hand-written copy of that length is exactly the shape where a
-    // dropped line is invisible (it happened twice on the skill side).
+    // over. EnemyDefinition stores it directly, so there is one field list
+    // for one set of facts, not a hand-written copy per stage where a dropped
+    // line is invisible.
     // System.Serializable is BCL, not UnityEngine, so Domain stays engine-free.
     [Serializable]
     public sealed class ResolvedEnemy
@@ -177,8 +175,7 @@ namespace PrincesPalace.Domain.Content
 
         // A skill's VFX, shown over the TARGET when it lands — see
         // RawEnemyEntry's own comment. Empty path means no prop.
-        // ONE VALUE, like a skill's. See SpellPresentation for the
-        // measurement that collapsed the four fields that were here.
+        // ONE VALUE, like a skill's. See SpellPresentation.
         public SpellPresentation Vfx = new SpellPresentation();
 
         // THE PAIR THAT REPLACES A NULLABLE, same trade ResolvedSkill makes:
@@ -219,20 +216,14 @@ namespace PrincesPalace.Domain.Content
 
         // The packed pair every damage call site wants, COMPUTED ON EVERY READ.
         //
-        // This was a memoised `_affinity`/`_affinityBuilt` pair, and the memo
-        // was a write to a shared object from inside a fight. ResolvedEnemy
-        // instances are the catalogue: ContentDatabase hands the SAME
-        // EnemyDefinition.Data to every encounter, so the first packet of
-        // damage of the first fight of the session mutated an object every
-        // later fight also reads. Nothing observable went wrong -- the value is
-        // a pure function of two arrays that never change -- but "nothing
-        // observable went wrong" is exactly the claim a content-ownership test
-        // has to be able to make about the WHOLE record, and it could not while
-        // this field existed.
+        // NOT MEMOISED, because a memo is a write to a shared object from inside
+        // a fight. ResolvedEnemy instances are the catalogue: ContentDatabase
+        // hands the SAME EnemyDefinition.Data to every encounter, and a
+        // content-ownership test has to be able to claim the WHOLE record is
+        // never mutated after load.
         //
-        // THE OBVIOUS FIX DOES NOT WORK, which is worth writing down because it
-        // is the one that gets tried. Seeding the cache in the constructors
-        // covers the resolver's path and misses the one that matters: Unity
+        // SEEDING A CACHE IN THE CONSTRUCTORS DOES NOT WORK. It covers the
+        // resolver's path and misses the one that matters: Unity
         // deserialises an asset by running the PARAMETERLESS constructor and
         // filling the fields afterwards, so at the moment that constructor runs
         // Weaknesses and Resistances are still empty and there is nothing to
@@ -255,9 +246,8 @@ namespace PrincesPalace.Domain.Content
         // chance), while a blank name with a chance of 1 is nothing to use.
         public bool HasSkill => !string.IsNullOrWhiteSpace(SkillName);
 
-        // Ported from v1's EnemyDefinition, which derived both the same way at
-        // the same place. They live here rather than at the call site so the
-        // enemy turn does not re-decide what "has a skill" means each time.
+        // They live here rather than at the call site so the enemy turn does
+        // not re-decide what "has a skill" means each time.
         public bool HasStatus => StatusAuthored && StatusDuration > 0;
 
         // For the serializer only. Every field carries its own initialiser so

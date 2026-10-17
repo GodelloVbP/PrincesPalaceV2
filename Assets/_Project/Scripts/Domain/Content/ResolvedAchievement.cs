@@ -35,9 +35,8 @@ namespace PrincesPalace.Domain.Content
         public RawAchievementEntry[] achievements = Array.Empty<RawAchievementEntry>();
     }
 
-    // One validated achievement -- and the shape AchievementDefinition now
-    // STORES rather than restates. It carried a ToResolved() of its own, which
-    // was the half-precedent the whole collapse generalised.
+    // One validated achievement -- and the shape AchievementDefinition
+    // STORES rather than restates.
     //
     // [Serializable] class with public fields; System.Serializable is BCL, so
     // Domain stays engine-free.

@@ -4,18 +4,12 @@ namespace PrincesPalace.Domain.Content
 {
     // One combat resource pool, exactly as typed into pools.json.
     //
-    // WHY THIS TYPE EXISTS. Mana was code: a constant in Core
-    // (GameplayConstants.DefaultMaxMana, deleted in phase B once this row
-    // became its one source), a capacity chain in
-    // ContentDatabase.Effective, three colours in FightHudPalette and a
-    // "everyone has mana" assumption threaded through the fight. The owner's
-    // standing per-PC requirement -- one character trades mana for a
-    // different resource, cannot carry spell books, and pays for skills in
-    // that resource -- is not expressible against any of that without a
-    // special case per switch. So mana stops being code and becomes one row
-    // in a catalogue, and a second resource is a second row rather than a
-    // parallel system. Bjorn's Fury is the second row; it is NOT authored
-    // yet (phase E).
+    // WHY THIS TYPE EXISTS. Mana is one row in a catalogue, not code: a
+    // per-PC resource (one character trades mana for a different resource,
+    // cannot carry spell books, and pays for skills in that resource) is
+    // expressible only if a second resource is a second row rather than a
+    // special case per switch or a parallel system. Bjorn's Fury is the
+    // second row.
     //
     // Flat, [Serializable], plain public fields -- the shape every Raw*Entry
     // in this folder has, for the reason RawCharacterEntry's header states:

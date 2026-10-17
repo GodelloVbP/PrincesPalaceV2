@@ -245,18 +245,14 @@ namespace PrincesPalace.Domain.Content
 
         // HOW IT LOOKS, nested under "vfx" in the JSON.
         //
-        // Six flat fields lived here -- vfxPath, vfxSeconds, vfxImpactFrame,
-        // vfxFromCaster, vfxDepartFrame, sfxPath -- and every one of them had a
-        // twin on the resolved skill, a twin on the ScriptableObject, and a
-        // twin on the combat beat. Adding a seventh meant writing the same
-        // field four times and copying it three. Holding the SAME TYPE the rest
-        // of the chain holds is what makes a new knob one field instead of
-        // four; see SpellPresentation.
+        // One block holding the SAME TYPE the rest of the chain holds (resolved
+        // skill, ScriptableObject, combat beat), so a new knob is one field
+        // instead of one per stage; see SpellPresentation.
         //
         // JsonUtility runs field initialisers before it fills anything in, so
         // an entry with no "vfx" block gets the defaults and an entry with a
-        // partial one gets defaults for whatever it left out. That is what
-        // retired the -1 and 0 sentinels these fields used to carry.
+        // partial one gets defaults for whatever it left out, so no field
+        // needs a -1 or 0 sentinel.
         [ContentDoc("How the skill looks and sounds when it resolves; see SpellPresentation.")]
         public SpellPresentation vfx = new SpellPresentation();
 
@@ -541,7 +537,7 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Required together with placeholder: why this skill exists undesigned.")]
         public string placeholderNote = "";
 
-        // ---- milestone B: consumption and health payment (plan §4) -------
+        // ---- Consumption and health payment (plan §4) --------------------
 
         // Percent of the CASTER'S OWN max health paid, ceiling-rounded,
         // alongside manaCost -- Blackglass Spear's blood price (plan 1.2). 0,
@@ -588,7 +584,7 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("The ordered DamageType names a Reclaim effect's consumed total is split across, odd point to the first; required together with detonationPercent.")]
         public string[] detonationSplit = Array.Empty<string>();
 
-        // ---- milestone C: initiative and formation (plan section 4) ------
+        // ---- Initiative and formation (plan section 4) -------------------
 
         // How many places EARLIER in the turn queue this skill moves its
         // target -- Borrowed Moment's 2 (plan 1.9, 2.7). The exact mirror of

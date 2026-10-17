@@ -8,10 +8,8 @@ namespace PrincesPalace.Domain.Content
     // TWO FIELDS AND BOTH REQUIRED, the same stance RawSpellTierEntry takes
     // and for the same reason: a progression table is exactly the kind of
     // content where every step deserves a deliberate, hand-picked number
-    // rather than a formula guessing on the author's behalf. That is the
-    // whole point of this file existing -- the formula it replaced
-    // (geometric, c=100 g=1.09) could not price the early levels and the
-    // late ones at the same time.
+    // rather than a formula guessing on the author's behalf: no single curve
+    // prices the early levels and the late ones at the same time.
     [Serializable]
     public class RawLevelCurveEntry
     {
