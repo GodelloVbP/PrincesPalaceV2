@@ -60,8 +60,9 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsFalse(authored.Allows(0), "position 2 is not the front rank");
             Assert.IsTrue(authored.Allows(1));
             Assert.IsTrue(authored.Allows(2));
-            Assert.AreEqual(Reach.Ranks(1, 2), authored,
-                "the 1-based door and the 0-based door must land on the same value");
+            Assert.AreEqual(ReachKind.ExplicitRanks, authored.Kind);
+            Assert.AreEqual(0b110, authored.RankMask,
+                "positions 2 and 3 are living ranks 1 and 2, bits 1 and 2");
         }
 
         [Test]
