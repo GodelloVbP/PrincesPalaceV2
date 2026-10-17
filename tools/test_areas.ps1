@@ -416,8 +416,8 @@ function Get-AreaClassNames {
 # ---------------------------------------------------------------------------
 # THE STRUCTURAL GATE. What run_tests_parallel.ps1 refuses to run over.
 #
-# Three things, all of them things a FOLDER can be wrong about, since a class
-# name no longer can be:
+# Each of these is a thing a FOLDER can be wrong about, since a class name no
+# longer can be:
 #
 #   1. A .cs file sitting directly in Tests/EditMode or Tests/PlayMode. It
 #      would be in no area, so no area-based tools/test.ps1 slice and no
@@ -752,12 +752,12 @@ $ChangedFullSuite = '^(tools/|Packages/|ProjectSettings/|Assets/_Project/Scenes/
 # the only evidence of that. This is why CharacterDossierScreen maps to ui
 # and GlossaryScreen to hub+ui, though they are two screens of a kind.
 $PathAreas = @(
-    # TalentEffect sits in Domain/Combat because that is where an effect is
-    # APPLIED, but TalentEffectTests is in Tests/EditMode/Hub with the rest of
-    # the talent tree -- exactly the split the placement guide argues for
-    # above. Both areas, then, or an edit here runs neither the fixture named
-    # after it nor the tree that authors it.
-    @{ Pattern = '^Assets/_Project/Scripts/Domain/Combat/TalentEffect'; Areas = @('combat', 'hub') }
+    # Talent effects are APPLIED in FightSession.Talents, in Domain/Combat, but
+    # TalentEffectTests is in Tests/EditMode/Hub with the rest of the talent
+    # tree -- exactly the split the placement guide argues for above. Both
+    # areas, then, or an edit here runs neither the fixture that pins the
+    # effect nor the tree that authors it.
+    @{ Pattern = '^Assets/_Project/Scripts/Domain/Combat/Session/FightSession\.Talents'; Areas = @('combat', 'hub') }
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Combat/';    Areas = @('combat') }
     # The balance bot's brains -- policies decide over FightSession the same
     # way the fight screen's menu does, so it belongs beside Domain/Combat/.
@@ -907,13 +907,11 @@ $PathAreas = @(
     @{ Pattern = '^Assets/_Project/Scripts/Core/(GameSettings|HoverIndex|NavigationInputModule|ReckoningController|RewardTracks|RunOrchestrator\.Spells)\.cs$'; Areas = @('ui', 'combat', 'run') }
     @{ Pattern = '^Assets/_Project/Scripts/Core/(SpellParticleRenderer|SpellPerformancePlayer|SpellVfxPlayer)\.cs$'; Areas = @('ui', 'art', 'combat') }
     @{ Pattern = '^Assets/_Project/Scripts/Core/BeaconPulse\.cs$'; Areas = @('ui', 'combat', 'hub') }
-    @{ Pattern = '^Assets/_Project/Scripts/Core/EmberFlare\.cs$'; Areas = @('ui', 'hub', 'run') }
     @{ Pattern = '^Assets/_Project/Scripts/Core/(CharacterVoice|DamagePopup|FocusMarker|FrameSequenceLoader|ListScroll|OptionsController|ThemedButtonState)\.cs$'; Areas = @('ui', 'combat') }
     @{ Pattern = '^Assets/_Project/Scripts/Core/(DebugMenuController|GlossaryController|KenBurnsDrift|LanternFlicker|MoteDrift|RelicDraftController|SlowDrift|StarTwinkle)\.cs$'; Areas = @('ui', 'hub') }
     @{ Pattern = '^Assets/_Project/Scripts/Core/(CharacterIdentity|ExitsController|HoldToConfirm|ItemDescription|OptionRow|PartyController|RewardTrackController(\.\w+)?|RoomResolver|RunEncounter|RunEventContext|RunLedger|SquadTrack)\.cs$'; Areas = @('ui', 'run') }
     @{ Pattern = '^Assets/_Project/Scripts/Core/'; Areas = @('ui') }
     @{ Pattern = '^Assets/_Project/Scripts/Data/'; Areas = @('run') }
-    @{ Pattern = '^Assets/_Project/Scripts/UI/';   Areas = @('ui') }
     # Bakes the shapes a flat uGUI Image cannot draw (the glow, the disc, the
     # armour stand) into committed PNGs. 'art' because it produces art, 'ui'
     # because every consumer is a screen tree.
@@ -965,9 +963,19 @@ $PathAreas = @(
     # Resources path from the event stage. 'content' for DialogueBustTests and
     # the content build's missing-expression warning, 'ui' for the stage.
     @{ Pattern = '^Assets/_Project/Resources/Portraits/Dialogue/'; Areas = @('content', 'ui') }
+    # The character portraits a character's content row names by path
+    # (CharacterPortraits; ContentDatabase validation resolves the path).
+    @{ Pattern = '^Assets/_Project/Resources/Portraits/'; Areas = @('content', 'ui') }
     # The enemy intent badges. 'combat' for the lookup tables that name them and
     # 'ui' for the screen side.
     @{ Pattern = '^Assets/_Project/Resources/Intent/';   Areas = @('combat', 'ui') }
+    # The fight HUD's ability-detail icons and the party plates it draws; the
+    # TMP sprite asset that inlines icons in descriptions. Same pairing as
+    # Intent/ above.
+    @{ Pattern = '^Assets/_Project/Resources/(Icons/Ability|Plates)/'; Areas = @('combat', 'ui') }
+    @{ Pattern = '^Assets/_Project/Resources/Icons/DescriptionIcons/'; Areas = @('ui') }
+    # The planted-shield stage's sprites, drawn only by the fight stage.
+    @{ Pattern = '^Assets/_Project/Resources/Props/'; Areas = @('art', 'combat') }
     # The party status badges (Chilled/Rooted so far). Same reasoning as
     # Intent/ immediately above, one folder over.
     @{ Pattern = '^Assets/_Project/Resources/Status/';   Areas = @('combat', 'ui') }
@@ -1019,8 +1027,10 @@ $PathAreas = @(
 function Get-ChangedFiles {
     param([string]$RepoRoot = $AreasProjectRoot)
 
-    $tracked = & git -C $RepoRoot diff --name-only HEAD
-    $untracked = & git -C $RepoRoot ls-files --others --exclude-standard
+    # quotepath=off: git otherwise wraps a name with a non-ASCII byte in quotes,
+    # and the leading quote makes $ChangedIgnore swallow it silently.
+    $tracked = & git -C $RepoRoot -c core.quotepath=off diff --name-only HEAD
+    $untracked = & git -C $RepoRoot -c core.quotepath=off ls-files --others --exclude-standard
     $all = @($tracked) + @($untracked) | Where-Object { $_ } | Sort-Object -Unique
     return $all | ForEach-Object { $_ -replace '\\', '/' }
 }

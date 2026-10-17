@@ -34,15 +34,14 @@ param(
 # So EditMode does not go through Unity any more. Domain is engine-free by
 # asmdef (noEngineReferences: true, zero references), which means the suite
 # over it compiles and runs under plain `dotnet test` against the SAME source
-# files -- see tools/domain-tests/README.md. 154 of the 159 EditMode classes
-# run there, 2349 of the 2384 tests, in ~4s warm against ~20s through Unity.
-# The five that stay in Unity need JsonUtility, Application.dataPath or
-# Resources.Load; tools/test.ps1 -List marks every class D (dotnet) or U
-# (Unity), and the split is read off the csproj, not maintained here.
+# files -- see tools/domain-tests/README.md. Nearly every EditMode class runs
+# there, in ~4s warm against ~20s through Unity. The few that stay in Unity
+# need JsonUtility, Application.dataPath or Resources.Load;
+# tools/test.ps1 -List marks every class D (dotnet) or U (Unity), and the split is read off the csproj, not maintained here.
 #
 # PlayMode is untouched and always Unity: it needs a scene and a player loop.
-# Its cost is spread across ~87 classes with no dominant hotspot, so carving
-# it into fixed "fast" and "slow" suites would not help either (this was
+# Its cost is spread across hundreds of classes with no dominant hotspot, so
+# carving it into fixed "fast" and "slow" suites would not help either (this was
 # investigated for real -- see the -Split section of the 2026-08-05 test-area
 # plan; deferred, not abandoned).
 #
@@ -52,8 +51,8 @@ param(
 # Be honest about where the saving lands, though, because it is not uniform.
 # A slice made only of D classes is ~4s. A slice with ANY PlayMode class is
 # still PlayMode-bound, and every named area except `rng` has some: `combat`
-# is ~110s either way, since 47 of its 122 classes are PlayMode and that is
-# 93s of the run. Areas are cut by SUBJECT, not by host, so a Domain change
+# is ~110s either way, since a large share of its classes are PlayMode and
+# they dominate the run. Areas are cut by SUBJECT, not by host, so a Domain change
 # in a subject that also has fight-screen tests correctly still runs them.
 # The saving is real on a class-name slice, which is what most of the loop
 # actually is, and it is nothing on `combat`. Do not read the 4s as the

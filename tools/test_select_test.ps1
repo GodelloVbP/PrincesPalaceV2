@@ -57,5 +57,32 @@ Assert-That "a Domain/Dungeon file promotes no Combat engine object" (-not ($dee
 $sel = Get-SelectedClasses -Path "$scripts/Domain/Dungeon/DifficultyCurve.cs"
 Assert-That "a Domain/Dungeon change selects fewer than 100 classes (got $($sel.Count))" ($sel.Count -lt 100)
 
+Write-Host "changed lines ignore comments"
+$oldSrc = "int a = 1;`n// was Time.timeScale = 0;`nint b = 2;`n"
+$newSrc = "int a = 1;`n// now Time.timeScale = 1;`nint b = 3;`n"
+$hits = @(Get-ChangedLines -Old $oldSrc -New $newSrc | Where-Object { $_ -match $GlobalStatePattern })
+Assert-That "a comment line naming Time.timeScale is not a global-state write" ($hits.Count -eq 0)
+$realSrc = "int a = 1;`nTime.timeScale = 0;`n"
+$hits = @(Get-ChangedLines -Old "int a = 1;`n" -New $realSrc | Where-Object { $_ -match $GlobalStatePattern })
+Assert-That "a real Time.timeScale write still is" ($hits.Count -eq 1)
+
+Write-Host "repo readers"
+$readers = @(Get-RepoReaderClasses -ClassesByFile $byFile)
+Assert-That "RewardArtTests (File.Exists and an upward Directory walk) is a repo reader" ($readers -contains "RewardArtTests")
+
+Write-Host "changed files with a non-ASCII path"
+$tmpRepo = Join-Path ([IO.Path]::GetTempPath()) ("pp_changed_" + [guid]::NewGuid().ToString("N"))
+New-Item -ItemType Directory -Force -Path (Join-Path $tmpRepo "Assets") | Out-Null
+try {
+    $accent = [string][char]0xE9
+    & git -C $tmpRepo init -q 2>$null
+    & git -C $tmpRepo -c user.name=t -c user.email=t@t commit -q --allow-empty -m base 2>$null
+    [IO.File]::WriteAllText((Join-Path $tmpRepo ("Assets\caf" + $accent + ".cs")), "x")
+    $names = @(Get-ChangedFiles -RepoRoot $tmpRepo)
+    Assert-That "an untracked Assets file with an accent comes back unquoted" ($names.Count -eq 1 -and $names[0].StartsWith("Assets/caf"))
+} finally {
+    Remove-Item -LiteralPath $tmpRepo -Recurse -Force -ErrorAction SilentlyContinue
+}
+
 if ($failures.Count -gt 0) { Write-Host "`n$($failures.Count) FAILED"; exit 1 }
 Write-Host "`nall ok"

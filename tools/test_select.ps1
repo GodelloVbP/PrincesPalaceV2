@@ -9,18 +9,17 @@
 # Test files are nodes of the same graph: a *TestBase in an area folder passes
 # a reference on to the fixtures deriving from it for free. A Tests/**/Shared
 # helper does not -- it costs a hop like production code, because Shared is
-# cross-cutting by definition: TestGlobals names 17 production types and 65
-# fixture files name it, so a free hop through it selected every fixture that
-# resets the engine clock.
+# cross-cutting by definition: TestGlobals names many production types and a
+# large share of the fixtures name it, so a free hop through it selected every
+# fixture that resets the engine clock.
 #
-# ONE HOP ($SelectDepth = 1), NOT THE TRANSITIVE CLOSURE. Measured 2026-09-24
-# over 528 production files: the unbounded closure of 505 of them reaches 70%
-# or more of production and selects ~206 of the 227 PlayMode fixtures for
-# nearly any file -- the full suite, slower to compute. Two hops: StageShake
-# 1 -> 78 classes (it reaches FightController, which 73 PlayMode fixtures
-# name), CombatMath 22 -> 225. One hop is the only depth that focuses at all;
-# what it gives up (a test that reaches the change only through another
-# production type or a Shared helper) is what the safety net is for.
+# ONE HOP ($SelectDepth = 1), NOT THE TRANSITIVE CLOSURE. The unbounded closure
+# of nearly any production file reaches most of production and selects almost
+# every PlayMode fixture -- the full suite, slower to compute. Two hops still
+# select far too much: StageShake reaches FightController, which most PlayMode
+# fixtures name. One hop is the only depth that focuses at all; what it
+# gives up (a test that reaches the change only through another production type
+# or a Shared helper) is what the safety net is for.
 #
 # ENGINE OBJECTS ARE ONE NODE. A partial type over $FacadeMinFiles production
 # files (FightSession) is what tests name; the helpers it calls (DamagePipeline,
@@ -65,9 +64,10 @@ $LastFullGreenFile = Join-Path $PSScriptRoot ".last-full-green"
 $GlobalStatePattern = '\b(Time\.(timeScale|captureDeltaTime|captureFramerate|fixedDeltaTime|maximumDeltaTime)|Application\.targetFrameRate|QualitySettings\.vSyncCount|EventSystem\.current)\s*[-+*/]?=(?!=)|\bPlayerPrefs\.(Set|Delete)'
 # Where scenes come from: a screen tree, or the registry/builder that emits it.
 $ScenePathPattern = '^Assets/_Project/Scripts/(Domain/UiKit/Screens/|Editor/SceneBuilder/)'
-# An EditMode test that reads the repo off disk. RepoTree and ContentDataFiles
-# are the Shared helpers that do it for a fixture.
-$RepoReadPattern = '\b(RepoTree|ContentDataFiles|Application\.dataPath|File\.ReadAll\w+|Directory\.(GetFiles|EnumerateFiles|GetDirectories))\b'
+# An EditMode test that reads the repo off disk, including by probing for a
+# file or walking up to the repo root. RepoTree and ContentDataFiles are the
+# Shared helpers that do it for a fixture.
+$RepoReadPattern = '\b(RepoTree|ContentDataFiles|Application\.dataPath|DirectoryInfo|File\.(ReadAll\w+|Exists)|Directory\.(GetFiles|EnumerateFiles|GetDirectories|Exists|GetCurrentDirectory))\b'
 
 if (-not ("PP.TestSelect.RefGraph" -as [type])) {
     # C# 5: Windows PowerShell 5.1's Add-Type compiler. Single-quoted
@@ -408,7 +408,8 @@ function Invoke-GitText {
     param([string[]]$GitArgs)
     $psi = New-Object Diagnostics.ProcessStartInfo
     $psi.FileName = "git"
-    $quoted = @("-C", $AreasProjectRoot) + $GitArgs | ForEach-Object { '"' + ($_ -replace '"', '\"') + '"' }
+    # quotepath=off keeps non-ASCII names unquoted in --name-only output.
+    $quoted = @("-C", $AreasProjectRoot, "-c", "core.quotepath=off") + $GitArgs | ForEach-Object { '"' + ($_ -replace '"', '\"') + '"' }
     $psi.Arguments = $quoted -join ' '
     $psi.UseShellExecute = $false
     $psi.CreateNoWindow = $true
@@ -434,12 +435,17 @@ function Get-RevText {
     return Invoke-GitText @("show", "${Rev}:$Path")
 }
 
-# Lines present on one side and not the other, trimmed. A set difference, not
-# a diff: enough to ask "did a changed line write Time.timeScale".
+# Code lines (comments stripped) present on one side and not the other,
+# trimmed. A set difference, not a diff: enough to ask "did a changed line
+# write Time.timeScale".
 function Get-ChangedLines {
     param([string]$Old, [string]$New)
     $a = New-Object 'System.Collections.Generic.HashSet[string]'
     $b = New-Object 'System.Collections.Generic.HashSet[string]'
+    # Comments are not edits: a comment that mentions a global write must not
+    # read as one.
+    if ($Old) { $Old = [PP.TestSelect.RefGraph]::StripComments($Old) }
+    if ($New) { $New = [PP.TestSelect.RefGraph]::StripComments($New) }
     if ($Old) { foreach ($l in ($Old -split "`r?`n")) { $t = $l.Trim(); if ($t) { [void]$a.Add($t) } } }
     if ($New) { foreach ($l in ($New -split "`r?`n")) { $t = $l.Trim(); if ($t) { [void]$b.Add($t) } } }
     $out = @()
