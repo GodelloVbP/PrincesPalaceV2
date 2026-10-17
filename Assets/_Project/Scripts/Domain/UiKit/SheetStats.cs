@@ -8,7 +8,7 @@ namespace PrincesPalace.Domain.UiKit
     // Every number the character sheet shows, in the order it shows them.
     //
     // One home for the row list, its labels and how each value is read, so the
-    // tree that lays out thirteen rows and the controller that fills them
+    // tree that lays out fourteen rows and the controller that fills them
     // cannot disagree about which row is which. Same idiom as
     // EquipmentSlots.All: declaration order IS display order, and there is no
     // lookup table to drift.
