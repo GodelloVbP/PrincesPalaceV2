@@ -54,7 +54,7 @@ KEEP = ("owner", "status", "evidence", "revision", "invalidated-by")
 SCRIPT_ROOT = "Assets/_Project/Scripts"
 
 # One entry per scoped root: (kind, predicate over a git-tracked path).
-# Order matters -- the first match wins, so githooks beat the general tools glob.
+# Order matters -- the first match wins.
 SCOPE = []
 
 
@@ -254,12 +254,10 @@ def split_document(text):
 def parse_existing(text):
     """Read the judgement cells out of the generated block of an existing file."""
     kept = {}
-    removed_order = []
     if not text:
-        return kept, removed_order
-    head, tail = split_document(text)
-    if head is None:
-        return kept, removed_order
+        return kept
+    if split_document(text)[0] is None:
+        return kept
     body = text.split(BEGIN, 1)[1].split(END, 1)[0]
     removed_columns = ["id"] + list(KEEP)
     for line in body.splitlines():
@@ -275,25 +273,37 @@ def parse_existing(text):
             # keeps its clearance instead of being forgotten on the next run.
             columns = removed_columns
         else:
-            continue
+            # Skipping the row would rewrite it blank on the next run and lose
+            # its recorded clearance, so a hand-written "|" is refused here.
+            raise SystemExit(
+                "MANIFEST row has %d cells, expected %d or %d (a '|' inside a cell?): %s"
+                % (len(cells), len(COLUMNS), len(removed_columns), line[:100]))
         if cells[0] in ("id", "---") or set(cells[0]) == {"-"}:
             continue
         row = dict(zip(columns, cells))
         path = row["id"].strip("`")
         kept[path] = {k: row.get(k, "") for k in KEEP}
-        removed_order.append(path)
-    return kept, removed_order
+    return kept
 
 
-def last_commit_for(repo, path):
-    out = run_git(repo, ["log", "-1", "--format=%H", "--", path]).strip()
-    return out
+def latest_commits(repo):
+    """path -> newest commit that touched it, from one pass over the history
+    (newest first, so the first sighting of a path is its latest commit)."""
+    latest = {}
+    commit = ""
+    for line in run_git(repo, ["log", "--format=@@%H", "--name-only"]).splitlines():
+        if line.startswith("@@"):
+            commit = line[2:]
+        elif line:
+            latest.setdefault(line, commit)
+    return latest
 
 
 def merge(repo, rows, kept):
     seen = set()
     reopened = []
     added = []
+    latest = None
     for row in rows:
         path = row["id"]
         seen.add(path)
@@ -307,7 +317,9 @@ def merge(repo, rows, kept):
             row["status"] = "open"
         recorded = row["revision"].strip("` ")
         if recorded:
-            current = last_commit_for(repo, path)
+            if latest is None:
+                latest = latest_commits(repo)
+            current = latest.get(path, "")
             if current and not current.startswith(recorded) and not recorded.startswith(current):
                 row["status"] = "re-open"
                 reopened.append(path)
@@ -427,7 +439,7 @@ def main(argv=None):
         with open(out_path, "r", encoding="utf-8", newline="") as handle:
             existing = handle.read()
 
-    kept, _order = parse_existing(existing)
+    kept = parse_existing(existing)
     rows = scan(repo)
     added, reopened, removed = merge(repo, rows, kept)
 
