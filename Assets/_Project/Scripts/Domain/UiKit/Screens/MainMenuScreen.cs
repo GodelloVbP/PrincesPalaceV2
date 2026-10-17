@@ -9,7 +9,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
     // input rather than being restated here. That matters: this screen builds
     // two separate things off that number -- slot cards and their delete
     // buttons -- and a second copy of it is precisely the shape of every
-    // count-vs-footprint bug v1 shipped. It also lets an EditMode test audit
+    // count-vs-footprint bug. It also lets an EditMode test audit
     // the screen at a roster the game does not currently have.
     public readonly struct MainMenuInputs
     {
@@ -271,8 +271,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.ContinueCaption = continueCaption;
             screen.ContinueSubline = continueSubline;
 
-            // 260x60 was 4.333:1 against the FiveByOne plate's true 5:1 --
-            // ThemedButtonAspectLintTests. Height down to nominal, width kept.
+            // Plate aspect is 5:1 (ThemedButtonAspectLintTests): width kept,
+            // height follows the plate's nominal.
             var itemSize = Ui.PlateNominalSizeFor(260f, 60f);
             var newRun = Ui.Button("NewRunButton", UiStrings.NewRun, itemSize, 24)
                 .Themed(ButtonTheme.Gold);
@@ -451,8 +451,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 slotChildren.Add(Ui.Row($"Slot{i}Row", Place.Flow, RowSpacing, UiAlign.Centre, button, delete));
             }
 
-            // 200x50 was 4:1 against the FiveByOne plate's true 5:1 --
-            // ThemedButtonAspectLintTests. Height down to nominal, width kept.
+            // Plate aspect is 5:1 (ThemedButtonAspectLintTests): width kept,
+            // height follows the plate's nominal.
             var footerButtonSize = Ui.PlateNominalSizeFor(200f, 50f);
             var cancel = Ui.Button("CloseSaveSlotButton", UiStrings.Cancel, footerButtonSize, 18)
                 .Closes()
@@ -507,10 +507,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // top and its dimmer swallows clicks meant for the Delete buttons
             // underneath.
             //
-            // Note what does NOT need saying here: the label's colour. v1 shipped
-            // this exact label invisible, because CreateText defaulted to black
-            // and the panel behind it is near-black (AUDIT P0 #4). Ui.Label
-            // defaults to white, so the bug has no way to recur.
+            // The label's colour needs no override: Ui.Label defaults to white,
+            // which reads on the near-black panel (AUDIT P0 #4).
             // THE HOLD wears the Crimson HQ plate instead of a flat track
             // rect -- the plate itself reads as the track, so only the
             // progress fill
@@ -551,10 +549,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // RUNTIME on the button itself: ThemedPlate() is CaptionPreserving
             // -- unlike Themed(), it builds no <name>Label from the text
             // passed to Ui.Button (Ui.ApplyThemePlateOnly only ever adds
-            // Visuals), so a real UiString there was being silently
-            // discarded. This regressed the caption entirely: the button
-            // held no visible word at all after the Crimson-plate conversion.
-            // Declared as its own child instead, named ResetConfirmYesCaption
+            // Visuals), so a real UiString there would be silently
+            // discarded and the button would show no word at all.
+            // The caption is its own child instead, named ResetConfirmYesCaption
             // so Ui.CaptionOf finds it (the <name>Caption convention
             // OutlineButton's retirement comment states), styled ButtonLabel
             // like every other themed caption, and added AFTER holdFillClip
@@ -573,9 +570,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             var confirmYes = holdButton;
 
-            // Matches ResetConfirmYesButton's own resized height (both were
-            // 200x60, 11.1% off Legacy's true 3:1) so the hold and its
-            // cancel sibling stay the same height in their Row.
+            // Same size as the hold button so the two stay the same height
+            // in their Row.
             var confirmNo = Ui.Button("ResetConfirmNoButton", UiStrings.Cancel,
                     new UiVec(ResetHoldWidth, ResetHoldHeight), 20)
                 .Closes()
