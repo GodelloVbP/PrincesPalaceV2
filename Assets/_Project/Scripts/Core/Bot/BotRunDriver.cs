@@ -668,18 +668,9 @@ namespace PrincesPalace
             // fires, and it is recorded as one.
             int roomBudget = Math.Max(64, depthCapSteps * 8);
             int rooms = 0;
-            int reservedLeg = -1;
 
             while (RunManager.HasRun)
             {
-                // A new leg opens its realm: decide its event rooms up front,
-                // as the map does (AUDIT #275).
-                if (RunManager.Run.legStartStep != reservedLeg)
-                {
-                    reservedLeg = RunManager.Run.legStartStep;
-                    RunOrchestrator.ReserveLegEvents();
-                }
-
                 if (RunManager.Run.step >= depthCapSteps)
                 {
                     result.Trace.Capped = true;

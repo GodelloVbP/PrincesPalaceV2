@@ -244,36 +244,6 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(1, checkedSeeds, "no seed under 4000 rolls the same event for two rooms");
         }
 
-        // A bot run decides every event room at leg start, in map order, through
-        // the seam the card preview uses (AUDIT #275): same seed, same events a
-        // player's previewed map reserves, and no two rooms share one.
-        [Test]
-        public void TheBotReservesEveryEventRoomAtLegStartLikeThePreview()
-        {
-            int checkedSeeds = 0;
-            for (ulong seed = 1; seed <= 4000 && checkedSeeds < 3; seed++)
-            {
-                if (RealmPaths.FirstRealm(seed).Nodes.Count(n => n.Type == RoomType.Event) < 2) continue;
-                RunManager.StartRun(seed);
-                var run = RunManager.Run;
-                var rooms = RunManager.Map.Nodes.Where(n => n.Type == RoomType.Event).ToArray();
-
-                foreach (var node in RunManager.Map.Nodes) MapNodePreview.For(run, node);
-                var previewed = run.nodeEvents.Select(e => $"{e.nodeId}:{e.eventId}").ToList();
-                Assert.AreEqual(rooms.Length, previewed.Count, $"seed {seed}: fixture, one pick per event room");
-
-                run.nodeEvents.Clear();
-                run.eventsSeen.Clear();
-                RunOrchestrator.ReserveLegEvents();
-
-                CollectionAssert.AreEqual(previewed, run.nodeEvents.Select(e => $"{e.nodeId}:{e.eventId}").ToList(), $"seed {seed}");
-                Assert.AreEqual(rooms.Length, run.nodeEvents.Select(e => e.eventId).Distinct().Count(), $"seed {seed}: two rooms share an event");
-                checkedSeeds++;
-            }
-
-            Assert.AreEqual(3, checkedSeeds, "no seeds under 4000 with two event rooms");
-        }
-
         // ---- the cue -------------------------------------------------------------
 
         [UnityTest]
