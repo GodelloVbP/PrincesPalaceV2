@@ -84,7 +84,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef PanelKicker;
         public NodeRef PanelPrice;
         public NodeRef PanelRefusal;
-        public NodeRef PanelMeter;
 
         public NodeRef RespecDialog;
         public NodeRef RespecDialogBody;
@@ -384,7 +383,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .AsDecor()
                 .Styled(TypographyRole.TacticalData);
             EmberCount = meter;
-            PanelMeter = meter;
             parts.Add(meter);
 
             var respec = Ui.Button("TalentRespecButton", UiStrings.TalentRespec,
