@@ -84,13 +84,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // partyRosterCardCount defaults to 3, matching how many characters
         // characters.json authors today -- a COMPATIBILITY default, not a
-        // design choice (docs/CODE_STANDARDS.md "Functions"): ScreenRegistry, which builds
-        // this with no argument, is out of scope for the package that added
-        // the parameter, so the
-        // default keeps every existing caller compiling. Wiring the REAL
-        // count (ContentDatabase.LoadOrdered<CharacterDefinition>().Count) is
-        // that later package's job, the same way MainMenuScreen.Build reads
-        // SaveSystem.SlotCount from ScreenRegistry rather than Domain.
+        // design choice (docs/CODE_STANDARDS.md "Functions"): it is for trees
+        // built without a registry, such as the lint tests. ScreenRegistry
+        // passes the real count (ContentDatabase.LoadOrdered<CharacterDefinition>().Count),
+        // as it does MainMenuScreen's SaveSystem.SlotCount, because Domain
+        // cannot read either.
         //
         // labelWidths are the tab labels as measured by the caller. Null takes
         // SystemMenuLabelWidths.Estimated, which is right for a look at the
