@@ -233,9 +233,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // is a heading about the descent's state and not a label on
             // anything in the scene.
             //
-            // Sized for the longest line any room can produce -- the unbuilt
-            // shop's apology -- so a placeholder message cannot overflow a box
-            // fitted to the short ones.
+            // Sized for the longest line any room can produce, so a long
+            // message cannot overflow a box fitted to the short ones.
             var roomMessage = Ui.Label("MapRoomMessageLabel", UiStrings.MapRoomShop,
                 new UiVec(760f, 32f), 18, "#C8BBE4", OnContent(190f, -176f))
                 .Styled(TypographyRole.Body);
