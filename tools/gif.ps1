@@ -87,7 +87,9 @@ $RunsRoot = Join-Path $PSScriptRoot "screenshots\gif\runs"
 
 $StartupDeadlineFirstImport = 90 * 60
 $StartupDeadlineWithLibrary = 10 * 60
-$ScenarioDeadline = 60
+# Frame capture runs the game well below real time: a five-card Reckoning
+# reveal with a cache writes 300+ frames and outlasts a minute of wall time.
+$ScenarioDeadline = 180
 $StillClassDeadline = 180
 
 function Get-PythonExe {
