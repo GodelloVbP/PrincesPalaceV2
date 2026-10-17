@@ -85,7 +85,7 @@ code change. A spell with a wind-up worth hearing names a second path,
 | File | Length | Note |
 |---|---|---|
 | `cinderfault_startup.wav` | 0.22s | Cinderfault's `castSfxPath`. The owner's 2.49s recording, cut to the 0.2167s before the rupture (`hitCueSeconds`) as the tail of its build: the swell climbs from -30 dB to within 3 dB of its plateau by 0.49s, so the window is 0.273-0.490s, 50ms fade-in. Its loudest 20ms is at 1.02s, but past 0.49s it is a steady roar with no build left. The earlier cut kept the quiet first 0.39s. |
-| `cinderfault_pressure.wav` | 0.39s | **PLACEHOLDER, no longer referenced.** The synthesised pressure cue `cinderfault_startup` replaced; still emitted by `tools/make_cinderfault_audio.py`. |
+| `cinderfault_pressure.wav` | 0.39s | **PLACEHOLDER, no longer referenced.** The synthesised pressure cue `cinderfault_startup` replaced; no tool emits it any more. |
 | `cinderfault_eruption_impact.wav` | 1.00s | Cinderfault's `sfxPath`. Calvo Earth `impact_ground_rock_debris_02`, a ground impact with debris (rms -16 dB source), cut at the transient with a 150ms fade. Replaced the synthesised `cinderfault_impact`. |
 | `winters_rebuke_impact.wav` | 0.90s | Calvo Ice `fast_impact_07`, the earliest transient of the eight fast impacts. |
 | `vipers_bite_impact.wav` | 0.58s | Calvo Acid `squish_whoosh_impact_04`, the shortest acid impact: a quick wet snap for a bite. |
@@ -152,10 +152,6 @@ cue fires as the beat opens and the blow lands `hitCueSeconds` later), with a
 `hitCueSeconds` change means editing its length there. Battle speed above 1x
 shortens the wait but not the clip, so the cast then outlasts the blow by the
 difference.
-
-`tools/make_cinderfault_audio.py` is unused: its pressure cue was replaced by
-`cinderfault_startup` and its impact cue by `cinderfault_eruption_impact`, and
-re-running it would re-emit `cinderfault_impact.wav` unreferenced.
 
 The Calvo clips were cut from the 48 kHz wav (Acid, Fire, Lightning, Water,
 Wind) or the 96 kHz wav (Dark, Earth, Ice, which ship no 48 kHz folder),
