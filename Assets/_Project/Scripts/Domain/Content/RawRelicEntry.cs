@@ -46,7 +46,7 @@ namespace PrincesPalace.Domain.Content
 
         // Mechanic (g), ACQUISITION GATE: true means this relic is only
         // ever offered to a party that has a convergence/ultimate ability
-        // (ConvergenceGate.HasConvergenceAbility) -- false (the default)
+        // (ConvergenceGate.IsConvergenceEffect) -- false (the default)
         // means every relic that does not say otherwise, which is nearly
         // all of them.
         [ContentDoc("Whether this relic is only ever offered to a party that already has a convergence/ultimate ability.")]

@@ -1,7 +1,3 @@
-using System.Collections.Generic;
-using System.Linq;
-using PrincesPalace.Domain.Content;
-
 namespace PrincesPalace.Domain.Combat.Session
 {
     // ACQUISITION GATE: whether a relic that wants "a party member has a
@@ -16,33 +12,16 @@ namespace PrincesPalace.Domain.Combat.Session
     // vocabulary -- Transform already IS that flag, for the one ability
     // shape a transform-granting skill can be.
     //
-    // A PURE PREDICATE OVER SKILLS, not over a save or a squad -- Domain
-    // cannot see either. The caller (RelicPool.Available's own caller in
-    // Core) hands down the party's resolved skill lists.
+    // A PURE PREDICATE OVER AN EFFECT, not over a save or a squad -- Domain
+    // cannot see either. RunOrchestrator and TraitRequirement ask it per
+    // skill and hand RelicPool.Available the party-level answer.
     public static class ConvergenceGate
     {
-        public static bool HasConvergenceAbility(IEnumerable<ResolvedSkill> skills)
-        {
-            return skills != null && skills.Any(s => IsConvergenceEffect(s.Effect));
-        }
-
         // The single definition of "counts as convergence", exposed so a
         // caller holding raw SkillEffect values (Core's SkillDefinition,
         // rather than Domain's ResolvedSkill -- the active squad in the hub
         // has not been resolved into a fight kit yet) can ask the same
         // question without wrapping its skills first.
         public static bool IsConvergenceEffect(SkillEffect effect) => effect == SkillEffect.Transform;
-
-        // The kit-level convenience -- what a fight actually has in hand.
-        public static bool HasConvergenceAbility(IEnumerable<PlayerKit> party)
-        {
-            if (party == null) return false;
-            foreach (var kit in party)
-            {
-                if (kit?.Skills != null && HasConvergenceAbility(kit.Skills)) return true;
-            }
-
-            return false;
-        }
     }
 }
