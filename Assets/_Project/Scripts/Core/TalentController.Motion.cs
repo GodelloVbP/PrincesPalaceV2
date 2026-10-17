@@ -8,15 +8,16 @@ namespace PrincesPalace
 {
     // THE SCREEN'S TIME, and nothing else.
     //
-    // Split from TalentController for one reason: everything here is a pure
-    // function of Time.unscaledTime and needs no state, while everything there
-    // is a function of the save and repaints only when the save changes. Mixing
+    // Split from TalentController for one reason: the loops here are pure
+    // functions of Time.unscaledTime, while everything there is a function of
+    // the save and repaints only when the save changes. Mixing
     // them is how a repaint ends up restarting a loop -- the exact bug the
     // reveal component had, where moving the selection replayed twenty-one
     // flourishes because the paint pass touched the animation.
     //
-    // The one piece of state on this side is the kindling beat, because a beat
-    // has a beginning. Loops do not.
+    // The state on this side belongs to beats (kindling, the push-in, the
+    // slide) and to the cached cloud alphas, because a beat has a beginning.
+    // Loops do not.
     //
     // UNSCALED, all of it. This screen is reachable from the hub with the game
     // paused behind it, and a sky that stops breathing when the timescale drops

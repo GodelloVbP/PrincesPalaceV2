@@ -339,10 +339,10 @@ namespace PrincesPalace
 
         // ---- navigation stack ----------------------------------------------
 
-        // Idempotent: Open() can in principle run again against an
-        // already-open menu (nothing currently guards it), and pushing a
-        // second context for the same controller would leave a stale entry
-        // under the stack no Close() will ever reach.
+        // Idempotent: Open() on an already-open menu is a tab
+        // switch and reaches this again; the _navContext null check keeps it
+        // from pushing a second context for the same controller, which would
+        // leave a stale entry under the stack no Close() will ever reach.
         private void PushNavContext()
         {
             if (_navContext == null)
