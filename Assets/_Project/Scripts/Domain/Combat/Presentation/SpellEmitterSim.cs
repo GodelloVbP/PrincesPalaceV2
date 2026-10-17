@@ -196,7 +196,7 @@ namespace PrincesPalace.Domain.Combat.Presentation
                 position = p0 + v0 * age + acceleration * (0.5f * age * age);
             }
 
-            float through = life <= 0f ? 1f : age / life;
+            float through = age / life;
             float size = Between(spec.sizeMin, spec.sizeMax, Hashed(seed, index, 4));
             float scale = size * Lerp(1f, spec.endScale, through);
             float alpha = AlphaThrough(spec.fadeFrom, through);
@@ -274,8 +274,7 @@ namespace PrincesPalace.Domain.Combat.Presentation
             if (through >= 1f) return 0f;
             if (fadeFrom >= 1f || through <= fadeFrom) return 1f;
 
-            float remaining = 1f - fadeFrom;
-            return remaining <= 0f ? 0f : 1f - (through - fadeFrom) / remaining;
+            return 1f - (through - fadeFrom) / (1f - fadeFrom);
         }
 
         private static float Between(float low, float high, float fraction) =>

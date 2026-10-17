@@ -787,11 +787,11 @@ namespace PrincesPalace
             for (int i = 0; i < drops.Count; i++)
             {
                 var held = drops[i];
-                float birth = SpellEmitterSim.BirthOf(spec, i, instance.StartSeconds);
-                var drop = SpellEmitterSim.At(spec, seed, i, held.P0, held.V0, Mathf.Max(0f, seconds - birth), frameCount);
-
                 int member = held.Member;
                 if (member < 0) continue;
+
+                float birth = SpellEmitterSim.BirthOf(spec, i, instance.StartSeconds);
+                var drop = SpellEmitterSim.At(spec, seed, i, held.P0, held.V0, Mathf.Max(0f, seconds - birth), frameCount);
 
                 if (!drop.Alive)
                 {

@@ -877,7 +877,7 @@ namespace PrincesPalace
                 // slot when both are true (that method's own header), but a
                 // shielded enemy with no BRK now gets its "+N" where BRK used
                 // to leave the Tags node blank.
-                enemyPlateTags[i].SetContent(FightHudModel.EnemyPlateTagLine(enemy, _session, enemyWard));
+                enemyPlateTags[i].SetContent(FightHudModel.EnemyPlateTagLine(enemy, enemyWard));
 
                 // Only an elite or boss carries a BreakShield at all -- the
                 // track stays hidden for everything else rather than showing
@@ -1620,7 +1620,7 @@ namespace PrincesPalace
             {
                 if (!isActiveAndEnabled || !gameObject.scene.isLoaded)
                 {
-                    if (routine != null) routine = null;
+                    routine = null;
                     SetFillFraction(ghost, liveFraction);
                     return;
                 }
@@ -3058,30 +3058,12 @@ namespace PrincesPalace
         // cast" shape TargetingIsMelee/TargetingIsGroup already share, so a
         // fourth copy of that lookup does not quietly start disagreeing with
         // the first three about which skill is live.
-        private int SelectedSkillPushSlots()
-        {
-            if (_menu.Branch != MenuBranch.Skill || _session?.Current == null) return 0;
-
-            var options = SkillOptions(_session.Current);
-            int row = _menu.Selection;
-            if (row < 0 || row >= options.Count) return 0;
-
-            return options[row].Skill.QueuePushSlots;
-        }
+        private int SelectedSkillPushSlots() => SelectedSkill()?.QueuePushSlots ?? 0;
 
         // The ally-side twin of SelectedSkillPushSlots, read the same way off
         // the same selected row so the two ghosts cannot disagree about which
         // skill the player is holding.
-        private int SelectedSkillAdvanceSlots()
-        {
-            if (_menu.Branch != MenuBranch.Skill || _session?.Current == null) return 0;
-
-            var options = SkillOptions(_session.Current);
-            int row = _menu.Selection;
-            if (row < 0 || row >= options.Count) return 0;
-
-            return options[row].Skill.AdvanceSlots;
-        }
+        private int SelectedSkillAdvanceSlots() => SelectedSkill()?.AdvanceSlots ?? 0;
 
         // ---- what the model needs -------------------------------------------
 
@@ -3290,7 +3272,7 @@ namespace PrincesPalace
             image.enabled = visible;
         }
 
-                private static void SetAlpha(TMPro.TMP_Text label, float alpha)
+        private static void SetAlpha(TMPro.TMP_Text label, float alpha)
         {
             if (label == null) return;
             var colour = label.color;

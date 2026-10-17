@@ -572,7 +572,7 @@ namespace PrincesPalace
             }
             else if (layer.Place == SpellPlace.Above && !layer.Travels)
             {
-                var over = SpellFlight.AbovePoint(body.Value, layer.height, layer.Travels ? -1f : box.y);
+                var over = SpellFlight.AbovePoint(body.Value, layer.height, box.y);
                 aim = new Vector2(over.X, over.Y);
             }
             else

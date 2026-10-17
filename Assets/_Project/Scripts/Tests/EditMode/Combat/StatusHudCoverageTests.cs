@@ -465,7 +465,7 @@ namespace PrincesPalace.Domain.Tests
             var enemy = Combatant("Reeling");
             enemy.BreakShield = new BreakShield(10) { IsBroken = true };
 
-            string line = FightHudModel.EnemyStatusLine(enemy, null);
+            string line = FightHudModel.EnemyStatusLine(enemy);
 
             StringAssert.Contains("BRK", line);
         }
@@ -484,7 +484,7 @@ namespace PrincesPalace.Domain.Tests
             StatusEffects.Apply(enemy.Statuses, StatusEffectType.Marked, 0, Marks.MarkDurationTurns);
             StatusEffects.Apply(enemy.Statuses, StatusEffectType.Feared, 25, 2);
 
-            string line = FightHudModel.EnemyStatusLine(enemy, null);
+            string line = FightHudModel.EnemyStatusLine(enemy);
 
             Assert.AreEqual("", line);
         }
@@ -501,7 +501,7 @@ namespace PrincesPalace.Domain.Tests
         {
             var enemy = Combatant("Shielded");
 
-            string line = FightHudModel.EnemyPlateTagLine(enemy, null, wardPoints: 12);
+            string line = FightHudModel.EnemyPlateTagLine(enemy, wardPoints: 12);
 
             StringAssert.Contains("+12", line);
         }
@@ -511,7 +511,7 @@ namespace PrincesPalace.Domain.Tests
         {
             var enemy = Combatant("Bare");
 
-            string line = FightHudModel.EnemyPlateTagLine(enemy, null, wardPoints: 0);
+            string line = FightHudModel.EnemyPlateTagLine(enemy, wardPoints: 0);
 
             Assert.AreEqual("", line);
         }
@@ -526,7 +526,7 @@ namespace PrincesPalace.Domain.Tests
             var enemy = Combatant("BrokenAndShielded");
             enemy.BreakShield = new BreakShield(10) { IsBroken = true };
 
-            string line = FightHudModel.EnemyPlateTagLine(enemy, null, wardPoints: 12);
+            string line = FightHudModel.EnemyPlateTagLine(enemy, wardPoints: 12);
 
             StringAssert.Contains("BRK", line);
             StringAssert.DoesNotContain("+12", line);

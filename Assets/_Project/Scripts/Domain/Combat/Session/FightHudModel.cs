@@ -1337,13 +1337,9 @@ namespace PrincesPalace.Domain.Combat.Session
         // it, and it must never be bumped into a "+N" overflow. The Tags node
         // this writes into stays in the screen tree for this prefix; see
         // FightScreen.BuildEnemyPlates.
-        //
-        // `session` is unread: StatusRowsFor reads session.IsMarked itself. It
-        // stays a parameter because the call site has a session in scope and a
-        // second always-shown fact would need it.
         private const string BrokenHex = "#FFC45A";
 
-        public static string EnemyStatusLine(CombatantState enemy, FightSession session)
+        public static string EnemyStatusLine(CombatantState enemy)
         {
             if (enemy == null || enemy.BreakShield == null || !enemy.BreakShield.IsBroken) return "";
 
@@ -1365,7 +1361,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // that one window is not losing the ward ITSELF: the segment on the
         // bar still shows it, only the "+N" beside it does not, until BRK
         // clears. Graceful degradation on a slot conflict, not silence.
-        public static string EnemyPlateTagLine(CombatantState enemy, FightSession session, int wardPoints)
+        public static string EnemyPlateTagLine(CombatantState enemy, int wardPoints)
         {
             return EnemyPlateTagLine(enemy != null && enemy.BreakShield != null && enemy.BreakShield.IsBroken,
                 wardPoints);

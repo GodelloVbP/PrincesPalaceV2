@@ -148,7 +148,6 @@ namespace PrincesPalace.Domain.Combat.Presentation
             }
 
             int playable = frameCount - first;
-            if (playable <= 0) return new SpellFrameSample(true, frameCount - 1, -1, 0f, alpha, scale, pose.degrees, pose.x, pose.y, glow, knee);
 
             float perFrame = PerFrame(layer, lifetime, playable);
             if (perFrame <= 0f) return new SpellFrameSample(true, first, -1, 0f, alpha, scale, pose.degrees, pose.x, pose.y, glow, knee);

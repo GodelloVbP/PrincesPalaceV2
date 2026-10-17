@@ -1105,7 +1105,7 @@ namespace PrincesPalace
 
             foreach (var combatant in _session.Encounter.PlayerParty.Concat(_session.Encounter.Enemies))
             {
-                string live = combatant?.Transformation?.SpritePath;
+                string live = combatant.Transformation?.SpritePath;
                 bool worn = _form.ContainsKey(combatant);
 
                 if (string.IsNullOrWhiteSpace(live))
