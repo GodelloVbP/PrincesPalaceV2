@@ -273,15 +273,13 @@ def still_classes(tests=PLAYMODE_TESTS):
 def caster_of(skill, characters):
     """Who the preview fight casts a skill as, mirroring PreviewFight.ChooseCaster:
     the authored owner when the roster has them, else (for a skill that spends a
-    resource) the first character carrying the owner's signature resource, else
+    resource) the first character carrying a signature resource, else
     the roster lead with battle art. '' when no character can cast it."""
     owner = skill.get("characterId") or ""
     if owner and any(c["id"] == owner for c in characters):
         return owner
     if (skill.get("resourceCost") or 0) > 0:
-        owned = next((c for c in characters if c["id"] == owner), None)
-        wanted = (owned or {}).get("signatureId") or None
-        payer = next((c for c in characters if c.get("signatureId") and (wanted is None or c["signatureId"] == wanted)), None)
+        payer = next((c for c in characters if c.get("signatureId")), None)
         return payer["id"] if payer else ""
     lead = next((c for c in characters if c.get("battleSpritePath")), None) or (characters[0] if characters else None)
     return lead["id"] if lead else ""
@@ -568,6 +566,29 @@ def replace_retrying(temp, path, attempts=50):
             time.sleep(0.02)
 
 
+def _take_over_stale_lock(lock, stale):
+    """Removes `lock` only if the file actually taken is still stale. Moving it
+    aside first means a waiter that read an old mtime cannot delete the fresh
+    lock another waiter created in the meantime: it checks what it moved, and
+    puts a live lock back."""
+    aside = "%s.stale.%d.%d" % (lock, os.getpid(), time.time_ns())
+    os.replace(lock, aside)
+    try:
+        live = time.time() - os.path.getmtime(aside) <= stale
+    except OSError:
+        live = False
+    if live:
+        try:
+            os.rename(aside, lock)
+            return
+        except OSError:
+            pass
+    try:
+        os.remove(aside)
+    except OSError:
+        pass
+
+
 def update_json_locked(path, updates, wait=30.0, stale=60.0):
     """Merges `updates` into the JSON object at `path` under a lock file, so
     concurrent sessions each keep their entries. The lock is a file created
@@ -583,14 +604,14 @@ def update_json_locked(path, updates, wait=30.0, stale=60.0):
         except (FileExistsError, PermissionError):
             # Windows reports a lock whose delete is still pending as
             # PermissionError, not FileExistsError: both mean "held, retry".
-            try:
-                if time.time() - os.path.getmtime(lock) > stale:
-                    os.remove(lock)
-                    continue
-            except OSError:
-                continue
             if time.time() > deadline:
                 raise TimeoutError("could not lock %s within %ds" % (path, wait))
+            try:
+                if time.time() - os.path.getmtime(lock) > stale:
+                    _take_over_stale_lock(lock, stale)
+                    continue
+            except OSError:
+                pass
             time.sleep(0.05)
     try:
         merged = read_json(path, {})
@@ -1192,7 +1213,15 @@ def runs_cap_bytes(override_gb=None):
 
 
 def dir_size(path):
-    return sum(os.path.getsize(os.path.join(root, f)) for root, _dirs, files in os.walk(path) for f in files)
+    """Total bytes under `path`. scandir hands back each file's size from the
+    directory listing, so a run of thousands of frames costs no per-file stat."""
+    total = 0
+    for entry in os.scandir(path):
+        if entry.is_dir(follow_symlinks=False):
+            total += dir_size(entry.path)
+        else:
+            total += entry.stat().st_size
+    return total
 
 
 def enforce_runs_cap(runs_root=None, cap_bytes=None, protect=(), now=None):
@@ -1408,6 +1437,8 @@ def build_sheet(inputs, frames60, crop=(0.55, 1.0), tile_width=300):
 def cmd_sheet(args):
     try:
         frames = [int(x) for x in args.frames.split(",") if x.strip()]
+        if any(n < 0 for n in frames):
+            raise ValueError("--frames takes 60 fps frame numbers, 0 or more")
         crop = parse_crop(args.crop)
         inputs = []
         for item in args.inputs:

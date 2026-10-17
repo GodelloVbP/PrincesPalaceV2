@@ -244,7 +244,7 @@ class RefusalTests(unittest.TestCase):
         self.assertIn("relics with vfx: bell", self.refused({"kind": "relic", "id": "ring"})[0])
         self.assertIn("not a StatusEffectType", self.refused({"kind": "status", "id": "Nope"})[0])
 
-    def test_phase_b_kinds_are_checked_against_what_exists(self):
+    def test_stance_sheet_and_still_kinds_are_checked_against_what_exists(self):
         self.assertEqual(self.refused({"kind": "stance", "id": "Enemies/rat"}), [])
         self.assertEqual(self.refused({"kind": "sheet", "id": "bolt"}), [])
         self.assertEqual(self.refused({"kind": "still", "id": "MenuCaptureTests/menu.png"}), [])
@@ -452,6 +452,46 @@ class StampAndLatestTests(unittest.TestCase):
             gif.update_json_locked(path, {"a": "1"})
             self.assertEqual(gif.read_json(path), {"a": "1"})
 
+    def test_a_lock_whose_mtime_cannot_be_read_times_out_instead_of_spinning(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "latest.json")
+            open(path + ".lock", "w").close()
+            calls = []
+
+            def unreadable(_p):
+                calls.append(1)
+                if len(calls) > 500:
+                    raise AssertionError("spun %d times without checking the deadline" % len(calls))
+                raise PermissionError("delete pending")
+
+            with unittest.mock.patch.object(gif.os.path, "getmtime", unreadable):
+                with self.assertRaises(TimeoutError):
+                    gif.update_json_locked(path, {"a": "1"}, wait=0.2)
+
+    def test_a_lock_retaken_by_another_waiter_is_not_removed_as_stale(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "latest.json")
+            lock = path + ".lock"
+            open(lock, "w").close()
+            real_mtime = os.path.getmtime
+            first = []
+
+            def stale_then_replaced(p):
+                if p == lock and not first:
+                    first.append(1)
+                    # Another waiter takes the stale lock over right after this
+                    # reader saw its old mtime: the file on disk is now fresh.
+                    os.remove(lock)
+                    open(lock, "w").close()
+                    return 0.0
+                return real_mtime(p)
+
+            with unittest.mock.patch.object(gif.os.path, "getmtime", stale_then_replaced):
+                with self.assertRaises(TimeoutError):
+                    gif.update_json_locked(path, {"a": "1"}, wait=0.3)
+            self.assertTrue(os.path.exists(lock))
+            self.assertIsNone(gif.read_json(path))
+
 
 class CropTests(unittest.TestCase):
     def test_stage_is_the_centred_1700_by_600_box(self):
@@ -463,7 +503,7 @@ class CropTests(unittest.TestCase):
         self.assertEqual(gif.crop_box("subject", (1920, 1080), (120, 250, 200, 300)), (110, 240, 260, 360))
 
 
-class NormalizeBKindsTests(unittest.TestCase):
+class NormalizeStanceSheetStillTests(unittest.TestCase):
     def test_fight_fields_are_pinned_so_the_key_depends_on_the_subject_only(self):
         a = gif.normalize({"kind": "sheet", "id": "bolt", "vs": "treant", "speed": 1.5, "formation": "full"}, SKILLS)
         b = gif.normalize({"kind": "sheet", "id": "bolt"}, SKILLS)
@@ -673,7 +713,7 @@ class ManifestTests(unittest.TestCase):
         baseline = gif.expand_manifest(gif.load_manifest("baseline"), ids)
         self.assertEqual([g["name"] for g in baseline["gaps"]], [])
         receipts = [s for s in baseline["scenarios"] if s["kind"] == "still" and "RelicReceiptCaptureTests" in str(s)]
-        self.assertEqual(len(receipts), 7, "the P4 capture cases are stills in the baseline")
+        self.assertEqual(len(receipts), 7, "the relic receipt capture cases are stills in the baseline")
 
 
 class ExportTests(unittest.TestCase):
@@ -738,6 +778,17 @@ class SheetTests60(unittest.TestCase):
             open(os.path.join(root, "k2", "anim.gif"), "w").close()
             with self.assertRaises(ValueError):
                 gif.resolve_sheet_input(root)
+
+    def test_a_negative_frame_number_is_refused(self):
+        with tempfile.TemporaryDirectory() as root:
+            a = os.path.join(root, "a.gif")
+            self.make_gif(a)
+            err = io.StringIO()
+            with contextlib.redirect_stderr(err):
+                code = gif.cmd_sheet(types.SimpleNamespace(
+                    frames="-4,10", crop="0.5,1", inputs=["rat=" + a], out=os.path.join(root, "s.png")))
+            self.assertEqual(code, 2)
+            self.assertIn("REFUSED", err.getvalue())
 
     def test_crop_must_be_an_ordered_fraction_pair(self):
         self.assertEqual(gif.parse_crop("0.5,1"), (0.5, 1.0))
