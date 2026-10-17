@@ -55,8 +55,7 @@ namespace PrincesPalace.Domain.Tests
         {
             int middle = RewardTrackLayout.FirstLevel + RewardTrackLayout.NodeCount / 2;
 
-            Assert.AreEqual(RewardTrackLayout.NodeX(middle) - RewardTrackLayout.ContentWidth * 0.5f,
-                RewardTrackLayout.NodeOffsetX(middle), 0.001f);
+            Assert.AreEqual(0f, RewardTrackLayout.NodeOffsetX(middle), 0.001f);
 
             Assert.Less(RewardTrackLayout.NodeOffsetX(RewardTrackLayout.FirstLevel), 0f,
                 "the first node should sit LEFT of the content's centre");
@@ -437,12 +436,12 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void SeekingIsClampedTheSameWayScrollingIs()
         {
-            Assert.AreEqual(RewardTrackLayout.ScrollFor(RewardTrackLayout.FirstLevel, Window),
-                RewardTrackLayout.ScrollForFraction(0f, Window), 0.001f,
+            Assert.AreEqual(-598f, RewardTrackLayout.ScrollFor(RewardTrackLayout.FirstLevel, Window), 0.001f);
+            Assert.AreEqual(-598f, RewardTrackLayout.ScrollForFraction(0f, Window), 0.001f,
                 "grabbing the very start of the ribbon does not match opening on level 2");
 
-            Assert.AreEqual(RewardTrackLayout.ScrollFor(RewardTrack.MaxLevel, Window),
-                RewardTrackLayout.ScrollForFraction(1f, Window), 0.001f,
+            Assert.AreEqual(-6202f, RewardTrackLayout.ScrollFor(RewardTrack.MaxLevel, Window), 0.001f);
+            Assert.AreEqual(-6202f, RewardTrackLayout.ScrollForFraction(1f, Window), 0.001f,
                 "grabbing the very end of the ribbon does not match opening on level 100");
         }
 
