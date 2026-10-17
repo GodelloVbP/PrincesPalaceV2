@@ -103,6 +103,10 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(1.13f, RevealFeel.Punch(LandStyle.Shimmer, 0f), Tolerance);
             Assert.AreEqual(0.85f, RevealFeel.RingReach(LandStyle.Shimmer), Tolerance);
             Assert.AreEqual(0f, RevealFeel.RingReach(LandStyle.Puff), Tolerance);
+            Assert.AreEqual(0.35f, RevealFeel.LandSpill(LandStyle.Flat), Tolerance);
+            Assert.AreEqual(0.45f, RevealFeel.LandSpill(LandStyle.Puff), Tolerance);
+            Assert.AreEqual(0.6f, RevealFeel.LandSpill(LandStyle.Shimmer), Tolerance);
+            Assert.AreEqual(0.4f, RevealFeel.LandSpill(LandStyle.Burst), Tolerance);
             Assert.AreEqual(8f, RevealFeel.StageShakePixels(LandStyle.Burst));
             Assert.AreEqual(0.25f, RevealFeel.ShakeSeconds(LandStyle.Burst), Tolerance);
             Assert.AreEqual(1.15f, RevealFeel.Punch(LandStyle.Burst, 0f), Tolerance);

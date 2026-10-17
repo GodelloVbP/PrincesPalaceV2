@@ -44,10 +44,24 @@ namespace PrincesPalace.Domain.Rewards
         {
             switch (style)
             {
-                case LandStyle.Puff: return 0.75f;
-                case LandStyle.Shimmer: return 0.95f;
+                case LandStyle.Puff: return 0.9f;
+                case LandStyle.Shimmer: return 1f;
                 case LandStyle.Burst: return 1f;
-                default: return 0.55f;
+                default: return 0.8f;
+            }
+        }
+
+        // The landing's pop: how far past the card the glow flashes, as extra
+        // scale, shrinking back as it settles. The face is opaque, so only
+        // what clears the card's edge shows; the ceremony keeps its build's.
+        public static float LandSpill(LandStyle style)
+        {
+            switch (style)
+            {
+                case LandStyle.Puff: return 0.45f;
+                case LandStyle.Shimmer: return 0.6f;
+                case LandStyle.Burst: return Spill(LandStyle.Burst);
+                default: return 0.35f;
             }
         }
 
@@ -85,7 +99,7 @@ namespace PrincesPalace.Domain.Rewards
             float from = Math.Max(LandGlow(style), BuildGlow(style));
             float ease = 1f - (1f - u) * (1f - u);
             alpha = from + (rest - from) * ease;
-            scale = 1f + Spill(style) * (1f - ease);
+            scale = 1f + LandSpill(style) * (1f - ease);
         }
 
         // ---- the card's own motion -------------------------------------------------
@@ -206,10 +220,10 @@ namespace PrincesPalace.Domain.Rewards
                 default:
                     return new SpellEmitter
                     {
-                        burst = 9, aimDegrees = 90f, spreadDegrees = 200f, speedMin = 50f, speedMax = 110f,
-                        drag = 5f, gravity = -40f, lifeMin = 0.3f, lifeMax = 0.45f, sizeMin = 0.5f, sizeMax = 0.8f,
+                        burst = 9, aimDegrees = 270f, spreadDegrees = 160f, speedMin = 60f, speedMax = 130f,
+                        drag = 5f, gravity = 40f, lifeMin = 0.3f, lifeMax = 0.45f, sizeMin = 0.5f, sizeMax = 0.8f,
                         fadeFrom = 0.2f, endScale = 1.3f, lateral = cardWidth * 0.8f,
-                        sourceDy = -cardHeight * 0.45f, seed = 1,
+                        sourceDy = -cardHeight * 0.5f, seed = 1,
                     };
             }
         }
