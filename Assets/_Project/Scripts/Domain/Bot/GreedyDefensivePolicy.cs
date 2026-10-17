@@ -361,12 +361,12 @@ namespace PrincesPalace.Domain.Bot
         // resolving it needs Domain/Content/Effect data the same way.
         // So this reads exactly as "the option carries no effect type" in
         // the brief's own words, and falls back to GreedyAggressivePolicy's
-        // read of "best": highest tier, then highest plus, ties by rng.
+        // read of "best": highest tier, ties by rng.
         // The non-identifiability above is still true OF THE OFFER, and is
         // exactly why the score now arrives on the view instead: Core's
         // GearEvaluator resolves the id through ContentDatabase, prices the
         // swap with this archetype's own defensive weights, and hands back one
-        // number per offer. The tier/plus read below is the fallback for when
+        // number per offer. The tier read below is the fallback for when
         // nothing scored them.
         public int ChooseOffer(IReadOnlyList<ItemOffer> offers, RunView view, SeededRandom rng)
         {

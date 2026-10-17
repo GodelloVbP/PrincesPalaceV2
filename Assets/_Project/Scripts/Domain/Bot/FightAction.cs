@@ -227,9 +227,9 @@ namespace PrincesPalace.Domain.Bot
                 // and the scoring archetypes see a non-damaging skill.
                 //
                 // EVERY MULTI-PICK CAST IS SKIPPED HERE, NOT OFFERED-AND-
-                // REFUSED: Milestone B shipped a skill the bot could pick and the session always refused, and
-                // BalanceBotSmokeTests found it as a 60-command STALL. An
-                // action the legal menu never contains cannot stall anything.
+                // REFUSED: a skill the bot could pick but the session always
+                // refuses shows up as a 60-command STALL (BalanceBotSmokeTests).
+                // An action the legal menu never contains cannot stall anything.
                 if (SkillEffects.PicksRequired(option.Skill.Effect) > 1) continue;
 
                 if (option.Skill.Targeting == SkillTargeting.SingleAlly)

@@ -213,10 +213,10 @@ namespace PrincesPalace.Domain.Bot
             return choices[0];
         }
 
-        // Scored when there is a score, tier-then-plus when there is not.
+        // Scored when there is a score, tier alone when there is not.
         //
-        // The tier-then-plus fallback exists because an ItemOffer names an
-        // id, a tier and a plus, and nothing about what wearing it would do
+        // The tier fallback exists because an ItemOffer names an
+        // id and a tier, and nothing about what wearing it would do
         // (see GreedyDefensive's copy of this comment). The driver asks
         // Core's GearEvaluator the same question the Reckoning screen asks it
         // for the player, and hands the answers down on the view; ranking by
@@ -357,7 +357,7 @@ namespace PrincesPalace.Domain.Bot
             // common relics weigh the most so they are drawn most often.
             // "First by the pool's weighting order" here means the rarest
             // (lowest-weight) relic on offer, the same read of "best" the
-            // offer picker above uses for tier/plus.
+            // offer picker above uses for tier.
             return BestIndexTiedByRng(offer.Count,
                 i => -RelicPool.WeightOf(offer[i].Rarity),
                 rng);

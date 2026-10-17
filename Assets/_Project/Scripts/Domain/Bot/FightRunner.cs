@@ -387,27 +387,6 @@ namespace PrincesPalace.Domain.Bot
             return -1;
         }
 
-        // THE SAME REPAIR FightController.RescueAStalledEnemyTurn MAKES, and
-        // for the same reason -- reported as a bug rather than swallowed.
-        //
-        // A command is supposed to resolve the whole exchange and hand the turn
-        // back (plan F6). It does not always: a fight that spends a second-life
-        // charge can come back sitting on an enemy turn nothing resolves. On
-        // screen that is a frozen stage with every verb dead, and Update()
-        // catches it a frame later. Headless there is no Update, so the loop
-        // above would simply fall out of its `IsPlayerTurn` condition and leave
-        // a fight that is neither won nor lost -- the run driver would then see
-        // an un-settled session, and a whole batch's depth numbers would be
-        // measuring a hang rather than the game.
-        //
-        // So it is repaired identically (resolve the enemy turns that are
-        // owed, then re-telegraph if the turn came back) AND recorded, every
-        // time, as a StalledEnemyTurn hit. Recording it per occurrence rather
-        // than once per fight is deliberate: the report's job is to say how
-        // often the live game does this, and a deduplicated count would read as
-        // rarer than it is. FightSettlementTests calls this "a pre-existing
-        // production fault these tests trip, not one they cause" and leaves it
-        // alone; this is the thing that will finally count it.
         // The legal list with TransformUse applied, and the one command to
         // play instead of asking the policy (WhenReady with a Transform ready
         // and none worn). Never takes every Transform out; it never empties
@@ -481,6 +460,27 @@ namespace PrincesPalace.Domain.Bot
             return option.Skill != null && option.Skill.Effect == SkillEffect.Transform;
         }
 
+        // THE SAME REPAIR FightController.RescueAStalledEnemyTurn MAKES, and
+        // for the same reason -- reported as a bug rather than swallowed.
+        //
+        // A command is supposed to resolve the whole exchange and hand the turn
+        // back (plan F6). It does not always: a fight that spends a second-life
+        // charge can come back sitting on an enemy turn nothing resolves. On
+        // screen that is a frozen stage with every verb dead, and Update()
+        // catches it a frame later. Headless there is no Update, so the loop
+        // above would simply fall out of its `IsPlayerTurn` condition and leave
+        // a fight that is neither won nor lost -- the run driver would then see
+        // an un-settled session, and a whole batch's depth numbers would be
+        // measuring a hang rather than the game.
+        //
+        // So it is repaired identically (resolve the enemy turns that are
+        // owed, then re-telegraph if the turn came back) AND recorded, every
+        // time, as a StalledEnemyTurn hit. Recording it per occurrence rather
+        // than once per fight is deliberate: the report's job is to say how
+        // often the live game does this, and a deduplicated count would read as
+        // rarer than it is. FightSettlementTests calls this "a pre-existing
+        // production fault these tests trip, not one they cause" and leaves it
+        // alone; this is the thing that will finally count it.
         private static List<InvariantHit> RescueAStalledEnemyTurn(FightSession session, int commands)
         {
             var hits = new List<InvariantHit>();
