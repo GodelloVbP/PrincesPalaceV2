@@ -215,7 +215,13 @@ namespace PrincesPalace.Domain.Content
                     // AND THE BELLWETHER KIT'S THREE (M2), same reason.
                     || !string.IsNullOrWhiteSpace(raw.damageType)
                     || (raw.damageBySeatMaxHpPercent != null && raw.damageBySeatMaxHpPercent.Length > 0)
-                    || raw.toSeat != 0;
+                    || raw.toSeat != 0
+                    // AND THE LAST NINE, same reason.
+                    || raw.hitCount != 0 || raw.damagePerMissingHealthPercent != 0
+                    || raw.refundsSpentOnKillPercent != 0 || raw.lifestealPercent != 0
+                    || raw.windowTurns != 0 || raw.regenPercentOfMaxHealth != 0
+                    || raw.plantedShieldBashPercent != 0
+                    || !string.IsNullOrWhiteSpace(raw.replacesSkillId) || raw.oncePerFight;
 
                 if (authorsAnEffectField)
                 {

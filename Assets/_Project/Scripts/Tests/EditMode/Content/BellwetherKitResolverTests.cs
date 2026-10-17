@@ -245,5 +245,36 @@ namespace PrincesPalace.Domain.Tests
             };
             Refuses(entry, "placeholder skills may not author any effect field");
         }
+
+        [TestCase("hitCount")]
+        [TestCase("damagePerMissingHealthPercent")]
+        [TestCase("refundsSpentOnKillPercent")]
+        [TestCase("lifestealPercent")]
+        [TestCase("windowTurns")]
+        [TestCase("regenPercentOfMaxHealth")]
+        [TestCase("plantedShieldBashPercent")]
+        [TestCase("replacesSkillId")]
+        [TestCase("oncePerFight")]
+        public void APlaceholderMayNotAuthorAnyKitEffectField(string field)
+        {
+            var entry = new RawSkillEntry
+            {
+                id = "undesigned", displayName = "Undecided", characterId = "sheep",
+                placeholder = true, placeholderNote = "not written yet",
+            };
+            switch (field)
+            {
+                case "hitCount": entry.hitCount = 2; break;
+                case "damagePerMissingHealthPercent": entry.damagePerMissingHealthPercent = 5; break;
+                case "refundsSpentOnKillPercent": entry.refundsSpentOnKillPercent = 50; break;
+                case "lifestealPercent": entry.lifestealPercent = 10; break;
+                case "windowTurns": entry.windowTurns = 2; break;
+                case "regenPercentOfMaxHealth": entry.regenPercentOfMaxHealth = 5; break;
+                case "plantedShieldBashPercent": entry.plantedShieldBashPercent = 20; break;
+                case "replacesSkillId": entry.replacesSkillId = "other"; break;
+                case "oncePerFight": entry.oncePerFight = true; break;
+            }
+            Refuses(entry, "placeholder skills may not author any effect field");
+        }
     }
 }
