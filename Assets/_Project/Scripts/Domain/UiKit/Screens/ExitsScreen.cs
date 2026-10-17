@@ -57,7 +57,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             // Authored geometry rather than a table, so this cannot drift the
             // way a list-driven pane can -- but the stack is centred on its own
-            // height now, so growing any part of it pushes BOTH ends outwards
+            // height, so growing any part of it pushes BOTH ends outwards
             // at once, and the end that goes first is the one carrying the
             // descent-ending button.
             if (!ExitsLayout.StackFits)
@@ -198,13 +198,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .Clipping();
 
             // AUTHORED AT THE HOLD'S FULL SIZE and driven to zero by the
-            // controller on wiring, same as before -- UiAudit refuses a
+            // controller on wiring -- UiAudit refuses a
             // zero-sized graphic, and growing sizeDelta.x from a pinned left
             // edge is what lets HoldFillMath resize it with one number.
             //
-            // PIVOTED LEFT, at the button's own left edge (button-local now
-            // that this is a CHILD of the button rather than a card-level
-            // sibling), so growing it by width extends it rightwards.
+            // PIVOTED LEFT, at the button's own left edge (button-local: it is
+            // a CHILD of the button), so growing it by width extends it
+            // rightwards.
             var fill = Ui.Solid("ExitAbandonHoldFill", HoldFill, holdSize,
                     Place.At(ExitsLayout.HoldFillLeft, 0f, new UiVec(0f, 0.5f)))
                 .AsDecor()
@@ -223,10 +223,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // RUNTIME on the button itself: ThemedPlate() is CaptionPreserving
             // -- unlike Themed(), it builds no <name>Label from the text
             // passed to Ui.Button (Ui.ApplyThemePlateOnly only ever adds
-            // Visuals), so UiStrings.ExitAbandonHold passed here was being
-            // silently discarded. This regressed the caption entirely: the
-            // button held no visible "HOLD TO ABANDON" at all after the
-            // Crimson-plate conversion. Declared as its own child instead,
+            // Visuals), so a caption passed there would be silently
+            // discarded. Declared as its own child instead,
             // named ExitAbandonHoldCaption so Ui.CaptionOf finds it (the
             // <name>Caption convention OutlineButton's retirement comment
             // states), styled ButtonLabel like every other themed caption,

@@ -811,8 +811,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // The focus detail's box; its height is refitted to the text at runtime.
         // It sits UNDER the row, never beside a card: beside, it covered the
-        // neighbouring cards. Wide so the text runs to few lines, and no taller
-        // than the band between the cards' bottom edge and the painted border.
+        // neighbouring cards. Wide so the text runs to few lines. Built at
+        // CardTipHeight; CardTipMaxHeight is the band between the cards' bottom
+        // edge and the painted border, which the refit on show keeps it inside.
         public const float CardTipWidth = 560f;
         public const float CardTipHeight = 200f;
         public const float CardTipTitleHeight = 30f;
@@ -840,13 +841,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const float HoneWidth = 172f;
         private const float HoneGap = 8f;
 
-        // One card of the page. A button, because taking is a click on the card
-        // itself, and a CARD across the width rather than a row in a list: the
-        // item is the object on this screen.
-        //
-        // Positioned for a FULL-WIDTH row (MaxCards wide). A narrower one is
-        // re-centred at runtime by ReckoningController, from the same
-        // OfferRowLayout.CardX this calls, so the two widths cannot drift apart.
         // THE REVEAL'S LIGHT per card, behind its face and back (C4): the
         // under-glow that builds before the flip and stays faintly lit in the
         // quality's colour, and the landing's rays, core flash and ring. All
@@ -862,9 +856,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public const float CardShadowDrop = 8f;
         public const float CardShadowSpread = 1.12f;
 
-        // The light's sizes, as fractions of the card's box.
         // The face's opaque ground: the card back's own violet, darkened.
         public const string FaceGround = "#1C1228";
+
+        // The light's sizes, as fractions of the card's box.
         public const float UnderGlowWidth = 1.3f;
         public const float UnderGlowHeight = 1.15f;
         public const float RaysSpan = 1.6f;
@@ -876,6 +871,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public const int RevealMoteCount = 64;
         public const float RevealMoteSize = 20f;
 
+        // One card of the page. A button, because taking is a click on the card
+        // itself, and a CARD across the width rather than a row in a list: the
+        // item is the object on this screen.
+        //
+        // Positioned for a FULL-WIDTH row (MaxCards wide). A narrower one is
+        // re-centred at runtime by ReckoningController, from the same
+        // OfferRowLayout.CardX this calls, so the two widths cannot drift apart.
         private UiNode BuildOffer(int index)
         {
             int count = OfferRowLayout.MaxCards;

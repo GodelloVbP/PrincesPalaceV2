@@ -25,9 +25,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
     // immediate parent -- the two columns are screen-absolute, a row's
     // children are row-local.
     //
-    // TWO PRESENTATIONS, ONE SET OF ROWS (docs/PLAN_DIALOGUE_STAGE.md, D2).
+    // TWO PRESENTATIONS, ONE SET OF ROWS (docs/PLAN_DIALOGUE_STAGE.md).
     // A page with no dialogue lines shows the frame and the text column
-    // above, exactly as before (contract 14). A page with lines shows the
+    // above (contract 14). A page with lines shows the
     // DialogueStage instead: backdrop, shade, set piece, bust, box and name
     // plate, back to front (the plan's layer table). The four choice rows
     // live in their own EventChoices panel, drawn after the stage, and the
@@ -210,9 +210,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef StageBackdrop;
         public NodeRef StageSetPiece;
 
-        // TWO bust images at the same spot, B inactive. D2 paints A only; D3's
-        // speaker change slides the old one out while the new one slides in,
-        // which needs both on screen at once.
+        // TWO bust images at the same spot, B inactive until a speaker change:
+        // that slides the old bust out while the new one slides in, which
+        // needs both on screen at once.
         public List<NodeRef> StageBusts = new List<NodeRef>();
         public NodeRef StageBox;
         public NodeRef StageLineText;
@@ -315,9 +315,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             return column;
         }
 
-        // The rows at their legacy spot, under the text column. They keep
-        // their names (EventChoice0..3) and their screen positions; only their
-        // parent moved.
+        // The rows at their legacy spot, under the text column, named
+        // EventChoice0..3.
         private UiNode BuildChoices()
         {
             var rows = new List<UiNode>();
@@ -385,8 +384,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // whose bust is missing (DialogueStageLayout.FramingFor), and sizes the
         // backdrop and bust to their sprites; nothing here is stretched.
         //
-        // EVERY PIECE IS DECOR. None of it takes a click in D2 (D3 adds the
-        // advance press as its own catcher), and decor is what exempts the
+        // EVERY PIECE IS DECOR. None of it takes a click (EventController adds
+        // the advance press at runtime as its own catcher), and decor is what exempts the
         // intended overlaps -- bust behind box, plate across the box's top
         // edge, set piece behind the bust, the whole stage over the legacy
         // layout. An AllowOverlap on a decor node is refused by UiAudit's A7
@@ -419,10 +418,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const float LinePadBottom = 28f;
         public const float LineWidth = DialogueStageLayout.BoxWidth - LinePadX * 2f;
         public const float LineHeight = DialogueStageLayout.BoxHeight - LinePadTop - LinePadBottom;
-        // 32: the result beat binds, not the line: a
-        // cap-length result plus its effects line wraps to four lines, about
-        // 175 of the 180 available at 32, and overflows at 34. The line at
-        // the cap alone is three. DialogueStageTextFitTests measures both in
+        // 32: the result beat binds, not the line. A cap-length result plus
+        // its effects line wraps to four lines, about 175 of the 180
+        // available at 32, and overflows at 34. The line at the cap alone is
+        // three. DialogueStageTextFitTests measures both in
         // the real label.
         public const int LineFontSize = 32;
 

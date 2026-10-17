@@ -139,12 +139,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const float DetailCentreY = DetailTop - DetailPanelSize * 0.5f;
         private const float DetailBottom = DetailCentreY - DetailPanelSize * 0.5f;
 
-        // Gold, then BUY/PACK/LEAVE, hard against the panel's own bottom
-        // edge exactly as they always were. THREE STACKED FULL-WIDTH ROWS NO
-        // LONGER FIT under a 420-tall comparison panel (measured: it would
-        // need ~14px MORE than is left) -- BUY and PACK go side by side
-        // instead, LEAVE stays full width below them, which is the two-per-
-        // row shape BuildKeeperPanel actually builds.
+        // Gold, then BUY/PACK/HONE, then LEAVE, hard against the panel's own
+        // bottom edge. STACKED FULL-WIDTH ROWS DO NOT FIT under a 420-tall
+        // comparison panel -- BUY, PACK and HONE sit side by side instead,
+        // LEAVE stays full width below them, which is the shape
+        // BuildKeeperPanel builds.
         private const float DetailToActionsGap = 24f;
         private const float ActionsTop = DetailBottom - DetailToActionsGap;
         private const float ActionsGoldHeight = 62f;
@@ -250,9 +249,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
             public float MetaCentreX => MetaLeft + MetaWidth * 0.5f;
         }
 
-        // 98 tall for a shelf of three in a 326px content box; 155 for a gear
+        // 94 tall for a shelf of three in a 314px content box; 149 for a gear
         // card in a 2x2. Both add up to less than their own box: 10+34+34+10
-        // = 88 of 98, 22+52+44+22 = 140 of 155, and the slack is the breathing
+        // = 88 of 94, 22+52+44+22 = 140 of 149, and the slack is the breathing
         // room between the two lines.
         private static CardMetrics ShelfCard(float height) =>
             new CardMetrics(ShelfCardWidth, height, 10f, 34f, 14f, 180f, 34f, 28, 20);
@@ -614,7 +613,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // SHOPKEEPER / DETAIL / ACTIONS, merged: the character picker, the
         // selected gear card's comparison panel
-        // (ItemComparisonPanel) and the shop's own BUY/PACK/LEAVE, one
+        // (ItemComparisonPanel) and the shop's own BUY/PACK/HONE/LEAVE, one
         // column spanning the full grid height. See this class's own
         // "merged keeper/detail/actions column" header above for why the
         // old two-panel, portrait-slot shape was retired instead of shrunk
@@ -654,11 +653,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
             DetailBody = detail.Body;
             parts.Add(detail.Panel);
 
-            // ---- gold, buy/pack, leave --------------------------------------
+            // ---- gold, buy/pack/hone, leave --------------------------------------
             //
-            // TWO PER ROW: a 420-tall comparison panel leaves this block
-            // less headroom than three stacked FiveByOne plates need, so
-            // BUY and PACK sit side by side (Ui.PlateNominalSizeFor keeps
+            // SIDE BY SIDE: a 420-tall comparison panel leaves this block
+            // less headroom than stacked FiveByOne plates need, so
+            // BUY, PACK and HONE share a row (Ui.PlateNominalSizeFor keeps
             // the requested WIDTH and only adjusts height to a valid plate
             // aspect, same as every other call site) and LEAVE stays full
             // width below them, hard against the panel's bottom edge.

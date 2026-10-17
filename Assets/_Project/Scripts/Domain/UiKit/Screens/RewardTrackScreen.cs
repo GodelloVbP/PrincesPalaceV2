@@ -10,13 +10,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
     // into the tab's detail area by CharacterDossierScreen, laid out for that
     // frame by RewardTrackLayout, and shown when the rail selects it.
     //
-    // A battle pass, read left to right. The rail was the whole screen once and
-    // the brief's own open questions were all versions of the same complaint --
-    // it is airy, nothing marks what is next, and eight nodes of ninety-nine
-    // are visible. The two new bands are the answer: a FOCUS CARD in the upper
-    // third that rests on the next reward until the pointer says otherwise, and
-    // an ASCENT RIBBON in the lower third where all ninety-nine levels fit at
-    // 14.5px apart and the visible window is a box you can drag.
+    // A battle pass, read left to right. A bare rail is airy, shows only a few
+    // nodes at a time and does not mark what is next, so two bands sit
+    // around it: a FOCUS CARD in the upper third that rests on the next
+    // reward until the pointer says otherwise, and an ASCENT RIBBON in the
+    // lower third where every level fits and the visible window is a box you
+    // can drag.
     //
     // EVERY NODE IS EMITTED WITH ITS REAL POSITION. Level 40 sits at the same x
     // forever, so there is nothing here for a controller to place at runtime --
@@ -65,14 +64,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public const string BandEdgeTop = "#F2DB9E29";
         public const string BandEdgeBottom = "#F2DB9E1F";
 
-        // The rail, in three weights: the dim line under everything, the lit
-        // half over it, and the bloom under that.
-        //
-        // RAILDONE IS FULL GOLD BECAUSE THE SPRITE CARRIES THE ALPHA. The lit
-        // rail is a ramp -- 32% at the start of the run and 100% at the
-        // player's own node -- so a flat tint here would flatten the one
-        // thing the ramp exists to say, which is which END of the lit half
-        // is now.
         // THE PRESTIGE STRETCH'S OWN GROUND, and the divider that opens it.
         //
         // A wash rather than a dimmer rail: the ten identity levels are not
@@ -85,6 +76,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public const string CompletionWord = "#F2DB9EC4";
         public const string PrestigeWord = "#C8B4DEA8";
 
+        // The rail, in three weights: the dim line under everything, the lit
+        // half over it, and the bloom under that.
+        //
+        // RAILDONE IS FULL GOLD BECAUSE THE SPRITE CARRIES THE ALPHA. The lit
+        // rail is a ramp -- 32% at the start of the run and 100% at the
+        // player's own node -- so a flat tint here would flatten the one
+        // thing the ramp exists to say, which is which END of the lit half
+        // is now.
         public const string Rail = "#C8B4DE29";
         public const string RailDone = "#F2DB9E";
         public const string RailGlow = "#F2DB9E52";
@@ -454,15 +453,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .TrackedOverRole(26f)
                 .AsDecor());
 
-            // NOTHING MARKED THE NEXT REWARD, which was one of the brief's six
-            // open questions. Drawn last so it sits over everything in the
+            // THE NEXT-REWARD MARK. Drawn last so it sits over everything in the
             // column it points into.
             //
-            // A WORD AND A LINE, not an arrow. The first build was a chevron in
-            // the only gap a centred caption left, which put it at the top of
-            // the band a hundred pixels from its node; this hangs in the strip
-            // between the caption's fixed lower edge and the disc's own rim,
-            // where there is nothing else, and says what it means in letters.
+            // A WORD AND A LINE, not an arrow: it hangs in the strip between
+            // the caption's fixed lower edge and the disc's own rim, where
+            // there is nothing else, and says what it means in letters.
             var nextMark = Ui.Panel("TrackNextMark",
                 Place.At(0f, RewardTrackLayout.NextMarkCentreY),
                 UiSize.Fixed(RewardTrackLayout.NextMarkWidth,
@@ -495,12 +491,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // content rect, whose comment records the same fact.
             //
             // OFFSET BY RailOffsetY, which is the one place that correction is
-            // applied. The band does not straddle the panel's vertical centre
-            // evenly (112px above the line, 100 below, because the caption
-            // stack is taller than the level number and the caret needs the
-            // difference), but the rail itself has to land ON that centre. So
-            // the whole content rect drops six pixels and every coordinate
-            // inside it is stated relative to the rail, where it belongs.
+            // applied. The band does not straddle the rail evenly (the caption
+            // stack above the line is taller than what hangs below it), but
+            // the rail itself has to land ON the band's centre. So the content
+            // rect is shifted by RailOffsetY, is ScrollContentHeight tall
+            // against the band's BandHeight, and every coordinate inside it is
+            // stated relative to the rail, where it belongs.
             var content = Ui.Panel("TrackContent",
                     Place.At(0f, RewardTrackLayout.RailOffsetY, new UiVec(0f, 0.5f)),
                     UiSize.Fixed(RewardTrackLayout.ContentWidth,
@@ -1048,9 +1044,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private static IEnumerable<UiNode> BuildRibbon(RewardTrackScreen screen)
         {
             // THE LABEL ROW, as a head and an instruction with a rule between
-            // them. One centred caption saying both was the first build, and a
-            // caption in the middle of an empty row reads as a note under a
-            // picture rather than as the top of a scale.
+            // them. One centred caption saying both would sit in the middle of
+            // an empty row and read as a note under a picture rather than as
+            // the top of a scale.
             yield return Ui.Label("TrackRibbonTitle", UiStrings.TrackRibbonTitle,
                     new UiVec(RewardTrackLayout.RibbonTitleWidth,
                               RewardTrackLayout.RibbonLabelHeight),

@@ -64,10 +64,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const string ScrimFill = "#0A0614D9";
         private const string ScrimCaption = FightHudPalette.TextSecondary;
 
-        // The ground-glow's build-time default. Genuinely no state to reflect
-        // yet -- occupancy is runtime data a later package supplies -- so this
-        // is the faint/neutral reading the design's own token table names for
-        // an empty position, not a guess at green or gold.
+        // The ground-glow's build-time default: the faint/neutral reading the
+        // design's own token table names for an empty position.
+        // PartyController overrides it per occupancy.
         private const string GlowNeutral = "#B4AA9629";    // rgba(180,170,150,.16)
 
         // The monogram standee's plate. A flat gold-rimmed card rather than a
@@ -97,7 +96,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // closed (PartyFormation.RosterVisible).
         public NodeRef RosterSection;
 
-        // ---- P4: drag-and-drop ------------------------------------------------------
+        // ---- drag-and-drop ----------------------------------------------------------
 
         // The reusable drag ghost -- ONE node, re-skinned per drag rather than
         // one per seat/card. See BuildDragGhost.
@@ -138,17 +137,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> SeatMonogramLetters = new List<NodeRef>();
         public List<NodeRef> SeatGlows = new List<NodeRef>();
 
-        // THE GAMEPAD-SELECTION HALO, one per seat and (below) one per card.
-        // NOT a gold radial glow behind every seat and card at ThemedButtonState's
-        // Selected ratio: on hardware that reads as way too strong.
-        // Core/FocusMarker.cs draws one arrow beside the focused slot
-        // instead, on this screen and every other.
-        //
-        // The three channels this screen actually owns are untouched -- the
-        // occupied glow, the gold selection/destination ring, and the
-        // unselectable wash. Only the borrowed fourth is gone, which is why
-        // "which slot Submit will hit" is now the arrow's job and "which
-        // slots are legal" stays the ring's.
         public List<NodeRef> SeatNames = new List<NodeRef>();
         public List<NodeRef> SeatRoles = new List<NodeRef>();
         public List<NodeRef> SeatRings = new List<NodeRef>();
@@ -205,7 +193,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             children.Add(BuildRosterSection(screen, rosterCount));
 
             // APPENDED LAST, so it draws over every other node on the pane --
-            // "top-most" per the P4 brief.
+            // "top-most" per the drag brief.
             children.Add(BuildDragGhost(screen));
 
             // BARE, not a kit container. This pane sits on the shared
@@ -351,7 +339,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             button.Children.Add(glow);
             screen.SeatGlows.Add(glow);
 
-            // NO BAKED SPRITE -- P3 loads a stance from Resources/Characters/
+            // NO BAKED SPRITE -- the controller loads a stance from Resources/Characters/
             // <id> and activates this; until then it stays off, because an
             // Image with no sprite renders as a filled rectangle (the same
             // "red brick under the monster's feet" bug FightScreen's own
@@ -365,7 +353,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.SeatArts.Add(art);
 
             // THE FALLBACK, active by default -- a build with no art loaded
-            // yet (every seat, today) reads as a plate and a letter rather
+            // yet reads as a plate and a letter rather
             // than as the rectangle above.
             float monogramSize = PartyLayout.ArtHeight * 0.58f;
             var plate = Ui.OutlineBox(stem + "MonogramPlate", Place.At(0f, LocalY(PartyLayout.ArtCentreY)),
@@ -729,7 +717,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             return button;
         }
 
-        // ---- the drag ghost (P4): one reusable floating overlay --------------------
+        // ---- the drag ghost (drag): one reusable floating overlay --------------------
 
         // ONE node, re-skinned per drag rather than one ghost per seat/card --
         // the controller shows the dragged actor's own sprite (or its

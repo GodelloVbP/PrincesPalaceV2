@@ -16,9 +16,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
     // the same one and a pool change cannot leave a fourth card orphaned.
     public sealed class RelicDraftScreen
     {
-        // VIOLET, 3:4 KIT CONTAINER. The authored 380x460 (aspect 0.826) was
-        // 40% off the kit's 3:4 aspect and had to move; WHICH AXIS MOVES has
-        // been the same call twice, and the answer is still width. Height is
+        // VIOLET, 3:4 KIT CONTAINER. The card keeps the kit's 3:4 aspect, so
+        // one axis is derived from the other, and the one that gives is
+        // width. Height is
         // what the frame's title/subtitle/Descend column above and below the
         // card row is budgeted against (see the frame's own 1500x1000
         // comment), so changing width is the change that does not reopen that
@@ -38,9 +38,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef EmptyHint;
         public NodeRef DescendButton;
 
-        // Level 70 of the reward track turns the draft from three random cards
-        // into the whole eligible pool, which is 13 relics -- more than a row
-        // of three can hold, so it pages. Hidden until then.
+        // The pager, for an offer wider than the card row; hidden while the
+        // offer fits (see the paging comment in Build).
         public NodeRef PrevPageButton;
         public NodeRef NextPageButton;
         public NodeRef PageLabel;
@@ -116,20 +115,18 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             // PAGING, for an offer wider than the card row can show at once.
             //
-            // Dormant today -- nothing currently offers more than three -- but
-            // the tree keeps the controls rather than removing them: the card
+            // Dormant while the offer is RelicPool.OfferCount cards, but the
+            // tree keeps the controls rather than removing them: the card
             // row is three wide and emitted once at build time, so the whole
             // pool still cannot be shown at once should a future reward widen
             // it again, and a 13-card grid would be a second card design
             // competing with the one that already reads well. Paging reuses
             // the cards exactly as they are and costs two arrows.
             //
-            // Outside the card row, not over it: three 380-wide cards at a 420
-            // pitch reach x +/-610. Pulled in from +/-680 to +/-660 when the
-            // frame gained real border art: the container's own 3.5%
-            // left/right inset caps content at +/-697.5 (half of the 1500-
-            // wide frame's own content bound), and 680+30 (this button's own
-            // half-width) reached 710 -- 12.5px past it.
+            // Outside the card row, not over it: the cards stop at x +/-557.5
+            // (CardWidth's comment), the pager sits at +/-660. The frame's
+            // content bound is +/-697.5 (half of the 1500-wide frame), and
+            // 660+30 (this button's own half-width) reaches 690, inside it.
             //
             // The counter sits between the cards (which stop at y -210) and
             // Descend (at -350), which is why its y is its own rather than the
@@ -257,11 +254,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
             inside.Add(pager.Label);
         }
 
-        // Copied from ReckoningScreen.BuildOffer -- the item-reward card at the
-        // end of a fight -- rather than the draft's own earlier card design.
-        // Easy-paste on purpose, per the ask: halo, burst, icon, name and a
-        // meta line, chromeless, no backing plate. One thing added back on
-        // top of that copy: the description line the reward card has no room
+        // Modelled on ReckoningScreen.BuildOffer -- the item-reward card at the
+        // end of a fight: halo, burst, icon, name and a meta line,
+        // chromeless, no backing plate. One thing added to that shape: the description line the reward card has no room
         // for, because a relic is chosen for its EFFECT and the offer card's
         // layout alone left that unreadable until Descend.
         private UiNode BuildCard(int index, float x)
@@ -306,12 +301,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     Place.At(0f, IconCentre), UiSize.Fixed(200f, IconTop - IconBottom))
                 .AsDecor();
 
-            // 230, DOWN FROM 340: the card was narrowed from 380 to clear the
-            // Violet 3:4 container's own aspect (see CardWidth's own comment)
-            // and 230 was what the 270-wide version's 234.9px content width
-            // left. The card is 345 wide now, so the container's 6.9%-a-side
-            // inset leaves 297.4 -- 230 has 33px a side rather than 5, which
-            // is slack it does not have to spend.
+            // 230: the card is 345 wide, so the Violet 3:4 container's
+            // 6.9%-a-side inset leaves 297.4 -- 230 has 33px a side, which is
+            // slack it does not have to spend.
             var name = Ui.Label($"DraftCard{index}Name", UiString.Runtime, new UiVec(230f, 60f), 24,
                     "#EDE6FF", Place.At(0f, IconBottom - 6f - 33f))
                 .AsDecor();
