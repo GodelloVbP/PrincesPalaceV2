@@ -23,8 +23,6 @@ namespace PrincesPalace.Domain.UiKit
         }
 
         public static UiPad Zero => new UiPad(0f, 0f, 0f, 0f);
-        public static UiPad All(float p) => new UiPad(p, p, p, p);
-        public static UiPad Axis(float horizontal, float vertical) => new UiPad(horizontal, horizontal, vertical, vertical);
 
         public float Horizontal => Left + Right;
         public float Vertical => Bottom + Top;
