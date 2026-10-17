@@ -124,8 +124,6 @@ namespace PrincesPalace
         private const string GlowOccupied = "#5FE07A8C";    // rgba(95,224,122,.55)
         private const string GlowHighlighted = "#E8C07AB3"; // rgba(232,192,122,.70)
 
-        private static readonly string[] SeatWords = { "front", "middle", "rear" };
-
         private bool _wired;
         private List<string> _rosterIds = new List<string>();
 
@@ -1190,10 +1188,10 @@ namespace PrincesPalace
             switch (outcome.Toast)
             {
                 case PartyToastKind.Placed:
-                    menu.ShowNotice(UiStrings.PartyToastPlaced, new object[] { outcome.Actor, SeatWord(outcome.Seat) });
+                    menu.ShowNotice(UiStrings.PartyToastPlaced, new object[] { outcome.Actor, FightSession.SeatWord(outcome.Seat) });
                     break;
                 case PartyToastKind.Moved:
-                    menu.ShowNotice(UiStrings.PartyToastMoved, new object[] { outcome.Actor, SeatWord(outcome.Seat) });
+                    menu.ShowNotice(UiStrings.PartyToastMoved, new object[] { outcome.Actor, FightSession.SeatWord(outcome.Seat) });
                     break;
                 case PartyToastKind.Swapped:
                     menu.ShowNotice(UiStrings.PartyToastSwapped, new object[] { outcome.Actor, outcome.Other });
@@ -1440,14 +1438,6 @@ namespace PrincesPalace
                 default: return UiStrings.PartySeatRear.Format();
             }
         }
-
-        // The notice's own copy uses the lower-case word ("takes the front
-        // position"), where the seat COLUMN's label is upper-case tactical
-        // data (UiStrings.PartySeatFront et al, baked at build time) -- two
-        // different registers for the same fact, so this stays local to the
-        // notice rather than becoming a fourth casing of PartySeatFront.
-        private static string SeatWord(int seat) =>
-            seat >= 0 && seat < SeatWords.Length ? SeatWords[seat] : "";
 
         private static Color GlowColorFor(bool occupied, bool highlighted)
         {

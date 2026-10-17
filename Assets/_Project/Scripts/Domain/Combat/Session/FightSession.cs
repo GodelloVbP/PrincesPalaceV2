@@ -760,7 +760,7 @@ namespace PrincesPalace.Domain.Combat.Session
         }
 
         // The seat as the log says it.
-        internal static string SeatWord(int seat) =>
+        public static string SeatWord(int seat) =>
             seat == PrincesPalace.Domain.Party.PartySeat.Front ? "front" : seat == PrincesPalace.Domain.Party.PartySeat.Middle ? "middle" : "rear";
 
         private static string WordFor(MoveDirection direction) =>
