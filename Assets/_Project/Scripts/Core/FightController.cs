@@ -125,17 +125,14 @@ namespace PrincesPalace
         // ONE ARRAY SHAPE FOR THE WHOLE COLUMN. Every one of these is
         // PcPlateCount long and indexed by PLATE, so the paint routine is one
         // loop over three identical surfaces rather than a party path and a
-        // roster path that had to be kept in step by hand. What replaced:
-        // partyName/partyHpFill/partyHpValue/partyMpFill/partyMpValue/
-        // partyMpTag/partyMpShade/partyMpRims/partyCardRims/partyBuffIcons/
-        // woolPips/woolValue and the whole roster* family.
+        // roster path that would have to be kept in step by hand.
         //
         // Bound by FIELD NAME off FightScreen's NodeRef lists of the same
         // name -- UiAutoBind matches an Image[]/TMP_Text[]/GameObject[] to a
         // list called the same thing with no ScreenRegistry code, and
         // UiWiringSweep refuses the build outright if one comes back null or
         // empty.
-        // BUTTONS SINCE AUDIT #147, where these were GameObjects: a
+        // BUTTONS (AUDIT #147): a
         // single-ally cast is confirmed by clicking the squadmate, on the
         // plate that already IS that squadmate. Interactable ONLY while an
         // ally pick is open -- outside one a live plate would be a button
@@ -529,12 +526,12 @@ namespace PrincesPalace
         // instead (RefreshEnemyPlates): an elite kit, or a boss room's boss.
         private EncounterClass _encounterClass = EncounterClass.Normal;
 
-        // NO INPUT LOCK. A real 0.6s WaitForSeconds gate was drafted and cut
-        // before it shipped: EnemyFightableTests.cs binds with
+        // NO INPUT LOCK. A real-time wait gate would break
+        // EnemyFightableTests.cs, which binds with
         // EncounterClass.Boss and presses ATTACK after two frames, for every
         // boss in the roster, with no speed-multiplier seam available to
         // compress a hard real-time wait the way FightBeatPlayer's own waits
-        // already can. A lock that only some fixtures know how to skip past
+        // can. A lock that only some fixtures know how to skip past
         // is a lock that silently breaks the ones that don't -- so the
         // announcement stays a beat the bark speaks, not a gate the player
         // waits on.
@@ -550,9 +547,9 @@ namespace PrincesPalace
             if (!string.IsNullOrEmpty(bossName)) PushLogLine(bossName);
         }
 
-        // Handed a new satchel after one is spent. Set only in Bind until now,
-        // so a potion used mid-fight left the column showing the count it had
-        // when the fight started.
+        // Handed a new satchel after one is spent, so a potion used mid-fight
+        // does not leave the column showing the count it had when the fight
+        // started.
         internal void RefreshSatchel(IReadOnlyList<SatchelStack> satchel)
         {
             _satchel = satchel ?? new List<SatchelStack>();
@@ -670,7 +667,7 @@ namespace PrincesPalace
 
             foreach (var line in _session.DrainImmediateMessages()) PushLogLine(line);
 
-            // The first turn's intents are NOT committed here any more.
+            // The first turn's intents are NOT committed here.
             //
             // FightSession.Begin() is where this belongs: with nothing
             // resolving an enemy that won initiative, a fight that opened on
@@ -1138,9 +1135,9 @@ namespace PrincesPalace
             int shown = FightSubmenuLayout.VisibleCount(count);
             _submenuCount = shown;
 
-            // NOTHING IS RE-ANCHORED ANY MORE. Every row sits at its pool
+            // NOTHING IS RE-ANCHORED. Every row sits at its pool
             // position forever and the rect around them moves instead -- one
-            // write where there were sixteen, and the only construction that
+            // write rather than sixteen, and the only construction that
             // can also scroll. Rows are switched on or off and nothing else.
             for (int i = 0; i < submenuRowRects.Length; i++)
             {
@@ -1155,11 +1152,11 @@ namespace PrincesPalace
             // menu that opens halfway down its own contents is a menu the
             // player has to scroll before they can read it.
             //
-            // ONLY ON OPENING IT, though, which is the fix. This ran on every
-            // repaint, and a repaint is what a hover costs -- so the player
-            // scrolled, the rows moved under the pointer, the new hover
-            // repainted, and the list was back at the top before the notch had
-            // finished. Same branch and same count means the same list still
+            // ONLY ON OPENING IT: this runs on every
+            // repaint, and a repaint is what a hover costs -- so resetting
+            // each time would have the player scroll, the rows move under the
+            // pointer, the new hover repaint, and the list jump back to the top
+            // before the notch finished. Same branch and same count means the same list still
             // open in front of the same player, and where they left it is
             // theirs to keep.
             bool sameList = shown == _submenuScrolledCount && _menu.Branch == _submenuScrolledBranch;
@@ -1260,7 +1257,7 @@ namespace PrincesPalace
             // NO BAR WHEN THERE IS NOTHING TO SCROLL, which is the common case:
             // a character with nine skills or fewer sees a plain framed list.
             // A track drawn against a list that fits is a control that cannot
-            // do anything, and this screen already had eight of those.
+            // do anything.
             bool scrolls = range > 0f;
 
             if (submenuScrollTrack != null
